@@ -1,0 +1,6 @@
+{
+  "manifest_version": 3,
+  "name": "TriboCRM Extension",
+  "version": "1.0.0",
+  "description": "Extensão Chrome do TriboCRM"
+}

@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p frontend/src/pages/admin frontend/src/pages/gestao frontend/src/pages/vendas frontend/src/components/ui frontend/src/components/shared frontend/src/hooks frontend/src/services frontend/src/store frontend/src/types frontend/src/utils frontend/public)",
+      "Bash(touch frontend/src/pages/admin/.gitkeep frontend/src/pages/gestao/.gitkeep frontend/src/pages/vendas/.gitkeep frontend/src/components/ui/.gitkeep frontend/src/components/shared/.gitkeep frontend/src/hooks/.gitkeep frontend/src/services/.gitkeep frontend/src/store/.gitkeep frontend/src/types/.gitkeep frontend/src/utils/.gitkeep)",
+      "Bash(mkdir -p backend/src/routes backend/src/controllers backend/src/middleware backend/src/services backend/src/jobs backend/src/schemas backend/src/types backend/src/utils backend/src/lib backend/prisma)",
+      "Bash(touch backend/src/routes/.gitkeep backend/src/controllers/.gitkeep backend/src/middleware/.gitkeep backend/src/services/.gitkeep backend/src/jobs/.gitkeep backend/src/schemas/.gitkeep backend/src/types/.gitkeep backend/src/utils/.gitkeep backend/src/lib/.gitkeep)",
+      "Bash(mkdir -p extension/src extension/public)",
+      "Bash(touch extension/src/.gitkeep extension/public/.gitkeep)",
+      "Bash(npm install:*)",
+      "Bash(npx prisma:*)",
+      "Bash(npx tsx:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}

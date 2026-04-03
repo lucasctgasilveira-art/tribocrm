@@ -1,0 +1,814 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  FINANCIAL
+  SUPPORT
+  COMMERCIAL
+}
+
+enum TenantStatus {
+  TRIAL
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+}
+
+enum PlanCycle {
+  MONTHLY
+  YEARLY
+}
+
+enum ChargeStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum PaymentMethod {
+  PIX
+  BOLETO
+  CREDIT_CARD
+}
+
+enum UserRole {
+  OWNER
+  MANAGER
+  TEAM_LEADER
+  SELLER
+}
+
+enum LeadStatus {
+  ACTIVE
+  WON
+  LOST
+  ARCHIVED
+}
+
+enum Temperature {
+  HOT
+  WARM
+  COLD
+}
+
+enum StageType {
+  NORMAL
+  WON
+  LOST
+  REACTIVATION
+}
+
+enum DistributionType {
+  MANUAL
+  ROUND_ROBIN_ALL
+  ROUND_ROBIN_TEAM
+  SPECIFIC_USER
+}
+
+enum InteractionType {
+  CALL
+  EMAIL
+  MEETING
+  WHATSAPP
+  PROPOSAL
+  VISIT
+  NOTE
+  SYSTEM
+}
+
+enum TaskType {
+  CALL
+  EMAIL
+  MEETING
+  WHATSAPP
+  VISIT
+}
+
+enum OAuthProvider {
+  GMAIL
+  GOOGLE_CALENDAR
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_VALUE
+}
+
+enum DiscountApprovalType {
+  PASSWORD
+  VALIDATION_QUEUE
+  BOTH
+}
+
+enum DiscountApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum AutomationTrigger {
+  STAGE_CHANGED
+  INACTIVE_DAYS
+  TASK_OVERDUE
+  LEAD_CREATED
+  PRODUCT_ADDED
+  GOAL_REACHED
+  FORM_SUBMITTED
+}
+
+enum AutomationAction {
+  SEND_WHATSAPP
+  SEND_EMAIL
+  CREATE_TASK
+  MOVE_STAGE
+  NOTIFY_USER
+  DUPLICATE_LEAD
+  MOVE_TO_PIPELINE
+}
+
+enum AutomationLogStatus {
+  SUCCESS
+  FAILED
+  SKIPPED
+}
+
+enum FormSubmissionStatus {
+  PROCESSED
+  FAILED
+  DUPLICATE
+}
+
+enum NotificationType {
+  EMAIL_OPENED
+  TASK_DUE
+  DISCOUNT_PENDING
+  WHATSAPP_FAILED
+  GOAL_ALERT
+  BIRTHDAY
+}
+
+enum PopupType {
+  OVERDUE
+  NEWS
+  PROMO
+  SURVEY
+  MAINTENANCE
+  WELCOME
+}
+
+enum PopupTarget {
+  INSTANCE_2
+  INSTANCE_3
+  BOTH
+}
+
+enum PopupFrequency {
+  ALWAYS_LOGIN
+  ONCE_PER_SESSION
+  ONCE_PER_DAY
+  ONCE_PER_WEEK
+}
+
+enum MenuButtonType {
+  MENTORIA
+  TREINAMENTOS
+}
+
+enum FieldType {
+  TEXT
+  NUMBER
+  DATE
+  SELECT
+}
+
+enum VisibilityType {
+  OWN
+  TEAM
+  ALL
+}
+
+enum ThemePreference {
+  DARK
+  LIGHT
+}
+
+enum GoalPeriodType {
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum GoalType {
+  REVENUE
+  DEALS
+  BOTH
+}
+
+enum GoalDistributionType {
+  GENERAL
+  INDIVIDUAL
+}
+
+enum RecurrenceType {
+  DAILY
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+}
+
+enum ScheduledMessageStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model AdminUser {
+  id               String    @id @default(uuid()) @db.Uuid
+  name             String    @db.VarChar(150)
+  email            String    @unique @db.VarChar(255)
+  passwordHash     String    @map("password_hash") @db.VarChar(255)
+  role             AdminRole
+  isActive         Boolean   @default(true) @map("is_active")
+  twoFactorSecret  String?   @map("two_factor_secret") @db.VarChar(100)
+  twoFactorEnabled Boolean   @default(false) @map("two_factor_enabled")
+  lastLoginAt      DateTime? @map("last_login_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  @@map("admin_users")
+}
+
+model Plan {
+  id                   String   @id @default(uuid()) @db.Uuid
+  name                 String   @db.VarChar(50)
+  slug                 String   @unique @db.VarChar(30)
+  priceMonthly         Decimal  @map("price_monthly") @db.Decimal(10, 2)
+  priceYearly          Decimal  @map("price_yearly") @db.Decimal(10, 2)
+  maxUsers             Int      @map("max_users")
+  extraUserPrice       Decimal  @map("extra_user_price") @db.Decimal(10, 2)
+  maxLeads             Int      @map("max_leads")
+  maxPipelines         Int      @map("max_pipelines")
+  maxAutomations       Int      @map("max_automations")
+  maxForms             Int      @map("max_forms")
+  maxCustomFields      Int      @map("max_custom_fields")
+  maxEmailTemplates    Int      @map("max_email_templates")
+  maxWhatsappTemplates Int      @map("max_whatsapp_templates")
+  features             Json
+  isActive             Boolean  @default(true) @map("is_active")
+  createdAt            DateTime @default(now()) @map("created_at")
+  tenants              Tenant[]
+  @@map("plans")
+}
+
+model GlobalPopup {
+  id             String         @id @default(uuid()) @db.Uuid
+  title          String         @db.VarChar(150)
+  message        String         @db.Text
+  type           PopupType
+  targetInstance PopupTarget    @map("target_instance")
+  targetPlans    String[]       @map("target_plans")
+  frequency      PopupFrequency
+  ctaLabel       String?        @map("cta_label") @db.VarChar(80)
+  ctaUrl         String?        @map("cta_url") @db.VarChar(500)
+  startsAt       DateTime       @map("starts_at")
+  endsAt         DateTime?      @map("ends_at")
+  isActive       Boolean        @default(true) @map("is_active")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  @@map("global_popups")
+}
+
+model MenuButton {
+  id        String         @id @default(uuid()) @db.Uuid
+  type      MenuButtonType
+  label     String         @db.VarChar(80)
+  url       String         @db.VarChar(500)
+  isActive  Boolean        @default(true) @map("is_active")
+  order     Int
+  updatedAt DateTime       @updatedAt @map("updated_at")
+  @@map("menu_buttons")
+}
+
+model Tenant {
+  id            String       @id @default(uuid()) @db.Uuid
+  name          String       @db.VarChar(150)
+  cnpj          String       @unique @db.VarChar(18)
+  email         String       @db.VarChar(255)
+  phone         String?      @db.VarChar(20)
+  planId        String       @map("plan_id") @db.Uuid
+  planCycle     PlanCycle    @map("plan_cycle")
+  status        TenantStatus @default(TRIAL)
+  trialEndsAt   DateTime?    @map("trial_ends_at")
+  planStartedAt DateTime?    @map("plan_started_at")
+  planExpiresAt DateTime?    @map("plan_expires_at")
+  internalNotes String?      @map("internal_notes") @db.Text
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+  plan          Plan         @relation(fields: [planId], references: [id])
+  users         User[]
+  teams         Team[]
+  pipelines     Pipeline[]
+  leads         Lead[]
+  charges       Charge[]
+  automations   Automation[]
+  captureForms  CaptureForm[]
+  products      Product[]
+  goals         Goal[]
+  @@map("tenants")
+}
+
+model Charge {
+  id            String        @id @default(uuid()) @db.Uuid
+  tenantId      String        @map("tenant_id") @db.Uuid
+  efiChargeId   String?       @map("efi_charge_id") @db.VarChar(100)
+  amount        Decimal       @db.Decimal(10, 2)
+  dueDate       DateTime      @map("due_date") @db.Date
+  paidAt        DateTime?     @map("paid_at")
+  paymentMethod PaymentMethod @map("payment_method")
+  status        ChargeStatus  @default(PENDING)
+  referenceMonth String?      @map("reference_month") @db.VarChar(7)
+  createdAt     DateTime      @default(now()) @map("created_at")
+  tenant        Tenant        @relation(fields: [tenantId], references: [id])
+  @@map("charges")
+}
+
+model User {
+  id              String          @id @default(uuid()) @db.Uuid
+  tenantId        String          @map("tenant_id") @db.Uuid
+  name            String          @db.VarChar(150)
+  email           String          @db.VarChar(255)
+  passwordHash    String          @map("password_hash") @db.VarChar(255)
+  role            UserRole
+  cpf             String?         @db.VarChar(14)
+  birthday        DateTime?       @db.Date
+  phone           String?         @db.VarChar(20)
+  avatarUrl       String?         @map("avatar_url") @db.VarChar(500)
+  themePreference ThemePreference @default(DARK) @map("theme_preference")
+  leadVisibility  VisibilityType  @default(OWN) @map("lead_visibility")
+  isActive        Boolean         @default(true) @map("is_active")
+  rampingStartsAt DateTime?       @map("ramping_starts_at") @db.Date
+  lastLoginAt     DateTime?       @map("last_login_at")
+  firstLoginAt    DateTime?       @map("first_login_at")
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+  deletedAt       DateTime?       @map("deleted_at")
+  tenant          Tenant          @relation(fields: [tenantId], references: [id])
+  ledTeams        Team[]
+  teamMemberships TeamMember[]
+  assignedLeads   Lead[]          @relation("LeadResponsible")
+  createdLeads    Lead[]          @relation("LeadCreatedBy")
+  permissions     UserPermission[]
+  oauthTokens     OAuthToken[]
+  interactions    Interaction[]
+  tasks           Task[]          @relation("TaskResponsible")
+  notifications   Notification[]
+  @@unique([tenantId, email])
+  @@map("users")
+}
+
+model UserPermission {
+  id            String   @id @default(uuid()) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  permissionKey String   @map("permission_key") @db.VarChar(100)
+  isGranted     Boolean  @map("is_granted")
+  changedBy     String   @map("changed_by") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at")
+  user          User     @relation(fields: [userId], references: [id])
+  @@map("user_permissions")
+}
+
+model Team {
+  id        String       @id @default(uuid()) @db.Uuid
+  tenantId  String       @map("tenant_id") @db.Uuid
+  name      String       @db.VarChar(100)
+  leaderId  String?      @map("leader_id") @db.Uuid
+  createdAt DateTime     @default(now()) @map("created_at")
+  tenant    Tenant       @relation(fields: [tenantId], references: [id])
+  leader    User?        @relation(fields: [leaderId], references: [id])
+  members   TeamMember[]
+  leads     Lead[]
+  @@map("teams")
+}
+
+model TeamMember {
+  id       String   @id @default(uuid()) @db.Uuid
+  tenantId String   @map("tenant_id") @db.Uuid
+  teamId   String   @map("team_id") @db.Uuid
+  userId   String   @map("user_id") @db.Uuid
+  joinedAt DateTime @default(now()) @map("joined_at")
+  team     Team     @relation(fields: [teamId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+  @@unique([teamId, userId])
+  @@map("team_members")
+}
+
+model Pipeline {
+  id                 String           @id @default(uuid()) @db.Uuid
+  tenantId           String           @map("tenant_id") @db.Uuid
+  name               String           @db.VarChar(100)
+  isDefault          Boolean          @default(false) @map("is_default")
+  distributionType   DistributionType @default(MANUAL) @map("distribution_type")
+  lastAssignedUserId String?          @map("last_assigned_user_id") @db.Uuid
+  isActive           Boolean          @default(true) @map("is_active")
+  createdAt          DateTime         @default(now()) @map("created_at")
+  tenant             Tenant           @relation(fields: [tenantId], references: [id])
+  stages             PipelineStage[]
+  leads              Lead[]
+  automations        Automation[]
+  goals              Goal[]
+  @@map("pipelines")
+}
+
+model PipelineStage {
+  id         String    @id @default(uuid()) @db.Uuid
+  tenantId   String    @map("tenant_id") @db.Uuid
+  pipelineId String    @map("pipeline_id") @db.Uuid
+  name       String    @db.VarChar(100)
+  type       StageType @default(NORMAL)
+  color      String    @db.VarChar(7)
+  sortOrder  Int       @map("sort_order")
+  isFixed    Boolean   @default(false) @map("is_fixed")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  pipeline   Pipeline  @relation(fields: [pipelineId], references: [id])
+  leads      Lead[]
+  @@map("pipeline_stages")
+}
+
+model Lead {
+  id             String        @id @default(uuid()) @db.Uuid
+  tenantId       String        @map("tenant_id") @db.Uuid
+  pipelineId     String        @map("pipeline_id") @db.Uuid
+  stageId        String        @map("stage_id") @db.Uuid
+  responsibleId  String        @map("responsible_id") @db.Uuid
+  teamId         String?       @map("team_id") @db.Uuid
+  createdBy      String        @map("created_by") @db.Uuid
+  name           String        @db.VarChar(150)
+  email          String?       @db.VarChar(255)
+  phone          String?       @db.VarChar(20)
+  whatsapp       String?       @db.VarChar(20)
+  cpf            String?       @db.VarChar(14)
+  cnpj           String?       @db.VarChar(18)
+  company        String?       @db.VarChar(150)
+  position       String?       @db.VarChar(100)
+  source         String?       @db.VarChar(80)
+  temperature    Temperature   @default(COLD)
+  expectedValue  Decimal?      @map("expected_value") @db.Decimal(12, 2)
+  closedValue    Decimal?      @map("closed_value") @db.Decimal(12, 2)
+  lossReasonId   String?       @map("loss_reason_id") @db.Uuid
+  status         LeadStatus    @default(ACTIVE)
+  wonAt          DateTime?     @map("won_at")
+  lostAt         DateTime?     @map("lost_at")
+  lastActivityAt DateTime?     @map("last_activity_at")
+  notes          String?       @db.Text
+  customFields   Json?         @map("custom_fields")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  deletedAt      DateTime?     @map("deleted_at")
+  tenant         Tenant        @relation(fields: [tenantId], references: [id])
+  pipeline       Pipeline      @relation(fields: [pipelineId], references: [id])
+  stage          PipelineStage @relation(fields: [stageId], references: [id])
+  responsible    User          @relation("LeadResponsible", fields: [responsibleId], references: [id])
+  creator        User          @relation("LeadCreatedBy", fields: [createdBy], references: [id])
+  team           Team?         @relation(fields: [teamId], references: [id])
+  interactions   Interaction[]
+  tasks          Task[]
+  leadProducts   LeadProduct[]
+  emailTracking  EmailTracking[]
+  scheduledMessages ScheduledMessage[]
+  @@map("leads")
+}
+
+model LeadProduct {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  leadId          String   @map("lead_id") @db.Uuid
+  productId       String   @map("product_id") @db.Uuid
+  quantity        Int      @default(1)
+  unitPrice       Decimal  @map("unit_price") @db.Decimal(12, 2)
+  discountPercent Decimal? @map("discount_percent") @db.Decimal(5, 2)
+  finalPrice      Decimal  @map("final_price") @db.Decimal(12, 2)
+  createdAt       DateTime @default(now()) @map("created_at")
+  lead            Lead     @relation(fields: [leadId], references: [id])
+  product         Product  @relation(fields: [productId], references: [id])
+  @@map("lead_products")
+}
+
+model LossReason {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  name      String   @db.VarChar(100)
+  isActive  Boolean  @default(true) @map("is_active")
+  sortOrder Int      @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@map("loss_reasons")
+}
+
+model Interaction {
+  id         String          @id @default(uuid()) @db.Uuid
+  tenantId   String          @map("tenant_id") @db.Uuid
+  leadId     String          @map("lead_id") @db.Uuid
+  userId     String          @map("user_id") @db.Uuid
+  type       InteractionType
+  content    String          @db.Text
+  occurredAt DateTime        @default(now()) @map("occurred_at")
+  isAuto     Boolean         @default(false) @map("is_auto")
+  createdAt  DateTime        @default(now()) @map("created_at")
+  lead       Lead            @relation(fields: [leadId], references: [id])
+  user       User            @relation(fields: [userId], references: [id])
+  @@map("interactions")
+}
+
+model Task {
+  id            String    @id @default(uuid()) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  leadId        String    @map("lead_id") @db.Uuid
+  responsibleId String    @map("responsible_id") @db.Uuid
+  createdBy     String    @map("created_by") @db.Uuid
+  type          TaskType
+  title         String    @db.VarChar(200)
+  description   String?   @db.Text
+  dueDate       DateTime? @map("due_date")
+  isDone        Boolean   @default(false) @map("is_done")
+  doneAt        DateTime? @map("done_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  lead          Lead      @relation(fields: [leadId], references: [id])
+  responsible   User      @relation("TaskResponsible", fields: [responsibleId], references: [id])
+  @@map("tasks")
+}
+
+model ManagerialTaskType {
+  id        String           @id @default(uuid()) @db.Uuid
+  tenantId  String           @map("tenant_id") @db.Uuid
+  name      String           @db.VarChar(100)
+  isActive  Boolean          @default(true) @map("is_active")
+  sortOrder Int              @map("sort_order")
+  createdAt DateTime         @default(now()) @map("created_at")
+  tasks     ManagerialTask[]
+  @@map("managerial_task_types")
+}
+
+model ManagerialTask {
+  id                 String                      @id @default(uuid()) @db.Uuid
+  tenantId           String                      @map("tenant_id") @db.Uuid
+  typeId             String                      @map("type_id") @db.Uuid
+  createdBy          String                      @map("created_by") @db.Uuid
+  title              String                      @db.VarChar(200)
+  description        String?                     @db.Text
+  dueDate            DateTime?                   @map("due_date")
+  isRecurring        Boolean                     @default(false) @map("is_recurring")
+  recurrence         RecurrenceType?
+  recurrenceOriginId String?                     @map("recurrence_origin_id") @db.Uuid
+  isDone             Boolean                     @default(false) @map("is_done")
+  doneAt             DateTime?                   @map("done_at")
+  createdAt          DateTime                    @default(now()) @map("created_at")
+  taskType           ManagerialTaskType          @relation(fields: [typeId], references: [id])
+  participants       ManagerialTaskParticipant[]
+  @@map("managerial_tasks")
+}
+
+model ManagerialTaskParticipant {
+  id         String         @id @default(uuid()) @db.Uuid
+  taskId     String         @map("task_id") @db.Uuid
+  userId     String         @map("user_id") @db.Uuid
+  notifiedAt DateTime?      @map("notified_at")
+  task       ManagerialTask @relation(fields: [taskId], references: [id])
+  @@unique([taskId, userId])
+  @@map("managerial_task_participants")
+}
+
+model EmailTemplate {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  name      String   @db.VarChar(100)
+  subject   String   @db.VarChar(200)
+  body      String   @db.Text
+  isActive  Boolean  @default(true) @map("is_active")
+  createdBy String   @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  @@map("email_templates")
+}
+
+model WhatsappTemplate {
+  id                String             @id @default(uuid()) @db.Uuid
+  tenantId          String             @map("tenant_id") @db.Uuid
+  name              String             @db.VarChar(100)
+  body              String             @db.Text
+  isActive          Boolean            @default(true) @map("is_active")
+  createdBy         String             @map("created_by") @db.Uuid
+  createdAt         DateTime           @default(now()) @map("created_at")
+  scheduledMessages ScheduledMessage[]
+  @@map("whatsapp_templates")
+}
+
+model EmailTracking {
+  id              String    @id @default(uuid()) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  leadId          String    @map("lead_id") @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  trackingPixelId String    @unique @map("tracking_pixel_id") @db.Uuid
+  openedAt        DateTime? @map("opened_at")
+  ctaClickedAt    DateTime? @map("cta_clicked_at")
+  openCount       Int       @default(0) @map("open_count")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  lead            Lead      @relation(fields: [leadId], references: [id])
+  @@map("email_tracking")
+}
+
+model OAuthToken {
+  id           String        @id @default(uuid()) @db.Uuid
+  tenantId     String        @map("tenant_id") @db.Uuid
+  userId       String        @map("user_id") @db.Uuid
+  provider     OAuthProvider
+  accessToken  String        @map("access_token") @db.Text
+  refreshToken String?       @map("refresh_token") @db.Text
+  expiresAt    DateTime?     @map("expires_at")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  user         User          @relation(fields: [userId], references: [id])
+  @@unique([userId, provider])
+  @@map("oauth_tokens")
+}
+
+model ScheduledMessage {
+  id           String                 @id @default(uuid()) @db.Uuid
+  tenantId     String                 @map("tenant_id") @db.Uuid
+  leadId       String                 @map("lead_id") @db.Uuid
+  userId       String                 @map("user_id") @db.Uuid
+  templateId   String?                @map("template_id") @db.Uuid
+  messageBody  String                 @map("message_body") @db.Text
+  scheduledAt  DateTime               @map("scheduled_at")
+  sentAt       DateTime?              @map("sent_at")
+  failedAt     DateTime?              @map("failed_at")
+  status       ScheduledMessageStatus @default(PENDING)
+  retryCount   Int                    @default(0) @map("retry_count")
+  createdAt    DateTime               @default(now()) @map("created_at")
+  lead         Lead                   @relation(fields: [leadId], references: [id])
+  template     WhatsappTemplate?      @relation(fields: [templateId], references: [id])
+  @@map("scheduled_messages")
+}
+
+model Automation {
+  id            String            @id @default(uuid()) @db.Uuid
+  tenantId      String            @map("tenant_id") @db.Uuid
+  pipelineId    String?           @map("pipeline_id") @db.Uuid
+  name          String            @db.VarChar(150)
+  triggerType   AutomationTrigger @map("trigger_type")
+  triggerConfig Json              @map("trigger_config")
+  actionType    AutomationAction  @map("action_type")
+  actionConfig  Json              @map("action_config")
+  isActive      Boolean           @default(true) @map("is_active")
+  createdBy     String            @map("created_by") @db.Uuid
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
+  tenant        Tenant            @relation(fields: [tenantId], references: [id])
+  pipeline      Pipeline?         @relation(fields: [pipelineId], references: [id])
+  logs          AutomationLog[]
+  @@map("automations")
+}
+
+model AutomationLog {
+  id           String              @id @default(uuid()) @db.Uuid
+  tenantId     String              @map("tenant_id") @db.Uuid
+  automationId String              @map("automation_id") @db.Uuid
+  leadId       String?             @map("lead_id") @db.Uuid
+  status       AutomationLogStatus
+  errorMessage String?             @map("error_message") @db.Text
+  executedAt   DateTime            @default(now()) @map("executed_at")
+  automation   Automation          @relation(fields: [automationId], references: [id])
+  @@map("automation_logs")
+}
+
+model CaptureForm {
+  id                    String           @id @default(uuid()) @db.Uuid
+  tenantId              String           @map("tenant_id") @db.Uuid
+  name                  String           @db.VarChar(100)
+  fieldsConfig          Json             @map("fields_config")
+  destinationPipelineId String           @map("destination_pipeline_id") @db.Uuid
+  destinationStageId    String           @map("destination_stage_id") @db.Uuid
+  distributionType      DistributionType @map("distribution_type")
+  automationId          String?          @map("automation_id") @db.Uuid
+  embedToken            String           @unique @map("embed_token") @db.VarChar(100)
+  isActive              Boolean          @default(true) @map("is_active")
+  createdAt             DateTime         @default(now()) @map("created_at")
+  tenant                Tenant           @relation(fields: [tenantId], references: [id])
+  submissions           FormSubmission[]
+  @@map("capture_forms")
+}
+
+model FormSubmission {
+  id          String               @id @default(uuid()) @db.Uuid
+  tenantId    String               @map("tenant_id") @db.Uuid
+  formId      String               @map("form_id") @db.Uuid
+  leadId      String?              @map("lead_id") @db.Uuid
+  rawData     Json                 @map("raw_data")
+  status      FormSubmissionStatus @default(PROCESSED)
+  ipAddress   String?              @map("ip_address") @db.VarChar(50)
+  submittedAt DateTime             @default(now()) @map("submitted_at")
+  form        CaptureForm          @relation(fields: [formId], references: [id])
+  @@map("form_submissions")
+}
+
+model Goal {
+  id               String               @id @default(uuid()) @db.Uuid
+  tenantId         String               @map("tenant_id") @db.Uuid
+  pipelineId       String               @map("pipeline_id") @db.Uuid
+  periodType       GoalPeriodType       @map("period_type")
+  periodReference  String               @map("period_reference") @db.VarChar(10)
+  goalType         GoalType             @map("goal_type")
+  totalRevenueGoal Decimal?             @map("total_revenue_goal") @db.Decimal(12, 2)
+  totalDealsGoal   Int?                 @map("total_deals_goal")
+  distributionType GoalDistributionType @map("distribution_type")
+  createdBy        String               @map("created_by") @db.Uuid
+  createdAt        DateTime             @default(now()) @map("created_at")
+  tenant           Tenant               @relation(fields: [tenantId], references: [id])
+  pipeline         Pipeline             @relation(fields: [pipelineId], references: [id])
+  individualGoals  GoalIndividual[]
+  @@map("goals")
+}
+
+model GoalIndividual {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  goalId      String   @map("goal_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  revenueGoal Decimal? @map("revenue_goal") @db.Decimal(12, 2)
+  dealsGoal   Int?     @map("deals_goal")
+  isRamping   Boolean  @default(false) @map("is_ramping")
+  createdAt   DateTime @default(now()) @map("created_at")
+  goal        Goal     @relation(fields: [goalId], references: [id])
+  @@unique([goalId, userId])
+  @@map("goal_individual")
+}
+
+model Product {
+  id               String                @id @default(uuid()) @db.Uuid
+  tenantId         String                @map("tenant_id") @db.Uuid
+  name             String                @db.VarChar(150)
+  description      String?               @db.Text
+  category         String?               @db.VarChar(80)
+  price            Decimal               @db.Decimal(12, 2)
+  allowsDiscount   Boolean               @default(false) @map("allows_discount")
+  discountType     DiscountType?         @map("discount_type")
+  maxDiscount      Decimal?              @map("max_discount") @db.Decimal(10, 2)
+  approvalType     DiscountApprovalType? @map("approval_type")
+  isActive         Boolean               @default(true) @map("is_active")
+  createdAt        DateTime              @default(now()) @map("created_at")
+  tenant           Tenant                @relation(fields: [tenantId], references: [id])
+  leadProducts     LeadProduct[]
+  discountRequests DiscountRequest[]
+  @@map("products")
+}
+
+model DiscountRequest {
+  id                String                 @id @default(uuid()) @db.Uuid
+  tenantId          String                 @map("tenant_id") @db.Uuid
+  leadId            String                 @map("lead_id") @db.Uuid
+  productId         String                 @map("product_id") @db.Uuid
+  requestedBy       String                 @map("requested_by") @db.Uuid
+  approvedBy        String?                @map("approved_by") @db.Uuid
+  requestedDiscount Decimal                @map("requested_discount") @db.Decimal(10, 2)
+  discountType      DiscountType           @map("discount_type")
+  status            DiscountApprovalStatus @default(PENDING)
+  rejectionReason   String?                @map("rejection_reason") @db.Text
+  resolvedAt        DateTime?              @map("resolved_at")
+  createdAt         DateTime               @default(now()) @map("created_at")
+  product           Product                @relation(fields: [productId], references: [id])
+  @@map("discount_requests")
+}
+
+model Notification {
+  id        String           @id @default(uuid()) @db.Uuid
+  tenantId  String           @map("tenant_id") @db.Uuid
+  userId    String           @map("user_id") @db.Uuid
+  type      NotificationType
+  title     String           @db.VarChar(150)
+  body      String           @db.Text
+  link      String?          @db.VarChar(500)
+  isRead    Boolean          @default(false) @map("is_read")
+  createdAt DateTime         @default(now()) @map("created_at")
+  user      User             @relation(fields: [userId], references: [id])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  action     String   @db.VarChar(100)
+  entityType String   @map("entity_type") @db.VarChar(50)
+  entityId   String?  @map("entity_id") @db.Uuid
+  oldValue   Json?    @map("old_value")
+  newValue   Json?    @map("new_value")
+  ipAddress  String?  @map("ip_address") @db.VarChar(50)
+  createdAt  DateTime @default(now()) @map("created_at")
+  @@map("audit_logs")
+}
