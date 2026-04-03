@@ -4,6 +4,7 @@ import { Search, MessageCircle, Mail, Phone, Plus, Kanban as KanbanIcon, List } 
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
 import LeadDrawer from '../../components/shared/LeadDrawer/LeadDrawer'
+import NewLeadModal, { type NewLeadData } from '../../components/shared/NewLeadModal/NewLeadModal'
 
 // ── Types ──
 
@@ -100,6 +101,8 @@ export default function PipelinePage() {
   const [draggedId, setDraggedId] = useState<string | null>(null)
   const [dropTarget, setDropTarget] = useState<string | null>(null)
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [modalStage, setModalStage] = useState<string | undefined>(undefined)
 
   function toggleChip(chip: FilterChip) {
     setActiveChips((prev) => {
@@ -166,6 +169,19 @@ export default function PipelinePage() {
 
   const onDragEnd = useCallback(() => { setDraggedId(null); setDropTarget(null) }, [])
 
+  function handleNewLead(data: NewLeadData) {
+    const tempMap: Record<string, Lead['temperature']> = { Quente: 'HOT', Morno: 'WARM', Frio: 'COLD' }
+    const newLead: Lead = {
+      id: String(Date.now()),
+      name: data.name, company: data.company,
+      value: parseInt(data.value) || 0,
+      stage: data.stage, temperature: tempMap[data.temperature] ?? 'WARM',
+      responsible: data.responsible.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase(),
+      lastContact: 'agora', phone: data.phone || '—', email: data.email || '—',
+    }
+    setLeads((prev) => [newLead, ...prev])
+  }
+
   return (
     <AppLayout menuItems={gestaoMenuItems}>
       <style>{SCROLLBAR_CSS}</style>
@@ -193,7 +209,7 @@ export default function PipelinePage() {
           <span style={{ color: '#22283a', margin: '0 10px' }}>|</span>
           <span style={{ color: '#6b7280' }}>Sem interação +5d</span><span style={{ color: '#ef4444', fontWeight: 700, marginLeft: 4 }}>{stats.stale}</span>
         </div>
-        <button style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'background 0.2s', flexShrink: 0 }}
+        <button onClick={() => { setModalStage(undefined); setModalOpen(true) }} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'background 0.2s', flexShrink: 0 }}
           onMouseEnter={(e) => { e.currentTarget.style.background = '#fb923c' }}
           onMouseLeave={(e) => { e.currentTarget.style.background = '#f97316' }}>
           <Plus size={15} strokeWidth={2} /> Novo Lead
@@ -254,7 +270,7 @@ export default function PipelinePage() {
                       <span style={{ fontSize: 13, fontWeight: 600, color: stage.color }}>{stage.name}</span>
                       <span style={{ background: `${stage.color}33`, color: stage.color, borderRadius: 999, padding: '2px 8px', fontSize: 12, fontWeight: 700 }}>{stageLeads.length}</span>
                     </div>
-                    <AddBtn />
+                    <AddBtn onClick={() => { setModalStage(stage.name); setModalOpen(true) }} />
                   </div>
                   {val > 0 && <div style={{ fontSize: 12, color: stage.color, opacity: 0.7, marginTop: 2, fontWeight: 700 }}>{formatCurrency(val)}</div>}
                 </div>
@@ -314,16 +330,18 @@ export default function PipelinePage() {
 
       {/* Drawer */}
       {selectedLead && <LeadDrawer lead={selectedLead} onClose={() => setSelectedLead(null)} stageColor={stages.find((s) => s.name === selectedLead.stage)?.color ?? '#6b7280'} instance="gestao" />}
+      <NewLeadModal open={modalOpen} onClose={() => setModalOpen(false)} onSubmit={handleNewLead} defaultStage={modalStage} />
     </AppLayout>
   )
 }
 
 // ── Small sub-components ──
 
-function AddBtn() {
+function AddBtn({ onClick }: { onClick?: () => void }) {
   const [h, setH] = useState(false)
   return (
     <button
+      onClick={onClick}
       onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
       style={{
         width: 24, height: 24, borderRadius: 6, border: '1px solid #22283a',

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Search, Plus, Download, MoreHorizontal, Kanban, List } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
+import NewLeadModal from '../../components/shared/NewLeadModal/NewLeadModal'
 
 // ── Data ──
 
@@ -80,6 +81,7 @@ export default function GestaoLeadsPage() {
   const [tab, setTab] = useState<'all' | 'active' | 'archived'>('all')
   const [menu, setMenu] = useState<string | null>(null)
   const [hov, setHov] = useState<string | null>(null)
+  const [modalOpen, setModalOpen] = useState(false)
 
   const filtered = useMemo(() => {
     let r = mockLeads.filter((l) => {
@@ -120,7 +122,7 @@ export default function GestaoLeadsPage() {
           <button style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#161a22', color: '#9ca3af', border: '1px solid #22283a', borderRadius: 8, padding: '8px 14px', fontSize: 13, cursor: 'pointer' }}>
             <Download size={15} strokeWidth={1.5} /> Importar
           </button>
-          <button style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+          <button onClick={() => setModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
             onMouseEnter={(e) => { e.currentTarget.style.background = '#fb923c' }}
             onMouseLeave={(e) => { e.currentTarget.style.background = '#f97316' }}>
             <Plus size={15} strokeWidth={2} /> Novo Lead
@@ -256,6 +258,7 @@ export default function GestaoLeadsPage() {
           </div>
         </div>
       </div>
+      <NewLeadModal open={modalOpen} onClose={() => setModalOpen(false)} onSubmit={() => setModalOpen(false)} />
     </AppLayout>
   )
 }
