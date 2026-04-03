@@ -1,7 +1,8 @@
 import { useState, useMemo, useCallback, type DragEvent } from 'react'
-import { Search, MessageCircle, Mail, Phone, Plus, X } from 'lucide-react'
+import { Search, MessageCircle, Mail, Phone, Plus } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { vendasMenuItems } from '../../config/vendasMenu'
+import LeadDrawer from '../../components/shared/LeadDrawer/LeadDrawer'
 
 // ── Types ──
 
@@ -163,53 +164,11 @@ export default function VendasPipelinePage() {
 
       </div>{/* end outer flex container */}
 
-      {selectedLead && <Drawer lead={selectedLead} onClose={() => setSelectedLead(null)} />}
+      {selectedLead && <LeadDrawer lead={selectedLead} onClose={() => setSelectedLead(null)} stageColor={stages.find((s) => s.name === selectedLead.stage)?.color ?? '#6b7280'} instance="vendas" />}
     </AppLayout>
   )
 }
 
-// ── Drawer ──
-function Drawer({ lead, onClose }: { lead: Lead; onClose: () => void }) {
-  const temp = tempConfig[lead.temperature]; const st = stages.find((s) => s.name === lead.stage)
-  return (
-    <>
-      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 50, animation: 'fadeIn 0.2s ease-out' }} />
-      <div style={{ position: 'fixed', right: 0, top: 0, width: 380, height: '100vh', background: '#161a22', borderLeft: '1px solid #22283a', zIndex: 51, display: 'flex', flexDirection: 'column', animation: 'slideIn 0.25s ease-out' }}>
-        <div style={{ padding: '20px 24px', borderBottom: '1px solid #22283a', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-          <div><h2 style={{ fontSize: 18, fontWeight: 700, color: '#e8eaf0', margin: 0 }}>{lead.name}</h2><p style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>{lead.company}</p></div>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b7280', padding: 4 }}><X size={20} strokeWidth={1.5} /></button>
-        </div>
-        <div style={{ flex: 1, overflowY: 'auto', padding: 24 }}>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-            {st && <span style={{ background: `${st.color}1F`, color: st.color, borderRadius: 999, padding: '4px 12px', fontSize: 12, fontWeight: 500 }}>{lead.stage}</span>}
-            <span style={{ background: temp.bg, color: temp.color, borderRadius: 999, padding: '4px 12px', fontSize: 12, fontWeight: 500 }}>{temp.label}</span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <Info label="Valor" value={formatCurrency(lead.value)} color="#22c55e" />
-            <Info label="Último contato" value={lead.lastContact ?? '—'} />
-            <Info label="Telefone" value={lead.phone} />
-            <Info label="E-mail" value={lead.email} />
-          </div>
-          <div style={{ display: 'flex', gap: 8, marginTop: 24 }}>
-            <DBtn color="#25d166" bg="rgba(37,209,102,0.1)" border="rgba(37,209,102,0.2)" icon={<MessageCircle size={16} strokeWidth={1.5} />} label="WhatsApp" />
-            <DBtn color="#3b82f6" bg="rgba(59,130,246,0.1)" border="rgba(59,130,246,0.2)" icon={<Mail size={16} strokeWidth={1.5} />} label="E-mail" />
-            <DBtn color="#f97316" bg="rgba(249,115,22,0.1)" border="rgba(249,115,22,0.2)" icon={<Phone size={16} strokeWidth={1.5} />} label="Ligar" />
-          </div>
-        </div>
-      </div>
-    </>
-  )
-}
-function Info({ label, value, color }: { label: string; value: string; color?: string }) {
-  return <div><div style={{ fontSize: 11, color: '#6b7280', marginBottom: 2 }}>{label}</div><div style={{ fontSize: 14, color: color ?? '#e8eaf0', fontWeight: 500 }}>{value}</div></div>
-}
-function DBtn({ color, bg, border, icon, label }: { color: string; bg: string; border: string; icon: React.ReactNode; label: string }) {
-  return <button style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: bg, color, border: `1px solid ${border}`, borderRadius: 8, padding: '10px 0', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>{icon} {label}</button>
-}
-function Stat({ label, value, color }: { label: string; value: string; color?: string }) {
-  return <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 16px' }}><span style={{ fontSize: 12, color: '#6b7280' }}>{label}</span><span style={{ fontSize: 13, fontWeight: 700, color: color ?? '#e8eaf0' }}>{value}</span></div>
-}
-function Sep() { return <div style={{ width: 1, height: 20, background: '#22283a' }} /> }
 function AddBtn() {
   const [h, setH] = useState(false)
   return <button onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)} style={{ width: 24, height: 24, borderRadius: 6, border: '1px solid #22283a', background: h ? '#22283a' : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', transition: 'background 0.15s' }}><Plus size={14} strokeWidth={1.5} /></button>

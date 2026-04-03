@@ -31,6 +31,7 @@ import WhatsappTemplatesPage from './pages/gestao/WhatsappTemplatesPage'
 import GoalsPage from './pages/gestao/GoalsPage'
 import MySubscriptionPage from './pages/gestao/MySubscriptionPage'
 import GestaoSettingsPage from './pages/gestao/SettingsPage'
+import GestaoLeadDetailPage from './pages/gestao/LeadDetailPage'
 
 // Vendas
 import VendasDashboardPage from './pages/vendas/DashboardPage'
@@ -39,6 +40,7 @@ import VendasLeadsPage from './pages/vendas/LeadsPage'
 import VendasTasksPage from './pages/vendas/TasksPage'
 import MyResultsPage from './pages/vendas/MyResultsPage'
 import PersonalSettingsPage from './pages/vendas/PersonalSettingsPage'
+import VendasLeadDetailPage from './pages/vendas/LeadDetailPage'
 import MentoriaPage from './pages/vendas/MentoriaPage'
 import TreinamentosPage from './pages/vendas/TreinamentosPage'
 
@@ -54,6 +56,7 @@ export default function App() {
       <Route path="/preview/vendas/dashboard" element={<VendasDashboardPage />} />
       <Route path="/preview/gestao/dashboard" element={<GestaoDashboardPage />} />
       <Route path="/preview/admin/dashboard" element={<AdminDashboardPage />} />
+      <Route path="/preview/leads/:id" element={<GestaoLeadDetailPage />} />
 
       {/* Admin */}
       <Route path="/admin/dashboard" element={<PrivateRoute allowed={['admin']}><AdminDashboardPage /></PrivateRoute>} />
@@ -70,6 +73,7 @@ export default function App() {
       <Route path="/gestao/dashboard" element={<PrivateRoute allowed={['gestao']}><GestaoDashboardPage /></PrivateRoute>} />
       <Route path="/gestao/pipeline" element={<PrivateRoute allowed={['gestao']}><GestaoPipelinePage /></PrivateRoute>} />
       <Route path="/gestao/leads" element={<PrivateRoute allowed={['gestao']}><GestaoLeadsPage /></PrivateRoute>} />
+      <Route path="/gestao/leads/:id" element={<PrivateRoute allowed={['gestao']}><GestaoLeadDetailPage /></PrivateRoute>} />
       <Route path="/gestao/tarefas" element={<PrivateRoute allowed={['gestao']}><GestaoTasksPage /></PrivateRoute>} />
       <Route path="/gestao/equipe/usuarios" element={<PrivateRoute allowed={['gestao']}><GestaoUsersPage /></PrivateRoute>} />
       <Route path="/gestao/equipe/times" element={<PrivateRoute allowed={['gestao']}><GestaoTeamsPage /></PrivateRoute>} />
@@ -88,6 +92,7 @@ export default function App() {
       <Route path="/vendas/dashboard" element={<PrivateRoute allowed={['vendas']}><VendasDashboardPage /></PrivateRoute>} />
       <Route path="/vendas/pipeline" element={<PrivateRoute allowed={['vendas']}><VendasPipelinePage /></PrivateRoute>} />
       <Route path="/vendas/leads" element={<PrivateRoute allowed={['vendas']}><VendasLeadsPage /></PrivateRoute>} />
+      <Route path="/vendas/leads/:id" element={<PrivateRoute allowed={['vendas']}><VendasLeadDetailPage /></PrivateRoute>} />
       <Route path="/vendas/tarefas" element={<PrivateRoute allowed={['vendas']}><VendasTasksPage /></PrivateRoute>} />
       <Route path="/vendas/resultados" element={<PrivateRoute allowed={['vendas']}><MyResultsPage /></PrivateRoute>} />
       <Route path="/vendas/configuracoes" element={<PrivateRoute allowed={['vendas']}><PersonalSettingsPage /></PrivateRoute>} />

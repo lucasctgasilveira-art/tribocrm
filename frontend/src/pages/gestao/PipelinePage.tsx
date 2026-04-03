@@ -1,7 +1,8 @@
 import { useState, useMemo, useCallback, type DragEvent } from 'react'
-import { Search, MessageCircle, Mail, Phone, Plus, X } from 'lucide-react'
+import { Search, MessageCircle, Mail, Phone, Plus } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
+import LeadDrawer from '../../components/shared/LeadDrawer/LeadDrawer'
 
 // ── Types ──
 
@@ -300,87 +301,8 @@ export default function PipelinePage() {
       </div>{/* end outer flex container */}
 
       {/* Drawer */}
-      {selectedLead && <LeadDrawer lead={selectedLead} onClose={() => setSelectedLead(null)} />}
+      {selectedLead && <LeadDrawer lead={selectedLead} onClose={() => setSelectedLead(null)} stageColor={stages.find((s) => s.name === selectedLead.stage)?.color ?? '#6b7280'} instance="gestao" />}
     </AppLayout>
-  )
-}
-
-// ── Drawer ──
-
-function LeadDrawer({ lead, onClose }: { lead: Lead; onClose: () => void }) {
-  const temp = tempConfig[lead.temperature]
-  const stageObj = stages.find((s) => s.name === lead.stage)
-  return (
-    <>
-      {/* Overlay */}
-      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 50, animation: 'fadeIn 0.2s ease-out' }} />
-      {/* Panel */}
-      <div style={{
-        position: 'fixed', right: 0, top: 0, width: 380, height: '100vh',
-        background: '#161a22', borderLeft: '1px solid #22283a', zIndex: 51,
-        display: 'flex', flexDirection: 'column',
-        animation: 'slideIn 0.25s ease-out',
-      }}>
-        {/* Header */}
-        <div style={{ padding: '20px 24px', borderBottom: '1px solid #22283a', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-          <div>
-            <h2 style={{ fontSize: 18, fontWeight: 700, color: '#e8eaf0', margin: 0 }}>{lead.name}</h2>
-            <p style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>{lead.company}</p>
-          </div>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b7280', padding: 4 }}>
-            <X size={20} strokeWidth={1.5} />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: 24 }}>
-          {/* Tags */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-            {stageObj && (
-              <span style={{ background: `${stageObj.color}1F`, color: stageObj.color, borderRadius: 999, padding: '4px 12px', fontSize: 12, fontWeight: 500 }}>{lead.stage}</span>
-            )}
-            <span style={{ background: temp.bg, color: temp.color, borderRadius: 999, padding: '4px 12px', fontSize: 12, fontWeight: 500 }}>{temp.label}</span>
-          </div>
-
-          {/* Info rows */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <InfoRow label="Valor" value={formatCurrency(lead.value)} valueColor="#22c55e" />
-            <InfoRow label="Responsável" value={lead.responsible} />
-            <InfoRow label="Último contato" value={lead.lastContact ?? '—'} />
-            <InfoRow label="Telefone" value={lead.phone} />
-            <InfoRow label="E-mail" value={lead.email} />
-          </div>
-
-          {/* Action buttons */}
-          <div style={{ display: 'flex', gap: 8, marginTop: 24 }}>
-            <DrawerActionBtn color="#25d166" bg="rgba(37,209,102,0.1)" border="rgba(37,209,102,0.2)" icon={<MessageCircle size={16} strokeWidth={1.5} />} label="WhatsApp" />
-            <DrawerActionBtn color="#3b82f6" bg="rgba(59,130,246,0.1)" border="rgba(59,130,246,0.2)" icon={<Mail size={16} strokeWidth={1.5} />} label="E-mail" />
-            <DrawerActionBtn color="#f97316" bg="rgba(249,115,22,0.1)" border="rgba(249,115,22,0.2)" icon={<Phone size={16} strokeWidth={1.5} />} label="Ligar" />
-          </div>
-        </div>
-      </div>
-    </>
-  )
-}
-
-function InfoRow({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
-  return (
-    <div>
-      <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 2 }}>{label}</div>
-      <div style={{ fontSize: 14, color: valueColor ?? '#e8eaf0', fontWeight: 500 }}>{value}</div>
-    </div>
-  )
-}
-
-function DrawerActionBtn({ color, bg, border, icon, label }: { color: string; bg: string; border: string; icon: React.ReactNode; label: string }) {
-  return (
-    <button style={{
-      flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-      background: bg, color, border: `1px solid ${border}`, borderRadius: 8,
-      padding: '10px 0', fontSize: 13, fontWeight: 500, cursor: 'pointer',
-    }}>
-      {icon} {label}
-    </button>
   )
 }
 
