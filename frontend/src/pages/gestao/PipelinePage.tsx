@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, type DragEvent } from 'react'
-import { Search, MessageCircle, Mail, Phone, Plus } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Search, MessageCircle, Mail, Phone, Plus, Kanban as KanbanIcon, List } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
 import LeadDrawer from '../../components/shared/LeadDrawer/LeadDrawer'
@@ -91,6 +92,7 @@ const chips: { key: FilterChip; label: string; activeColor: string; activeBg: st
 // ── Component ──
 
 export default function PipelinePage() {
+  const nav = useNavigate()
   const [leads, setLeads] = useState<Lead[]>(initialLeads)
   const [search, setSearch] = useState('')
   const [activeChips, setActiveChips] = useState<Set<FilterChip>>(new Set())
@@ -171,7 +173,17 @@ export default function PipelinePage() {
 
       {/* Header + Stats inline */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexShrink: 0 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 700, color: '#e8eaf0', margin: 0 }}>Pipeline</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 20, fontWeight: 700, color: '#e8eaf0' }}>Pipeline</span>
+          <div style={{ display: 'flex', gap: 4 }}>
+            <button style={{ padding: '6px 12px', borderRadius: 8, fontSize: 12, cursor: 'pointer', border: '1px solid #f97316', background: 'rgba(249,115,22,0.12)', color: '#f97316', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <KanbanIcon size={14} strokeWidth={1.5} /> Kanban
+            </button>
+            <button onClick={() => nav('/gestao/leads')} style={{ padding: '6px 12px', borderRadius: 8, fontSize: 12, cursor: 'pointer', border: '1px solid #22283a', background: '#161a22', color: '#6b7280', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <List size={14} strokeWidth={1.5} /> Lista
+            </button>
+          </div>
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 0, fontSize: 13 }}>
           <span style={{ color: '#6b7280' }}>Total</span><span style={{ color: '#e8eaf0', fontWeight: 700, marginLeft: 4 }}>{stats.total}</span>
           <span style={{ color: '#22283a', margin: '0 10px' }}>|</span>
