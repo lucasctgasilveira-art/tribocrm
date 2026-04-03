@@ -1,9 +1,11 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Plus, Download, MoreHorizontal, Kanban, List } from 'lucide-react'
+import { Search, Plus, Download, MoreHorizontal, Kanban, List, FileSpreadsheet, FileText } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
 import NewLeadModal from '../../components/shared/NewLeadModal/NewLeadModal'
+import ImportLeadsModal from '../../components/shared/ImportLeadsModal/ImportLeadsModal'
+import LeadDrawer from '../../components/shared/LeadDrawer/LeadDrawer'
 
 // ── Data ──
 
@@ -82,6 +84,9 @@ export default function GestaoLeadsPage() {
   const [menu, setMenu] = useState<string | null>(null)
   const [hov, setHov] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
+  const [drawerLead, setDrawerLead] = useState<Lead | null>(null)
 
   const filtered = useMemo(() => {
     let r = mockLeads.filter((l) => {
@@ -98,6 +103,18 @@ export default function GestaoLeadsPage() {
     if (sortBy === 'name') r = [...r].sort((a, b) => a.name.localeCompare(b.name))
     return r
   }, [search, stageF, tempF, respF, sortBy, tab])
+
+  function exportData(type: 'xlsx' | 'csv') {
+    const header = 'Nome,Empresa,Etapa,Temperatura,Valor,Responsável,Última Atividade'
+    const rows = filtered.map(l => `${l.name},${l.company},${l.stage},${l.temperature},${l.value},${l.responsible},${l.lastActivity}`)
+    const csv = [header, ...rows].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    const date = new Date().toISOString().slice(0, 10)
+    a.href = url; a.download = `leads_export_${date}.${type}`; a.click()
+    URL.revokeObjectURL(url)
+  }
 
   const totalActive = mockLeads.filter(l => l.stage !== 'Perdido' && l.stage !== 'Venda Realizada').length
   const totalValue = mockLeads.reduce((s, l) => s + l.value, 0)
@@ -119,9 +136,26 @@ export default function GestaoLeadsPage() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#161a22', color: '#9ca3af', border: '1px solid #22283a', borderRadius: 8, padding: '8px 14px', fontSize: 13, cursor: 'pointer' }}>
+          <button onClick={() => setImportOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#161a22', color: '#9ca3af', border: '1px solid #22283a', borderRadius: 8, padding: '8px 14px', fontSize: 13, cursor: 'pointer' }}>
             <Download size={15} strokeWidth={1.5} /> Importar
           </button>
+          <div style={{ position: 'relative' }}>
+            <button onClick={() => setExportOpen(!exportOpen)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#161a22', color: '#9ca3af', border: '1px solid #22283a', borderRadius: 8, padding: '8px 14px', fontSize: 13, cursor: 'pointer' }}>
+              <Download size={15} strokeWidth={1.5} /> Exportar
+            </button>
+            {exportOpen && (
+              <div style={{ position: 'absolute', right: 0, top: 42, zIndex: 20, background: '#161a22', border: '1px solid #22283a', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', minWidth: 200, padding: '4px 0' }}>
+                <div onClick={() => { exportData('xlsx'); setExportOpen(false) }} style={{ padding: '10px 16px', fontSize: 13, color: '#e8eaf0', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
+                  onMouseEnter={e => { e.currentTarget.style.background = '#22283a' }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
+                  <FileSpreadsheet size={15} color="#22c55e" strokeWidth={1.5} /> Exportar Excel (.xlsx)
+                </div>
+                <div onClick={() => { exportData('csv'); setExportOpen(false) }} style={{ padding: '10px 16px', fontSize: 13, color: '#e8eaf0', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
+                  onMouseEnter={e => { e.currentTarget.style.background = '#22283a' }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
+                  <FileText size={15} color="#9ca3af" strokeWidth={1.5} /> Exportar CSV (.csv)
+                </div>
+              </div>
+            )}
+          </div>
           <button onClick={() => setModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
             onMouseEnter={(e) => { e.currentTarget.style.background = '#fb923c' }}
             onMouseLeave={(e) => { e.currentTarget.style.background = '#f97316' }}>
@@ -189,10 +223,10 @@ export default function GestaoLeadsPage() {
               const td = tempDisplay[l.temperature]
               return (
                 <tr key={l.id}
-                  onClick={() => { if (menu !== l.id) navigate(`/gestao/leads/${l.id}`) }}
+                  onClick={() => { if (menu !== l.id) setDrawerLead(l) }}
                   onMouseEnter={() => setHov(l.id)}
                   onMouseLeave={() => setHov(null)}
-                  style={{ borderBottom: '1px solid #22283a', background: hov === l.id ? '#1c2130' : 'transparent', cursor: 'pointer', transition: 'background 0.1s' }}>
+                  style={{ borderBottom: '1px solid #22283a', background: drawerLead?.id === l.id ? 'rgba(249,115,22,0.06)' : hov === l.id ? '#1c2130' : 'transparent', cursor: 'pointer', transition: 'background 0.1s', borderLeft: drawerLead?.id === l.id ? '2px solid #f97316' : '2px solid transparent' }}>
                   {/* Lead */}
                   <td style={{ padding: '14px 20px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -233,7 +267,7 @@ export default function GestaoLeadsPage() {
                       <div style={{ position: 'absolute', right: 20, top: 48, zIndex: 20, background: '#161a22', border: '1px solid #22283a', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', minWidth: 160, padding: '4px 0' }}>
                         {menuOpts.map(opt => (
                           <div key={opt}
-                            onClick={(e) => { e.stopPropagation(); setMenu(null); if (opt === 'Ver detalhes') navigate(`/gestao/leads/${l.id}`) }}
+                            onClick={(e) => { e.stopPropagation(); setMenu(null); if (opt === 'Ver detalhes') setDrawerLead(l) }}
                             style={{ padding: '8px 14px', fontSize: 13, color: '#e8eaf0', cursor: 'pointer' }}
                             onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
                             onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}>
@@ -259,6 +293,21 @@ export default function GestaoLeadsPage() {
         </div>
       </div>
       <NewLeadModal open={modalOpen} onClose={() => setModalOpen(false)} onSubmit={() => setModalOpen(false)} />
+      <ImportLeadsModal open={importOpen} onClose={() => setImportOpen(false)} />
+      {drawerLead && (
+        <LeadDrawer
+          lead={{
+            id: drawerLead.id, name: drawerLead.name, company: drawerLead.company,
+            value: drawerLead.value, stage: drawerLead.stage,
+            temperature: (drawerLead.temperature === 'Quente' ? 'HOT' : drawerLead.temperature === 'Morno' ? 'WARM' : 'COLD') as 'HOT' | 'WARM' | 'COLD',
+            responsible: ini(drawerLead.responsible), lastContact: drawerLead.lastActivity,
+            phone: '—', email: '—',
+          }}
+          onClose={() => setDrawerLead(null)}
+          stageColor={stageColors[drawerLead.stage] ?? '#6b7280'}
+          instance="gestao"
+        />
+      )}
     </AppLayout>
   )
 }
