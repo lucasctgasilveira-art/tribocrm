@@ -1,14 +1,15 @@
 import { useState } from 'react'
 import {
-  Mail, MessageCircle, Phone, Video, FileText, Handshake,
-  Check, Plus, type LucideIcon,
+  Mail, MessageCircle, Phone, Video, FileText, Handshake, ShieldCheck,
+  Check, Plus, ChevronRight, type LucideIcon,
 } from 'lucide-react'
 import AppLayout from '../AppLayout/AppLayout'
 import type { SidebarEntry } from '../Sidebar/Sidebar'
+import TaskDrawer from '../TaskDrawer/TaskDrawer'
 
 // ── Types ──
 
-type TaskType = 'call' | 'email' | 'whatsapp' | 'meeting' | 'visit' | 'proposal'
+type TaskType = 'call' | 'email' | 'whatsapp' | 'meeting' | 'visit' | 'proposal' | 'approve'
 type PeriodFilter = 'overdue' | 'today' | 'week' | 'nextweek' | 'all' | 'done'
 
 interface MockTask {
@@ -25,6 +26,7 @@ interface MockTask {
   done: boolean
   calendarBadge?: boolean
   doneDate?: string
+  detail?: string
   group: 'today' | 'tomorrow' | 'done'
 }
 
@@ -37,14 +39,15 @@ const typeConfig: Record<TaskType, { icon: LucideIcon; color: string; label: str
   meeting: { icon: Video, color: '#a855f7', label: 'Reunião' },
   visit: { icon: Handshake, color: '#f59e0b', label: 'Visita' },
   proposal: { icon: FileText, color: '#9ca3af', label: 'Proposta' },
+  approve: { icon: ShieldCheck, color: '#22c55e', label: 'Liberar Pedido' },
 }
 
 const periodFilters: { key: PeriodFilter; label: string; count: number; badgeColor?: string }[] = [
   { key: 'overdue', label: 'Atrasadas', count: 2, badgeColor: '#ef4444' },
-  { key: 'today', label: 'Hoje', count: 3, badgeColor: '#f97316' },
-  { key: 'week', label: 'Esta semana', count: 7 },
+  { key: 'today', label: 'Hoje', count: 4, badgeColor: '#f97316' },
+  { key: 'week', label: 'Esta semana', count: 8 },
   { key: 'nextweek', label: 'Próxima semana', count: 4 },
-  { key: 'all', label: 'Todas', count: 14 },
+  { key: 'all', label: 'Todas', count: 15 },
   { key: 'done', label: 'Concluídas', count: 18 },
 ]
 
@@ -54,6 +57,7 @@ const typeFilters: { key: TaskType; icon: LucideIcon; color: string; label: stri
   { key: 'call', icon: Phone, color: '#f97316', label: 'Ligação' },
   { key: 'meeting', icon: Video, color: '#a855f7', label: 'Reunião' },
   { key: 'visit', icon: Handshake, color: '#f59e0b', label: 'Visita' },
+  { key: 'approve', icon: ShieldCheck, color: '#22c55e', label: 'Liberar Pedido' },
 ]
 
 // ── Mock Data ──
@@ -62,6 +66,7 @@ const mockTasks: MockTask[] = [
   { id: '1', type: 'call', title: 'Follow-up sobre desconto solicitado', leadInitials: 'CT', leadName: 'Camila Torres', leadCompany: 'Torres & Filhos', stageBadge: 'Negociando', stageColor: '#f59e0b', time: '14:00', overdue: true, done: false, group: 'today' },
   { id: '2', type: 'meeting', title: 'Demo ao vivo para a equipe comercial', leadInitials: 'RM', leadName: 'Rafael Mendes', leadCompany: 'MendesNet', stageBadge: 'Em Contato', stageColor: '#3b82f6', time: '16:30', overdue: false, done: false, calendarBadge: true, group: 'today' },
   { id: '3', type: 'email', title: 'Enviar material de apresentação do produto', leadInitials: 'FL', leadName: 'Fernanda Lima', leadCompany: 'Lima Distribuidora', stageBadge: 'Sem Contato', stageColor: '#6b7280', time: '18:00', overdue: false, done: false, group: 'today' },
+  { id: '8', type: 'approve', title: 'Liberar pedido — Desconto 20% Plano Pro', leadInitials: 'AN', leadName: 'Ana Souza → Camila Torres', leadCompany: 'Torres & Filhos', stageBadge: 'Negociando', stageColor: '#f59e0b', time: 'Aguardando · 2h', overdue: false, done: false, detail: 'R$ 12.000 → R$ 9.600 · economia R$ 2.400', group: 'today' },
   { id: '4', type: 'whatsapp', title: 'Enviar link da proposta atualizada', leadInitials: 'PG', leadName: 'Priscila Gomes', leadCompany: 'GomesTech', stageBadge: 'Proposta Enviada', stageColor: '#a855f7', time: '10:00', overdue: false, done: false, group: 'tomorrow' },
   { id: '5', type: 'proposal', title: 'Montar proposta com desconto 5%', leadInitials: 'CT', leadName: 'Camila Torres', leadCompany: 'Torres & Filhos', stageBadge: 'Negociando', stageColor: '#f59e0b', time: '14:00', overdue: false, done: false, group: 'tomorrow' },
   { id: '6', type: 'email', title: 'Enviar contrato revisado', leadInitials: 'DM', leadName: 'Diego Marques', leadCompany: 'Marquesali', stageBadge: 'Proposta Enviada', stageColor: '#a855f7', time: '', overdue: false, done: true, doneDate: '19/03', group: 'done' },
@@ -79,9 +84,18 @@ export default function TasksView({ menuItems }: TasksViewProps) {
   const [typeFilter, setTypeFilter] = useState<TaskType | null>(null)
   const [tasks, setTasks] = useState(mockTasks)
   const [hoveredId, setHoveredId] = useState<string | null>(null)
+  const [selectedTask, setSelectedTask] = useState<MockTask | null>(null)
+  const [toast, setToast] = useState('')
 
   function toggleDone(id: string) {
     setTasks((prev) => prev.map((t) => t.id === id ? { ...t, done: !t.done } : t))
+  }
+
+  function handleDrawerComplete(id: string) {
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, done: true, doneDate: 'agora' } : t))
+    setSelectedTask(null)
+    setToast('Tarefa concluída!')
+    setTimeout(() => setToast(''), 3000)
   }
 
   const filtered = tasks.filter((t) => {
@@ -154,13 +168,13 @@ export default function TasksView({ menuItems }: TasksViewProps) {
 
           {/* Task groups */}
           {todayTasks.length > 0 && (
-            <TaskGroup label="Hoje — Quinta, 03 de Abril" tasks={todayTasks} hoveredId={hoveredId} setHoveredId={setHoveredId} toggleDone={toggleDone} />
+            <TaskGroup label="Hoje — Quinta, 03 de Abril" tasks={todayTasks} hoveredId={hoveredId} setHoveredId={setHoveredId} toggleDone={toggleDone} selectedId={selectedTask?.id ?? null} onSelect={setSelectedTask} />
           )}
           {tomorrowTasks.length > 0 && (
-            <TaskGroup label="Amanhã — Sexta, 04 de Abril" tasks={tomorrowTasks} hoveredId={hoveredId} setHoveredId={setHoveredId} toggleDone={toggleDone} />
+            <TaskGroup label="Amanhã — Sexta, 04 de Abril" tasks={tomorrowTasks} hoveredId={hoveredId} setHoveredId={setHoveredId} toggleDone={toggleDone} selectedId={selectedTask?.id ?? null} onSelect={setSelectedTask} />
           )}
           {doneTasks.length > 0 && (
-            <TaskGroup label="Concluídas recentemente" tasks={doneTasks} hoveredId={hoveredId} setHoveredId={setHoveredId} toggleDone={toggleDone} />
+            <TaskGroup label="Concluídas recentemente" tasks={doneTasks} hoveredId={hoveredId} setHoveredId={setHoveredId} toggleDone={toggleDone} selectedId={selectedTask?.id ?? null} onSelect={setSelectedTask} />
           )}
           {filtered.length === 0 && (
             <div style={{ textAlign: 'center', padding: 40, color: '#6b7280', fontSize: 13 }}>Nenhuma tarefa encontrada.</div>
@@ -174,8 +188,9 @@ export default function TasksView({ menuItems }: TasksViewProps) {
               <div style={{ fontSize: 13, fontWeight: 600, color: '#e8eaf0', marginBottom: 16 }}>Resumo da semana</div>
 
               <SummaryCard label="Atrasadas" value="2" color="#ef4444" />
-              <SummaryCard label="Para hoje" value="3" color="#f97316" />
-              <SummaryCard label="Esta semana" value="7" color="#e8eaf0" />
+              <SummaryCard label="Para hoje" value="4" color="#f97316" />
+              <SummaryCard label="Esta semana" value="8" color="#e8eaf0" />
+              <SummaryCard label="Liberar pedido" value="3" color="#22c55e" />
               <SummaryCard label="Concluídas" value="18" color="#22c55e" />
 
               <div style={{ borderTop: '1px solid #22283a', margin: '16px 0' }} />
@@ -196,18 +211,18 @@ export default function TasksView({ menuItems }: TasksViewProps) {
           </div>
         </div>
       </div>
+      {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: '#161a22', border: '1px solid #22283a', borderLeft: '4px solid #22c55e', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: '#e8eaf0', zIndex: 60, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>{toast}</div>}
+      {selectedTask && <TaskDrawer task={selectedTask} onClose={() => setSelectedTask(null)} onComplete={handleDrawerComplete} />}
     </AppLayout>
   )
 }
 
 // ── Task Group ──
 
-function TaskGroup({ label, tasks, hoveredId, setHoveredId, toggleDone }: {
-  label: string
-  tasks: MockTask[]
-  hoveredId: string | null
-  setHoveredId: (id: string | null) => void
-  toggleDone: (id: string) => void
+function TaskGroup({ label, tasks, hoveredId, setHoveredId, toggleDone, selectedId, onSelect }: {
+  label: string; tasks: MockTask[]; hoveredId: string | null
+  setHoveredId: (id: string | null) => void; toggleDone: (id: string) => void
+  selectedId: string | null; onSelect: (t: MockTask) => void
 }) {
   return (
     <div style={{ marginBottom: 24 }}>
@@ -215,7 +230,7 @@ function TaskGroup({ label, tasks, hoveredId, setHoveredId, toggleDone }: {
         {label}
       </div>
       {tasks.map((task) => (
-        <TaskCard key={task.id} task={task} hovered={hoveredId === task.id} onHover={setHoveredId} toggleDone={toggleDone} />
+        <TaskCard key={task.id} task={task} hovered={hoveredId === task.id} selected={selectedId === task.id} onHover={setHoveredId} toggleDone={toggleDone} onSelect={() => onSelect(task)} />
       ))}
     </div>
   )
@@ -223,22 +238,22 @@ function TaskGroup({ label, tasks, hoveredId, setHoveredId, toggleDone }: {
 
 // ── Task Card ──
 
-function TaskCard({ task, hovered, onHover, toggleDone }: {
-  task: MockTask
-  hovered: boolean
-  onHover: (id: string | null) => void
-  toggleDone: (id: string) => void
+function TaskCard({ task, hovered, selected, onHover, toggleDone, onSelect }: {
+  task: MockTask; hovered: boolean; selected: boolean
+  onHover: (id: string | null) => void; toggleDone: (id: string) => void; onSelect: () => void
 }) {
   const tc = typeConfig[task.type]
   const Icon = tc.icon
+  const [btnHov, setBtnHov] = useState(false)
 
   return (
     <div
       onMouseEnter={() => onHover(task.id)}
       onMouseLeave={() => onHover(null)}
       style={{
-        background: hovered ? '#1c2130' : '#161a22',
-        border: `1px solid ${hovered ? '#374151' : '#22283a'}`,
+        background: selected ? 'rgba(249,115,22,0.06)' : hovered ? '#1c2130' : '#161a22',
+        border: `1px solid ${hovered || selected ? '#374151' : '#22283a'}`,
+        borderLeft: selected ? '2px solid #f97316' : `1px solid ${hovered ? '#374151' : '#22283a'}`,
         borderRadius: 10, padding: 14, marginBottom: 8,
         display: 'flex', gap: 12, alignItems: 'flex-start',
         transition: 'all 0.15s', opacity: task.done ? 0.5 : 1,
@@ -289,6 +304,8 @@ function TaskCard({ task, hovered, onHover, toggleDone }: {
             <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: 'rgba(239,68,68,0.12)', color: '#ef4444', fontWeight: 600 }}>
               Atrasada · {task.time}
             </span>
+          ) : task.time.includes('Aguardando') ? (
+            <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: 'rgba(249,115,22,0.12)', color: '#f97316', fontWeight: 600 }}>{task.time}</span>
           ) : (
             <span style={{ fontSize: 12, color: '#9ca3af' }}>{task.time}</span>
           )}
@@ -296,7 +313,24 @@ function TaskCard({ task, hovered, onHover, toggleDone }: {
             <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, background: 'rgba(59,130,246,0.12)', color: '#3b82f6' }}>Google Calendar</span>
           )}
         </div>
+        {task.detail && (
+          <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>{task.detail}</div>
+        )}
       </div>
+
+      {/* Details button */}
+      <button onClick={onSelect}
+        onMouseEnter={() => setBtnHov(true)} onMouseLeave={() => setBtnHov(false)}
+        style={{
+          background: btnHov ? 'rgba(249,115,22,0.06)' : 'transparent',
+          border: `1px solid ${btnHov ? '#f97316' : '#22283a'}`,
+          borderRadius: 6, padding: '5px 10px', fontSize: 12,
+          color: btnHov ? '#f97316' : '#9ca3af', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', gap: 4,
+          flexShrink: 0, alignSelf: 'center', transition: 'all 0.15s', whiteSpace: 'nowrap',
+        }}>
+        Detalhes <ChevronRight size={14} strokeWidth={1.5} />
+      </button>
     </div>
   )
 }
