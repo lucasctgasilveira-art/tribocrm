@@ -22,7 +22,8 @@
       "Bash(lsof -ti:3001)",
       "Bash(xargs kill:*)",
       "Bash(netstat -ano)",
-      "Bash(node -e \"const d=JSON.parse\\(require\\('fs'\\).readFileSync\\(0,'utf8'\\)\\);console.log\\('role:',d.data.user.role\\);console.log\\('name:',d.data.user.name\\);console.log\\('tenantId:',d.data.user.tenantId\\);console.log\\('token OK:',d.data.accessToken.length>0\\)\")"
+      "Bash(node -e \"const d=JSON.parse\\(require\\('fs'\\).readFileSync\\(0,'utf8'\\)\\);console.log\\('role:',d.data.user.role\\);console.log\\('name:',d.data.user.name\\);console.log\\('tenantId:',d.data.user.tenantId\\);console.log\\('token OK:',d.data.accessToken.length>0\\)\")",
+      "Bash(git commit:*)"
     ]
   }
 }
