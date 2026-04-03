@@ -1,4 +1,6 @@
-import GestaoPlaceholder from './GestaoPlaceholder'
-export default function TasksPage() {
-  return <GestaoPlaceholder title="Tarefas" subtitle="Tarefas do time" />
+import TasksView from '../../components/shared/TasksView/TasksView'
+import { gestaoMenuItems } from '../../config/gestaoMenu'
+
+export default function GestaoTasksPage() {
+  return <TasksView menuItems={gestaoMenuItems} />
 }
