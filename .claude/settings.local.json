@@ -10,7 +10,19 @@
       "Bash(npm install:*)",
       "Bash(npx prisma:*)",
       "Bash(npx tsx:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git rm:*)",
+      "Bash(git remote:*)",
+      "Bash(git branch:*)",
+      "Bash(git push:*)",
+      "Bash(npm run:*)",
+      "Bash(curl:*)",
+      "Bash(python -m json.tool)",
+      "Bash(npx kill-port:*)",
+      "Bash(lsof -ti:3001)",
+      "Bash(xargs kill:*)",
+      "Bash(netstat -ano)",
+      "Bash(node -e \"const d=JSON.parse\\(require\\('fs'\\).readFileSync\\(0,'utf8'\\)\\);console.log\\('role:',d.data.user.role\\);console.log\\('name:',d.data.user.name\\);console.log\\('tenantId:',d.data.user.tenantId\\);console.log\\('token OK:',d.data.accessToken.length>0\\)\")"
     ]
   }
 }

@@ -65,6 +65,78 @@ export async function login(req: Request, res: Response): Promise<void> {
       return
     }
 
+    // 1. Try admin_users first
+    const adminUser = await prisma.adminUser.findUnique({
+      where: { email: emailLower },
+    })
+
+    if (adminUser && adminUser.isActive) {
+      const passwordValid = await bcrypt.compare(password, adminUser.passwordHash)
+      if (!passwordValid) {
+        incrementLoginAttempts(emailLower)
+        const current = loginAttempts.get(emailLower)
+        const remaining = MAX_LOGIN_ATTEMPTS - (current?.count ?? 0)
+
+        if (remaining <= 0) {
+          res.status(429).json({
+            success: false,
+            error: {
+              code: 'ACCOUNT_LOCKED',
+              message: 'Conta bloqueada por excesso de tentativas. Tente novamente em 15 minutos.',
+            },
+          })
+          return
+        }
+
+        res.status(401).json({
+          success: false,
+          error: {
+            code: 'INVALID_CREDENTIALS',
+            message: `E-mail ou senha incorretos. ${remaining} tentativa(s) restante(s).`,
+          },
+        })
+        return
+      }
+
+      // Admin login success
+      loginAttempts.delete(emailLower)
+
+      const tokenPayload = { userId: adminUser.id, tenantId: 'platform', role: adminUser.role }
+      const accessToken = generateAccessToken(tokenPayload)
+      const refreshToken = generateRefreshToken(tokenPayload)
+
+      await prisma.adminUser.update({
+        where: { id: adminUser.id },
+        data: { lastLoginAt: new Date() },
+      })
+
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+        path: '/',
+      })
+
+      res.json({
+        success: true,
+        data: {
+          accessToken,
+          user: {
+            id: adminUser.id,
+            name: adminUser.name,
+            email: adminUser.email,
+            role: adminUser.role,
+            tenantId: 'platform',
+            avatarUrl: null,
+            themePreference: 'DARK',
+          },
+        },
+      })
+      return
+    }
+
+    // 2. Try users table
     const user = await prisma.user.findFirst({
       where: { email: emailLower, deletedAt: null },
       include: { tenant: true },
@@ -114,14 +186,13 @@ export async function login(req: Request, res: Response): Promise<void> {
       return
     }
 
-    // Reset attempts on successful login
+    // User login success
     loginAttempts.delete(emailLower)
 
     const tokenPayload = { userId: user.id, tenantId: user.tenantId, role: user.role }
     const accessToken = generateAccessToken(tokenPayload)
     const refreshToken = generateRefreshToken(tokenPayload)
 
-    // Update last login
     await prisma.user.update({
       where: { id: user.id },
       data: {
@@ -130,12 +201,11 @@ export async function login(req: Request, res: Response): Promise<void> {
       },
     })
 
-    // Set refreshToken as httpOnly cookie
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      maxAge: 30 * 24 * 60 * 60 * 1000,
       path: '/',
     })
 
@@ -189,19 +259,34 @@ export async function refresh(req: Request, res: Response): Promise<void> {
       role: string
     }
 
-    const user = await prisma.user.findFirst({
-      where: { id: decoded.userId, tenantId: decoded.tenantId, isActive: true, deletedAt: null },
-    })
+    let tokenPayload: { userId: string; tenantId: string; role: string }
 
-    if (!user) {
-      res.status(401).json({
-        success: false,
-        error: { code: 'USER_NOT_FOUND', message: 'Usuário não encontrado' },
+    if (decoded.tenantId === 'platform') {
+      // Admin user refresh
+      const adminUser = await prisma.adminUser.findFirst({
+        where: { id: decoded.userId, isActive: true },
       })
-      return
+      if (!adminUser) {
+        res.status(401).json({
+          success: false,
+          error: { code: 'USER_NOT_FOUND', message: 'Usuário não encontrado' },
+        })
+        return
+      }
+      tokenPayload = { userId: adminUser.id, tenantId: 'platform', role: adminUser.role }
+    } else {
+      const user = await prisma.user.findFirst({
+        where: { id: decoded.userId, tenantId: decoded.tenantId, isActive: true, deletedAt: null },
+      })
+      if (!user) {
+        res.status(401).json({
+          success: false,
+          error: { code: 'USER_NOT_FOUND', message: 'Usuário não encontrado' },
+        })
+        return
+      }
+      tokenPayload = { userId: user.id, tenantId: user.tenantId, role: user.role }
     }
-
-    const tokenPayload = { userId: user.id, tenantId: user.tenantId, role: user.role }
     const accessToken = generateAccessToken(tokenPayload)
     const newRefreshToken = generateRefreshToken(tokenPayload)
 

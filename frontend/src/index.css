@@ -6,6 +6,7 @@
   --card: #161a22;
   --border: #22283a;
   --accent: #f97316;
+  --accent-hover: #fb923c;
   --text: #e8eaf0;
   --text-2: #9ca3af;
   --muted: #6b7280;
@@ -34,6 +35,7 @@ body {
   --color-card: #161a22;
   --color-border: #22283a;
   --color-accent: #f97316;
+  --color-accent-hover: #fb923c;
   --color-text: #e8eaf0;
   --color-text-2: #9ca3af;
   --color-muted: #6b7280;
