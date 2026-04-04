@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import {
   Mail, MessageCircle, Phone, Video, FileText, Handshake, ShieldCheck,
-  Check, Plus, ChevronRight, type LucideIcon,
+  Check, Plus, ChevronRight, Users, BarChart2, BookOpen, type LucideIcon,
 } from 'lucide-react'
 import AppLayout from '../AppLayout/AppLayout'
 import type { SidebarEntry } from '../Sidebar/Sidebar'
@@ -73,6 +73,28 @@ const mockTasks: MockTask[] = [
   { id: '7', type: 'call', title: 'Qualificar necessidade e orçamento disponível', leadInitials: 'TB', leadName: 'Thiago Bastos', leadCompany: 'Bastos & Co', stageBadge: 'Em Contato', stageColor: '#3b82f6', time: '', overdue: false, done: true, doneDate: '18/03', group: 'done' },
 ]
 
+// ── Managerial Tasks ──
+
+type TaskCategory = 'leads' | 'gerenciais'
+
+interface ManagerialTask {
+  id: string
+  icon: LucideIcon
+  iconColor: string
+  title: string
+  recurrence: string
+  deadline: string
+  overdue: boolean
+  participants: string[]
+}
+
+const managerialTasks: ManagerialTask[] = [
+  { id: 'g1', icon: Users, iconColor: '#f97316', title: 'Feedback individual — Ana Souza', recurrence: 'Quinzenal', deadline: 'Vence hoje 15:00', overdue: true, participants: ['AS', 'LG'] },
+  { id: 'g2', icon: Users, iconColor: '#f97316', title: 'Reunião de alinhamento do time', recurrence: 'Semanal', deadline: 'Amanhã 09:00', overdue: false, participants: ['AS', 'PG', 'CT'] },
+  { id: 'g3', icon: BarChart2, iconColor: '#3b82f6', title: 'Análise de relatório mensal', recurrence: 'Mensal', deadline: 'Esta semana', overdue: false, participants: ['LG'] },
+  { id: 'g4', icon: BookOpen, iconColor: '#a855f7', title: 'Treinamento interno — Pipeline Kanban', recurrence: 'Mensal', deadline: 'Próxima semana', overdue: false, participants: ['AS', 'PG', 'CT', 'RM'] },
+]
+
 // ── Component ──
 
 interface TasksViewProps {
@@ -80,6 +102,7 @@ interface TasksViewProps {
 }
 
 export default function TasksView({ menuItems }: TasksViewProps) {
+  const [category, setCategory] = useState<TaskCategory>('leads')
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('today')
   const [typeFilter, setTypeFilter] = useState<TaskType | null>(null)
   const [tasks, setTasks] = useState(mockTasks)
@@ -148,7 +171,7 @@ export default function TasksView({ menuItems }: TasksViewProps) {
           </div>
 
           {/* Type filters */}
-          <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
             {typeFilters.map((tf) => {
               const Icon = tf.icon
               const active = typeFilter === tf.key
@@ -166,18 +189,131 @@ export default function TasksView({ menuItems }: TasksViewProps) {
             })}
           </div>
 
-          {/* Task groups */}
-          {todayTasks.length > 0 && (
-            <TaskGroup label="Hoje — Quinta, 03 de Abril" tasks={todayTasks} hoveredId={hoveredId} setHoveredId={setHoveredId} toggleDone={toggleDone} selectedId={selectedTask?.id ?? null} onSelect={setSelectedTask} />
+          {/* Category toggle */}
+          <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
+            {([
+              { key: 'leads' as const, label: 'Tarefas de leads' },
+              { key: 'gerenciais' as const, label: 'Tarefas gerenciais' },
+            ]).map((c) => {
+              const active = category === c.key
+              return (
+                <button
+                  key={c.key}
+                  onClick={() => setCategory(c.key)}
+                  style={{
+                    borderRadius: 999,
+                    padding: '6px 16px',
+                    fontSize: 13,
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    background: active ? 'rgba(249,115,22,0.12)' : '#161a22',
+                    border: `1px solid ${active ? '#f97316' : '#22283a'}`,
+                    color: active ? '#f97316' : '#6b7280',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {c.label}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Lead tasks */}
+          {category === 'leads' && (
+            <>
+              {todayTasks.length > 0 && (
+                <TaskGroup label="Hoje — Quinta, 03 de Abril" tasks={todayTasks} hoveredId={hoveredId} setHoveredId={setHoveredId} toggleDone={toggleDone} selectedId={selectedTask?.id ?? null} onSelect={setSelectedTask} />
+              )}
+              {tomorrowTasks.length > 0 && (
+                <TaskGroup label="Amanhã — Sexta, 04 de Abril" tasks={tomorrowTasks} hoveredId={hoveredId} setHoveredId={setHoveredId} toggleDone={toggleDone} selectedId={selectedTask?.id ?? null} onSelect={setSelectedTask} />
+              )}
+              {doneTasks.length > 0 && (
+                <TaskGroup label="Concluídas recentemente" tasks={doneTasks} hoveredId={hoveredId} setHoveredId={setHoveredId} toggleDone={toggleDone} selectedId={selectedTask?.id ?? null} onSelect={setSelectedTask} />
+              )}
+              {filtered.length === 0 && (
+                <div style={{ textAlign: 'center', padding: 40, color: '#6b7280', fontSize: 13 }}>Nenhuma tarefa encontrada.</div>
+              )}
+            </>
           )}
-          {tomorrowTasks.length > 0 && (
-            <TaskGroup label="Amanhã — Sexta, 04 de Abril" tasks={tomorrowTasks} hoveredId={hoveredId} setHoveredId={setHoveredId} toggleDone={toggleDone} selectedId={selectedTask?.id ?? null} onSelect={setSelectedTask} />
-          )}
-          {doneTasks.length > 0 && (
-            <TaskGroup label="Concluídas recentemente" tasks={doneTasks} hoveredId={hoveredId} setHoveredId={setHoveredId} toggleDone={toggleDone} selectedId={selectedTask?.id ?? null} onSelect={setSelectedTask} />
-          )}
-          {filtered.length === 0 && (
-            <div style={{ textAlign: 'center', padding: 40, color: '#6b7280', fontSize: 13 }}>Nenhuma tarefa encontrada.</div>
+
+          {/* Managerial tasks */}
+          {category === 'gerenciais' && (
+            <div>
+              {managerialTasks.map((mt) => {
+                const Icon = mt.icon
+                return (
+                  <div
+                    key={mt.id}
+                    style={{
+                      background: '#161a22',
+                      border: '1px solid #22283a',
+                      borderRadius: 10,
+                      padding: 14,
+                      marginBottom: 8,
+                      display: 'flex',
+                      gap: 12,
+                      alignItems: 'center',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = '#1c2130'; e.currentTarget.style.borderColor = '#374151' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = '#161a22'; e.currentTarget.style.borderColor = '#22283a' }}
+                  >
+                    {/* icon */}
+                    <div style={{
+                      width: 34, height: 34, borderRadius: 8, flexShrink: 0,
+                      background: `${mt.iconColor}1F`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <Icon size={16} color={mt.iconColor} strokeWidth={1.5} />
+                    </div>
+
+                    {/* content */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: '#e8eaf0' }}>{mt.title}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                        <span style={{ fontSize: 10, fontWeight: 500, background: '#22283a', color: '#9ca3af', borderRadius: 4, padding: '2px 8px' }}>
+                          {mt.recurrence}
+                        </span>
+                        <span style={{
+                          fontSize: 11,
+                          color: mt.overdue ? '#ef4444' : '#9ca3af',
+                          fontWeight: mt.overdue ? 600 : 400,
+                        }}>
+                          {mt.deadline}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* stacked avatars */}
+                    <div style={{ display: 'flex', flexShrink: 0 }}>
+                      {mt.participants.map((p, i) => (
+                        <div
+                          key={p}
+                          style={{
+                            width: 24, height: 24, borderRadius: '50%',
+                            background: '#22283a', border: '2px solid #161a22',
+                            fontSize: 9, fontWeight: 700, color: '#e8eaf0',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            marginLeft: i > 0 ? -8 : 0, zIndex: mt.participants.length - i,
+                          }}
+                        >
+                          {p}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* details button */}
+                    <button style={{
+                      background: 'transparent', border: '1px solid #22283a',
+                      borderRadius: 6, padding: '5px 10px', fontSize: 12,
+                      color: '#9ca3af', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0,
+                    }}>
+                      Detalhes <ChevronRight size={14} strokeWidth={1.5} />
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
           )}
         </div>
 
@@ -191,6 +327,7 @@ export default function TasksView({ menuItems }: TasksViewProps) {
               <SummaryCard label="Para hoje" value="4" color="#f97316" />
               <SummaryCard label="Esta semana" value="8" color="#e8eaf0" />
               <SummaryCard label="Liberar pedido" value="3" color="#22c55e" />
+              <SummaryCard label="Gerenciais" value="2" color="#a855f7" />
               <SummaryCard label="Concluídas" value="18" color="#22c55e" />
 
               <div style={{ borderTop: '1px solid #22283a', margin: '16px 0' }} />

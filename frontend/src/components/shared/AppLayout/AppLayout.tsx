@@ -1,8 +1,9 @@
-import { useState, useEffect, type ReactNode } from 'react'
+import { useState, useEffect, useCallback, type ReactNode } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import Topbar from '../Topbar/Topbar'
 import Sidebar, { type SidebarEntry, SIDEBAR_EXPANDED_W, SIDEBAR_COLLAPSED_W } from '../Sidebar/Sidebar'
 import PopupManager, { type PopupData } from '../PopupManager/PopupManager'
+import GlobalSearch from '../GlobalSearch/GlobalSearch'
 
 interface AppLayoutProps {
   menuItems: SidebarEntry[]
@@ -48,6 +49,22 @@ const mockPopups: PopupData[] = [
 export default function AppLayout({ menuItems, children }: AppLayoutProps) {
   const navigate = useNavigate()
   const location = useLocation()
+  const [searchOpen, setSearchOpen] = useState(false)
+
+  const openSearch = useCallback(() => setSearchOpen(true), [])
+  const closeSearch = useCallback(() => setSearchOpen(false), [])
+
+  /* Ctrl+K / Cmd+K */
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault()
+        setSearchOpen((prev) => !prev)
+      }
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [])
 
   const [sidebarW, setSidebarW] = useState(() =>
     localStorage.getItem('tribocrm_sidebar_collapsed') === 'true' ? SIDEBAR_COLLAPSED_W : SIDEBAR_EXPANDED_W
@@ -82,7 +99,7 @@ export default function AppLayout({ menuItems, children }: AppLayoutProps) {
 
   return (
     <div style={{ minHeight: '100vh', background: '#0a0b0f' }}>
-      <Topbar />
+      <Topbar onOpenSearch={openSearch} />
       <Sidebar menuItems={menuItems} />
       <main style={{ marginLeft: sidebarW, paddingTop: 60, transition: 'margin-left 0.25s cubic-bezier(0.4,0,0.2,1)' }}>
         <div style={{ padding: 24, minHeight: 'calc(100vh - 60px)', overflow: 'hidden' }}>
@@ -90,6 +107,7 @@ export default function AppLayout({ menuItems, children }: AppLayoutProps) {
         </div>
       </main>
       <PopupManager popups={mockPopups} />
+      <GlobalSearch open={searchOpen} onClose={closeSearch} />
     </div>
   )
 }
