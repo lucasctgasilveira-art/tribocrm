@@ -5,6 +5,7 @@ interface JwtPayload {
   userId: string
   tenantId: string
   role: string
+  teamId: string | null
 }
 
 declare global {
@@ -41,7 +42,12 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
     if (!secret) throw new Error('JWT_SECRET not configured')
 
     const decoded = jwt.verify(token, secret) as JwtPayload
-    req.user = decoded
+    req.user = {
+      userId: decoded.userId,
+      tenantId: decoded.tenantId,
+      role: decoded.role,
+      teamId: decoded.teamId ?? null,
+    }
     next()
   } catch {
     res.status(401).json({
