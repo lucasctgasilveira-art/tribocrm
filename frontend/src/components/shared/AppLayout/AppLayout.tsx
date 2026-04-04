@@ -1,11 +1,48 @@
 import { useState, useEffect, type ReactNode } from 'react'
 import Topbar from '../Topbar/Topbar'
 import Sidebar, { type SidebarEntry, SIDEBAR_EXPANDED_W, SIDEBAR_COLLAPSED_W } from '../Sidebar/Sidebar'
+import PopupManager, { type PopupData } from '../PopupManager/PopupManager'
 
 interface AppLayoutProps {
   menuItems: SidebarEntry[]
   children: ReactNode
 }
+
+const mockPopups: PopupData[] = [
+  {
+    id: 'pop-welcome',
+    type: 'WELCOME',
+    title: 'Bem-vindo ao TriboCRM! \u{1F389}',
+    message: 'Seu sistema está configurado e pronto para uso. Comece cadastrando seus primeiros leads no pipeline.',
+    ctaLabel: 'Começar agora',
+    ctaUrl: '/gestao/leads',
+    targetInstance: 'BOTH',
+    frequency: 'ONCE_PER_USER',
+    priority: 2,
+  },
+  {
+    id: 'pop-news',
+    type: 'NEWS',
+    title: 'Novidade — Pipeline Kanban v2',
+    message: 'Conheça as melhorias do nosso Pipeline: headers coloridos, drag and drop melhorado e drawer do lead completo.',
+    ctaLabel: 'Ver novidades',
+    ctaUrl: '/gestao/pipeline',
+    targetInstance: 'INSTANCE_2',
+    frequency: 'ONCE_PER_USER',
+    priority: 2,
+  },
+  {
+    id: 'pop-promo',
+    type: 'PROMO',
+    title: 'Upgrade para Pro com 15% OFF',
+    message: 'Aproveite nossa promoção de abril e faça upgrade para o Plano Pro com desconto especial.',
+    ctaLabel: 'Ver oferta',
+    ctaUrl: '/gestao/assinatura',
+    targetInstance: 'INSTANCE_2',
+    frequency: 'ONCE_PER_DAY',
+    priority: 2,
+  },
+]
 
 export default function AppLayout({ menuItems, children }: AppLayoutProps) {
   const [sidebarW, setSidebarW] = useState(() =>
@@ -30,6 +67,7 @@ export default function AppLayout({ menuItems, children }: AppLayoutProps) {
           {children}
         </div>
       </main>
+      <PopupManager popups={mockPopups} />
     </div>
   )
 }
