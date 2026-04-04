@@ -7,6 +7,7 @@ import rateLimit from 'express-rate-limit'
 import authRoutes from './routes/auth.routes'
 import pipelineRoutes from './routes/pipeline.routes'
 import leadsRoutes from './routes/leads.routes'
+import tasksRoutes from './routes/tasks.routes'
 
 const app = express()
 
@@ -44,5 +45,6 @@ app.get('/health', (_req, res) => {
 app.use('/auth', authRoutes)
 app.use('/pipelines', pipelineRoutes)
 app.use('/leads', leadsRoutes)
+app.use('/tasks', tasksRoutes)
 
 export default app

@@ -1,18 +1,50 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   Mail, MessageCircle, Phone, Video, FileText, Handshake, ShieldCheck,
-  Check, Plus, ChevronRight, Users, BarChart2, BookOpen, type LucideIcon,
+  Check, Plus, ChevronRight, Users, BarChart2, BookOpen, Loader2,
+  type LucideIcon,
 } from 'lucide-react'
 import AppLayout from '../AppLayout/AppLayout'
 import type { SidebarEntry } from '../Sidebar/Sidebar'
 import TaskDrawer from '../TaskDrawer/TaskDrawer'
+import {
+  getTasks, completeTask as completeTaskApi,
+  getManagerialTasks, completeManagerialTask as completeManagerialApi,
+} from '../../../services/tasks.service'
 
 // ── Types ──
 
 type TaskType = 'call' | 'email' | 'whatsapp' | 'meeting' | 'visit' | 'proposal' | 'approve'
 type PeriodFilter = 'overdue' | 'today' | 'week' | 'nextweek' | 'all' | 'done'
+type TaskCategory = 'leads' | 'gerenciais'
 
-interface MockTask {
+interface ApiTask {
+  id: string
+  type: string
+  title: string
+  description: string | null
+  dueDate: string | null
+  isDone: boolean
+  doneAt: string | null
+  createdAt: string
+  lead: { id: string; name: string; company: string | null }
+  responsible: { id: string; name: string }
+}
+
+interface ApiManagerialTask {
+  id: string
+  title: string
+  description: string | null
+  dueDate: string | null
+  isDone: boolean
+  doneAt: string | null
+  isRecurring: boolean
+  recurrence: string | null
+  taskType: { id: string; name: string }
+  participants: { id: string; userId: string }[]
+}
+
+interface DisplayTask {
   id: string
   type: TaskType
   title: string
@@ -30,6 +62,17 @@ interface MockTask {
   group: 'today' | 'tomorrow' | 'done'
 }
 
+interface DisplayManagerialTask {
+  id: string
+  icon: LucideIcon
+  iconColor: string
+  title: string
+  recurrence: string
+  deadline: string
+  overdue: boolean
+  participants: string[]
+}
+
 // ── Config ──
 
 const typeConfig: Record<TaskType, { icon: LucideIcon; color: string; label: string }> = {
@@ -42,15 +85,6 @@ const typeConfig: Record<TaskType, { icon: LucideIcon; color: string; label: str
   approve: { icon: ShieldCheck, color: '#22c55e', label: 'Liberar Pedido' },
 }
 
-const periodFilters: { key: PeriodFilter; label: string; count: number; badgeColor?: string }[] = [
-  { key: 'overdue', label: 'Atrasadas', count: 2, badgeColor: '#ef4444' },
-  { key: 'today', label: 'Hoje', count: 4, badgeColor: '#f97316' },
-  { key: 'week', label: 'Esta semana', count: 8 },
-  { key: 'nextweek', label: 'Próxima semana', count: 4 },
-  { key: 'all', label: 'Todas', count: 15 },
-  { key: 'done', label: 'Concluídas', count: 18 },
-]
-
 const typeFilters: { key: TaskType; icon: LucideIcon; color: string; label: string }[] = [
   { key: 'email', icon: Mail, color: '#3b82f6', label: 'E-mail' },
   { key: 'whatsapp', icon: MessageCircle, color: '#25d166', label: 'WhatsApp' },
@@ -60,40 +94,112 @@ const typeFilters: { key: TaskType; icon: LucideIcon; color: string; label: stri
   { key: 'approve', icon: ShieldCheck, color: '#22c55e', label: 'Liberar Pedido' },
 ]
 
-// ── Mock Data ──
-
-const mockTasks: MockTask[] = [
-  { id: '1', type: 'call', title: 'Follow-up sobre desconto solicitado', leadInitials: 'CT', leadName: 'Camila Torres', leadCompany: 'Torres & Filhos', stageBadge: 'Negociando', stageColor: '#f59e0b', time: '14:00', overdue: true, done: false, group: 'today' },
-  { id: '2', type: 'meeting', title: 'Demo ao vivo para a equipe comercial', leadInitials: 'RM', leadName: 'Rafael Mendes', leadCompany: 'MendesNet', stageBadge: 'Em Contato', stageColor: '#3b82f6', time: '16:30', overdue: false, done: false, calendarBadge: true, group: 'today' },
-  { id: '3', type: 'email', title: 'Enviar material de apresentação do produto', leadInitials: 'FL', leadName: 'Fernanda Lima', leadCompany: 'Lima Distribuidora', stageBadge: 'Sem Contato', stageColor: '#6b7280', time: '18:00', overdue: false, done: false, group: 'today' },
-  { id: '8', type: 'approve', title: 'Liberar pedido — Desconto 20% Plano Pro', leadInitials: 'AN', leadName: 'Ana Souza → Camila Torres', leadCompany: 'Torres & Filhos', stageBadge: 'Negociando', stageColor: '#f59e0b', time: 'Aguardando · 2h', overdue: false, done: false, detail: 'R$ 12.000 → R$ 9.600 · economia R$ 2.400', group: 'today' },
-  { id: '4', type: 'whatsapp', title: 'Enviar link da proposta atualizada', leadInitials: 'PG', leadName: 'Priscila Gomes', leadCompany: 'GomesTech', stageBadge: 'Proposta Enviada', stageColor: '#a855f7', time: '10:00', overdue: false, done: false, group: 'tomorrow' },
-  { id: '5', type: 'proposal', title: 'Montar proposta com desconto 5%', leadInitials: 'CT', leadName: 'Camila Torres', leadCompany: 'Torres & Filhos', stageBadge: 'Negociando', stageColor: '#f59e0b', time: '14:00', overdue: false, done: false, group: 'tomorrow' },
-  { id: '6', type: 'email', title: 'Enviar contrato revisado', leadInitials: 'DM', leadName: 'Diego Marques', leadCompany: 'Marquesali', stageBadge: 'Proposta Enviada', stageColor: '#a855f7', time: '', overdue: false, done: true, doneDate: '19/03', group: 'done' },
-  { id: '7', type: 'call', title: 'Qualificar necessidade e orçamento disponível', leadInitials: 'TB', leadName: 'Thiago Bastos', leadCompany: 'Bastos & Co', stageBadge: 'Em Contato', stageColor: '#3b82f6', time: '', overdue: false, done: true, doneDate: '18/03', group: 'done' },
-]
-
-// ── Managerial Tasks ──
-
-type TaskCategory = 'leads' | 'gerenciais'
-
-interface ManagerialTask {
-  id: string
-  icon: LucideIcon
-  iconColor: string
-  title: string
-  recurrence: string
-  deadline: string
-  overdue: boolean
-  participants: string[]
+const managerialIconMap: Record<string, { icon: LucideIcon; color: string }> = {
+  default: { icon: Users, color: '#f97316' },
+  reunião: { icon: Users, color: '#f97316' },
+  relatório: { icon: BarChart2, color: '#3b82f6' },
+  treinamento: { icon: BookOpen, color: '#a855f7' },
+  feedback: { icon: Users, color: '#f97316' },
 }
 
-const managerialTasks: ManagerialTask[] = [
-  { id: 'g1', icon: Users, iconColor: '#f97316', title: 'Feedback individual — Ana Souza', recurrence: 'Quinzenal', deadline: 'Vence hoje 15:00', overdue: true, participants: ['AS', 'LG'] },
-  { id: 'g2', icon: Users, iconColor: '#f97316', title: 'Reunião de alinhamento do time', recurrence: 'Semanal', deadline: 'Amanhã 09:00', overdue: false, participants: ['AS', 'PG', 'CT'] },
-  { id: 'g3', icon: BarChart2, iconColor: '#3b82f6', title: 'Análise de relatório mensal', recurrence: 'Mensal', deadline: 'Esta semana', overdue: false, participants: ['LG'] },
-  { id: 'g4', icon: BookOpen, iconColor: '#a855f7', title: 'Treinamento interno — Pipeline Kanban', recurrence: 'Mensal', deadline: 'Próxima semana', overdue: false, participants: ['AS', 'PG', 'CT', 'RM'] },
-]
+// ── Helpers ──
+
+function getInitials(name: string): string {
+  return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+}
+
+function formatTime(dateStr: string | null): string {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+function formatDeadline(dateStr: string | null): string {
+  if (!dateStr) return '—'
+  const d = new Date(dateStr)
+  const now = new Date()
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const diffDays = Math.floor((d.getTime() - startOfDay.getTime()) / (1000 * 60 * 60 * 24))
+
+  if (diffDays < 0) return `Atrasada · ${Math.abs(diffDays)}d`
+  if (diffDays === 0) return `Vence hoje ${formatTime(dateStr)}`
+  if (diffDays === 1) return `Amanhã ${formatTime(dateStr)}`
+  if (diffDays <= 7) return 'Esta semana'
+  return 'Próxima semana'
+}
+
+function isOverdue(dateStr: string | null, isDone: boolean): boolean {
+  if (isDone || !dateStr) return false
+  return new Date(dateStr) < new Date()
+}
+
+function getTaskGroup(dateStr: string | null, isDone: boolean): 'today' | 'tomorrow' | 'done' {
+  if (isDone) return 'done'
+  if (!dateStr) return 'today'
+  const d = new Date(dateStr)
+  const now = new Date()
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const startOfTomorrow = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000)
+  const endOfTomorrow = new Date(startOfTomorrow.getTime() + 24 * 60 * 60 * 1000)
+
+  if (d < startOfTomorrow) return 'today'
+  if (d < endOfTomorrow) return 'tomorrow'
+  return 'today'
+}
+
+function mapApiType(apiType: string): TaskType {
+  const map: Record<string, TaskType> = {
+    CALL: 'call', EMAIL: 'email', WHATSAPP: 'whatsapp',
+    MEETING: 'meeting', VISIT: 'visit',
+  }
+  return map[apiType] ?? 'call'
+}
+
+function mapApiTask(t: ApiTask): DisplayTask {
+  return {
+    id: t.id,
+    type: mapApiType(t.type),
+    title: t.title,
+    leadInitials: getInitials(t.lead.name),
+    leadName: t.lead.name,
+    leadCompany: t.lead.company ?? '',
+    stageBadge: '',
+    stageColor: '#6b7280',
+    time: t.isDone ? '' : formatTime(t.dueDate),
+    overdue: isOverdue(t.dueDate, t.isDone),
+    done: t.isDone,
+    doneDate: t.doneAt ? new Date(t.doneAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : undefined,
+    group: getTaskGroup(t.dueDate, t.isDone),
+  }
+}
+
+function mapManagerialTask(t: ApiManagerialTask): DisplayManagerialTask {
+  const typeName = t.taskType?.name?.toLowerCase() ?? 'default'
+  const iconConfig = managerialIconMap[typeName] ?? managerialIconMap.default!
+  return {
+    id: t.id,
+    icon: iconConfig!.icon,
+    iconColor: iconConfig!.color,
+    title: t.title,
+    recurrence: t.isRecurring && t.recurrence ? t.recurrence : 'Única',
+    deadline: formatDeadline(t.dueDate),
+    overdue: isOverdue(t.dueDate, t.isDone),
+    participants: t.participants.map((_, i) => `P${i + 1}`),
+  }
+}
+
+function periodToDueDateParam(period: PeriodFilter): string | undefined {
+  const map: Record<string, string> = {
+    overdue: 'overdue', today: 'today', week: 'week', nextweek: 'next_week',
+  }
+  return map[period]
+}
+
+function periodToStatusParam(period: PeriodFilter): string | undefined {
+  if (period === 'done') return 'COMPLETED'
+  if (period === 'overdue') return 'PENDING'
+  return 'PENDING'
+}
 
 // ── Component ──
 
@@ -105,34 +211,120 @@ export default function TasksView({ menuItems }: TasksViewProps) {
   const [category, setCategory] = useState<TaskCategory>('leads')
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('today')
   const [typeFilter, setTypeFilter] = useState<TaskType | null>(null)
-  const [tasks, setTasks] = useState(mockTasks)
+  const [loading, setLoading] = useState(true)
+
+  // Lead tasks state
+  const [tasks, setTasks] = useState<DisplayTask[]>([])
+  const [taskCounts, setTaskCounts] = useState({ overdue: 0, today: 0, week: 0, nextweek: 0, all: 0, done: 0 })
+
+  // Managerial tasks state
+  const [mTasks, setMTasks] = useState<DisplayManagerialTask[]>([])
+
   const [hoveredId, setHoveredId] = useState<string | null>(null)
-  const [selectedTask, setSelectedTask] = useState<MockTask | null>(null)
+  const [selectedTask, setSelectedTask] = useState<DisplayTask | null>(null)
   const [toast, setToast] = useState('')
 
-  function toggleDone(id: string) {
-    setTasks((prev) => prev.map((t) => t.id === id ? { ...t, done: !t.done } : t))
+  // Load counts for period pills
+  const loadCounts = useCallback(async () => {
+    try {
+      const [overdue, today, week, nextweek, all, done] = await Promise.all([
+        getTasks({ dueDate: 'overdue', status: 'PENDING', perPage: 1 }),
+        getTasks({ dueDate: 'today', status: 'PENDING', perPage: 1 }),
+        getTasks({ dueDate: 'week', status: 'PENDING', perPage: 1 }),
+        getTasks({ dueDate: 'next_week', status: 'PENDING', perPage: 1 }),
+        getTasks({ perPage: 1 }),
+        getTasks({ status: 'COMPLETED', perPage: 1 }),
+      ])
+      setTaskCounts({
+        overdue: overdue.meta.total,
+        today: today.meta.total,
+        week: week.meta.total,
+        nextweek: nextweek.meta.total,
+        all: all.meta.total,
+        done: done.meta.total,
+      })
+    } catch { /* ignore */ }
+  }, [])
+
+  // Load lead tasks
+  useEffect(() => {
+    if (category !== 'leads') return
+    async function load() {
+      setLoading(true)
+      try {
+        const params: Record<string, string | number> = { perPage: 50 }
+        const dueDateParam = periodToDueDateParam(periodFilter)
+        if (dueDateParam) params.dueDate = dueDateParam
+        const statusParam = periodToStatusParam(periodFilter)
+        if (statusParam) params.status = statusParam
+        if (typeFilter) params.type = typeFilter.toUpperCase()
+        if (periodFilter === 'all') { delete params.dueDate; delete params.status }
+
+        const result = await getTasks(params)
+        setTasks(result.data.map(mapApiTask))
+      } catch {
+        setTasks([])
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+    loadCounts()
+  }, [category, periodFilter, typeFilter, loadCounts])
+
+  // Load managerial tasks
+  useEffect(() => {
+    if (category !== 'gerenciais') return
+    async function load() {
+      setLoading(true)
+      try {
+        const result = await getManagerialTasks({ perPage: 50 })
+        setMTasks(result.data.map(mapManagerialTask))
+      } catch {
+        setMTasks([])
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [category])
+
+  async function handleToggleDone(id: string) {
+    try {
+      await completeTaskApi(id)
+      setTasks(prev => prev.map(t => t.id === id ? { ...t, done: true, doneDate: 'agora', group: 'done' as const } : t))
+      setToast('Tarefa concluída!')
+      setTimeout(() => setToast(''), 3000)
+      loadCounts()
+    } catch { /* ignore */ }
   }
 
   function handleDrawerComplete(id: string) {
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, done: true, doneDate: 'agora' } : t))
+    handleToggleDone(id)
     setSelectedTask(null)
-    setToast('Tarefa concluída!')
-    setTimeout(() => setToast(''), 3000)
   }
 
-  const filtered = tasks.filter((t) => {
-    if (typeFilter && t.type !== typeFilter) return false
-    if (periodFilter === 'overdue') return t.overdue && !t.done
-    if (periodFilter === 'today') return t.group === 'today' && !t.done
-    if (periodFilter === 'done') return t.done
-    if (periodFilter === 'week') return !t.done
-    return true
-  })
+  async function handleManagerialComplete(id: string) {
+    try {
+      await completeManagerialApi(id)
+      setMTasks(prev => prev.filter(t => t.id !== id))
+      setToast('Tarefa gerencial concluída!')
+      setTimeout(() => setToast(''), 3000)
+    } catch { /* ignore */ }
+  }
 
-  const todayTasks = filtered.filter((t) => t.group === 'today' && !t.done)
-  const tomorrowTasks = filtered.filter((t) => t.group === 'tomorrow' && !t.done)
-  const doneTasks = filtered.filter((t) => t.done)
+  const todayTasks = tasks.filter(t => t.group === 'today' && !t.done)
+  const tomorrowTasks = tasks.filter(t => t.group === 'tomorrow' && !t.done)
+  const doneTasks = tasks.filter(t => t.done)
+
+  const periodFilters: { key: PeriodFilter; label: string; count: number; badgeColor?: string }[] = [
+    { key: 'overdue', label: 'Atrasadas', count: taskCounts.overdue, badgeColor: '#ef4444' },
+    { key: 'today', label: 'Hoje', count: taskCounts.today, badgeColor: '#f97316' },
+    { key: 'week', label: 'Esta semana', count: taskCounts.week },
+    { key: 'nextweek', label: 'Próxima semana', count: taskCounts.nextweek },
+    { key: 'all', label: 'Todas', count: taskCounts.all },
+    { key: 'done', label: 'Concluídas', count: taskCounts.done },
+  ]
 
   return (
     <AppLayout menuItems={menuItems}>
@@ -201,11 +393,7 @@ export default function TasksView({ menuItems }: TasksViewProps) {
                   key={c.key}
                   onClick={() => setCategory(c.key)}
                   style={{
-                    borderRadius: 999,
-                    padding: '6px 16px',
-                    fontSize: 13,
-                    fontWeight: 500,
-                    cursor: 'pointer',
+                    borderRadius: 999, padding: '6px 16px', fontSize: 13, fontWeight: 500, cursor: 'pointer',
                     background: active ? 'rgba(249,115,22,0.12)' : '#161a22',
                     border: `1px solid ${active ? '#f97316' : '#22283a'}`,
                     color: active ? '#f97316' : '#6b7280',
@@ -218,102 +406,94 @@ export default function TasksView({ menuItems }: TasksViewProps) {
             })}
           </div>
 
-          {/* Lead tasks */}
-          {category === 'leads' && (
+          {/* Loading */}
+          {loading ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 60, gap: 10 }}>
+              <Loader2 size={22} color="#f97316" strokeWidth={1.5} className="animate-spin" />
+              <span style={{ fontSize: 14, color: '#6b7280' }}>Carregando tarefas...</span>
+            </div>
+          ) : (
             <>
-              {todayTasks.length > 0 && (
-                <TaskGroup label="Hoje — Quinta, 03 de Abril" tasks={todayTasks} hoveredId={hoveredId} setHoveredId={setHoveredId} toggleDone={toggleDone} selectedId={selectedTask?.id ?? null} onSelect={setSelectedTask} />
+              {/* Lead tasks */}
+              {category === 'leads' && (
+                <>
+                  {todayTasks.length > 0 && (
+                    <TaskGroup label="Hoje" tasks={todayTasks} hoveredId={hoveredId} setHoveredId={setHoveredId} toggleDone={handleToggleDone} selectedId={selectedTask?.id ?? null} onSelect={setSelectedTask} />
+                  )}
+                  {tomorrowTasks.length > 0 && (
+                    <TaskGroup label="Amanhã" tasks={tomorrowTasks} hoveredId={hoveredId} setHoveredId={setHoveredId} toggleDone={handleToggleDone} selectedId={selectedTask?.id ?? null} onSelect={setSelectedTask} />
+                  )}
+                  {doneTasks.length > 0 && (
+                    <TaskGroup label="Concluídas recentemente" tasks={doneTasks} hoveredId={hoveredId} setHoveredId={setHoveredId} toggleDone={handleToggleDone} selectedId={selectedTask?.id ?? null} onSelect={setSelectedTask} />
+                  )}
+                  {tasks.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: 40, color: '#6b7280', fontSize: 13 }}>Nenhuma tarefa encontrada.</div>
+                  )}
+                </>
               )}
-              {tomorrowTasks.length > 0 && (
-                <TaskGroup label="Amanhã — Sexta, 04 de Abril" tasks={tomorrowTasks} hoveredId={hoveredId} setHoveredId={setHoveredId} toggleDone={toggleDone} selectedId={selectedTask?.id ?? null} onSelect={setSelectedTask} />
-              )}
-              {doneTasks.length > 0 && (
-                <TaskGroup label="Concluídas recentemente" tasks={doneTasks} hoveredId={hoveredId} setHoveredId={setHoveredId} toggleDone={toggleDone} selectedId={selectedTask?.id ?? null} onSelect={setSelectedTask} />
-              )}
-              {filtered.length === 0 && (
-                <div style={{ textAlign: 'center', padding: 40, color: '#6b7280', fontSize: 13 }}>Nenhuma tarefa encontrada.</div>
+
+              {/* Managerial tasks */}
+              {category === 'gerenciais' && (
+                <div>
+                  {mTasks.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: 40, color: '#6b7280', fontSize: 13 }}>Nenhuma tarefa gerencial encontrada.</div>
+                  ) : mTasks.map((mt) => {
+                    const Icon = mt.icon
+                    return (
+                      <div
+                        key={mt.id}
+                        style={{
+                          background: '#161a22', border: '1px solid #22283a', borderRadius: 10,
+                          padding: 14, marginBottom: 8, display: 'flex', gap: 12, alignItems: 'center',
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#1c2130'; e.currentTarget.style.borderColor = '#374151' }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = '#161a22'; e.currentTarget.style.borderColor = '#22283a' }}
+                      >
+                        <div style={{
+                          width: 34, height: 34, borderRadius: 8, flexShrink: 0,
+                          background: `${mt.iconColor}1F`,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          <Icon size={16} color={mt.iconColor} strokeWidth={1.5} />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 500, color: '#e8eaf0' }}>{mt.title}</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                            <span style={{ fontSize: 10, fontWeight: 500, background: '#22283a', color: '#9ca3af', borderRadius: 4, padding: '2px 8px' }}>
+                              {mt.recurrence}
+                            </span>
+                            <span style={{ fontSize: 11, color: mt.overdue ? '#ef4444' : '#9ca3af', fontWeight: mt.overdue ? 600 : 400 }}>
+                              {mt.deadline}
+                            </span>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', flexShrink: 0 }}>
+                          {mt.participants.map((p, i) => (
+                            <div key={p} style={{
+                              width: 24, height: 24, borderRadius: '50%',
+                              background: '#22283a', border: '2px solid #161a22',
+                              fontSize: 9, fontWeight: 700, color: '#e8eaf0',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              marginLeft: i > 0 ? -8 : 0, zIndex: mt.participants.length - i,
+                            }}>{p}</div>
+                          ))}
+                        </div>
+                        <button
+                          onClick={() => handleManagerialComplete(mt.id)}
+                          style={{
+                            background: 'transparent', border: '1px solid #22283a',
+                            borderRadius: 6, padding: '5px 10px', fontSize: 12,
+                            color: '#9ca3af', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0,
+                          }}>
+                          Concluir <Check size={14} strokeWidth={1.5} />
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
               )}
             </>
-          )}
-
-          {/* Managerial tasks */}
-          {category === 'gerenciais' && (
-            <div>
-              {managerialTasks.map((mt) => {
-                const Icon = mt.icon
-                return (
-                  <div
-                    key={mt.id}
-                    style={{
-                      background: '#161a22',
-                      border: '1px solid #22283a',
-                      borderRadius: 10,
-                      padding: 14,
-                      marginBottom: 8,
-                      display: 'flex',
-                      gap: 12,
-                      alignItems: 'center',
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = '#1c2130'; e.currentTarget.style.borderColor = '#374151' }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = '#161a22'; e.currentTarget.style.borderColor = '#22283a' }}
-                  >
-                    {/* icon */}
-                    <div style={{
-                      width: 34, height: 34, borderRadius: 8, flexShrink: 0,
-                      background: `${mt.iconColor}1F`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      <Icon size={16} color={mt.iconColor} strokeWidth={1.5} />
-                    </div>
-
-                    {/* content */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 500, color: '#e8eaf0' }}>{mt.title}</div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                        <span style={{ fontSize: 10, fontWeight: 500, background: '#22283a', color: '#9ca3af', borderRadius: 4, padding: '2px 8px' }}>
-                          {mt.recurrence}
-                        </span>
-                        <span style={{
-                          fontSize: 11,
-                          color: mt.overdue ? '#ef4444' : '#9ca3af',
-                          fontWeight: mt.overdue ? 600 : 400,
-                        }}>
-                          {mt.deadline}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* stacked avatars */}
-                    <div style={{ display: 'flex', flexShrink: 0 }}>
-                      {mt.participants.map((p, i) => (
-                        <div
-                          key={p}
-                          style={{
-                            width: 24, height: 24, borderRadius: '50%',
-                            background: '#22283a', border: '2px solid #161a22',
-                            fontSize: 9, fontWeight: 700, color: '#e8eaf0',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            marginLeft: i > 0 ? -8 : 0, zIndex: mt.participants.length - i,
-                          }}
-                        >
-                          {p}
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* details button */}
-                    <button style={{
-                      background: 'transparent', border: '1px solid #22283a',
-                      borderRadius: 6, padding: '5px 10px', fontSize: 12,
-                      color: '#9ca3af', cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0,
-                    }}>
-                      Detalhes <ChevronRight size={14} strokeWidth={1.5} />
-                    </button>
-                  </div>
-                )
-              })}
-            </div>
           )}
         </div>
 
@@ -323,12 +503,10 @@ export default function TasksView({ menuItems }: TasksViewProps) {
             <div style={{ background: '#161a22', border: '1px solid #22283a', borderRadius: 12, padding: 16 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: '#e8eaf0', marginBottom: 16 }}>Resumo da semana</div>
 
-              <SummaryCard label="Atrasadas" value="2" color="#ef4444" />
-              <SummaryCard label="Para hoje" value="4" color="#f97316" />
-              <SummaryCard label="Esta semana" value="8" color="#e8eaf0" />
-              <SummaryCard label="Liberar pedido" value="3" color="#22c55e" />
-              <SummaryCard label="Gerenciais" value="2" color="#a855f7" />
-              <SummaryCard label="Concluídas" value="18" color="#22c55e" />
+              <SummaryCard label="Atrasadas" value={String(taskCounts.overdue)} color="#ef4444" />
+              <SummaryCard label="Para hoje" value={String(taskCounts.today)} color="#f97316" />
+              <SummaryCard label="Esta semana" value={String(taskCounts.week)} color="#e8eaf0" />
+              <SummaryCard label="Concluídas" value={String(taskCounts.done)} color="#22c55e" />
 
               <div style={{ borderTop: '1px solid #22283a', margin: '16px 0' }} />
 
@@ -357,9 +535,9 @@ export default function TasksView({ menuItems }: TasksViewProps) {
 // ── Task Group ──
 
 function TaskGroup({ label, tasks, hoveredId, setHoveredId, toggleDone, selectedId, onSelect }: {
-  label: string; tasks: MockTask[]; hoveredId: string | null
+  label: string; tasks: DisplayTask[]; hoveredId: string | null
   setHoveredId: (id: string | null) => void; toggleDone: (id: string) => void
-  selectedId: string | null; onSelect: (t: MockTask) => void
+  selectedId: string | null; onSelect: (t: DisplayTask) => void
 }) {
   return (
     <div style={{ marginBottom: 24 }}>
@@ -376,7 +554,7 @@ function TaskGroup({ label, tasks, hoveredId, setHoveredId, toggleDone, selected
 // ── Task Card ──
 
 function TaskCard({ task, hovered, selected, onHover, toggleDone, onSelect }: {
-  task: MockTask; hovered: boolean; selected: boolean
+  task: DisplayTask; hovered: boolean; selected: boolean
   onHover: (id: string | null) => void; toggleDone: (id: string) => void; onSelect: () => void
 }) {
   const tc = typeConfig[task.type]
@@ -398,9 +576,9 @@ function TaskCard({ task, hovered, selected, onHover, toggleDone, onSelect }: {
     >
       {/* Checkbox */}
       <div
-        onClick={() => toggleDone(task.id)}
+        onClick={() => { if (!task.done) toggleDone(task.id) }}
         style={{
-          width: 18, height: 18, borderRadius: 4, flexShrink: 0, cursor: 'pointer', marginTop: 2,
+          width: 18, height: 18, borderRadius: 4, flexShrink: 0, cursor: task.done ? 'default' : 'pointer', marginTop: 2,
           border: task.done ? 'none' : '1px solid #22283a',
           background: task.done ? '#22c55e' : 'transparent',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -423,17 +601,17 @@ function TaskCard({ task, hovered, selected, onHover, toggleDone, onSelect }: {
         <div style={{ fontSize: 13, fontWeight: 500, color: '#e8eaf0', textDecoration: task.done ? 'line-through' : 'none' }}>
           {task.title}
         </div>
-        {/* Lead info */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
           <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#22283a', fontSize: 8, fontWeight: 700, color: '#e8eaf0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             {task.leadInitials}
           </div>
-          <span style={{ fontSize: 12, color: '#6b7280' }}>{task.leadName} · {task.leadCompany}</span>
-          <span style={{ background: `${task.stageColor}1F`, color: task.stageColor, borderRadius: 999, padding: '1px 7px', fontSize: 10, fontWeight: 500, flexShrink: 0 }}>
-            {task.stageBadge}
-          </span>
+          <span style={{ fontSize: 12, color: '#6b7280' }}>{task.leadName}{task.leadCompany ? ` · ${task.leadCompany}` : ''}</span>
+          {task.stageBadge && (
+            <span style={{ background: `${task.stageColor}1F`, color: task.stageColor, borderRadius: 999, padding: '1px 7px', fontSize: 10, fontWeight: 500, flexShrink: 0 }}>
+              {task.stageBadge}
+            </span>
+          )}
         </div>
-        {/* Time / badges */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
           {task.done && task.doneDate ? (
             <span style={{ fontSize: 12, color: '#22c55e' }}>Feito · {task.doneDate}</span>
@@ -441,18 +619,10 @@ function TaskCard({ task, hovered, selected, onHover, toggleDone, onSelect }: {
             <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: 'rgba(239,68,68,0.12)', color: '#ef4444', fontWeight: 600 }}>
               Atrasada · {task.time}
             </span>
-          ) : task.time.includes('Aguardando') ? (
-            <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: 'rgba(249,115,22,0.12)', color: '#f97316', fontWeight: 600 }}>{task.time}</span>
-          ) : (
+          ) : task.time ? (
             <span style={{ fontSize: 12, color: '#9ca3af' }}>{task.time}</span>
-          )}
-          {task.calendarBadge && (
-            <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, background: 'rgba(59,130,246,0.12)', color: '#3b82f6' }}>Google Calendar</span>
-          )}
+          ) : null}
         </div>
-        {task.detail && (
-          <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>{task.detail}</div>
-        )}
       </div>
 
       {/* Details button */}
