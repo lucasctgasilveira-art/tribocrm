@@ -1,32 +1,119 @@
-import { useState } from 'react'
-import { Plus, Globe, MoreHorizontal, X, Code, Copy } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Plus, Globe, MoreHorizontal, X, Code, Copy, Loader2 } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
+import { getForms, getFormStats, createForm, updateForm, deleteForm } from '../../services/forms.service'
+import { getPipelines } from '../../services/pipeline.service'
 
 // ── Types ──
 
+interface FieldConfig { label: string; type: string; required: boolean }
+
 interface FormItem {
-  id: string; name: string; active: boolean; pipeline: string; stage: string
-  responsible: string; leadsCount: number; lastSubmission: string; fields: string[]
+  id: string
+  name: string
+  isActive: boolean
+  fieldsConfig: FieldConfig[]
+  distributionType: string
+  embedToken: string
+  pipeline: { id: string; name: string }
+  stage: { id: string; name: string }
+  leadsCount: number
+  lastSubmission: string | null
 }
 
-const forms: FormItem[] = [
-  { id: '1', name: 'Formulário do Site Principal', active: true, pipeline: 'Pipeline Principal', stage: 'Sem Contato', responsible: 'Round-robin automático', leadsCount: 38, lastSubmission: 'há 2 horas', fields: ['Nome*', 'E-mail*', 'Telefone*', 'Empresa', 'Mensagem'] },
-  { id: '2', name: 'Landing Page Evento', active: true, pipeline: 'Pipeline Principal', stage: 'Em Contato', responsible: 'Ana Souza (fixo)', leadsCount: 9, lastSubmission: 'há 3 dias', fields: ['Nome*', 'E-mail*', 'Telefone*', 'Como nos conheceu'] },
-  { id: '3', name: 'Formulário Parceiros', active: false, pipeline: 'Pipeline Parceiros', stage: 'Sem Contato', responsible: 'Pedro Gomes (fixo)', leadsCount: 0, lastSubmission: 'Nunca usado', fields: ['Nome*', 'E-mail*', 'CNPJ', 'Segmento'] },
-]
+interface Stats {
+  totalForms: number
+  activeForms: number
+  totalLeadsCaptured: number
+  thisWeekLeads: number
+}
 
-const menuOpts = ['Editar', 'Duplicar', 'Ativar/Desativar', 'Excluir']
+interface PipelineOption {
+  id: string
+  name: string
+  stages: { id: string; name: string }[]
+}
+
+// ── Helpers ──
+
+function formatTimeAgo(dateStr: string | null): string {
+  if (!dateStr) return 'Nunca usado'
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const hours = Math.floor(diff / (1000 * 60 * 60))
+  if (hours < 1) return 'agora'
+  if (hours < 24) return `há ${hours}h`
+  const days = Math.floor(hours / 24)
+  if (days === 1) return 'há 1 dia'
+  return `há ${days} dias`
+}
+
+const distLabels: Record<string, string> = {
+  ROUND_ROBIN_ALL: 'Round-robin automático',
+  ROUND_ROBIN_TEAM: 'Round-robin por time',
+  SPECIFIC_USER: 'Vendedor específico',
+  MANUAL: 'Manual',
+}
+
+const menuOpts = ['Ativar/Desativar', 'Excluir']
 
 const inputS: React.CSSProperties = { width: '100%', background: '#111318', border: '1px solid #22283a', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: '#e8eaf0', outline: 'none', boxSizing: 'border-box' }
 
 // ── Component ──
 
 export default function FormsPage() {
+  const [forms, setForms] = useState<FormItem[]>([])
+  const [stats, setStats] = useState<Stats>({ totalForms: 0, activeForms: 0, totalLeadsCaptured: 0, thisWeekLeads: 0 })
+  const [pipelines, setPipelines] = useState<PipelineOption[]>([])
+  const [loading, setLoading] = useState(true)
   const [openMenu, setOpenMenu] = useState<string | null>(null)
-  const [embedModal, setEmbedModal] = useState<string | null>(null)
+  const [embedModal, setEmbedModal] = useState<FormItem | null>(null)
   const [newModal, setNewModal] = useState(false)
   const [toast, setToast] = useState('')
+
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    try {
+      const [formsData, statsData, pipelinesData] = await Promise.all([
+        getForms(),
+        getFormStats(),
+        getPipelines(),
+      ])
+      setForms(formsData)
+      setStats(statsData)
+      setPipelines(pipelinesData)
+    } catch {
+      setForms([])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { loadData() }, [loadData])
+
+  async function handleToggleActive(f: FormItem) {
+    try {
+      await updateForm(f.id, { isActive: !f.isActive })
+      setOpenMenu(null)
+      loadData()
+    } catch { /* ignore */ }
+  }
+
+  async function handleDelete(id: string) {
+    try {
+      await deleteForm(id)
+      setOpenMenu(null)
+      loadData()
+    } catch { /* ignore */ }
+  }
+
+  async function handleCreate(payload: { name: string; pipelineId: string; stageId: string; distributionType: string; fieldsConfig: FieldConfig[] }) {
+    try {
+      await createForm(payload)
+      setNewModal(false)
+      loadData()
+    } catch { /* ignore */ }
+  }
 
   return (
     <AppLayout menuItems={gestaoMenuItems}>
@@ -43,13 +130,13 @@ export default function FormsPage() {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', fontSize: 13, marginBottom: 16 }}>
-        <span style={{ color: '#6b7280' }}>Total</span><span style={{ color: '#e8eaf0', fontWeight: 700, marginLeft: 4 }}>3</span>
+        <span style={{ color: '#6b7280' }}>Total</span><span style={{ color: '#e8eaf0', fontWeight: 700, marginLeft: 4 }}>{stats.totalForms}</span>
         <span style={{ color: '#22283a', margin: '0 10px' }}>|</span>
-        <span style={{ color: '#6b7280' }}>Ativos</span><span style={{ color: '#22c55e', fontWeight: 700, marginLeft: 4 }}>2</span>
+        <span style={{ color: '#6b7280' }}>Ativos</span><span style={{ color: '#22c55e', fontWeight: 700, marginLeft: 4 }}>{stats.activeForms}</span>
         <span style={{ color: '#22283a', margin: '0 10px' }}>|</span>
-        <span style={{ color: '#6b7280' }}>Leads captados</span><span style={{ color: '#e8eaf0', fontWeight: 700, marginLeft: 4 }}>47</span>
+        <span style={{ color: '#6b7280' }}>Leads captados</span><span style={{ color: '#e8eaf0', fontWeight: 700, marginLeft: 4 }}>{stats.totalLeadsCaptured}</span>
         <span style={{ color: '#22283a', margin: '0 10px' }}>|</span>
-        <span style={{ color: '#6b7280' }}>Esta semana</span><span style={{ color: '#e8eaf0', fontWeight: 700, marginLeft: 4 }}>8</span>
+        <span style={{ color: '#6b7280' }}>Esta semana</span><span style={{ color: '#e8eaf0', fontWeight: 700, marginLeft: 4 }}>{stats.thisWeekLeads}</span>
       </div>
 
       <div style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 8, padding: '12px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
@@ -57,55 +144,81 @@ export default function FormsPage() {
         <span style={{ color: '#9ca3af' }}>Cole o código embed no seu site para capturar leads automaticamente no pipeline.</span>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-        {forms.map(f => (
-          <div key={f.id} style={{ background: '#161a22', border: '1px solid #22283a', borderRadius: 12, padding: 20, display: 'flex', flexDirection: 'column', transition: 'border-color 0.2s' }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(249,115,22,0.3)' }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = '#22283a' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-              <span style={{ fontSize: 15, fontWeight: 600, color: '#e8eaf0', flex: 1 }}>{f.name}</span>
-              <span style={{ background: f.active ? 'rgba(34,197,94,0.12)' : 'rgba(107,114,128,0.12)', color: f.active ? '#22c55e' : '#6b7280', borderRadius: 999, padding: '2px 8px', fontSize: 10, fontWeight: 500 }}>{f.active ? 'Ativo' : 'Inativo'}</span>
-            </div>
-            <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Pipeline: <span style={{ color: '#e8eaf0' }}>{f.pipeline} → {f.stage}</span></div>
-            <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 8 }}>Responsável: <span style={{ color: '#e8eaf0' }}>{f.responsible}</span></div>
-            <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 12 }}>{f.leadsCount} leads captados · Última submissão {f.lastSubmission}</div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
-              {f.fields.map(field => (
-                <span key={field} style={{ background: '#22283a', color: field.includes('*') ? '#e8eaf0' : '#6b7280', borderRadius: 4, padding: '2px 8px', fontSize: 11 }}>{field}</span>
-              ))}
-            </div>
-            <div style={{ marginTop: 'auto', paddingTop: 14, borderTop: '1px solid #22283a', display: 'flex', gap: 6, position: 'relative' }}>
-              <button onClick={() => setEmbedModal(f.id)} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: '1px solid #22283a', borderRadius: 6, padding: '5px 12px', fontSize: 12, color: '#9ca3af', cursor: 'pointer' }}>
-                <Code size={12} strokeWidth={1.5} /> Ver código embed
-              </button>
-              <button style={{ background: 'transparent', border: '1px solid #22283a', borderRadius: 6, padding: '5px 12px', fontSize: 12, color: '#9ca3af', cursor: 'pointer' }}>Editar</button>
-              <button onClick={() => setOpenMenu(openMenu === f.id ? null : f.id)} style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid #22283a', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', marginLeft: 'auto' }}>
-                <MoreHorizontal size={14} strokeWidth={1.5} />
-              </button>
-              {openMenu === f.id && (
-                <div style={{ position: 'absolute', right: 0, bottom: 36, zIndex: 20, background: '#161a22', border: '1px solid #22283a', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', minWidth: 150, padding: '4px 0' }}>
-                  {menuOpts.map(opt => <div key={opt} onClick={() => setOpenMenu(null)} style={{ padding: '8px 14px', fontSize: 13, color: opt === 'Excluir' ? '#ef4444' : '#e8eaf0', cursor: 'pointer' }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>{opt}</div>)}
+      {loading ? (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 60, gap: 10 }}>
+          <Loader2 size={22} color="#f97316" strokeWidth={1.5} className="animate-spin" />
+          <span style={{ fontSize: 14, color: '#6b7280' }}>Carregando formulários...</span>
+        </div>
+      ) : forms.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 60, color: '#6b7280', fontSize: 14 }}>Nenhum formulário criado</div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          {forms.map(f => {
+            const fields = (f.fieldsConfig as FieldConfig[]) ?? []
+            return (
+              <div key={f.id} style={{ background: '#161a22', border: '1px solid #22283a', borderRadius: 12, padding: 20, display: 'flex', flexDirection: 'column', transition: 'border-color 0.2s' }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(249,115,22,0.3)' }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = '#22283a' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                  <span style={{ fontSize: 15, fontWeight: 600, color: '#e8eaf0', flex: 1 }}>{f.name}</span>
+                  <span style={{ background: f.isActive ? 'rgba(34,197,94,0.12)' : 'rgba(107,114,128,0.12)', color: f.isActive ? '#22c55e' : '#6b7280', borderRadius: 999, padding: '2px 8px', fontSize: 10, fontWeight: 500 }}>{f.isActive ? 'Ativo' : 'Inativo'}</span>
                 </div>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
+                <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Pipeline: <span style={{ color: '#e8eaf0' }}>{f.pipeline.name} → {f.stage.name}</span></div>
+                <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 8 }}>Responsável: <span style={{ color: '#e8eaf0' }}>{distLabels[f.distributionType] ?? f.distributionType}</span></div>
+                <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 12 }}>{f.leadsCount} leads captados · Última submissão {formatTimeAgo(f.lastSubmission)}</div>
+                {fields.length > 0 && (
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+                    {fields.map(field => (
+                      <span key={field.label} style={{ background: '#22283a', color: field.required ? '#e8eaf0' : '#6b7280', borderRadius: 4, padding: '2px 8px', fontSize: 11 }}>{field.label}{field.required ? '*' : ''}</span>
+                    ))}
+                  </div>
+                )}
+                <div style={{ marginTop: 'auto', paddingTop: 14, borderTop: '1px solid #22283a', display: 'flex', gap: 6, position: 'relative' }}>
+                  <button onClick={() => setEmbedModal(f)} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: '1px solid #22283a', borderRadius: 6, padding: '5px 12px', fontSize: 12, color: '#9ca3af', cursor: 'pointer' }}>
+                    <Code size={12} strokeWidth={1.5} /> Ver código embed
+                  </button>
+                  <button style={{ background: 'transparent', border: '1px solid #22283a', borderRadius: 6, padding: '5px 12px', fontSize: 12, color: '#9ca3af', cursor: 'pointer' }}>Editar</button>
+                  <button onClick={() => setOpenMenu(openMenu === f.id ? null : f.id)} style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid #22283a', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', marginLeft: 'auto' }}>
+                    <MoreHorizontal size={14} strokeWidth={1.5} />
+                  </button>
+                  {openMenu === f.id && (
+                    <div style={{ position: 'absolute', right: 0, bottom: 36, zIndex: 20, background: '#161a22', border: '1px solid #22283a', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', minWidth: 150, padding: '4px 0' }}>
+                      {menuOpts.map(opt => (
+                        <div key={opt}
+                          onClick={() => {
+                            if (opt === 'Ativar/Desativar') handleToggleActive(f)
+                            else if (opt === 'Excluir') handleDelete(f.id)
+                            else setOpenMenu(null)
+                          }}
+                          style={{ padding: '8px 14px', fontSize: 13, color: opt === 'Excluir' ? '#ef4444' : '#e8eaf0', cursor: 'pointer' }}
+                          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+                          onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>{opt}</div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
 
-      {embedModal && <EmbedModal formId={embedModal} onClose={() => setEmbedModal(null)} onCopy={() => { setToast('Código copiado!'); setTimeout(() => setToast(''), 2500) }} />}
-      {newModal && <NewFormModal onClose={() => setNewModal(false)} />}
+      {embedModal && <EmbedModal form={embedModal} onClose={() => setEmbedModal(null)} onCopy={() => { setToast('Código copiado!'); setTimeout(() => setToast(''), 2500) }} />}
+      {newModal && <NewFormModal pipelines={pipelines} onClose={() => setNewModal(false)} onSave={handleCreate} />}
     </AppLayout>
   )
 }
 
 // ── Embed Modal ──
 
-function EmbedModal({ formId, onClose, onCopy }: { formId: string; onClose: () => void; onCopy: () => void }) {
-  const code = `<script src="https://app.tribocrm.com.br/embed.js"\n  data-form="${formId}"\n  data-theme="dark">\n</script>`
+function EmbedModal({ form, onClose, onCopy }: { form: FormItem; onClose: () => void; onCopy: () => void }) {
+  const code = `<script src="https://app.tribocrm.com.br/embed.js"\n  data-form="${form.embedToken}"\n  data-theme="dark">\n</script>`
 
   function handleCopy() {
     navigator.clipboard.writeText(code).then(onCopy)
   }
+
+  const fields = (form.fieldsConfig as FieldConfig[]) ?? []
 
   return (
     <>
@@ -124,9 +237,9 @@ function EmbedModal({ formId, onClose, onCopy }: { formId: string; onClose: () =
           <div style={{ fontSize: 10, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8, fontWeight: 600 }}>Preview</div>
           <div style={{ background: '#f8f9fc', borderRadius: 8, padding: 20 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 320 }}>
-              {['Nome completo', 'E-mail', 'Telefone'].map(f => (
-                <div key={f}>
-                  <div style={{ fontSize: 11, color: '#374151', marginBottom: 4 }}>{f}</div>
+              {fields.filter(f => f.required || true).map(f => (
+                <div key={f.label}>
+                  <div style={{ fontSize: 11, color: '#374151', marginBottom: 4 }}>{f.label}</div>
                   <div style={{ background: '#fff', border: '1px solid #d1d5db', borderRadius: 6, padding: '8px 10px', fontSize: 12, color: '#9ca3af' }}>Digite aqui...</div>
                 </div>
               ))}
@@ -144,26 +257,35 @@ function EmbedModal({ formId, onClose, onCopy }: { formId: string; onClose: () =
 
 // ── New Form Modal ──
 
-interface FieldConfig { name: string; enabled: boolean; required: boolean }
-
-function NewFormModal({ onClose }: { onClose: () => void }) {
+function NewFormModal({ pipelines, onClose, onSave }: { pipelines: PipelineOption[]; onClose: () => void; onSave: (payload: { name: string; pipelineId: string; stageId: string; distributionType: string; fieldsConfig: FieldConfig[] }) => void }) {
   const [name, setName] = useState('')
-  const [pipeline, setPipeline] = useState('Pipeline Principal')
-  const [stage, setStage] = useState('Sem Contato')
-  const [assign, setAssign] = useState<'roundrobin' | 'specific'>('roundrobin')
-  const [automation, setAutomation] = useState(false)
-  const [fields, setFields] = useState<FieldConfig[]>([
-    { name: 'Nome completo', enabled: true, required: true },
-    { name: 'E-mail', enabled: true, required: true },
-    { name: 'Telefone', enabled: true, required: true },
-    { name: 'Empresa', enabled: true, required: false },
-    { name: 'Cargo', enabled: false, required: false },
-    { name: 'CNPJ', enabled: false, required: false },
-    { name: 'Mensagem', enabled: true, required: false },
+  const [pipelineId, setPipelineId] = useState(pipelines[0]?.id ?? '')
+  const [stageId, setStageId] = useState('')
+  const [assign, setAssign] = useState('ROUND_ROBIN_ALL')
+  const [fields, setFields] = useState<(FieldConfig & { enabled: boolean })[]>([
+    { label: 'Nome completo', type: 'text', required: true, enabled: true },
+    { label: 'E-mail', type: 'text', required: true, enabled: true },
+    { label: 'Telefone', type: 'text', required: true, enabled: true },
+    { label: 'Empresa', type: 'text', required: false, enabled: true },
+    { label: 'Cargo', type: 'text', required: false, enabled: false },
+    { label: 'CNPJ', type: 'text', required: false, enabled: false },
+    { label: 'Mensagem', type: 'text', required: false, enabled: true },
   ])
+
+  const selectedPipeline = pipelines.find(p => p.id === pipelineId)
+  const stages = selectedPipeline?.stages ?? []
+
+  useEffect(() => {
+    if (stages.length > 0 && !stageId) setStageId(stages[0]!.id)
+  }, [pipelineId, stages, stageId])
 
   function toggleField(idx: number, key: 'enabled' | 'required') {
     setFields(prev => prev.map((f, i) => i === idx ? { ...f, [key]: !f[key] } : f))
+  }
+
+  function handleSave() {
+    const activeFields = fields.filter(f => f.enabled).map(f => ({ label: f.label, type: f.type, required: f.required }))
+    onSave({ name, pipelineId, stageId, distributionType: assign, fieldsConfig: activeFields })
   }
 
   return (
@@ -175,7 +297,6 @@ function NewFormModal({ onClose }: { onClose: () => void }) {
           <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b7280', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
         </div>
         <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
-          {/* Section 1 */}
           <div style={{ marginBottom: 16 }}>
             <label style={{ fontSize: 12, fontWeight: 500, color: '#9ca3af', display: 'block', marginBottom: 6 }}>Nome do formulário <span style={{ color: '#f97316' }}>*</span></label>
             <input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Formulário do Site" style={inputS} />
@@ -183,36 +304,39 @@ function NewFormModal({ onClose }: { onClose: () => void }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
             <div>
               <label style={{ fontSize: 12, fontWeight: 500, color: '#9ca3af', display: 'block', marginBottom: 6 }}>Pipeline destino</label>
-              <select value={pipeline} onChange={e => setPipeline(e.target.value)} style={{ ...inputS, appearance: 'none' as const, cursor: 'pointer' }}><option>Pipeline Principal</option><option>Pipeline Parceiros</option></select>
+              <select value={pipelineId} onChange={e => { setPipelineId(e.target.value); setStageId('') }} style={{ ...inputS, appearance: 'none' as const, cursor: 'pointer' }}>
+                {pipelines.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
             </div>
             <div>
               <label style={{ fontSize: 12, fontWeight: 500, color: '#9ca3af', display: 'block', marginBottom: 6 }}>Etapa inicial</label>
-              <select value={stage} onChange={e => setStage(e.target.value)} style={{ ...inputS, appearance: 'none' as const, cursor: 'pointer' }}><option>Sem Contato</option><option>Em Contato</option></select>
+              <select value={stageId} onChange={e => setStageId(e.target.value)} style={{ ...inputS, appearance: 'none' as const, cursor: 'pointer' }}>
+                {stages.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
             </div>
           </div>
           <div style={{ marginBottom: 20 }}>
             <label style={{ fontSize: 12, fontWeight: 500, color: '#9ca3af', display: 'block', marginBottom: 8 }}>Atribuir para</label>
             <div style={{ display: 'flex', gap: 12 }}>
-              {(['roundrobin', 'specific'] as const).map(v => (
+              {(['ROUND_ROBIN_ALL', 'SPECIFIC_USER'] as const).map(v => (
                 <label key={v} onClick={() => setAssign(v)} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: '#e8eaf0' }}>
                   <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${assign === v ? '#f97316' : '#22283a'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {assign === v && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f97316' }} />}
                   </div>
-                  {v === 'roundrobin' ? 'Round-robin automático' : 'Vendedor específico'}
+                  {v === 'ROUND_ROBIN_ALL' ? 'Round-robin automático' : 'Vendedor específico'}
                 </label>
               ))}
             </div>
           </div>
 
-          {/* Section 2 — Fields */}
           <div style={{ fontSize: 10, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 10, fontWeight: 600 }}>Campos do formulário</div>
           <div style={{ background: '#0f1117', border: '1px solid #22283a', borderRadius: 8, overflow: 'hidden', marginBottom: 20 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px 80px', padding: '8px 14px', background: '#0a0b0f', fontSize: 10, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '1px' }}>
               <span>Campo</span><span style={{ textAlign: 'center' }}>Ativo</span><span style={{ textAlign: 'center' }}>Obrigatório</span>
             </div>
             {fields.map((f, i) => (
-              <div key={f.name} style={{ display: 'grid', gridTemplateColumns: '1fr 60px 80px', padding: '10px 14px', borderBottom: i < fields.length - 1 ? '1px solid #22283a' : 'none', alignItems: 'center' }}>
-                <span style={{ fontSize: 13, color: f.enabled ? '#e8eaf0' : '#6b7280' }}>{f.name}</span>
+              <div key={f.label} style={{ display: 'grid', gridTemplateColumns: '1fr 60px 80px', padding: '10px 14px', borderBottom: i < fields.length - 1 ? '1px solid #22283a' : 'none', alignItems: 'center' }}>
+                <span style={{ fontSize: 13, color: f.enabled ? '#e8eaf0' : '#6b7280' }}>{f.label}</span>
                 <div style={{ textAlign: 'center' }}>
                   <Toggle on={f.enabled} onToggle={() => toggleField(i, 'enabled')} />
                 </div>
@@ -222,21 +346,10 @@ function NewFormModal({ onClose }: { onClose: () => void }) {
               </div>
             ))}
           </div>
-
-          {/* Section 3 */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Toggle on={automation} onToggle={() => setAutomation(!automation)} />
-            <span style={{ fontSize: 13, color: '#e8eaf0' }}>Vincular automação</span>
-          </div>
-          {automation && (
-            <select style={{ ...inputS, marginTop: 8, appearance: 'none' as const, cursor: 'pointer' }}>
-              <option>WhatsApp de boas-vindas</option><option>Tarefa ao entrar em contato</option>
-            </select>
-          )}
         </div>
         <div style={{ padding: '16px 24px', borderTop: '1px solid #22283a', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
           <button onClick={onClose} style={{ background: 'transparent', border: '1px solid #22283a', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: '#9ca3af', cursor: 'pointer' }}>Cancelar</button>
-          <button disabled={!name.trim()} style={{ background: name.trim() ? '#f97316' : '#22283a', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: name.trim() ? '#fff' : '#6b7280', cursor: name.trim() ? 'pointer' : 'not-allowed' }}>Criar formulário</button>
+          <button onClick={handleSave} disabled={!name.trim() || !pipelineId || !stageId} style={{ background: name.trim() && pipelineId && stageId ? '#f97316' : '#22283a', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: name.trim() && pipelineId && stageId ? '#fff' : '#6b7280', cursor: name.trim() && pipelineId && stageId ? 'pointer' : 'not-allowed' }}>Criar formulário</button>
         </div>
       </div>
     </>
