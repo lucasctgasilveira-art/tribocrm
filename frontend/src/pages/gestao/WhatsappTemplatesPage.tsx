@@ -1,4 +1,182 @@
-import GestaoPlaceholder from './GestaoPlaceholder'
+import { useState, useRef } from 'react'
+import { Plus, MoreHorizontal, MessageCircle, X, Bold, Italic, Strikethrough, Smile } from 'lucide-react'
+import AppLayout from '../../components/shared/AppLayout/AppLayout'
+import { gestaoMenuItems } from '../../config/gestaoMenu'
+
+interface Template { id: string; name: string; active: boolean; preview: string; vars: string[]; usedCount: number; lastUsed: string }
+
+const templates: Template[] = [
+  { id:'1', name:'Primeiro contato', active:true, preview:'Oi {{nome_lead}}! 👋 Sou {{nome_vendedor}} da Tribo de Vendas...', vars:['nome_lead','nome_vendedor'], usedCount:34, lastUsed:'hoje' },
+  { id:'2', name:'Follow-up proposta 3 dias', active:true, preview:'{{nome_lead}}, passando para ver se ficou alguma dúvida sobre nossa proposta 😊', vars:['nome_lead'], usedCount:18, lastUsed:'há 1 dia' },
+  { id:'3', name:'Parabéns pela venda', active:true, preview:'🎉 Parabéns {{nome_vendedor}}! Você acabou de fechar {{nome_lead}}...', vars:['nome_lead','nome_vendedor'], usedCount:7, lastUsed:'há 3 dias' },
+  { id:'4', name:'Lembrete de reunião', active:true, preview:'Oi {{nome_lead}}! Lembrando nossa reunião hoje às {{hora_reuniao}} 📅', vars:['nome_lead','hora_reuniao'], usedCount:11, lastUsed:'há 2 dias' },
+  { id:'5', name:'Reativação — Lead Frio', active:false, preview:'Oi {{nome_lead}}! Faz um tempo que não nos falamos...', vars:['nome_lead'], usedCount:0, lastUsed:'Nunca usado' },
+]
+
+const allVars = ['nome_lead','empresa_lead','nome_vendedor','nome_produto','valor_produto','data_hoje']
+const menuOpts = ['Editar', 'Duplicar', 'Ativar/Desativar', 'Excluir']
+
 export default function WhatsappTemplatesPage() {
-  return <GestaoPlaceholder title="Modelos de WhatsApp" subtitle="Templates de mensagens WhatsApp" />
+  const [openMenu, setOpenMenu] = useState<string | null>(null)
+  const [modalOpen, setModalOpen] = useState(false)
+
+  return (
+    <AppLayout menuItems={gestaoMenuItems}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <h1 style={{ fontSize: 20, fontWeight: 700, color: '#e8eaf0', margin: 0 }}>Modelos de WhatsApp</h1>
+        <button onClick={() => setModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+          <Plus size={15} strokeWidth={2} /> Novo Modelo
+        </button>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', fontSize: 13, marginBottom: 16 }}>
+        <span style={{ color: '#6b7280' }}>Total</span><span style={{ color: '#e8eaf0', fontWeight: 700, marginLeft: 4 }}>5</span>
+        <span style={{ color: '#22283a', margin: '0 10px' }}>|</span>
+        <span style={{ color: '#6b7280' }}>Ativos</span><span style={{ color: '#22c55e', fontWeight: 700, marginLeft: 4 }}>4</span>
+        <span style={{ color: '#22283a', margin: '0 10px' }}>|</span>
+        <span style={{ color: '#6b7280' }}>Disponíveis na extensão</span><span style={{ color: '#e8eaf0', fontWeight: 700, marginLeft: 4 }}>4</span>
+      </div>
+
+      {/* Info */}
+      <div style={{ background: 'rgba(37,209,102,0.08)', border: '1px solid rgba(37,209,102,0.2)', borderRadius: 8, padding: '12px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+        <MessageCircle size={16} color="#25d166" strokeWidth={1.5} style={{ flexShrink: 0 }} />
+        <span style={{ color: '#9ca3af' }}>Estes modelos ficam disponíveis no painel lateral da extensão do Chrome para envio rápido pelo WhatsApp Web.</span>
+      </div>
+
+      {/* Template cards grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+        {templates.map(t => (
+          <div key={t.id} style={{ background: '#161a22', border: '1px solid #22283a', borderRadius: 12, padding: 20, display: 'flex', flexDirection: 'column', transition: 'border-color 0.2s' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(249,115,22,0.3)' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = '#22283a' }}>
+            {/* Top */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: '#e8eaf0', flex: 1 }}>{t.name}</span>
+              <span style={{ background: t.active ? 'rgba(34,197,94,0.12)' : 'rgba(107,114,128,0.12)', color: t.active ? '#22c55e' : '#6b7280', borderRadius: 999, padding: '2px 8px', fontSize: 10, fontWeight: 500 }}>{t.active ? 'Ativo' : 'Inativo'}</span>
+            </div>
+            {/* Middle */}
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, color: '#6b7280', marginTop: 8, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{t.preview}</div>
+              <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
+                {t.vars.map(v => <span key={v} style={{ background: '#22283a', color: '#9ca3af', borderRadius: 4, padding: '2px 8px', fontSize: 11 }}>{`{{${v}}}`}</span>)}
+              </div>
+            </div>
+            {/* Footer */}
+            <div style={{ marginTop: 'auto', paddingTop: 14, borderTop: '1px solid #22283a' }}>
+              <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 8 }}>{t.usedCount > 0 ? `Usado ${t.usedCount}x · ${t.lastUsed}` : t.lastUsed}</div>
+              <div style={{ display: 'flex', gap: 6, position: 'relative' }}>
+                <button style={{ background: 'transparent', border: '1px solid #22283a', borderRadius: 6, padding: '5px 12px', fontSize: 12, color: '#9ca3af', cursor: 'pointer' }}>Editar</button>
+                <button style={{ background: 'transparent', border: '1px solid #22283a', borderRadius: 6, padding: '5px 12px', fontSize: 12, color: '#9ca3af', cursor: 'pointer' }}>Duplicar</button>
+                <button onClick={() => setOpenMenu(openMenu === t.id ? null : t.id)} style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid #22283a', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af' }}>
+                  <MoreHorizontal size={14} strokeWidth={1.5} />
+                </button>
+                {openMenu === t.id && (
+                  <div style={{ position: 'absolute', right: 0, top: 32, zIndex: 20, background: '#161a22', border: '1px solid #22283a', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', minWidth: 150, padding: '4px 0' }}>
+                    {menuOpts.map(opt => <div key={opt} onClick={() => setOpenMenu(null)} style={{ padding: '8px 14px', fontSize: 13, color: opt === 'Excluir' ? '#ef4444' : '#e8eaf0', cursor: 'pointer' }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>{opt}</div>)}
+                </div>
+              )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {modalOpen && <WhatsAppModal onClose={() => setModalOpen(false)} />}
+    </AppLayout>
+  )
+}
+
+// ── WhatsApp Modal ──
+
+function renderWA(text: string): string {
+  return text
+    .replace(/\*([^*]+)\*/g, '<strong>$1</strong>')
+    .replace(/_([^_]+)_/g, '<em>$1</em>')
+    .replace(/~([^~]+)~/g, '<del>$1</del>')
+    .replace(/\{\{nome_lead\}\}/g, 'Camila Torres')
+    .replace(/\{\{empresa_lead\}\}/g, 'Torres & Filhos')
+    .replace(/\{\{nome_vendedor\}\}/g, 'Ana Souza')
+    .replace(/\{\{nome_produto\}\}/g, 'Plano Pro')
+    .replace(/\{\{valor_produto\}\}/g, 'R$ 12.000')
+    .replace(/\{\{data_hoje\}\}/g, '03/04/2026')
+    .replace(/\n/g, '<br/>')
+}
+
+function WhatsAppModal({ onClose }: { onClose: () => void }) {
+  const [name, setName] = useState('')
+  const [body, setBody] = useState('')
+  const bodyRef = useRef<HTMLTextAreaElement>(null)
+
+  function insertAt(before: string, after: string) {
+    const ta = bodyRef.current; if (!ta) return
+    const s = ta.selectionStart; const e = ta.selectionEnd; const sel = body.slice(s, e)
+    const text = before + (sel || 'texto') + after
+    setBody(body.slice(0, s) + text + body.slice(e))
+    setTimeout(() => { ta.focus(); ta.selectionStart = s + before.length; ta.selectionEnd = s + before.length + (sel || 'texto').length }, 0)
+  }
+
+  function insertVar(v: string) {
+    const ta = bodyRef.current; if (!ta) return
+    const s = ta.selectionStart; const tag = `{{${v}}}`
+    setBody(body.slice(0, s) + tag + body.slice(ta.selectionEnd))
+    setTimeout(() => { ta.focus(); ta.selectionStart = ta.selectionEnd = s + tag.length }, 0)
+  }
+
+  const inputS: React.CSSProperties = { width: '100%', background: '#111318', border: '1px solid #22283a', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: '#e8eaf0', outline: 'none', boxSizing: 'border-box' }
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 560, maxWidth: '90vw', maxHeight: '90vh', background: '#161a22', border: '1px solid #22283a', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid #22283a', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: '#e8eaf0', margin: 0 }}>Novo Modelo de WhatsApp</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b7280', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+        </div>
+        <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: 12, fontWeight: 500, color: '#9ca3af', display: 'block', marginBottom: 6 }}>Nome do modelo <span style={{ color: '#f97316' }}>*</span></label>
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Primeiro contato" style={inputS} />
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: 12, fontWeight: 500, color: '#9ca3af', display: 'block', marginBottom: 6 }}>Mensagem</label>
+            {/* Formatting bar */}
+            <div style={{ background: '#111318', borderBottom: '1px solid #22283a', padding: '8px 12px', display: 'flex', gap: 6, borderRadius: '8px 8px 0 0' }}>
+              <FmtBtn icon={<Bold size={14} />} onClick={() => insertAt('*', '*')} title="Negrito" />
+              <FmtBtn icon={<Italic size={14} />} onClick={() => insertAt('_', '_')} title="Itálico" />
+              <FmtBtn icon={<Strikethrough size={14} />} onClick={() => insertAt('~', '~')} title="Tachado" />
+              <FmtBtn icon={<Smile size={14} />} onClick={() => insertAt('😊', '')} title="Emoji" />
+            </div>
+            <textarea ref={bodyRef} rows={8} value={body} onChange={e => setBody(e.target.value)} placeholder={'Oi {{nome_lead}}! 👋'} style={{ ...inputS, resize: 'none', borderRadius: '0 0 8px 8px', borderTop: 'none', lineHeight: 1.6 }} />
+            <div style={{ fontSize: 11, color: '#6b7280', marginTop: 4 }}>Use *negrito*, _itálico_, ~tachado~ — formatação compatível com WhatsApp</div>
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 10, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8, fontWeight: 600 }}>Variáveis disponíveis — clique para inserir:</div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {allVars.map(v => <button key={v} onClick={() => insertVar(v)} style={{ background: '#22283a', color: '#f97316', borderRadius: 4, padding: '3px 10px', fontSize: 12, border: 'none', cursor: 'pointer' }}>{`{{${v}}}`}</button>)}
+            </div>
+          </div>
+          {/* WhatsApp preview */}
+          {body && (
+            <div style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 10, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8, fontWeight: 600 }}>Preview</div>
+              <div style={{ background: '#0b141a', borderRadius: 12, padding: 16 }}>
+                <div style={{ background: '#1f2c34', borderRadius: '12px 12px 12px 4px', padding: '10px 14px', maxWidth: '85%', position: 'relative' }}>
+                  <div style={{ fontSize: 13, color: '#e8eaf0', lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: renderWA(body) }} />
+                  <div style={{ fontSize: 10, color: '#6b7280', textAlign: 'right', marginTop: 4 }}>14:30 ✓✓</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid #22283a', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid #22283a', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: '#9ca3af', cursor: 'pointer' }}>Cancelar</button>
+          <button disabled={!name.trim()} style={{ background: name.trim() ? '#f97316' : '#22283a', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: name.trim() ? '#fff' : '#6b7280', cursor: name.trim() ? 'pointer' : 'not-allowed' }}>Salvar modelo</button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+function FmtBtn({ icon, onClick, title }: { icon: React.ReactNode; onClick: () => void; title: string }) {
+  return <button onClick={onClick} title={title} style={{ background: 'transparent', border: '1px solid #22283a', borderRadius: 4, padding: '4px 8px', cursor: 'pointer', color: '#9ca3af', display: 'flex', alignItems: 'center' }}>{icon}</button>
 }
