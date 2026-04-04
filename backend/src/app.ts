@@ -8,6 +8,7 @@ import authRoutes from './routes/auth.routes'
 import pipelineRoutes from './routes/pipeline.routes'
 import leadsRoutes from './routes/leads.routes'
 import tasksRoutes from './routes/tasks.routes'
+import reportsRoutes from './routes/reports.routes'
 
 const app = express()
 
@@ -46,5 +47,6 @@ app.use('/auth', authRoutes)
 app.use('/pipelines', pipelineRoutes)
 app.use('/leads', leadsRoutes)
 app.use('/tasks', tasksRoutes)
+app.use('/reports', reportsRoutes)
 
 export default app
