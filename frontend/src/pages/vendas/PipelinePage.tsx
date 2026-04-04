@@ -1,9 +1,10 @@
-import { useState, useMemo, useCallback, type DragEvent } from 'react'
-import { Search, MessageCircle, Mail, Phone, Plus } from 'lucide-react'
+import { useState, useEffect, useCallback, type DragEvent } from 'react'
+import { Search, MessageCircle, Mail, Phone, Plus, Loader2 } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { vendasMenuItems } from '../../config/vendasMenu'
 import LeadDrawer from '../../components/shared/LeadDrawer/LeadDrawer'
 import NewLeadModal, { type NewLeadData } from '../../components/shared/NewLeadModal/NewLeadModal'
+import { getPipelines, getKanban } from '../../services/pipeline.service'
 
 // ── Types ──
 
@@ -11,34 +12,22 @@ type Temperature = 'HOT' | 'WARM' | 'COLD'
 
 interface Lead {
   id: string; name: string; company: string; value: number; stage: string
-  temperature: Temperature; responsible: string; lastContact: string | null
-  phone: string; email: string
+  temperature: Temperature; lastContact: string | null; phone: string; email: string
 }
 
-interface StageConfig { name: string; color: string }
+interface StageConfig { id: string; name: string; color: string }
 
-const stages: StageConfig[] = [
-  { name: 'Sem Contato', color: '#6b7280' },
-  { name: 'Em Contato', color: '#3b82f6' },
-  { name: 'Negociando', color: '#f59e0b' },
-  { name: 'Proposta Enviada', color: '#a855f7' },
-  { name: 'Venda Realizada', color: '#22c55e' },
-  { name: 'Repescagem', color: '#f97316' },
-  { name: 'Perdido', color: '#ef4444' },
-]
+interface ApiLead {
+  id: string; name: string; company: string | null; phone: string | null; whatsapp: string | null
+  expectedValue: string | number | null; temperature: Temperature; stageId: string; lastActivityAt: string | null
+  responsible: { id: string; name: string }
+}
 
-const initialLeads: Lead[] = [
-  { id:'1', name:'Camila Torres', company:'Torres & Filhos', value:12000, stage:'Sem Contato', temperature:'HOT', responsible:'EU', lastContact:'há 2 dias', phone:'(21) 98712-3344', email:'camila@torres.com' },
-  { id:'2', name:'Rafael Mendes', company:'MendesNet', value:8500, stage:'Sem Contato', temperature:'COLD', responsible:'EU', lastContact:'há 8 dias', phone:'(11) 97654-3210', email:'rafael@mendesnet.com' },
-  { id:'3', name:'Fernanda Lima', company:'Lima Distribuidora', value:18000, stage:'Em Contato', temperature:'HOT', responsible:'EU', lastContact:'hoje', phone:'(31) 95432-1098', email:'fernanda@lima.com' },
-  { id:'4', name:'Marcos Oliveira', company:'MO Serviços', value:5000, stage:'Em Contato', temperature:'COLD', responsible:'EU', lastContact:'há 18 dias', phone:'(41) 94321-0987', email:'marcos@mo.com' },
-  { id:'5', name:'Roberto Souza', company:'RS Comércio', value:32000, stage:'Negociando', temperature:'HOT', responsible:'EU', lastContact:'há 1 dia', phone:'(21) 92109-8765', email:'roberto@rs.com' },
-  { id:'6', name:'Ana Paula Costa', company:'Costa & Filhos', value:12000, stage:'Negociando', temperature:'WARM', responsible:'EU', lastContact:'há 5 dias', phone:'(11) 91098-7654', email:'ana@costa.com' },
-  { id:'7', name:'Priscila Gomes', company:'GomesTech', value:28000, stage:'Proposta Enviada', temperature:'HOT', responsible:'EU', lastContact:'há 2 dias', phone:'(11) 89876-5432', email:'priscila@gomestech.com' },
-  { id:'8', name:'Diego Marques', company:'Marquesali', value:15000, stage:'Proposta Enviada', temperature:'WARM', responsible:'EU', lastContact:'há 3 dias', phone:'(31) 88765-4321', email:'diego@marquesali.com' },
-  { id:'9', name:'Juliana Torres', company:'Torres Import', value:28000, stage:'Venda Realizada', temperature:'HOT', responsible:'EU', lastContact:'hoje', phone:'(21) 87654-3210', email:'juliana@torres.com' },
-  { id:'10', name:'Bruno Salave', company:'SalaGroup', value:19000, stage:'Repescagem', temperature:'WARM', responsible:'EU', lastContact:'há 12 dias', phone:'(41) 86543-2109', email:'bruno@sala.com' },
-]
+interface KanbanStage {
+  id: string; name: string; color: string; position: number; leads: ApiLead[]
+}
+
+// ── Helpers ──
 
 const tempConfig: Record<Temperature, { label: string; color: string; bg: string }> = {
   HOT: { label: '🔥 Quente', color: '#f97316', bg: 'rgba(249,115,22,0.12)' },
@@ -50,14 +39,34 @@ function formatCurrency(v: number): string {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })
 }
 
+function formatTimeAgo(dateStr: string | null): string | null {
+  if (!dateStr) return null
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+  if (days === 0) return 'hoje'
+  if (days === 1) return 'há 1 dia'
+  return `há ${days} dias`
+}
+
+function mapApiLead(l: ApiLead, stageName: string): Lead {
+  return {
+    id: l.id, name: l.name, company: l.company ?? '', value: Number(l.expectedValue) || 0,
+    stage: stageName, temperature: l.temperature, lastContact: formatTimeAgo(l.lastActivityAt),
+    phone: l.phone ?? l.whatsapp ?? '—', email: '—',
+  }
+}
+
 const CSS = `
   .vp-board::-webkit-scrollbar{height:6px}.vp-board::-webkit-scrollbar-track{background:#161a22;border-radius:3px}.vp-board::-webkit-scrollbar-thumb{background:#22283a;border-radius:3px}.vp-board{scrollbar-width:thin;scrollbar-color:#22283a #161a22}
   .vp-col::-webkit-scrollbar{width:4px}.vp-col::-webkit-scrollbar-track{background:transparent}.vp-col::-webkit-scrollbar-thumb{background:transparent;border-radius:4px}.vp-wrap:hover .vp-col::-webkit-scrollbar-thumb{background:#22283a}.vp-col{scrollbar-width:thin;scrollbar-color:transparent transparent}.vp-wrap:hover .vp-col{scrollbar-color:#22283a transparent}
-  @keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}@keyframes fadeIn{from{opacity:0}to{opacity:1}}
 `
 
+// ── Component ──
+
 export default function VendasPipelinePage() {
-  const [leads, setLeads] = useState<Lead[]>(initialLeads)
+  const [stages, setStages] = useState<StageConfig[]>([])
+  const [leads, setLeads] = useState<Lead[]>([])
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [hoveredCard, setHoveredCard] = useState<string | null>(null)
   const [draggedId, setDraggedId] = useState<string | null>(null)
@@ -66,21 +75,42 @@ export default function VendasPipelinePage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [modalStage, setModalStage] = useState<string | undefined>(undefined)
 
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase()
-    return leads.filter((l) => !q || l.name.toLowerCase().includes(q) || l.company.toLowerCase().includes(q))
-  }, [leads, search])
+  useEffect(() => {
+    async function load() {
+      setLoading(true)
+      try {
+        const pipelinesData = await getPipelines()
+        if (pipelinesData.length > 0) {
+          const kanban = await getKanban(pipelinesData[0].id)
+          setStages(kanban.stages.map((s: KanbanStage) => ({ id: s.id, name: s.name, color: s.color })))
+          const allLeads: Lead[] = []
+          kanban.stages.forEach((s: KanbanStage) => {
+            s.leads.forEach((l: ApiLead) => allLeads.push(mapApiLead(l, s.name)))
+          })
+          setLeads(allLeads)
+        }
+      } catch { /* ignore */ }
+      finally { setLoading(false) }
+    }
+    load()
+  }, [])
 
-  const stats = useMemo(() => ({
+  const filtered = leads.filter(l => {
+    if (!search) return true
+    const q = search.toLowerCase()
+    return l.name.toLowerCase().includes(q) || l.company.toLowerCase().includes(q)
+  })
+
+  const stats = {
     total: filtered.length,
     totalValue: filtered.reduce((s, l) => s + l.value, 0),
-    hot: filtered.filter((l) => l.temperature === 'HOT').length,
-  }), [filtered])
+    hot: filtered.filter(l => l.temperature === 'HOT').length,
+  }
 
   const onDragStart = useCallback((e: DragEvent, id: string) => { setDraggedId(id); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', id) }, [])
   const onDragOver = useCallback((e: DragEvent, s: string) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDropTarget(s) }, [])
   const onDragLeave = useCallback(() => setDropTarget(null), [])
-  const onDrop = useCallback((e: DragEvent, s: string) => { e.preventDefault(); const id = e.dataTransfer.getData('text/plain'); setLeads((p) => p.map((l) => l.id === id ? { ...l, stage: s } : l)); setDraggedId(null); setDropTarget(null) }, [])
+  const onDrop = useCallback((e: DragEvent, s: string) => { e.preventDefault(); const id = e.dataTransfer.getData('text/plain'); setLeads(p => p.map(l => l.id === id ? { ...l, stage: s } : l)); setDraggedId(null); setDropTarget(null) }, [])
   const onDragEnd = useCallback(() => { setDraggedId(null); setDropTarget(null) }, [])
 
   function handleNewLead(data: NewLeadData) {
@@ -89,9 +119,28 @@ export default function VendasPipelinePage() {
       id: String(Date.now()), name: data.name, company: data.company,
       value: parseInt(data.value) || 0, stage: data.stage,
       temperature: tempMap[data.temperature] ?? 'WARM',
-      responsible: 'EU', lastContact: 'agora', phone: data.phone || '—', email: data.email || '—',
+      lastContact: 'agora', phone: data.phone || '—', email: data.email || '—',
     }
-    setLeads((prev) => [newLead, ...prev])
+    setLeads(prev => [newLead, ...prev])
+  }
+
+  if (loading) {
+    return (
+      <AppLayout menuItems={vendasMenuItems}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 'calc(100vh - 108px)', gap: 10 }}>
+          <Loader2 size={24} color="#f97316" strokeWidth={1.5} className="animate-spin" />
+          <span style={{ fontSize: 14, color: '#6b7280' }}>Carregando pipeline...</span>
+        </div>
+      </AppLayout>
+    )
+  }
+
+  if (stages.length === 0) {
+    return (
+      <AppLayout menuItems={vendasMenuItems}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 'calc(100vh - 108px)', color: '#6b7280', fontSize: 14 }}>Nenhum pipeline disponível</div>
+      </AppLayout>
+    )
   }
 
   return (
@@ -99,7 +148,7 @@ export default function VendasPipelinePage() {
       <style>{CSS}</style>
       <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 108px)' }}>
 
-      {/* Header + Stats inline */}
+      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexShrink: 0 }}>
         <h1 style={{ fontSize: 20, fontWeight: 700, color: '#e8eaf0', margin: 0 }}>Meu Pipeline</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: 0, fontSize: 13 }}>
@@ -109,7 +158,7 @@ export default function VendasPipelinePage() {
           <span style={{ color: '#22283a', margin: '0 10px' }}>|</span>
           <span style={{ color: '#6b7280' }}>Quentes</span><span style={{ color: '#f97316', fontWeight: 700, marginLeft: 4 }}>🔥 {stats.hot}</span>
         </div>
-        <button onClick={() => { setModalStage(undefined); setModalOpen(true) }} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'background 0.2s', flexShrink: 0 }}
+        <button onClick={() => { setModalStage(undefined); setModalOpen(true) }} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
           onMouseEnter={(e) => { e.currentTarget.style.background = '#fb923c' }} onMouseLeave={(e) => { e.currentTarget.style.background = '#f97316' }}>
           <Plus size={15} strokeWidth={2} /> Novo Lead
         </button>
@@ -126,13 +175,12 @@ export default function VendasPipelinePage() {
       <div className="vp-board" style={{ flex: 1, overflowX: 'auto', overflowY: 'hidden', minHeight: 0 }}>
         <div style={{ display: 'flex', gap: 12, height: '100%', paddingBottom: 8 }}>
           {stages.map((stage) => {
-            const sl = filtered.filter((l) => l.stage === stage.name)
+            const sl = filtered.filter(l => l.stage === stage.name)
             const sv = sl.reduce((s, l) => s + l.value, 0)
             return (
-              <div key={stage.name} className="vp-wrap"
+              <div key={stage.id} className="vp-wrap"
                 onDragOver={(e) => onDragOver(e, stage.name)} onDragLeave={onDragLeave} onDrop={(e) => onDrop(e, stage.name)}
                 style={{ width: 260, flexShrink: 0, display: 'flex', flexDirection: 'column', background: '#0f1117', borderRadius: 12, maxHeight: '100%', border: dropTarget === stage.name ? '1px solid rgba(249,115,22,0.3)' : '1px solid transparent', transition: 'border-color 0.2s' }}>
-                {/* Header */}
                 <div style={{ background: `${stage.color}26`, borderRadius: 8, padding: '10px 14px', margin: '8px 8px 8px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -146,7 +194,7 @@ export default function VendasPipelinePage() {
                 <div className="vp-col" style={{ flex: 1, overflowY: 'auto', padding: '0 8px 8px', minHeight: 0 }}>
                   {sl.length === 0 ? (
                     <div style={{ border: '1px dashed #22283a', borderRadius: 8, padding: 20, textAlign: 'center', fontSize: 12, color: '#6b7280' }}>Sem leads</div>
-                  ) : sl.map((lead) => {
+                  ) : sl.map(lead => {
                     const temp = tempConfig[lead.temperature]
                     return (
                       <div key={lead.id} draggable onDragStart={(e) => onDragStart(e, lead.id)} onDragEnd={onDragEnd} onClick={() => setSelectedLead(lead)}
@@ -176,9 +224,9 @@ export default function VendasPipelinePage() {
         </div>
       </div>
 
-      </div>{/* end outer flex container */}
+      </div>
 
-      {selectedLead && <LeadDrawer lead={selectedLead} onClose={() => setSelectedLead(null)} stageColor={stages.find((s) => s.name === selectedLead.stage)?.color ?? '#6b7280'} instance="vendas" />}
+      {selectedLead && <LeadDrawer lead={{ ...selectedLead, responsible: 'EU' }} onClose={() => setSelectedLead(null)} stageColor={stages.find(s => s.name === selectedLead.stage)?.color ?? '#6b7280'} instance="vendas" />}
       <NewLeadModal open={modalOpen} onClose={() => setModalOpen(false)} onSubmit={handleNewLead} defaultStage={modalStage} />
     </AppLayout>
   )
