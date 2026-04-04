@@ -57,6 +57,7 @@ export default function App() {
       <Route path="/preview/gestao/dashboard" element={<GestaoDashboardPage />} />
       <Route path="/preview/admin/dashboard" element={<AdminDashboardPage />} />
       <Route path="/preview/leads/:id" element={<GestaoLeadDetailPage />} />
+      <Route path="/preview/vendas/resultados" element={<MyResultsPage />} />
       <Route path="/preview/gestao/tarefas" element={<GestaoTasksPage />} />
 
       {/* Admin */}
