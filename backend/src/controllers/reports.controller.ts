@@ -1,6 +1,197 @@
 import { Request, Response } from 'express'
 import { prisma } from '../lib/prisma'
 
+// ── Helper: date range from period ──
+
+function getDateRange(period: string, startDate?: string, endDate?: string) {
+  if (startDate && endDate) {
+    return { start: new Date(startDate), end: new Date(endDate + 'T23:59:59.999Z') }
+  }
+
+  const now = new Date()
+
+  if (period === 'quarter') {
+    const qMonth = Math.floor(now.getMonth() / 3) * 3
+    return {
+      start: new Date(now.getFullYear(), qMonth, 1),
+      end: new Date(now.getFullYear(), qMonth + 3, 0, 23, 59, 59, 999),
+    }
+  }
+
+  if (period === 'year') {
+    return {
+      start: new Date(now.getFullYear(), 0, 1),
+      end: new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999),
+    }
+  }
+
+  // default: month
+  return {
+    start: new Date(now.getFullYear(), now.getMonth(), 1),
+    end: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999),
+  }
+}
+
+// ── GET /reports/gestao ──
+
+export async function getGestaoReports(req: Request, res: Response): Promise<void> {
+  try {
+    const tenantId = req.user!.tenantId
+    const period = (req.query.period as string) || 'month'
+    const { start, end } = getDateRange(period, req.query.startDate as string, req.query.endDate as string)
+
+    // ── 1. KPIs ──
+
+    const wonLeads = await prisma.lead.findMany({
+      where: { tenantId, status: 'WON', wonAt: { gte: start, lte: end }, deletedAt: null },
+      select: { closedValue: true },
+    })
+    const totalRevenue = wonLeads.reduce((s, l) => s + (l.closedValue ? Number(l.closedValue) : 0), 0)
+    const wonCount = wonLeads.length
+
+    const totalLeads = await prisma.lead.count({
+      where: { tenantId, createdAt: { gte: start, lte: end }, deletedAt: null },
+    })
+
+    const conversionRate = totalLeads > 0 ? Math.round((wonCount / totalLeads) * 1000) / 10 : 0
+    const averageTicket = wonCount > 0 ? Math.round((totalRevenue / wonCount) * 100) / 100 : 0
+
+    const kpis = { totalRevenue, totalLeads, conversionRate, averageTicket }
+
+    // ── 2. Team Performance ──
+
+    const users = await prisma.user.findMany({
+      where: { tenantId, role: { in: ['SELLER', 'MANAGER', 'OWNER'] }, isActive: true, deletedAt: null },
+      select: { id: true, name: true, avatarUrl: true },
+    })
+
+    // Find goal for this period
+    let periodType: 'MONTHLY' | 'QUARTERLY' | 'YEARLY' = 'MONTHLY'
+    let periodReference = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`
+    if (period === 'quarter') {
+      periodType = 'QUARTERLY'
+      const q = Math.floor(start.getMonth() / 3) + 1
+      periodReference = `${start.getFullYear()}-Q${q}`
+    } else if (period === 'year') {
+      periodType = 'YEARLY'
+      periodReference = `${start.getFullYear()}`
+    }
+
+    const goalRecord = await prisma.goal.findFirst({
+      where: { tenantId, periodType, periodReference },
+      include: { individualGoals: true },
+    })
+
+    const teamPerformance = await Promise.all(
+      users.map(async (user) => {
+        const leadsCount = await prisma.lead.count({
+          where: { tenantId, responsibleId: user.id, createdAt: { gte: start, lte: end }, deletedAt: null },
+        })
+
+        const userWonLeads = await prisma.lead.findMany({
+          where: { tenantId, responsibleId: user.id, status: 'WON', wonAt: { gte: start, lte: end }, deletedAt: null },
+          select: { closedValue: true },
+        })
+
+        const closingsCount = userWonLeads.length
+        const revenue = userWonLeads.reduce((s, l) => s + (l.closedValue ? Number(l.closedValue) : 0), 0)
+        const userConversionRate = leadsCount > 0 ? Math.round((closingsCount / leadsCount) * 1000) / 10 : 0
+
+        let goalPercentage = 0
+        if (goalRecord) {
+          const indGoal = goalRecord.individualGoals.find(g => g.userId === user.id)
+          const target = indGoal?.revenueGoal ? Number(indGoal.revenueGoal) : (goalRecord.totalRevenueGoal ? Number(goalRecord.totalRevenueGoal) / users.length : 0)
+          goalPercentage = target > 0 ? Math.round((revenue / target) * 1000) / 10 : 0
+        }
+
+        return { id: user.id, name: user.name, avatarUrl: user.avatarUrl, leadsCount, closingsCount, conversionRate: userConversionRate, revenue, goalPercentage }
+      })
+    )
+
+    teamPerformance.sort((a, b) => b.revenue - a.revenue)
+
+    // ── 3. Loss Reasons ──
+
+    const lostLeads = await prisma.lead.findMany({
+      where: { tenantId, status: 'LOST', lostAt: { gte: start, lte: end }, deletedAt: null, lossReasonId: { not: null } },
+      select: { lossReasonId: true },
+    })
+
+    // Fetch loss reason names
+    const reasonIds = [...new Set(lostLeads.map(l => l.lossReasonId!).filter(Boolean))]
+    const lossReasonRecords = reasonIds.length > 0
+      ? await prisma.lossReason.findMany({ where: { id: { in: reasonIds } }, select: { id: true, name: true } })
+      : []
+    const reasonNameMap = new Map(lossReasonRecords.map(r => [r.id, r.name]))
+
+    const reasonMap = new Map<string, { reason: string; count: number }>()
+    for (const lead of lostLeads) {
+      const name = reasonNameMap.get(lead.lossReasonId!) ?? 'Sem motivo'
+      const entry = reasonMap.get(name)
+      if (entry) entry.count++
+      else reasonMap.set(name, { reason: name, count: 1 })
+    }
+
+    const totalLost = lostLeads.length
+    const lossReasons = Array.from(reasonMap.values())
+      .map(r => ({ ...r, percentage: totalLost > 0 ? Math.round((r.count / totalLost) * 100) : 0 }))
+      .sort((a, b) => b.count - a.count)
+
+    // ── 4. Activities ──
+
+    const interactions = await prisma.interaction.findMany({
+      where: { tenantId, occurredAt: { gte: start, lte: end } },
+      select: { type: true },
+    })
+
+    const activities = { calls: 0, whatsapp: 0, emails: 0, meetings: 0, visits: 0 }
+    for (const i of interactions) {
+      if (i.type === 'CALL') activities.calls++
+      else if (i.type === 'WHATSAPP') activities.whatsapp++
+      else if (i.type === 'EMAIL') activities.emails++
+      else if (i.type === 'MEETING') activities.meetings++
+      else if (i.type === 'VISIT') activities.visits++
+    }
+
+    // ── 5. Pipeline by Stage ──
+
+    const defaultPipeline = await prisma.pipeline.findFirst({
+      where: { tenantId, isDefault: true, isActive: true },
+      include: { stages: { orderBy: { sortOrder: 'asc' } } },
+    })
+
+    const pipelineByStage = defaultPipeline
+      ? await Promise.all(
+          defaultPipeline.stages.map(async (stage) => {
+            const stageLeads = await prisma.lead.findMany({
+              where: { tenantId, stageId: stage.id, status: 'ACTIVE', deletedAt: null },
+              select: { expectedValue: true },
+            })
+            return {
+              stageName: stage.name,
+              color: stage.color,
+              count: stageLeads.length,
+              value: stageLeads.reduce((s, l) => s + (l.expectedValue ? Number(l.expectedValue) : 0), 0),
+            }
+          })
+        )
+      : []
+
+    // ── Response ──
+
+    res.json({
+      success: true,
+      data: { kpis, teamPerformance, lossReasons, activities, pipelineByStage },
+    })
+  } catch (error) {
+    console.error('[Reports] getGestaoReports error:', error)
+    res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Erro interno do servidor' },
+    })
+  }
+}
+
 export async function getDashboard(req: Request, res: Response): Promise<void> {
   try {
     const tenantId = req.user!.tenantId
