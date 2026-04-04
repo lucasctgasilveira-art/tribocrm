@@ -13,3 +13,6 @@ coverage/
 !.vscode/settings.json
 *.tsbuildinfo
 ~$*
+
+.vercel
+.env*.local
