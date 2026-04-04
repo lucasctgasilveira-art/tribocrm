@@ -219,6 +219,27 @@ export default function TwoFactorPage() {
           )}
         </button>
 
+        {/* Dev skip */}
+        {import.meta.env.DEV && (
+          <button
+            onClick={() => navigate('/admin/dashboard')}
+            style={{
+              width: '100%',
+              background: 'rgba(239,68,68,0.12)',
+              color: '#ef4444',
+              fontWeight: 600,
+              fontSize: 13,
+              borderRadius: 8,
+              padding: 9,
+              border: '1px solid rgba(239,68,68,0.3)',
+              cursor: 'pointer',
+              marginTop: 12,
+            }}
+          >
+            Pular 2FA (dev only)
+          </button>
+        )}
+
         {/* links */}
         <div style={{ textAlign: 'center', marginTop: 20, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <a

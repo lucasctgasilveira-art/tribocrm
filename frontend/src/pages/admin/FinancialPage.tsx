@@ -1,95 +1,161 @@
-import { useState } from 'react'
-import { TrendingUp, BarChart2, AlertCircle, UserMinus, DollarSign, Download } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { TrendingUp, BarChart2, AlertCircle, UserMinus, DollarSign, Download, Loader2 } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { adminMenuItems } from '../../config/adminMenu'
+import { getFinancial } from '../../services/admin.service'
+
+// ── Types ──
 
 type Period = 'month' | 'quarter' | 'year'
 
-const kpis = [
-  { label: 'MRR', value: 'R$ 42.180', variation: '↑ +12% vs mês ant.', vColor: '#22c55e', icon: TrendingUp, iColor: '#f97316' },
-  { label: 'ARR', value: 'R$ 506.160', variation: '↑ projetado', vColor: '#22c55e', icon: BarChart2, iColor: '#f97316' },
-  { label: 'Inadimplentes', value: '4', variation: '⚠️ 2 críticos', vColor: '#f59e0b', icon: AlertCircle, iColor: '#ef4444' },
-  { label: 'Churn', value: '2', variation: '↓ -1 vs mês ant.', vColor: '#22c55e', icon: UserMinus, iColor: '#6b7280' },
-  { label: 'Ticket Médio', value: 'R$ 296', variation: '↑ +5% vs mês ant.', vColor: '#22c55e', icon: DollarSign, iColor: '#f97316' },
-]
+interface Charge {
+  id: string
+  amount: string | number
+  dueDate: string
+  paidAt: string | null
+  status: string
+  tenant: { id: string; name: string; plan: { id: string; name: string; slug: string } }
+}
 
-interface Charge { company: string; plan: string; planColor: string; planBg: string; value: string; due: string; paid: string; status: 'Pago' | 'Pendente' | 'Vencido' | 'Cancelado' }
+interface FinancialData {
+  kpis: { mrr: number; arr: number; overdueCount: number; churnRate: number; averageTicket: number }
+  charges: Charge[]
+}
 
-const charges: Charge[] = [
-  { company: 'MendesNet', plan: 'Pro', planColor: '#f97316', planBg: 'rgba(249,115,22,0.12)', value: 'R$ 349', due: '05/04/2026', paid: '05/04/2026', status: 'Pago' },
-  { company: 'GomesTech', plan: 'Enterprise', planColor: '#a855f7', planBg: 'rgba(168,85,247,0.12)', value: 'R$ 649', due: '10/04/2026', paid: '—', status: 'Pendente' },
-  { company: 'Torres & Filhos', plan: 'Essencial', planColor: '#3b82f6', planBg: 'rgba(59,130,246,0.12)', value: 'R$ 197', due: '01/04/2026', paid: '—', status: 'Vencido' },
-  { company: 'Lima Distribuidora', plan: 'Essencial', planColor: '#3b82f6', planBg: 'rgba(59,130,246,0.12)', value: 'R$ 197', due: '18/04/2026', paid: '18/03/2026', status: 'Pago' },
-  { company: 'Souza Commerce', plan: 'Pro', planColor: '#f97316', planBg: 'rgba(249,115,22,0.12)', value: 'R$ 349', due: '01/04/2026', paid: '—', status: 'Vencido' },
-  { company: 'Ribeiro Vendas', plan: 'Solo', planColor: '#9ca3af', planBg: 'rgba(107,114,128,0.12)', value: 'R$ 69', due: '22/04/2026', paid: '—', status: 'Pendente' },
-  { company: 'Alpha Marketing', plan: 'Pro', planColor: '#f97316', planBg: 'rgba(249,115,22,0.12)', value: 'R$ 349', due: '08/04/2026', paid: '07/04/2026', status: 'Pago' },
-  { company: 'Prime Solutions', plan: 'Enterprise', planColor: '#a855f7', planBg: 'rgba(168,85,247,0.12)', value: 'R$ 649', due: '30/04/2026', paid: '—', status: 'Pendente' },
-  { company: 'Bastos & Co', plan: 'Solo', planColor: '#9ca3af', planBg: 'rgba(107,114,128,0.12)', value: 'R$ 69', due: '21/03/2026', paid: '—', status: 'Vencido' },
-  { company: 'Costa Digital', plan: 'Essencial', planColor: '#3b82f6', planBg: 'rgba(59,130,246,0.12)', value: 'R$ 197', due: '15/03/2026', paid: '—', status: 'Cancelado' },
-]
+// ── Config ──
 
-const statusS: Record<string, { bg: string; color: string }> = { Pago: { bg: 'rgba(34,197,94,0.12)', color: '#22c55e' }, Pendente: { bg: 'rgba(245,158,11,0.12)', color: '#f59e0b' }, Vencido: { bg: 'rgba(239,68,68,0.12)', color: '#ef4444' }, Cancelado: { bg: 'rgba(107,114,128,0.12)', color: '#6b7280' } }
+const statusS: Record<string, { bg: string; color: string; label: string }> = {
+  PAID: { bg: 'rgba(34,197,94,0.12)', color: '#22c55e', label: 'Pago' },
+  PENDING: { bg: 'rgba(245,158,11,0.12)', color: '#f59e0b', label: 'Pendente' },
+  OVERDUE: { bg: 'rgba(239,68,68,0.12)', color: '#ef4444', label: 'Vencido' },
+  CANCELLED: { bg: 'rgba(107,114,128,0.12)', color: '#6b7280', label: 'Cancelado' },
+}
+
+const planColors: Record<string, { bg: string; color: string }> = {
+  solo: { bg: 'rgba(107,114,128,0.12)', color: '#9ca3af' },
+  essencial: { bg: 'rgba(59,130,246,0.12)', color: '#3b82f6' },
+  pro: { bg: 'rgba(249,115,22,0.12)', color: '#f97316' },
+  enterprise: { bg: 'rgba(168,85,247,0.12)', color: '#a855f7' },
+}
+
+function fmt(v: number) { return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 }) }
+
 const thS: React.CSSProperties = { padding: '12px 20px', fontSize: 11, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, textAlign: 'left' }
 const tdS: React.CSSProperties = { padding: '14px 20px', fontSize: 13, color: '#e8eaf0', borderBottom: '1px solid #22283a' }
 
+// ── Component ──
+
 export default function FinancialPage() {
+  const [data, setData] = useState<FinancialData | null>(null)
+  const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState<Period>('month')
-  const [toast, setToast] = useState('')
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true)
+      try {
+        const result = await getFinancial({ period })
+        setData(result)
+      } catch {
+        setData(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [period])
+
   const periods: { key: Period; label: string }[] = [{ key: 'month', label: 'Este mês' }, { key: 'quarter', label: 'Trimestre' }, { key: 'year', label: 'Ano' }]
+
+  if (loading) {
+    return (
+      <AppLayout menuItems={adminMenuItems}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 'calc(100vh - 108px)', gap: 10 }}>
+          <Loader2 size={24} color="#f97316" strokeWidth={1.5} className="animate-spin" />
+          <span style={{ fontSize: 14, color: '#6b7280' }}>Carregando financeiro...</span>
+        </div>
+      </AppLayout>
+    )
+  }
+
+  const kpis = data?.kpis ?? { mrr: 0, arr: 0, overdueCount: 0, churnRate: 0, averageTicket: 0 }
+  const charges = data?.charges ?? []
+
+  const kpiCards = [
+    { label: 'MRR', value: fmt(kpis.mrr), variation: '', vColor: '#22c55e', icon: TrendingUp, iColor: '#f97316' },
+    { label: 'ARR', value: fmt(kpis.arr), variation: '', vColor: '#22c55e', icon: BarChart2, iColor: '#f97316' },
+    { label: 'Inadimplentes', value: String(kpis.overdueCount), variation: kpis.overdueCount > 0 ? `⚠️ ${kpis.overdueCount} pendente(s)` : '', vColor: '#f59e0b', icon: AlertCircle, iColor: '#ef4444' },
+    { label: 'Churn', value: `${kpis.churnRate}%`, variation: '', vColor: '#22c55e', icon: UserMinus, iColor: '#6b7280' },
+    { label: 'Ticket Médio', value: fmt(kpis.averageTicket), variation: '', vColor: '#22c55e', icon: DollarSign, iColor: '#f97316' },
+  ]
 
   return (
     <AppLayout menuItems={adminMenuItems}>
-      {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: '#161a22', border: '1px solid #22283a', borderLeft: '4px solid #22c55e', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: '#e8eaf0', zIndex: 60, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>{toast}</div>}
-
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <h1 style={{ fontSize: 20, fontWeight: 700, color: '#e8eaf0', margin: 0 }}>Financeiro</h1>
         <div style={{ display: 'flex', gap: 4 }}>
-          {periods.map(p => <button key={p.key} onClick={() => setPeriod(p.key)} style={{ borderRadius: 999, padding: '6px 14px', fontSize: 12, fontWeight: 500, cursor: 'pointer', background: period === p.key ? 'rgba(249,115,22,0.12)' : '#161a22', border: `1px solid ${period === p.key ? '#f97316' : '#22283a'}`, color: period === p.key ? '#f97316' : '#6b7280' }}>{p.label}</button>)}
+          {periods.map(p => (
+            <button key={p.key} onClick={() => setPeriod(p.key)} style={{
+              borderRadius: 999, padding: '6px 14px', fontSize: 12, fontWeight: 500, cursor: 'pointer',
+              background: period === p.key ? 'rgba(249,115,22,0.12)' : '#161a22',
+              border: `1px solid ${period === p.key ? '#f97316' : '#22283a'}`,
+              color: period === p.key ? '#f97316' : '#6b7280',
+            }}>{p.label}</button>
+          ))}
         </div>
       </div>
 
+      {/* KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16, marginBottom: 20 }}>
-        {kpis.map(k => { const I = k.icon; return (
-          <div key={k.label} style={{ background: '#161a22', border: '1px solid #22283a', borderRadius: 12, padding: 16, position: 'relative' }}>
-            <I size={18} color={k.iColor} strokeWidth={1.5} style={{ position: 'absolute', top: 16, right: 16 }} />
-            <span style={{ fontSize: 11, color: '#6b7280', display: 'block', marginBottom: 4 }}>{k.label}</span>
-            <span style={{ fontSize: 22, fontWeight: 700, color: '#e8eaf0', display: 'block' }}>{k.value}</span>
-            <span style={{ fontSize: 11, color: k.vColor, marginTop: 2, display: 'block' }}>{k.variation}</span>
-          </div>
-        )})}
+        {kpiCards.map(k => {
+          const I = k.icon
+          return (
+            <div key={k.label} style={{ background: '#161a22', border: '1px solid #22283a', borderRadius: 12, padding: 16, position: 'relative' }}>
+              <I size={18} color={k.iColor} strokeWidth={1.5} style={{ position: 'absolute', top: 16, right: 16 }} />
+              <span style={{ fontSize: 11, color: '#6b7280', display: 'block', marginBottom: 4 }}>{k.label}</span>
+              <span style={{ fontSize: 22, fontWeight: 700, color: '#e8eaf0', display: 'block' }}>{k.value}</span>
+              {k.variation && <span style={{ fontSize: 11, color: k.vColor, marginTop: 2, display: 'block' }}>{k.variation}</span>}
+            </div>
+          )
+        })}
       </div>
 
+      {/* Charges table */}
       <div style={{ background: '#161a22', border: '1px solid #22283a', borderRadius: 12, overflow: 'hidden' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid #22283a', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ fontSize: 14, fontWeight: 600, color: '#e8eaf0' }}>Cobranças</span>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <select style={{ background: '#0f1117', border: '1px solid #22283a', borderRadius: 8, padding: '5px 24px 5px 10px', fontSize: 12, color: '#e8eaf0', outline: 'none', cursor: 'pointer', appearance: 'none' as const }}><option>Status</option><option>Pago</option><option>Pendente</option><option>Vencido</option><option>Cancelado</option></select>
-            <select style={{ background: '#0f1117', border: '1px solid #22283a', borderRadius: 8, padding: '5px 24px 5px 10px', fontSize: 12, color: '#e8eaf0', outline: 'none', cursor: 'pointer', appearance: 'none' as const }}><option>Plano</option><option>Solo</option><option>Essencial</option><option>Pro</option><option>Enterprise</option></select>
-            <button style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: '1px solid #22283a', borderRadius: 6, padding: '4px 10px', fontSize: 11, color: '#9ca3af', cursor: 'pointer' }}><Download size={12} strokeWidth={1.5} /> Exportar CSV</button>
-          </div>
+          <button style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: '1px solid #22283a', borderRadius: 6, padding: '4px 10px', fontSize: 11, color: '#9ca3af', cursor: 'pointer' }}>
+            <Download size={12} strokeWidth={1.5} /> Exportar CSV
+          </button>
         </div>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead><tr style={{ background: '#0f1117' }}>{['Empresa', 'Plano', 'Valor', 'Vencimento', 'Pagamento', 'Status', 'Ações'].map(h => <th key={h} style={thS}>{h}</th>)}</tr></thead>
+          <thead>
+            <tr style={{ background: '#0f1117' }}>
+              {['Empresa', 'Plano', 'Valor', 'Vencimento', 'Pagamento', 'Status'].map(h => <th key={h} style={thS}>{h}</th>)}
+            </tr>
+          </thead>
           <tbody>
-            {charges.map((c, i) => { const s = statusS[c.status]!; return (
-              <tr key={i} onMouseEnter={e => { e.currentTarget.style.background = '#1c2130' }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
-                <td style={tdS}>{c.company}</td>
-                <td style={tdS}><span style={{ background: c.planBg, color: c.planColor, borderRadius: 4, padding: '2px 8px', fontSize: 11, fontWeight: 500 }}>{c.plan}</span></td>
-                <td style={{ ...tdS, fontWeight: 700 }}>{c.value}</td>
-                <td style={tdS}>{c.due}</td>
-                <td style={tdS}>{c.paid}</td>
-                <td style={tdS}><span style={{ background: s.bg, color: s.color, borderRadius: 999, padding: '3px 10px', fontSize: 11, fontWeight: 500 }}>{c.status}</span></td>
-                <td style={tdS}>
-                  <button onClick={() => { if (c.status !== 'Pago' && c.status !== 'Cancelado') { setToast(`Cobrança enviada para ${c.company}!`); setTimeout(() => setToast(''), 3000) } }}
-                    style={{ background: 'transparent', border: '1px solid #22283a', borderRadius: 6, padding: '4px 10px', fontSize: 11, color: c.status === 'Pago' || c.status === 'Cancelado' ? '#9ca3af' : '#f97316', cursor: 'pointer' }}>
-                    {c.status === 'Pago' || c.status === 'Cancelado' ? 'Ver' : 'Cobrar'}
-                  </button>
-                </td>
-              </tr>
-            )})}
+            {charges.length === 0 ? (
+              <tr><td colSpan={6} style={{ padding: 40, textAlign: 'center', color: '#6b7280', fontSize: 14 }}>Nenhuma cobrança encontrada</td></tr>
+            ) : charges.map(c => {
+              const s = statusS[c.status] ?? statusS.PENDING!
+              const pc = planColors[c.tenant.plan.slug] ?? planColors.solo
+              return (
+                <tr key={c.id} onMouseEnter={e => { e.currentTarget.style.background = '#1c2130' }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
+                  <td style={tdS}>{c.tenant.name}</td>
+                  <td style={tdS}><span style={{ background: pc!.bg, color: pc!.color, borderRadius: 4, padding: '2px 8px', fontSize: 11, fontWeight: 500 }}>{c.tenant.plan.name}</span></td>
+                  <td style={{ ...tdS, fontWeight: 700 }}>{fmt(Number(c.amount))}</td>
+                  <td style={tdS}>{new Date(c.dueDate).toLocaleDateString('pt-BR')}</td>
+                  <td style={tdS}>{c.paidAt ? new Date(c.paidAt).toLocaleDateString('pt-BR') : '—'}</td>
+                  <td style={tdS}><span style={{ background: s.bg, color: s.color, borderRadius: 999, padding: '3px 10px', fontSize: 11, fontWeight: 500 }}>{s.label}</span></td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
-        <div style={{ padding: '12px 20px', borderTop: '1px solid #22283a', fontSize: 12, color: '#6b7280' }}>Mostrando 1-10 de 174 cobranças</div>
+        <div style={{ padding: '12px 20px', borderTop: '1px solid #22283a', fontSize: 12, color: '#6b7280' }}>
+          Mostrando {charges.length} cobrança{charges.length !== 1 ? 's' : ''}
+        </div>
       </div>
     </AppLayout>
   )
