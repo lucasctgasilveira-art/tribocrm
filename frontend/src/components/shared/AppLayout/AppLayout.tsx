@@ -1,4 +1,5 @@
 import { useState, useEffect, type ReactNode } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import Topbar from '../Topbar/Topbar'
 import Sidebar, { type SidebarEntry, SIDEBAR_EXPANDED_W, SIDEBAR_COLLAPSED_W } from '../Sidebar/Sidebar'
 import PopupManager, { type PopupData } from '../PopupManager/PopupManager'
@@ -45,9 +46,30 @@ const mockPopups: PopupData[] = [
 ]
 
 export default function AppLayout({ menuItems, children }: AppLayoutProps) {
+  const navigate = useNavigate()
+  const location = useLocation()
+
   const [sidebarW, setSidebarW] = useState(() =>
     localStorage.getItem('tribocrm_sidebar_collapsed') === 'true' ? SIDEBAR_COLLAPSED_W : SIDEBAR_EXPANDED_W
   )
+
+  /* ─── onboarding redirect ─── */
+  useEffect(() => {
+    const skip = new URLSearchParams(location.search).get('skip') === 'true'
+    if (skip) return
+
+    const path = location.pathname
+    if (path.startsWith('/gestao') && !path.includes('/onboarding')) {
+      if (!localStorage.getItem('tribocrm_onboarding_done')) {
+        navigate('/gestao/onboarding', { replace: true })
+      }
+    }
+    if (path.startsWith('/vendas') && !path.includes('/onboarding')) {
+      if (!localStorage.getItem('tribocrm_vendedor_onboarding_done')) {
+        navigate('/vendas/onboarding', { replace: true })
+      }
+    }
+  }, [location.pathname, location.search, navigate])
 
   useEffect(() => {
     function onToggle(e: Event) {

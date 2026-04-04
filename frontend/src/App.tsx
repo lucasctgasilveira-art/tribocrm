@@ -1,6 +1,9 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from './pages/auth/LoginPage'
 import InstanceSelectorPage from './pages/auth/InstanceSelectorPage'
+import TwoFactorPage from './pages/auth/TwoFactorPage'
+import OnboardingGestorPage from './pages/auth/OnboardingGestorPage'
+import OnboardingVendedorPage from './pages/auth/OnboardingVendedorPage'
 import PrivateRoute from './components/shared/PrivateRoute'
 
 // Admin
@@ -51,6 +54,11 @@ export default function App() {
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/auth/select-instance" element={<InstanceSelectorPage />} />
+      <Route path="/auth/2fa" element={<TwoFactorPage />} />
+
+      {/* Onboarding */}
+      <Route path="/gestao/onboarding" element={<OnboardingGestorPage />} />
+      <Route path="/vendas/onboarding" element={<OnboardingVendedorPage />} />
 
       {/* Preview (sem proteção — apenas para teste visual) */}
       <Route path="/preview/vendas/dashboard" element={<VendasDashboardPage />} />
@@ -59,6 +67,9 @@ export default function App() {
       <Route path="/preview/leads/:id" element={<GestaoLeadDetailPage />} />
       <Route path="/preview/vendas/resultados" element={<MyResultsPage />} />
       <Route path="/preview/vendas/configuracoes" element={<PersonalSettingsPage />} />
+      <Route path="/preview/onboarding/gestor" element={<OnboardingGestorPage />} />
+      <Route path="/preview/onboarding/vendedor" element={<OnboardingVendedorPage />} />
+      <Route path="/preview/2fa" element={<TwoFactorPage />} />
       <Route path="/preview/gestao/tarefas" element={<GestaoTasksPage />} />
 
       {/* Admin */}
