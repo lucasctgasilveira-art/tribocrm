@@ -12,6 +12,7 @@ import reportsRoutes from './routes/reports.routes'
 import usersRoutes from './routes/users.routes'
 import productsRoutes from './routes/products.routes'
 import notificationsRoutes from './routes/notifications.routes'
+import goalsRoutes from './routes/goals.routes'
 
 const app = express()
 
@@ -54,5 +55,6 @@ app.use('/reports', reportsRoutes)
 app.use(usersRoutes)
 app.use('/products', productsRoutes)
 app.use('/notifications', notificationsRoutes)
+app.use('/goals', goalsRoutes)
 
 export default app
