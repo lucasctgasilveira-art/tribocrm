@@ -1,0 +1,61 @@
+import api from './api'
+
+export interface UsersParams {
+  search?: string
+  role?: string
+  teamId?: string
+  isActive?: string
+}
+
+export interface CreateUserPayload {
+  name: string
+  email: string
+  password: string
+  role: string
+  cpf?: string
+  birthday?: string
+  teamId?: string
+}
+
+export interface CreateTeamPayload {
+  name: string
+  leaderId?: string
+  memberIds?: string[]
+}
+
+export async function getUsers(params?: UsersParams) {
+  const response = await api.get('/users', { params })
+  return response.data.data
+}
+
+export async function createUser(payload: CreateUserPayload) {
+  const response = await api.post('/users', payload)
+  return response.data.data
+}
+
+export async function updateUser(id: string, payload: Record<string, unknown>) {
+  const response = await api.patch(`/users/${id}`, payload)
+  return response.data.data
+}
+
+export async function resetUserPassword(id: string, newPassword: string) {
+  const response = await api.patch(`/users/${id}/reset-password`, { newPassword })
+  return response.data.data
+}
+
+export async function getTeams() {
+  const response = await api.get('/teams')
+  return response.data.data
+}
+
+export async function createTeam(payload: CreateTeamPayload) {
+  const response = await api.post('/teams', payload)
+  return response.data.data
+}
+
+export async function updateTeam(id: string, payload: Record<string, unknown>) {
+  const response = await api.patch(`/teams/${id}`, payload)
+  return response.data.data
+}
+
+export default { getUsers, createUser, updateUser, resetUserPassword, getTeams, createTeam, updateTeam }
