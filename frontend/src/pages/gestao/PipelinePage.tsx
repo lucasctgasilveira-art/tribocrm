@@ -1,10 +1,11 @@
-import { useState, useMemo, useCallback, type DragEvent } from 'react'
+import { useState, useEffect, useMemo, useCallback, type DragEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, MessageCircle, Mail, Phone, Plus, Kanban as KanbanIcon, List } from 'lucide-react'
+import { Search, MessageCircle, Mail, Phone, Plus, Kanban as KanbanIcon, List, Loader2 } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
 import LeadDrawer from '../../components/shared/LeadDrawer/LeadDrawer'
 import NewLeadModal, { type NewLeadData } from '../../components/shared/NewLeadModal/NewLeadModal'
+import { getPipelines, getKanban } from '../../services/pipeline.service'
 
 // ── Types ──
 
@@ -23,37 +24,40 @@ interface Lead {
   email: string
 }
 
-interface StageConfig { name: string; color: string }
+interface StageConfig { id: string; name: string; color: string; position: number }
+
+interface ApiLead {
+  id: string
+  name: string
+  company: string | null
+  phone: string | null
+  whatsapp: string | null
+  expectedValue: string | number | null
+  temperature: Temperature
+  stageId: string
+  lastActivityAt: string | null
+  responsible: { id: string; name: string }
+}
+
+interface KanbanStage {
+  id: string
+  name: string
+  color: string
+  position: number
+  leads: ApiLead[]
+}
+
+interface KanbanData {
+  pipeline: { id: string; name: string }
+  stages: KanbanStage[]
+}
+
+interface PipelineItem {
+  id: string
+  name: string
+}
 
 // ── Config ──
-
-const stages: StageConfig[] = [
-  { name: 'Sem Contato', color: '#6b7280' },
-  { name: 'Em Contato', color: '#3b82f6' },
-  { name: 'Negociando', color: '#f59e0b' },
-  { name: 'Proposta Enviada', color: '#a855f7' },
-  { name: 'Venda Realizada', color: '#22c55e' },
-  { name: 'Repescagem', color: '#f97316' },
-  { name: 'Perdido', color: '#ef4444' },
-]
-
-const initialLeads: Lead[] = [
-  { id:'1', name:'Camila Torres', company:'Torres & Filhos', value:12000, stage:'Sem Contato', temperature:'HOT', responsible:'AN', lastContact:'há 2 dias', phone:'(21) 98712-3344', email:'camila@torres.com' },
-  { id:'2', name:'Rafael Mendes', company:'MendesNet', value:8500, stage:'Sem Contato', temperature:'COLD', responsible:'PG', lastContact:'há 8 dias', phone:'(11) 97654-3210', email:'rafael@mendesnet.com' },
-  { id:'3', name:'Pedro Alves', company:'Alves Tech', value:5000, stage:'Sem Contato', temperature:'WARM', responsible:'LC', lastContact:'há 3 dias', phone:'(21) 96543-2109', email:'pedro@alves.com' },
-  { id:'4', name:'Fernanda Lima', company:'Lima Distribuidora', value:18000, stage:'Em Contato', temperature:'HOT', responsible:'AN', lastContact:'hoje', phone:'(31) 95432-1098', email:'fernanda@lima.com' },
-  { id:'5', name:'Marcos Oliveira', company:'MO Serviços', value:5000, stage:'Em Contato', temperature:'COLD', responsible:'PG', lastContact:'há 18 dias', phone:'(41) 94321-0987', email:'marcos@mo.com' },
-  { id:'6', name:'Juliana Costa', company:'Costa Digital', value:9500, stage:'Em Contato', temperature:'WARM', responsible:'MR', lastContact:'há 4 dias', phone:'(51) 93210-9876', email:'juliana@costa.com' },
-  { id:'7', name:'Roberto Souza', company:'RS Comércio', value:32000, stage:'Negociando', temperature:'HOT', responsible:'AN', lastContact:'há 1 dia', phone:'(21) 92109-8765', email:'roberto@rs.com' },
-  { id:'8', name:'Ana Paula Costa', company:'Costa & Filhos', value:12000, stage:'Negociando', temperature:'WARM', responsible:'LC', lastContact:'há 5 dias', phone:'(11) 91098-7654', email:'ana@costa.com' },
-  { id:'9', name:'Thiago Bastos', company:'Bastos & Co', value:7500, stage:'Negociando', temperature:'COLD', responsible:'TB', lastContact:'há 7 dias', phone:'(21) 90987-6543', email:'thiago@bastos.com' },
-  { id:'10', name:'Priscila Gomes', company:'GomesTech', value:28000, stage:'Proposta Enviada', temperature:'HOT', responsible:'PG', lastContact:'há 2 dias', phone:'(11) 89876-5432', email:'priscila@gomestech.com' },
-  { id:'11', name:'Diego Marques', company:'Marquesali', value:15000, stage:'Proposta Enviada', temperature:'WARM', responsible:'AN', lastContact:'há 3 dias', phone:'(31) 88765-4321', email:'diego@marquesali.com' },
-  { id:'12', name:'Juliana Torres', company:'Torres Import', value:28000, stage:'Venda Realizada', temperature:'HOT', responsible:'LC', lastContact:'hoje', phone:'(21) 87654-3210', email:'juliana@torres.com' },
-  { id:'13', name:'Bruno Salave', company:'SalaGroup', value:19000, stage:'Repescagem', temperature:'WARM', responsible:'MR', lastContact:'há 12 dias', phone:'(41) 86543-2109', email:'bruno@sala.com' },
-  { id:'14', name:'Carla Mendes', company:'Mendes Soluções', value:6000, stage:'Perdido', temperature:'COLD', responsible:'TB', lastContact:'há 20 dias', phone:'(51) 85432-1098', email:'carla@mendes.com' },
-  { id:'15', name:'Lucas Ferreira', company:'Ferreira & Cia', value:22000, stage:'Em Contato', temperature:'HOT', responsible:'PG', lastContact:'há 1 dia', phone:'(21) 84321-0987', email:'lucas@ferreira.com' },
-]
 
 const tempConfig: Record<Temperature, { label: string; color: string; bg: string }> = {
   HOT: { label: '🔥 Quente', color: '#f97316', bg: 'rgba(249,115,22,0.12)' },
@@ -65,6 +69,34 @@ type FilterChip = 'mine' | 'hot' | 'cold' | 'overdue' | 'stale'
 
 function formatCurrency(v: number): string {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })
+}
+
+function formatTimeAgo(dateStr: string | null): string | null {
+  if (!dateStr) return null
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+  if (days === 0) return 'hoje'
+  if (days === 1) return 'há 1 dia'
+  return `há ${days} dias`
+}
+
+function getInitials(name: string): string {
+  return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+}
+
+function mapApiLeadToLead(apiLead: ApiLead, stageName: string): Lead {
+  return {
+    id: apiLead.id,
+    name: apiLead.name,
+    company: apiLead.company ?? '',
+    value: Number(apiLead.expectedValue) || 0,
+    stage: stageName,
+    temperature: apiLead.temperature,
+    responsible: getInitials(apiLead.responsible.name),
+    lastContact: formatTimeAgo(apiLead.lastActivityAt),
+    phone: apiLead.phone ?? apiLead.whatsapp ?? '—',
+    email: '—',
+  }
 }
 
 const SCROLLBAR_CSS = `
@@ -94,7 +126,12 @@ const chips: { key: FilterChip; label: string; activeColor: string; activeBg: st
 
 export default function PipelinePage() {
   const nav = useNavigate()
-  const [leads, setLeads] = useState<Lead[]>(initialLeads)
+  const [pipelines, setPipelines] = useState<PipelineItem[]>([])
+  const [selectedPipelineId, setSelectedPipelineId] = useState<string | null>(null)
+  const [stages, setStages] = useState<StageConfig[]>([])
+  const [leads, setLeads] = useState<Lead[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [activeChips, setActiveChips] = useState<Set<FilterChip>>(new Set())
   const [hoveredCard, setHoveredCard] = useState<string | null>(null)
@@ -103,6 +140,54 @@ export default function PipelinePage() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [modalStage, setModalStage] = useState<string | undefined>(undefined)
+
+  // Load pipelines on mount
+  useEffect(() => {
+    async function load() {
+      try {
+        setLoading(true)
+        setError(null)
+        const pipelinesData = await getPipelines()
+        setPipelines(pipelinesData.map((p: PipelineItem) => ({ id: p.id, name: p.name })))
+
+        if (pipelinesData.length > 0) {
+          const firstId = pipelinesData[0].id
+          setSelectedPipelineId(firstId)
+          const kanban: KanbanData = await getKanban(firstId)
+          setStages(kanban.stages.map((s: KanbanStage) => ({ id: s.id, name: s.name, color: s.color, position: s.position })))
+          const allLeads: Lead[] = []
+          kanban.stages.forEach((s: KanbanStage) => {
+            s.leads.forEach((l: ApiLead) => allLeads.push(mapApiLeadToLead(l, s.name)))
+          })
+          setLeads(allLeads)
+        }
+      } catch {
+        setError('Erro ao carregar pipelines')
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
+
+  // Switch pipeline
+  async function handlePipelineChange(pipelineId: string) {
+    try {
+      setLoading(true)
+      setSelectedPipelineId(pipelineId)
+      const kanban: KanbanData = await getKanban(pipelineId)
+      setStages(kanban.stages.map((s: KanbanStage) => ({ id: s.id, name: s.name, color: s.color, position: s.position })))
+      const allLeads: Lead[] = []
+      kanban.stages.forEach((s: KanbanStage) => {
+        s.leads.forEach((l: ApiLead) => allLeads.push(mapApiLeadToLead(l, s.name)))
+      })
+      setLeads(allLeads)
+    } catch {
+      setError('Erro ao carregar pipeline')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   function toggleChip(chip: FilterChip) {
     setActiveChips((prev) => {
@@ -182,6 +267,40 @@ export default function PipelinePage() {
     setLeads((prev) => [newLead, ...prev])
   }
 
+  // ── Loading / Error states ──
+  if (loading) {
+    return (
+      <AppLayout menuItems={gestaoMenuItems}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 'calc(100vh - 108px)', gap: 10 }}>
+          <Loader2 size={24} color="#f97316" strokeWidth={1.5} className="animate-spin" />
+          <span style={{ fontSize: 14, color: '#6b7280' }}>Carregando pipeline...</span>
+        </div>
+      </AppLayout>
+    )
+  }
+
+  if (error) {
+    return (
+      <AppLayout menuItems={gestaoMenuItems}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 'calc(100vh - 108px)', flexDirection: 'column', gap: 12 }}>
+          <span style={{ fontSize: 14, color: '#ef4444' }}>{error}</span>
+          <button onClick={() => window.location.reload()} style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Tentar novamente</button>
+        </div>
+      </AppLayout>
+    )
+  }
+
+  if (pipelines.length === 0) {
+    return (
+      <AppLayout menuItems={gestaoMenuItems}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 'calc(100vh - 108px)', flexDirection: 'column', gap: 12 }}>
+          <span style={{ fontSize: 16, color: '#e8eaf0', fontWeight: 600 }}>Nenhum pipeline encontrado</span>
+          <span style={{ fontSize: 13, color: '#6b7280' }}>Crie seu primeiro pipeline para começar a gerenciar seus leads.</span>
+        </div>
+      </AppLayout>
+    )
+  }
+
   return (
     <AppLayout menuItems={gestaoMenuItems}>
       <style>{SCROLLBAR_CSS}</style>
@@ -235,10 +354,15 @@ export default function PipelinePage() {
             <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar lead ou empresa..."
               style={{ width: 220, background: '#161a22', border: '1px solid #22283a', borderRadius: 8, padding: '6px 12px 6px 32px', fontSize: 13, color: '#e8eaf0', outline: 'none', boxSizing: 'border-box' }} />
           </div>
-          <select style={{ background: '#161a22', border: '1px solid #22283a', borderRadius: 8, padding: '6px 28px 6px 12px', fontSize: 13, color: '#e8eaf0', outline: 'none', cursor: 'pointer', appearance: 'none' as const,
+          <select
+            value={selectedPipelineId ?? ''}
+            onChange={(e) => handlePipelineChange(e.target.value)}
+            style={{ background: '#161a22', border: '1px solid #22283a', borderRadius: 8, padding: '6px 28px 6px 12px', fontSize: 13, color: '#e8eaf0', outline: 'none', cursor: 'pointer', appearance: 'none' as const,
             backgroundImage: `url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%236b7280' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
             backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center' }}>
-            <option>Pipeline Principal</option>
+            {pipelines.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
           </select>
         </div>
       </div>
@@ -252,7 +376,7 @@ export default function PipelinePage() {
             const isDropping = dropTarget === stage.name
             return (
               <div
-                key={stage.name} className="col-wrap"
+                key={stage.id} className="col-wrap"
                 onDragOver={(e) => onDragOver(e, stage.name)}
                 onDragLeave={onDragLeave}
                 onDrop={(e) => onDrop(e, stage.name)}
@@ -354,17 +478,6 @@ function AddBtn({ onClick }: { onClick?: () => void }) {
     </button>
   )
 }
-
-function StatItem({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 16px' }}>
-      <span style={{ fontSize: 12, color: '#6b7280' }}>{label}</span>
-      <span style={{ fontSize: 13, fontWeight: 700, color: valueColor ?? '#e8eaf0' }}>{value}</span>
-    </div>
-  )
-}
-
-function StatSep() { return <div style={{ width: 1, height: 20, background: '#22283a' }} /> }
 
 function ActionBtn({ children, color }: { children: React.ReactNode; color: string }) {
   const [h, setH] = useState(false)
