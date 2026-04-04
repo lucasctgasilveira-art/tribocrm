@@ -1,67 +1,66 @@
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Plus, Download, MoreHorizontal, Kanban, List, FileSpreadsheet, FileText } from 'lucide-react'
+import { Search, Plus, Download, MoreHorizontal, Kanban, List, FileSpreadsheet, FileText, Loader2 } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
-import NewLeadModal from '../../components/shared/NewLeadModal/NewLeadModal'
+import NewLeadModal, { type NewLeadData } from '../../components/shared/NewLeadModal/NewLeadModal'
 import ImportLeadsModal from '../../components/shared/ImportLeadsModal/ImportLeadsModal'
 import LeadDrawer from '../../components/shared/LeadDrawer/LeadDrawer'
+import { getLeads, createLead } from '../../services/leads.service'
+import { getPipelines } from '../../services/pipeline.service'
 
-// ── Data ──
+// ── Types ──
 
 interface Lead {
   id: string
   name: string
-  company: string
-  stage: string
-  temperature: string
-  value: number
-  responsible: string
-  lastActivity: string
+  company: string | null
+  email: string | null
+  phone: string | null
+  whatsapp: string | null
+  expectedValue: string | number | null
+  temperature: 'HOT' | 'WARM' | 'COLD'
+  status: string
+  lastActivityAt: string | null
+  updatedAt: string
+  stage: { id: string; name: string; color: string }
+  responsible: { id: string; name: string }
 }
 
-const stageColors: Record<string, string> = {
-  'Sem Contato': '#6b7280',
-  'Em Contato': '#3b82f6',
-  'Negociando': '#f59e0b',
-  'Proposta Enviada': '#a855f7',
-  'Venda Realizada': '#22c55e',
-  'Repescagem': '#f97316',
-  'Perdido': '#ef4444',
+interface Meta {
+  total: number
+  page: number
+  perPage: number
+  totalPages: number
 }
+
+interface PipelineOption {
+  id: string
+  name: string
+  stages: { id: string; name: string; color: string }[]
+}
+
+// ── Config ──
 
 const tempDisplay: Record<string, { label: string; color: string }> = {
-  Quente: { label: '🔥 Quente', color: '#f97316' },
-  Morno: { label: '🌤 Morno', color: '#f59e0b' },
-  Frio: { label: '❄️ Frio', color: '#3b82f6' },
+  HOT: { label: '🔥 Quente', color: '#f97316' },
+  WARM: { label: '🌤 Morno', color: '#f59e0b' },
+  COLD: { label: '❄️ Frio', color: '#3b82f6' },
 }
 
-const mockLeads: Lead[] = [
-  { id: '1', name: 'Camila Torres', company: 'Torres & Filhos', stage: 'Negociando', temperature: 'Quente', value: 12000, responsible: 'Ana Souza', lastActivity: 'há 2 dias' },
-  { id: '2', name: 'Rafael Mendes', company: 'MendesNet', stage: 'Sem Contato', temperature: 'Frio', value: 8500, responsible: 'Pedro Gomes', lastActivity: 'há 8 dias' },
-  { id: '3', name: 'Pedro Alves', company: 'Alves Tech', stage: 'Sem Contato', temperature: 'Morno', value: 5000, responsible: 'Lucas Castro', lastActivity: 'há 3 dias' },
-  { id: '4', name: 'Fernanda Lima', company: 'Lima Distribuidora', stage: 'Em Contato', temperature: 'Quente', value: 18000, responsible: 'Ana Souza', lastActivity: 'hoje' },
-  { id: '5', name: 'Marcos Oliveira', company: 'MO Serviços', stage: 'Em Contato', temperature: 'Frio', value: 5000, responsible: 'Pedro Gomes', lastActivity: 'há 18 dias' },
-  { id: '6', name: 'Juliana Costa', company: 'Costa Digital', stage: 'Em Contato', temperature: 'Morno', value: 9500, responsible: 'Mariana Reis', lastActivity: 'há 4 dias' },
-  { id: '7', name: 'Roberto Souza', company: 'RS Comércio', stage: 'Negociando', temperature: 'Quente', value: 32000, responsible: 'Ana Souza', lastActivity: 'há 1 dia' },
-  { id: '8', name: 'Ana Paula Costa', company: 'Costa & Filhos', stage: 'Negociando', temperature: 'Morno', value: 12000, responsible: 'Lucas Castro', lastActivity: 'há 5 dias' },
-  { id: '9', name: 'Thiago Bastos', company: 'Bastos & Co', stage: 'Negociando', temperature: 'Frio', value: 7500, responsible: 'Thiago Bastos', lastActivity: 'há 7 dias' },
-  { id: '10', name: 'Priscila Gomes', company: 'GomesTech', stage: 'Proposta Enviada', temperature: 'Quente', value: 28000, responsible: 'Pedro Gomes', lastActivity: 'há 2 dias' },
-  { id: '11', name: 'Diego Marques', company: 'Marquesali', stage: 'Proposta Enviada', temperature: 'Morno', value: 15000, responsible: 'Ana Souza', lastActivity: 'há 3 dias' },
-  { id: '12', name: 'Juliana Torres', company: 'Torres Import', stage: 'Venda Realizada', temperature: 'Quente', value: 28000, responsible: 'Lucas Castro', lastActivity: 'hoje' },
-  { id: '13', name: 'Bruno Salave', company: 'SalaGroup', stage: 'Repescagem', temperature: 'Morno', value: 19000, responsible: 'Mariana Reis', lastActivity: 'há 12 dias' },
-  { id: '14', name: 'Carla Mendes', company: 'Mendes Soluções', stage: 'Perdido', temperature: 'Frio', value: 6000, responsible: 'Thiago Bastos', lastActivity: 'há 20 dias' },
-  { id: '15', name: 'Lucas Ferreira', company: 'Ferreira & Cia', stage: 'Em Contato', temperature: 'Quente', value: 22000, responsible: 'Pedro Gomes', lastActivity: 'há 1 dia' },
-]
-
-const stageOptions = ['Todas', 'Sem Contato', 'Em Contato', 'Negociando', 'Proposta Enviada', 'Venda Realizada', 'Repescagem', 'Perdido']
-const tempOptions = ['Todas', 'Quente', 'Morno', 'Frio']
-const respOptions = ['Todos', 'Ana Souza', 'Pedro Gomes', 'Lucas Castro', 'Mariana Reis', 'Thiago Bastos']
-const sortOptions = [{ v: 'recent', l: 'Mais recente' }, { v: 'value', l: 'Maior valor' }, { v: 'name', l: 'Nome A-Z' }]
 const menuOpts = ['Ver detalhes', 'Editar', 'Mover etapa', 'Arquivar']
 
 function fmt(v: number) { return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 }) }
 function ini(n: string) { return n.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() }
+
+function formatTimeAgo(dateStr: string | null): string {
+  if (!dateStr) return '—'
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+  if (days === 0) return 'hoje'
+  if (days === 1) return 'há 1 dia'
+  return `há ${days} dias`
+}
 
 const dd: React.CSSProperties = {
   background: '#161a22', border: '1px solid #22283a', borderRadius: 8,
@@ -75,12 +74,24 @@ const dd: React.CSSProperties = {
 
 export default function GestaoLeadsPage() {
   const navigate = useNavigate()
+
+  // Data state
+  const [leads, setLeads] = useState<Lead[]>([])
+  const [meta, setMeta] = useState<Meta>({ total: 0, page: 1, perPage: 20, totalPages: 0 })
+  const [pipelines, setPipelines] = useState<PipelineOption[]>([])
+  const [loading, setLoading] = useState(true)
+
+  // Filter state
   const [search, setSearch] = useState('')
-  const [stageF, setStageF] = useState('Todas')
-  const [tempF, setTempF] = useState('Todas')
-  const [respF, setRespF] = useState('Todos')
-  const [sortBy, setSortBy] = useState('recent')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [pipelineId, setPipelineId] = useState<string>('')
+  const [stageId, setStageId] = useState<string>('')
+  const [temperature, setTemperature] = useState<string>('')
   const [tab, setTab] = useState<'all' | 'active' | 'archived'>('all')
+  const [page, setPage] = useState(1)
+  const [sortBy, setSortBy] = useState('recent')
+
+  // UI state
   const [menu, setMenu] = useState<string | null>(null)
   const [hov, setHov] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
@@ -88,25 +99,81 @@ export default function GestaoLeadsPage() {
   const [exportOpen, setExportOpen] = useState(false)
   const [drawerLead, setDrawerLead] = useState<Lead | null>(null)
 
-  const filtered = useMemo(() => {
-    let r = mockLeads.filter((l) => {
-      const q = search.toLowerCase()
-      if (q && !l.name.toLowerCase().includes(q) && !l.company.toLowerCase().includes(q)) return false
-      if (stageF !== 'Todas' && l.stage !== stageF) return false
-      if (tempF !== 'Todas' && l.temperature !== tempF) return false
-      if (respF !== 'Todos' && l.responsible !== respF) return false
-      if (tab === 'active' && (l.stage === 'Perdido' || l.stage === 'Venda Realizada')) return false
-      if (tab === 'archived' && l.stage !== 'Perdido' && l.stage !== 'Venda Realizada') return false
-      return true
-    })
-    if (sortBy === 'value') r = [...r].sort((a, b) => b.value - a.value)
-    if (sortBy === 'name') r = [...r].sort((a, b) => a.name.localeCompare(b.name))
-    return r
-  }, [search, stageF, tempF, respF, sortBy, tab])
+  // Debounce search
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const handleSearch = useCallback((value: string) => {
+    setSearch(value)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      setDebouncedSearch(value)
+      setPage(1)
+    }, 500)
+  }, [])
+
+  // Load pipelines on mount
+  useEffect(() => {
+    getPipelines().then((data: PipelineOption[]) => setPipelines(data)).catch(() => {})
+  }, [])
+
+  // Compute status filter from tab
+  const statusFilter = useMemo(() => {
+    if (tab === 'active') return 'ACTIVE'
+    if (tab === 'archived') return ''
+    return ''
+  }, [tab])
+
+  // Load leads when filters change
+  useEffect(() => {
+    async function load() {
+      setLoading(true)
+      try {
+        const params: Record<string, string | number> = { page, perPage: 20 }
+        if (debouncedSearch) params.search = debouncedSearch
+        if (pipelineId) params.pipelineId = pipelineId
+        if (stageId) params.stageId = stageId
+        if (temperature) params.temperature = temperature
+        if (statusFilter) params.status = statusFilter
+        const result = await getLeads(params)
+        setLeads(result.data)
+        setMeta(result.meta)
+      } catch {
+        setLeads([])
+        setMeta({ total: 0, page: 1, perPage: 20, totalPages: 0 })
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [debouncedSearch, pipelineId, stageId, temperature, statusFilter, page])
+
+  // Available stages based on selected pipeline
+  const stageOptions = useMemo(() => {
+    if (!pipelineId) {
+      const allStages: { id: string; name: string }[] = []
+      pipelines.forEach(p => p.stages?.forEach(s => {
+        if (!allStages.find(x => x.name === s.name)) allStages.push(s)
+      }))
+      return allStages
+    }
+    const p = pipelines.find(p => p.id === pipelineId)
+    return p?.stages ?? []
+  }, [pipelines, pipelineId])
+
+  // Sorted leads (client-side sort on current page)
+  const sortedLeads = useMemo(() => {
+    const arr = [...leads]
+    if (sortBy === 'value') arr.sort((a, b) => (Number(b.expectedValue) || 0) - (Number(a.expectedValue) || 0))
+    if (sortBy === 'name') arr.sort((a, b) => a.name.localeCompare(b.name))
+    return arr
+  }, [leads, sortBy])
+
+  // Stats from meta
+  const totalHot = leads.filter(l => l.temperature === 'HOT').length
+  const totalValue = leads.reduce((s, l) => s + (Number(l.expectedValue) || 0), 0)
 
   function exportData(type: 'xlsx' | 'csv') {
     const header = 'Nome,Empresa,Etapa,Temperatura,Valor,Responsável,Última Atividade'
-    const rows = filtered.map(l => `${l.name},${l.company},${l.stage},${l.temperature},${l.value},${l.responsible},${l.lastActivity}`)
+    const rows = leads.map(l => `${l.name},${l.company ?? ''},${l.stage.name},${l.temperature},${Number(l.expectedValue) || 0},${l.responsible.name},${formatTimeAgo(l.lastActivityAt)}`)
     const csv = [header, ...rows].join('\n')
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
@@ -116,9 +183,35 @@ export default function GestaoLeadsPage() {
     URL.revokeObjectURL(url)
   }
 
-  const totalActive = mockLeads.filter(l => l.stage !== 'Perdido' && l.stage !== 'Venda Realizada').length
-  const totalValue = mockLeads.reduce((s, l) => s + l.value, 0)
-  const totalHot = mockLeads.filter(l => l.temperature === 'Quente').length
+  async function handleNewLead(data: NewLeadData) {
+    try {
+      const selectedPipeline = pipelines[0]
+      if (!selectedPipeline) return
+
+      const stage = selectedPipeline.stages?.find(s => s.name === data.stage) ?? selectedPipeline.stages?.[0]
+      if (!stage) return
+
+      const tempMap: Record<string, string> = { Quente: 'HOT', Morno: 'WARM', Frio: 'COLD' }
+
+      await createLead({
+        name: data.name,
+        company: data.company || undefined,
+        email: data.email || undefined,
+        phone: data.phone || undefined,
+        expectedValue: parseInt(data.value) || undefined,
+        pipelineId: selectedPipeline.id,
+        stageId: stage.id,
+        temperature: tempMap[data.temperature] ?? 'WARM',
+      })
+
+      setModalOpen(false)
+      setPage(1)
+      // Trigger reload
+      setDebouncedSearch(prev => prev + '')
+    } catch {
+      // Error handled by interceptor
+    }
+  }
 
   return (
     <AppLayout menuItems={gestaoMenuItems}>
@@ -166,11 +259,9 @@ export default function GestaoLeadsPage() {
 
       {/* Stats */}
       <div style={{ display: 'flex', alignItems: 'center', fontSize: 13, marginBottom: 16 }}>
-        <span style={{ color: '#6b7280' }}>Total</span><span style={{ color: '#e8eaf0', fontWeight: 700, marginLeft: 4 }}>47</span>
+        <span style={{ color: '#6b7280' }}>Total</span><span style={{ color: '#e8eaf0', fontWeight: 700, marginLeft: 4 }}>{meta.total}</span>
         <span style={{ color: '#22283a', margin: '0 10px' }}>|</span>
-        <span style={{ color: '#6b7280' }}>Ativos</span><span style={{ color: '#e8eaf0', fontWeight: 700, marginLeft: 4 }}>{totalActive}</span>
-        <span style={{ color: '#22283a', margin: '0 10px' }}>|</span>
-        <span style={{ color: '#6b7280' }}>Valor total</span><span style={{ color: '#e8eaf0', fontWeight: 700, marginLeft: 4 }}>{fmt(totalValue)}</span>
+        <span style={{ color: '#6b7280' }}>Valor na página</span><span style={{ color: '#e8eaf0', fontWeight: 700, marginLeft: 4 }}>{fmt(totalValue)}</span>
         <span style={{ color: '#22283a', margin: '0 10px' }}>|</span>
         <span style={{ color: '#6b7280' }}>Quentes</span><span style={{ color: '#f97316', fontWeight: 700, marginLeft: 4 }}>🔥 {totalHot}</span>
       </div>
@@ -179,27 +270,34 @@ export default function GestaoLeadsPage() {
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
         <div style={{ position: 'relative', flex: 1, maxWidth: 260 }}>
           <Search size={15} color="#6b7280" strokeWidth={1.5} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
-          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por nome ou empresa..."
+          <input type="text" value={search} onChange={(e) => handleSearch(e.target.value)} placeholder="Buscar por nome ou empresa..."
             style={{ width: '100%', background: '#161a22', border: '1px solid #22283a', borderRadius: 8, padding: '0 12px 0 34px', fontSize: 13, color: '#e8eaf0', outline: 'none', height: 36, boxSizing: 'border-box' }} />
         </div>
-        <select value={stageF} onChange={(e) => setStageF(e.target.value)} style={dd}>
-          {stageOptions.map(s => <option key={s} value={s}>{s === 'Todas' ? 'Etapa' : s}</option>)}
+        <select value={pipelineId} onChange={(e) => { setPipelineId(e.target.value); setStageId(''); setPage(1) }} style={dd}>
+          <option value="">Pipeline</option>
+          {pipelines.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
-        <select value={tempF} onChange={(e) => setTempF(e.target.value)} style={dd}>
-          {tempOptions.map(t => <option key={t} value={t}>{t === 'Todas' ? 'Temperatura' : t}</option>)}
+        <select value={stageId} onChange={(e) => { setStageId(e.target.value); setPage(1) }} style={dd}>
+          <option value="">Etapa</option>
+          {stageOptions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
-        <select value={respF} onChange={(e) => setRespF(e.target.value)} style={dd}>
-          {respOptions.map(r => <option key={r} value={r}>{r === 'Todos' ? 'Responsável' : r}</option>)}
+        <select value={temperature} onChange={(e) => { setTemperature(e.target.value); setPage(1) }} style={dd}>
+          <option value="">Temperatura</option>
+          <option value="HOT">Quente</option>
+          <option value="WARM">Morno</option>
+          <option value="COLD">Frio</option>
         </select>
         <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} style={dd}>
-          {sortOptions.map(s => <option key={s.v} value={s.v}>{s.l}</option>)}
+          <option value="recent">Mais recente</option>
+          <option value="value">Maior valor</option>
+          <option value="name">Nome A-Z</option>
         </select>
       </div>
 
       {/* Tabs */}
       <div style={{ display: 'flex', borderBottom: '1px solid #22283a', marginBottom: 16 }}>
-        {([['all', `Todos (47)`], ['active', `Ativos (${totalActive})`], ['archived', `Arquivados (${47 - totalActive})`]] as const).map(([k, label]) => (
-          <button key={k} onClick={() => setTab(k)} style={{
+        {([['all', 'Todos'], ['active', 'Ativos'], ['archived', 'Arquivados']] as const).map(([k, label]) => (
+          <button key={k} onClick={() => { setTab(k); setPage(1) }} style={{
             background: 'transparent', border: 'none', cursor: 'pointer', padding: '10px 16px', fontSize: 13,
             color: tab === k ? '#f97316' : '#6b7280', fontWeight: tab === k ? 500 : 400,
             borderBottom: tab === k ? '2px solid #f97316' : '2px solid transparent', marginBottom: -1,
@@ -207,104 +305,132 @@ export default function GestaoLeadsPage() {
         ))}
       </div>
 
-      {/* Table */}
-      <div style={{ background: '#161a22', border: '1px solid #22283a', borderRadius: 12, overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ background: '#0f1117' }}>
-              {['Lead', 'Etapa', 'Temperatura', 'Valor', 'Responsável', 'Última atividade', 'Ações'].map(h => (
-                <th key={h} style={{ padding: '12px 20px', fontSize: 11, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, textAlign: 'left', whiteSpace: 'nowrap' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((l) => {
-              const sc = stageColors[l.stage] ?? '#6b7280'
-              const td = tempDisplay[l.temperature]
-              return (
-                <tr key={l.id}
-                  onClick={() => { if (menu !== l.id) setDrawerLead(l) }}
-                  onMouseEnter={() => setHov(l.id)}
-                  onMouseLeave={() => setHov(null)}
-                  style={{ borderBottom: '1px solid #22283a', background: drawerLead?.id === l.id ? 'rgba(249,115,22,0.06)' : hov === l.id ? '#1c2130' : 'transparent', cursor: 'pointer', transition: 'background 0.1s', borderLeft: drawerLead?.id === l.id ? '2px solid #f97316' : '2px solid transparent' }}>
-                  {/* Lead */}
-                  <td style={{ padding: '14px 20px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ width: 32, height: 32, borderRadius: 8, background: '#22283a', fontSize: 11, fontWeight: 700, color: '#e8eaf0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{ini(l.name)}</div>
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: 500, color: '#e8eaf0' }}>{l.name}</div>
-                        <div style={{ fontSize: 12, color: '#6b7280' }}>{l.company}</div>
-                      </div>
-                    </div>
-                  </td>
-                  {/* Etapa */}
-                  <td style={{ padding: '14px 20px' }}>
-                    <span style={{ background: `${sc}1F`, color: sc, borderRadius: 999, padding: '3px 10px', fontSize: 11, fontWeight: 500 }}>{l.stage}</span>
-                  </td>
-                  {/* Temperatura */}
-                  <td style={{ padding: '14px 20px', fontSize: 12, color: td?.color ?? '#6b7280' }}>{td?.label ?? l.temperature}</td>
-                  {/* Valor */}
-                  <td style={{ padding: '14px 20px', fontSize: 13, fontWeight: 700, color: '#e8eaf0' }}>{fmt(l.value)}</td>
-                  {/* Responsável */}
-                  <td style={{ padding: '14px 20px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#22283a', fontSize: 9, fontWeight: 700, color: '#e8eaf0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{ini(l.responsible)}</div>
-                      <span style={{ fontSize: 12, color: '#9ca3af' }}>{l.responsible}</span>
-                    </div>
-                  </td>
-                  {/* Última atividade */}
-                  <td style={{ padding: '14px 20px', fontSize: 12, color: '#6b7280' }}>{l.lastActivity}</td>
-                  {/* Ações */}
-                  <td style={{ padding: '14px 20px', position: 'relative' }}>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setMenu(menu === l.id ? null : l.id) }}
-                      style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid #22283a', background: menu === l.id ? '#22283a' : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af' }}
-                      onMouseEnter={(e) => { if (menu !== l.id) e.currentTarget.style.background = '#22283a' }}
-                      onMouseLeave={(e) => { if (menu !== l.id) e.currentTarget.style.background = 'transparent' }}>
-                      <MoreHorizontal size={14} strokeWidth={1.5} />
-                    </button>
-                    {menu === l.id && (
-                      <div style={{ position: 'absolute', right: 20, top: 48, zIndex: 20, background: '#161a22', border: '1px solid #22283a', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', minWidth: 160, padding: '4px 0' }}>
-                        {menuOpts.map(opt => (
-                          <div key={opt}
-                            onClick={(e) => { e.stopPropagation(); setMenu(null); if (opt === 'Ver detalhes') setDrawerLead(l) }}
-                            style={{ padding: '8px 14px', fontSize: 13, color: '#e8eaf0', cursor: 'pointer' }}
-                            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}>
-                            {opt}
-                          </div>
-                        ))}
-                      </div>
-                    )}
+      {/* Loading */}
+      {loading ? (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 60, gap: 10 }}>
+          <Loader2 size={22} color="#f97316" strokeWidth={1.5} className="animate-spin" />
+          <span style={{ fontSize: 14, color: '#6b7280' }}>Carregando leads...</span>
+        </div>
+      ) : (
+        /* Table */
+        <div style={{ background: '#161a22', border: '1px solid #22283a', borderRadius: 12, overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: '#0f1117' }}>
+                {['Lead', 'Etapa', 'Temperatura', 'Valor', 'Responsável', 'Última atividade', 'Ações'].map(h => (
+                  <th key={h} style={{ padding: '12px 20px', fontSize: 11, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, textAlign: 'left', whiteSpace: 'nowrap' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {sortedLeads.length === 0 ? (
+                <tr>
+                  <td colSpan={7} style={{ padding: 40, textAlign: 'center', color: '#6b7280', fontSize: 14 }}>
+                    Nenhum lead encontrado
                   </td>
                 </tr>
-              )
-            })}
-          </tbody>
-        </table>
+              ) : sortedLeads.map((l) => {
+                const sc = l.stage.color
+                const td = tempDisplay[l.temperature]
+                return (
+                  <tr key={l.id}
+                    onClick={() => { if (menu !== l.id) setDrawerLead(l) }}
+                    onMouseEnter={() => setHov(l.id)}
+                    onMouseLeave={() => setHov(null)}
+                    style={{ borderBottom: '1px solid #22283a', background: drawerLead?.id === l.id ? 'rgba(249,115,22,0.06)' : hov === l.id ? '#1c2130' : 'transparent', cursor: 'pointer', transition: 'background 0.1s', borderLeft: drawerLead?.id === l.id ? '2px solid #f97316' : '2px solid transparent' }}>
+                    {/* Lead */}
+                    <td style={{ padding: '14px 20px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: 8, background: '#22283a', fontSize: 11, fontWeight: 700, color: '#e8eaf0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{ini(l.name)}</div>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 500, color: '#e8eaf0' }}>{l.name}</div>
+                          <div style={{ fontSize: 12, color: '#6b7280' }}>{l.company ?? '—'}</div>
+                        </div>
+                      </div>
+                    </td>
+                    {/* Etapa */}
+                    <td style={{ padding: '14px 20px' }}>
+                      <span style={{ background: `${sc}1F`, color: sc, borderRadius: 999, padding: '3px 10px', fontSize: 11, fontWeight: 500 }}>{l.stage.name}</span>
+                    </td>
+                    {/* Temperatura */}
+                    <td style={{ padding: '14px 20px', fontSize: 12, color: td?.color ?? '#6b7280' }}>{td?.label ?? l.temperature}</td>
+                    {/* Valor */}
+                    <td style={{ padding: '14px 20px', fontSize: 13, fontWeight: 700, color: '#e8eaf0' }}>{fmt(Number(l.expectedValue) || 0)}</td>
+                    {/* Responsável */}
+                    <td style={{ padding: '14px 20px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#22283a', fontSize: 9, fontWeight: 700, color: '#e8eaf0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{ini(l.responsible.name)}</div>
+                        <span style={{ fontSize: 12, color: '#9ca3af' }}>{l.responsible.name}</span>
+                      </div>
+                    </td>
+                    {/* Última atividade */}
+                    <td style={{ padding: '14px 20px', fontSize: 12, color: '#6b7280' }}>{formatTimeAgo(l.lastActivityAt)}</td>
+                    {/* Ações */}
+                    <td style={{ padding: '14px 20px', position: 'relative' }}>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setMenu(menu === l.id ? null : l.id) }}
+                        style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid #22283a', background: menu === l.id ? '#22283a' : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af' }}
+                        onMouseEnter={(e) => { if (menu !== l.id) e.currentTarget.style.background = '#22283a' }}
+                        onMouseLeave={(e) => { if (menu !== l.id) e.currentTarget.style.background = 'transparent' }}>
+                        <MoreHorizontal size={14} strokeWidth={1.5} />
+                      </button>
+                      {menu === l.id && (
+                        <div style={{ position: 'absolute', right: 20, top: 48, zIndex: 20, background: '#161a22', border: '1px solid #22283a', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', minWidth: 160, padding: '4px 0' }}>
+                          {menuOpts.map(opt => (
+                            <div key={opt}
+                              onClick={(e) => { e.stopPropagation(); setMenu(null); if (opt === 'Ver detalhes') setDrawerLead(l) }}
+                              style={{ padding: '8px 14px', fontSize: 13, color: '#e8eaf0', cursor: 'pointer' }}
+                              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+                              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}>
+                              {opt}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
 
-        {/* Pagination */}
-        <div style={{ padding: '12px 20px', borderTop: '1px solid #22283a', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 12, color: '#6b7280' }}>Mostrando 1-{filtered.length} de 47 leads</span>
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button disabled style={{ padding: '6px 14px', fontSize: 12, fontWeight: 500, borderRadius: 6, border: '1px solid #22283a', cursor: 'not-allowed', background: 'transparent', color: '#6b7280', opacity: 0.5 }}>Anterior</button>
-            <button style={{ padding: '6px 14px', fontSize: 12, fontWeight: 500, borderRadius: 6, border: '1px solid #22283a', cursor: 'pointer', background: '#161a22', color: '#e8eaf0' }}>Próximo</button>
+          {/* Pagination */}
+          <div style={{ padding: '12px 20px', borderTop: '1px solid #22283a', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 12, color: '#6b7280' }}>
+              Mostrando {leads.length === 0 ? 0 : (meta.page - 1) * meta.perPage + 1}-{Math.min(meta.page * meta.perPage, meta.total)} de {meta.total} leads
+            </span>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button
+                disabled={page <= 1}
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                style={{ padding: '6px 14px', fontSize: 12, fontWeight: 500, borderRadius: 6, border: '1px solid #22283a', cursor: page <= 1 ? 'not-allowed' : 'pointer', background: 'transparent', color: page <= 1 ? '#6b7280' : '#e8eaf0', opacity: page <= 1 ? 0.5 : 1 }}>
+                Anterior
+              </button>
+              <button
+                disabled={page >= meta.totalPages}
+                onClick={() => setPage(p => p + 1)}
+                style={{ padding: '6px 14px', fontSize: 12, fontWeight: 500, borderRadius: 6, border: '1px solid #22283a', cursor: page >= meta.totalPages ? 'not-allowed' : 'pointer', background: '#161a22', color: page >= meta.totalPages ? '#6b7280' : '#e8eaf0', opacity: page >= meta.totalPages ? 0.5 : 1 }}>
+                Próximo
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-      <NewLeadModal open={modalOpen} onClose={() => setModalOpen(false)} onSubmit={() => setModalOpen(false)} />
+      )}
+
+      <NewLeadModal open={modalOpen} onClose={() => setModalOpen(false)} onSubmit={handleNewLead} />
       <ImportLeadsModal open={importOpen} onClose={() => setImportOpen(false)} />
       {drawerLead && (
         <LeadDrawer
           lead={{
-            id: drawerLead.id, name: drawerLead.name, company: drawerLead.company,
-            value: drawerLead.value, stage: drawerLead.stage,
-            temperature: (drawerLead.temperature === 'Quente' ? 'HOT' : drawerLead.temperature === 'Morno' ? 'WARM' : 'COLD') as 'HOT' | 'WARM' | 'COLD',
-            responsible: ini(drawerLead.responsible), lastContact: drawerLead.lastActivity,
-            phone: '—', email: '—',
+            id: drawerLead.id, name: drawerLead.name, company: drawerLead.company ?? '',
+            value: Number(drawerLead.expectedValue) || 0, stage: drawerLead.stage.name,
+            temperature: drawerLead.temperature,
+            responsible: ini(drawerLead.responsible.name),
+            lastContact: formatTimeAgo(drawerLead.lastActivityAt),
+            phone: drawerLead.phone ?? drawerLead.whatsapp ?? '—', email: drawerLead.email ?? '—',
           }}
           onClose={() => setDrawerLead(null)}
-          stageColor={stageColors[drawerLead.stage] ?? '#6b7280'}
+          stageColor={drawerLead.stage.color}
           instance="gestao"
         />
       )}

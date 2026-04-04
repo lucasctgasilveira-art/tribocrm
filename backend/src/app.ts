@@ -6,6 +6,7 @@ import cookieParser from 'cookie-parser'
 import rateLimit from 'express-rate-limit'
 import authRoutes from './routes/auth.routes'
 import pipelineRoutes from './routes/pipeline.routes'
+import leadsRoutes from './routes/leads.routes'
 
 const app = express()
 
@@ -42,5 +43,6 @@ app.get('/health', (_req, res) => {
 // Routes
 app.use('/auth', authRoutes)
 app.use('/pipelines', pipelineRoutes)
+app.use('/leads', leadsRoutes)
 
 export default app
