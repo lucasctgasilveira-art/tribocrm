@@ -79,7 +79,7 @@ export default function LeadDetailView({ menuItems, instance }: LeadDetailViewPr
     )
   }
 
-  const temp = tempConfig[lead.temperature] ?? tempConfig.COLD
+  const temp = tempConfig[lead.temperature] ?? tempConfig.COLD!
   const stageObj = stages.find((s) => s.name === lead.stage)
   const stageColor = stageObj?.color ?? '#6b7280'
   const respName = responsibleNames[lead.responsible] ?? lead.responsible

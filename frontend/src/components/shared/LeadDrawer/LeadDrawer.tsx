@@ -55,7 +55,7 @@ const CSS = `
 export default function LeadDrawer({ lead, onClose, stageColor, instance = 'gestao' }: LeadDrawerProps) {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<Tab>('history')
-  const temp = tempConfig[lead.temperature] ?? tempConfig.COLD
+  const temp = tempConfig[lead.temperature] ?? tempConfig.COLD!
 
   const tabs: { key: Tab; label: string }[] = [
     { key: 'history', label: 'Histórico' },
