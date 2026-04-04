@@ -1,12 +1,27 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   Bell, Search, Mail, ShieldCheck, AlertCircle, CheckCircle2, UserPlus,
   type LucideIcon,
 } from 'lucide-react'
+import {
+  getNotifications,
+  markAsRead as markAsReadApi,
+  markAllAsRead as markAllAsReadApi,
+} from '../../../services/notifications.service'
 
 /* ── types ── */
 
-interface Notification {
+interface ApiNotification {
+  id: string
+  type: string
+  title: string
+  body: string
+  link: string | null
+  isRead: boolean
+  createdAt: string
+}
+
+interface DisplayNotification {
   id: string
   icon: LucideIcon
   iconColor: string
@@ -15,14 +30,6 @@ interface Notification {
   time: string
   read: boolean
 }
-
-const initialNotifications: Notification[] = [
-  { id: 'n1', icon: Mail, iconColor: '#3b82f6', title: 'Camila Torres abriu seu e-mail', subtitle: 'Proposta comercial — aberto 3x', time: 'há 5 minutos', read: false },
-  { id: 'n2', icon: ShieldCheck, iconColor: '#22c55e', title: 'Desconto aprovado', subtitle: 'Ana Souza aprovou 15% para GomesTech', time: 'há 20 minutos', read: false },
-  { id: 'n3', icon: AlertCircle, iconColor: '#f59e0b', title: 'Lead quente sem contato', subtitle: 'Roberto Souza — sem atividade há 2 dias', time: 'há 1 hora', read: false },
-  { id: 'n4', icon: CheckCircle2, iconColor: '#22c55e', title: 'Venda fechada — Torres & Filhos', subtitle: 'R$ 12.000 fechado por Ana Souza', time: 'há 3 horas', read: true },
-  { id: 'n5', icon: UserPlus, iconColor: '#f97316', title: 'Novo lead captado', subtitle: 'Formulário do site — Fernanda Lima', time: 'há 5 horas', read: true },
-]
 
 /* ── helpers ── */
 
@@ -33,6 +40,41 @@ function getInitials(name: string): string {
     .slice(0, 2)
     .map((w) => w[0]?.toUpperCase() ?? '')
     .join('')
+}
+
+const typeIconMap: Record<string, { icon: LucideIcon; color: string }> = {
+  EMAIL_OPENED: { icon: Mail, color: '#3b82f6' },
+  DISCOUNT_PENDING: { icon: ShieldCheck, color: '#22c55e' },
+  GOAL_ALERT: { icon: AlertCircle, color: '#f59e0b' },
+  TASK_DUE: { icon: AlertCircle, color: '#f97316' },
+  BIRTHDAY: { icon: CheckCircle2, color: '#a855f7' },
+  WHATSAPP_FAILED: { icon: AlertCircle, color: '#ef4444' },
+}
+
+const defaultIcon = { icon: UserPlus, color: '#f97316' }
+
+function formatTimeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const minutes = Math.floor(diff / (1000 * 60))
+  if (minutes < 1) return 'agora'
+  if (minutes < 60) return `há ${minutes} minuto${minutes > 1 ? 's' : ''}`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `há ${hours} hora${hours > 1 ? 's' : ''}`
+  const days = Math.floor(hours / 24)
+  return `há ${days} dia${days > 1 ? 's' : ''}`
+}
+
+function mapNotification(n: ApiNotification): DisplayNotification {
+  const config = typeIconMap[n.type] ?? defaultIcon
+  return {
+    id: n.id,
+    icon: config.icon,
+    iconColor: config.color,
+    title: n.title,
+    subtitle: n.body,
+    time: formatTimeAgo(n.createdAt),
+    read: n.isRead,
+  }
 }
 
 /* ── component ── */
@@ -46,10 +88,27 @@ export default function Topbar({ onOpenSearch }: TopbarProps) {
   const initials = getInitials(user.name ?? 'U')
 
   const [showNotif, setShowNotif] = useState(false)
-  const [notifications, setNotifications] = useState(initialNotifications)
+  const [notifications, setNotifications] = useState<DisplayNotification[]>([])
+  const [unreadCount, setUnreadCount] = useState(0)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  const unreadCount = notifications.filter((n) => !n.read).length
+  const loadNotifications = useCallback(async () => {
+    try {
+      const result = await getNotifications()
+      setNotifications(result.data.map(mapNotification))
+      setUnreadCount(result.meta.unreadCount)
+    } catch { /* ignore — token may not exist yet */ }
+  }, [])
+
+  // Load on mount + poll every 60s
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken')
+    if (!token) return
+
+    loadNotifications()
+    const interval = setInterval(loadNotifications, 60000)
+    return () => clearInterval(interval)
+  }, [loadNotifications])
 
   /* close on outside click */
   useEffect(() => {
@@ -62,12 +121,20 @@ export default function Topbar({ onOpenSearch }: TopbarProps) {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [showNotif])
 
-  function markAllRead() {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
+  async function markAllRead() {
+    try {
+      await markAllAsReadApi()
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
+      setUnreadCount(0)
+    } catch { /* ignore */ }
   }
 
-  function markRead(id: string) {
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)))
+  async function markRead(id: string) {
+    try {
+      await markAsReadApi(id)
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)))
+      setUnreadCount((prev) => Math.max(0, prev - 1))
+    } catch { /* ignore */ }
   }
 
   return (
@@ -181,29 +248,35 @@ export default function Topbar({ onOpenSearch }: TopbarProps) {
                 }}
               >
                 <span style={{ fontSize: 14, fontWeight: 600, color: '#e8eaf0' }}>Notificações</span>
-                <button
-                  onClick={markAllRead}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#f97316',
-                    fontSize: 12,
-                    cursor: 'pointer',
-                    padding: 0,
-                  }}
-                >
-                  Marcar todas como lidas
-                </button>
+                {unreadCount > 0 && (
+                  <button
+                    onClick={markAllRead}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#f97316',
+                      fontSize: 12,
+                      cursor: 'pointer',
+                      padding: 0,
+                    }}
+                  >
+                    Marcar todas como lidas
+                  </button>
+                )}
               </div>
 
               {/* list */}
               <div style={{ maxHeight: 360, overflowY: 'auto' }}>
-                {notifications.map((n) => {
+                {notifications.length === 0 ? (
+                  <div style={{ padding: 32, textAlign: 'center', color: '#6b7280', fontSize: 13 }}>
+                    Nenhuma notificação
+                  </div>
+                ) : notifications.map((n) => {
                   const Icon = n.icon
                   return (
                     <div
                       key={n.id}
-                      onClick={() => markRead(n.id)}
+                      onClick={() => { if (!n.read) markRead(n.id) }}
                       style={{
                         padding: '12px 16px',
                         borderBottom: '1px solid #22283a',
