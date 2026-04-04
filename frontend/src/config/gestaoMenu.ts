@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Kanban, Users, UserSquare2, CheckSquare,
   BarChart2, Package, Zap, FileText, Mail, Target,
-  CreditCard, Settings,
+  CreditCard, BookOpen,
 } from 'lucide-react'
 import type { SidebarEntry } from '../components/shared/Sidebar/Sidebar'
 
@@ -32,7 +32,7 @@ export const gestaoMenuItems: SidebarEntry[] = [
     ],
   },
   { label: 'Metas', icon: Target, path: '/gestao/metas' },
+  { label: 'Regras do Negócio', icon: BookOpen, path: '/gestao/configuracoes' },
   { section: 'Conta' },
   { label: 'Minha Assinatura', icon: CreditCard, path: '/gestao/assinatura' },
-  { label: 'Configurações', icon: Settings, path: '/gestao/configuracoes' },
 ]
