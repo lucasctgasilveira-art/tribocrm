@@ -98,7 +98,7 @@ export default function AppLayout({ menuItems, children }: AppLayoutProps) {
   }, [])
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0b0f' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <Topbar onOpenSearch={openSearch} />
       <Sidebar menuItems={menuItems} />
       <main style={{ marginLeft: sidebarW, paddingTop: 60, transition: 'margin-left 0.25s cubic-bezier(0.4,0,0.2,1)' }}>

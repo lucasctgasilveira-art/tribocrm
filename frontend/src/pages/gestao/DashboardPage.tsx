@@ -127,7 +127,7 @@ export default function GestaoDashboardPage() {
       <AppLayout menuItems={gestaoMenuItems}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 'calc(100vh - 108px)', gap: 10 }}>
           <Loader2 size={24} color="#f97316" strokeWidth={1.5} className="animate-spin" />
-          <span style={{ fontSize: 14, color: '#6b7280' }}>Carregando dashboard...</span>
+          <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>Carregando dashboard...</span>
         </div>
       </AppLayout>
     )
@@ -150,17 +150,17 @@ export default function GestaoDashboardPage() {
     { label: 'Receita no Mês', value: fmt(kpis.revenueThisMonth), icon: TrendingUp, iconColor: '#f97316' },
     { label: 'Pipeline Total', value: fmt(kpis.pipelineTotal), icon: Kanban, iconColor: '#f97316' },
     { label: 'Taxa de Conversão', value: `${kpis.conversionRate}%`, icon: Target, iconColor: '#f97316' },
-    { label: 'Aprovações pendentes', value: String(kpis.pendingApprovalsCount), icon: Clock, iconColor: kpis.pendingApprovalsCount > 0 ? '#f59e0b' : '#6b7280' },
+    { label: 'Aprovações pendentes', value: String(kpis.pendingApprovalsCount), icon: Clock, iconColor: kpis.pendingApprovalsCount > 0 ? '#f59e0b' : 'var(--text-muted)' },
   ]
 
   return (
     <AppLayout menuItems={gestaoMenuItems}>
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#e8eaf0', margin: 0 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
           {getGreeting()}, {getUserFirstName()}!
         </h1>
-        <p style={{ fontSize: 14, color: '#6b7280', marginTop: 4 }}>
+        <p style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 4 }}>
           Aqui está o resumo do seu time hoje.
         </p>
       </div>
@@ -170,53 +170,53 @@ export default function GestaoDashboardPage() {
         {kpiCards.map((kpi) => {
           const Icon = kpi.icon
           return (
-            <div key={kpi.label} style={{ background: '#161a22', border: '1px solid #22283a', borderRadius: 12, padding: 20, position: 'relative' }}>
+            <div key={kpi.label} style={{ background: 'var(--bg-card)', border: '1px solid #22283a', borderRadius: 12, padding: 20, position: 'relative' }}>
               <Icon size={20} color={kpi.iconColor} strokeWidth={1.5} style={{ position: 'absolute', top: 20, right: 20 }} />
-              <span style={{ fontSize: 12, color: '#6b7280', display: 'block', marginBottom: 6 }}>{kpi.label}</span>
-              <span style={{ fontSize: 28, fontWeight: 700, color: '#e8eaf0', display: 'block' }}>{kpi.value}</span>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>{kpi.label}</span>
+              <span style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-primary)', display: 'block' }}>{kpi.value}</span>
             </div>
           )
         })}
       </div>
 
       {/* Goal Progress */}
-      <div style={{ background: '#161a22', border: '1px solid #22283a', borderRadius: 12, padding: 20, marginTop: 20 }}>
+      <div style={{ background: 'var(--bg-card)', border: '1px solid #22283a', borderRadius: 12, padding: 20, marginTop: 20 }}>
         {goal ? (
           <>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 14, fontWeight: 600, color: '#e8eaf0' }}>Meta de {new Date().toLocaleString('pt-BR', { month: 'long' }).replace(/^\w/, c => c.toUpperCase())} — Receita</span>
+              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Meta de {new Date().toLocaleString('pt-BR', { month: 'long' }).replace(/^\w/, c => c.toUpperCase())} — Receita</span>
               <span style={{ fontSize: 13, fontWeight: 600, color: metaColor(goal.percentage) }}>{goal.percentage}% concluído</span>
             </div>
-            <div style={{ background: '#22283a', borderRadius: 999, height: 8, margin: '12px 0' }}>
+            <div style={{ background: 'var(--border)', borderRadius: 999, height: 8, margin: '12px 0' }}>
               <div style={{ width: `${Math.min(goal.percentage, 100)}%`, height: '100%', background: 'linear-gradient(to right, #f97316, #fb923c)', borderRadius: 999 }} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-              <span style={{ color: '#e8eaf0' }}>{fmt(goal.current)} realizados</span>
-              <span style={{ color: '#6b7280' }}>Meta: {fmt(goal.target)}</span>
+              <span style={{ color: 'var(--text-primary)' }}>{fmt(goal.current)} realizados</span>
+              <span style={{ color: 'var(--text-muted)' }}>Meta: {fmt(goal.target)}</span>
               <span style={{ color: '#f59e0b' }}>Faltam {fmt(Math.max(0, goal.target - goal.current))}</span>
             </div>
           </>
         ) : (
-          <div style={{ textAlign: 'center', padding: 12, color: '#6b7280', fontSize: 13 }}>
+          <div style={{ textAlign: 'center', padding: 12, color: 'var(--text-muted)', fontSize: 13 }}>
             Nenhuma meta cadastrada para este mês.
           </div>
         )}
       </div>
 
       {/* Team Performance Table */}
-      <div style={{ background: '#161a22', border: '1px solid #22283a', borderRadius: 12, marginTop: 20, overflow: 'hidden' }}>
+      <div style={{ background: 'var(--bg-card)', border: '1px solid #22283a', borderRadius: 12, marginTop: 20, overflow: 'hidden' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid #22283a', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: '#e8eaf0' }}>Performance da equipe</span>
-          <span style={{ fontSize: 12, color: '#6b7280' }}>Por receita · {new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' }).replace(/^\w/, c => c.toUpperCase())}</span>
+          <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Performance da equipe</span>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Por receita · {new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' }).replace(/^\w/, c => c.toUpperCase())}</span>
         </div>
         {teamPerformance.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 32, color: '#6b7280', fontSize: 13 }}>Nenhum dado disponível</div>
+          <div style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)', fontSize: 13 }}>Nenhum dado disponível</div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ background: '#0f1117' }}>
+              <tr style={{ background: 'var(--bg)' }}>
                 {['Vendedor', 'Leads', 'Fechamentos', 'Conversão', 'Receita'].map((h) => (
-                  <th key={h} style={{ padding: '10px 20px', fontSize: 11, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, textAlign: 'left' }}>
+                  <th key={h} style={{ padding: '10px 20px', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, textAlign: 'left' }}>
                     {h}
                   </th>
                 ))}
@@ -227,18 +227,18 @@ export default function GestaoDashboardPage() {
                 <tr key={m.id} style={{ borderBottom: '1px solid #22283a' }}>
                   <td style={{ padding: '14px 20px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#22283a', fontSize: 10, fontWeight: 700, color: '#e8eaf0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--border)', fontSize: 10, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         {ini(m.name)}
                       </div>
                       <div>
-                        <div style={{ fontSize: 13, fontWeight: 500, color: '#e8eaf0' }}>{m.name}</div>
-                        <div style={{ fontSize: 11, color: '#6b7280' }}>{m.role}</div>
+                        <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{m.name}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{m.role}</div>
                       </div>
                     </div>
                   </td>
-                  <td style={{ padding: '14px 20px', fontSize: 13, color: '#e8eaf0' }}>{m.leadsCount}</td>
-                  <td style={{ padding: '14px 20px', fontSize: 13, color: '#e8eaf0' }}>{m.closingsCount}</td>
-                  <td style={{ padding: '14px 20px', fontSize: 13, color: '#e8eaf0' }}>{m.conversionRate}%</td>
+                  <td style={{ padding: '14px 20px', fontSize: 13, color: 'var(--text-primary)' }}>{m.leadsCount}</td>
+                  <td style={{ padding: '14px 20px', fontSize: 13, color: 'var(--text-primary)' }}>{m.closingsCount}</td>
+                  <td style={{ padding: '14px 20px', fontSize: 13, color: 'var(--text-primary)' }}>{m.conversionRate}%</td>
                   <td style={{ padding: '14px 20px', fontSize: 13, fontWeight: 500, color: '#22c55e' }}>{fmt(m.revenue)}</td>
                 </tr>
               ))}
@@ -250,23 +250,23 @@ export default function GestaoDashboardPage() {
       {/* Approvals + Stale Leads row */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 20 }}>
         {/* Approvals */}
-        <div style={{ background: '#161a22', border: '1px solid #22283a', borderRadius: 12, padding: 20 }}>
+        <div style={{ background: 'var(--bg-card)', border: '1px solid #22283a', borderRadius: 12, padding: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <span style={{ fontSize: 14, fontWeight: 600, color: '#e8eaf0' }}>Aprovações pendentes</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Aprovações pendentes</span>
             {kpis.pendingApprovalsCount > 0 && (
               <span style={{ background: 'rgba(239,68,68,0.12)', color: '#ef4444', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>{kpis.pendingApprovalsCount}</span>
             )}
           </div>
           {pendingApprovals.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 20, color: '#6b7280', fontSize: 13 }}>Nenhuma aprovação pendente</div>
+            <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)', fontSize: 13 }}>Nenhuma aprovação pendente</div>
           ) : pendingApprovals.map((a, i) => (
             <div key={a.id} style={{ padding: '12px 0', borderBottom: i < pendingApprovals.length - 1 ? '1px solid #22283a' : 'none' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ fontSize: 13, fontWeight: 500, color: '#e8eaf0' }}>Desconto {a.discountPercent}% — {a.product.name}</span>
-                <span style={{ fontSize: 11, color: '#6b7280' }}>{timeAgo(a.createdAt)}</span>
+                <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>Desconto {a.discountPercent}% — {a.product.name}</span>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{timeAgo(a.createdAt)}</span>
               </div>
-              <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>{a.requestedBy.name} → {a.lead.name}</div>
-              <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 8 }}>{fmt(a.originalPrice)} → {fmt(a.requestedPrice)}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>{a.requestedBy.name} → {a.lead.name}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8 }}>{fmt(a.originalPrice)} → {fmt(a.requestedPrice)}</div>
               <div style={{ display: 'flex', gap: 6 }}>
                 <button style={{ background: 'rgba(34,197,94,0.12)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 6, padding: '4px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
                   <CheckCircle size={12} strokeWidth={2} /> Aprovar
@@ -280,26 +280,26 @@ export default function GestaoDashboardPage() {
         </div>
 
         {/* Stale Leads */}
-        <div style={{ background: '#161a22', border: '1px solid #22283a', borderRadius: 12, padding: 20 }}>
+        <div style={{ background: 'var(--bg-card)', border: '1px solid #22283a', borderRadius: 12, padding: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <span style={{ fontSize: 14, fontWeight: 600, color: '#e8eaf0' }}>Leads sem interação</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Leads sem interação</span>
             {inactiveLeads.length > 0 && (
               <span style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>5d+</span>
             )}
           </div>
           {inactiveLeads.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 20, color: '#6b7280', fontSize: 13 }}>Todos os leads estão em dia</div>
+            <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)', fontSize: 13 }}>Todos os leads estão em dia</div>
           ) : inactiveLeads.map((lead, i) => {
             const days = lead.daysSinceContact
             const dayColor = days !== null && days >= 6 ? '#ef4444' : '#f59e0b'
             return (
               <div key={lead.id} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '10px 0', borderBottom: i < inactiveLeads.length - 1 ? '1px solid #22283a' : 'none' }}>
-                <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#22283a', fontSize: 10, fontWeight: 700, color: '#e8eaf0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--border)', fontSize: 10, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   {ini(lead.responsible.name)}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: '#e8eaf0' }}>{lead.name}</div>
-                  <div style={{ fontSize: 12, color: '#6b7280' }}>{lead.company ?? '—'} · {lead.stage.name}</div>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{lead.name}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{lead.company ?? '—'} · {lead.stage.name}</div>
                 </div>
                 <span style={{
                   fontSize: 11, padding: '2px 8px', borderRadius: 999, fontWeight: 600, flexShrink: 0,

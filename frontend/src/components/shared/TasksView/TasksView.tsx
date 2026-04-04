@@ -81,7 +81,7 @@ const typeConfig: Record<TaskType, { icon: LucideIcon; color: string; label: str
   whatsapp: { icon: MessageCircle, color: '#25d166', label: 'WhatsApp' },
   meeting: { icon: Video, color: '#a855f7', label: 'Reunião' },
   visit: { icon: Handshake, color: '#f59e0b', label: 'Visita' },
-  proposal: { icon: FileText, color: '#9ca3af', label: 'Proposta' },
+  proposal: { icon: FileText, color: 'var(--text-secondary)', label: 'Proposta' },
   approve: { icon: ShieldCheck, color: '#22c55e', label: 'Liberar Pedido' },
 }
 
@@ -164,7 +164,7 @@ function mapApiTask(t: ApiTask): DisplayTask {
     leadName: t.lead.name,
     leadCompany: t.lead.company ?? '',
     stageBadge: '',
-    stageColor: '#6b7280',
+    stageColor: 'var(--text-muted)',
     time: t.isDone ? '' : formatTime(t.dueDate),
     overdue: isOverdue(t.dueDate, t.isDone),
     done: t.isDone,
@@ -333,23 +333,23 @@ export default function TasksView({ menuItems }: TasksViewProps) {
         <div style={{ flex: 1, minWidth: 0 }}>
           {/* Header + period pills + button in one line */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-            <span style={{ fontSize: 20, fontWeight: 700, color: '#e8eaf0', flexShrink: 0 }}>Tarefas</span>
+            <span style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', flexShrink: 0 }}>Tarefas</span>
             <div style={{ display: 'flex', gap: 5, flex: 1, flexWrap: 'wrap' }}>
               {periodFilters.map((pf) => {
                 const active = periodFilter === pf.key
                 return (
                   <button key={pf.key} onClick={() => setPeriodFilter(pf.key)} style={{
                     borderRadius: 999, padding: '5px 11px', fontSize: 11, fontWeight: 500, cursor: 'pointer',
-                    background: active ? 'rgba(249,115,22,0.12)' : '#161a22',
-                    border: `1px solid ${active ? '#f97316' : '#22283a'}`,
-                    color: active ? '#f97316' : '#6b7280',
+                    background: active ? 'rgba(249,115,22,0.12)' : 'var(--bg-card)',
+                    border: `1px solid ${active ? '#f97316' : 'var(--border)'}`,
+                    color: active ? '#f97316' : 'var(--text-muted)',
                     display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.15s',
                   }}>
                     {pf.label}
                     <span style={{
                       fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 999,
-                      background: pf.badgeColor ? `${pf.badgeColor}1F` : '#22283a',
-                      color: pf.badgeColor ?? '#9ca3af',
+                      background: pf.badgeColor ? `${pf.badgeColor}1F` : 'var(--border)',
+                      color: pf.badgeColor ?? 'var(--text-secondary)',
                     }}>{pf.count}</span>
                   </button>
                 )
@@ -370,9 +370,9 @@ export default function TasksView({ menuItems }: TasksViewProps) {
               return (
                 <button key={tf.key} onClick={() => setTypeFilter(active ? null : tf.key)} style={{
                   padding: '6px 12px', borderRadius: 8, fontSize: 12, cursor: 'pointer',
-                  border: `1px solid ${active ? tf.color : '#22283a'}`,
+                  border: `1px solid ${active ? tf.color : 'var(--border)'}`,
                   background: active ? `${tf.color}14` : 'transparent',
-                  color: active ? tf.color : '#6b7280',
+                  color: active ? tf.color : 'var(--text-muted)',
                   display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.15s',
                 }}>
                   <Icon size={14} strokeWidth={1.5} /> {tf.label}
@@ -394,9 +394,9 @@ export default function TasksView({ menuItems }: TasksViewProps) {
                   onClick={() => setCategory(c.key)}
                   style={{
                     borderRadius: 999, padding: '6px 16px', fontSize: 13, fontWeight: 500, cursor: 'pointer',
-                    background: active ? 'rgba(249,115,22,0.12)' : '#161a22',
-                    border: `1px solid ${active ? '#f97316' : '#22283a'}`,
-                    color: active ? '#f97316' : '#6b7280',
+                    background: active ? 'rgba(249,115,22,0.12)' : 'var(--bg-card)',
+                    border: `1px solid ${active ? '#f97316' : 'var(--border)'}`,
+                    color: active ? '#f97316' : 'var(--text-muted)',
                     transition: 'all 0.15s',
                   }}
                 >
@@ -410,7 +410,7 @@ export default function TasksView({ menuItems }: TasksViewProps) {
           {loading ? (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 60, gap: 10 }}>
               <Loader2 size={22} color="#f97316" strokeWidth={1.5} className="animate-spin" />
-              <span style={{ fontSize: 14, color: '#6b7280' }}>Carregando tarefas...</span>
+              <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>Carregando tarefas...</span>
             </div>
           ) : (
             <>
@@ -427,7 +427,7 @@ export default function TasksView({ menuItems }: TasksViewProps) {
                     <TaskGroup label="Concluídas recentemente" tasks={doneTasks} hoveredId={hoveredId} setHoveredId={setHoveredId} toggleDone={handleToggleDone} selectedId={selectedTask?.id ?? null} onSelect={setSelectedTask} />
                   )}
                   {tasks.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: 40, color: '#6b7280', fontSize: 13 }}>Nenhuma tarefa encontrada.</div>
+                    <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)', fontSize: 13 }}>Nenhuma tarefa encontrada.</div>
                   )}
                 </>
               )}
@@ -436,18 +436,18 @@ export default function TasksView({ menuItems }: TasksViewProps) {
               {category === 'gerenciais' && (
                 <div>
                   {mTasks.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: 40, color: '#6b7280', fontSize: 13 }}>Nenhuma tarefa gerencial encontrada.</div>
+                    <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)', fontSize: 13 }}>Nenhuma tarefa gerencial encontrada.</div>
                   ) : mTasks.map((mt) => {
                     const Icon = mt.icon
                     return (
                       <div
                         key={mt.id}
                         style={{
-                          background: '#161a22', border: '1px solid #22283a', borderRadius: 10,
+                          background: 'var(--bg-card)', border: '1px solid #22283a', borderRadius: 10,
                           padding: 14, marginBottom: 8, display: 'flex', gap: 12, alignItems: 'center',
                         }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = '#1c2130'; e.currentTarget.style.borderColor = '#374151' }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = '#161a22'; e.currentTarget.style.borderColor = '#22283a' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-elevated)'; e.currentTarget.style.borderColor = 'var(--border)' }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--bg-card)'; e.currentTarget.style.borderColor = 'var(--border)' }}
                       >
                         <div style={{
                           width: 34, height: 34, borderRadius: 8, flexShrink: 0,
@@ -457,12 +457,12 @@ export default function TasksView({ menuItems }: TasksViewProps) {
                           <Icon size={16} color={mt.iconColor} strokeWidth={1.5} />
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 500, color: '#e8eaf0' }}>{mt.title}</div>
+                          <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{mt.title}</div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                            <span style={{ fontSize: 10, fontWeight: 500, background: '#22283a', color: '#9ca3af', borderRadius: 4, padding: '2px 8px' }}>
+                            <span style={{ fontSize: 10, fontWeight: 500, background: 'var(--border)', color: 'var(--text-secondary)', borderRadius: 4, padding: '2px 8px' }}>
                               {mt.recurrence}
                             </span>
-                            <span style={{ fontSize: 11, color: mt.overdue ? '#ef4444' : '#9ca3af', fontWeight: mt.overdue ? 600 : 400 }}>
+                            <span style={{ fontSize: 11, color: mt.overdue ? '#ef4444' : 'var(--text-secondary)', fontWeight: mt.overdue ? 600 : 400 }}>
                               {mt.deadline}
                             </span>
                           </div>
@@ -471,8 +471,8 @@ export default function TasksView({ menuItems }: TasksViewProps) {
                           {mt.participants.map((p, i) => (
                             <div key={p} style={{
                               width: 24, height: 24, borderRadius: '50%',
-                              background: '#22283a', border: '2px solid #161a22',
-                              fontSize: 9, fontWeight: 700, color: '#e8eaf0',
+                              background: 'var(--border)', border: '2px solid #161a22',
+                              fontSize: 9, fontWeight: 700, color: 'var(--text-primary)',
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
                               marginLeft: i > 0 ? -8 : 0, zIndex: mt.participants.length - i,
                             }}>{p}</div>
@@ -483,7 +483,7 @@ export default function TasksView({ menuItems }: TasksViewProps) {
                           style={{
                             background: 'transparent', border: '1px solid #22283a',
                             borderRadius: 6, padding: '5px 10px', fontSize: 12,
-                            color: '#9ca3af', cursor: 'pointer',
+                            color: 'var(--text-secondary)', cursor: 'pointer',
                             display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0,
                           }}>
                           Concluir <Check size={14} strokeWidth={1.5} />
@@ -500,8 +500,8 @@ export default function TasksView({ menuItems }: TasksViewProps) {
         {/* Right column — Summary */}
         <div style={{ width: 220, flexShrink: 0 }}>
           <div style={{ position: 'sticky', top: 24 }}>
-            <div style={{ background: '#161a22', border: '1px solid #22283a', borderRadius: 12, padding: 16 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#e8eaf0', marginBottom: 16 }}>Resumo da semana</div>
+            <div style={{ background: 'var(--bg-card)', border: '1px solid #22283a', borderRadius: 12, padding: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 16 }}>Resumo da semana</div>
 
               <SummaryCard label="Atrasadas" value={String(taskCounts.overdue)} color="#ef4444" />
               <SummaryCard label="Para hoje" value={String(taskCounts.today)} color="#f97316" />
@@ -510,10 +510,10 @@ export default function TasksView({ menuItems }: TasksViewProps) {
 
               <div style={{ borderTop: '1px solid #22283a', margin: '16px 0' }} />
 
-              <div style={{ fontSize: 10, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8 }}>Nova tarefa rápida</div>
+              <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8 }}>Nova tarefa rápida</div>
               <input placeholder="Título da tarefa..." style={{
-                width: '100%', background: '#0f1117', border: '1px solid #22283a', borderRadius: 8,
-                padding: '9px 12px', fontSize: 13, color: '#e8eaf0', outline: 'none', boxSizing: 'border-box',
+                width: '100%', background: 'var(--bg)', border: '1px solid #22283a', borderRadius: 8,
+                padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box',
               }} />
               <button style={{
                 width: '100%', marginTop: 8, background: '#f97316', color: '#fff', border: 'none',
@@ -526,7 +526,7 @@ export default function TasksView({ menuItems }: TasksViewProps) {
           </div>
         </div>
       </div>
-      {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: '#161a22', border: '1px solid #22283a', borderLeft: '4px solid #22c55e', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: '#e8eaf0', zIndex: 60, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>{toast}</div>}
+      {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid #22283a', borderLeft: '4px solid #22c55e', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 60, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>{toast}</div>}
       {selectedTask && <TaskDrawer task={selectedTask} onClose={() => setSelectedTask(null)} onComplete={handleDrawerComplete} />}
     </AppLayout>
   )
@@ -541,7 +541,7 @@ function TaskGroup({ label, tasks, hoveredId, setHoveredId, toggleDone, selected
 }) {
   return (
     <div style={{ marginBottom: 24 }}>
-      <div style={{ fontSize: 11, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '1px', borderBottom: '1px solid #22283a', paddingBottom: 8, marginBottom: 12 }}>
+      <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', borderBottom: '1px solid #22283a', paddingBottom: 8, marginBottom: 12 }}>
         {label}
       </div>
       {tasks.map((task) => (
@@ -566,9 +566,9 @@ function TaskCard({ task, hovered, selected, onHover, toggleDone, onSelect }: {
       onMouseEnter={() => onHover(task.id)}
       onMouseLeave={() => onHover(null)}
       style={{
-        background: selected ? 'rgba(249,115,22,0.06)' : hovered ? '#1c2130' : '#161a22',
-        border: `1px solid ${hovered || selected ? '#374151' : '#22283a'}`,
-        borderLeft: selected ? '2px solid #f97316' : `1px solid ${hovered ? '#374151' : '#22283a'}`,
+        background: selected ? 'rgba(249,115,22,0.06)' : hovered ? 'var(--bg-elevated)' : 'var(--bg-card)',
+        border: `1px solid ${hovered || selected ? 'var(--border)' : 'var(--border)'}`,
+        borderLeft: selected ? '2px solid #f97316' : `1px solid ${hovered ? 'var(--border)' : 'var(--border)'}`,
         borderRadius: 10, padding: 14, marginBottom: 8,
         display: 'flex', gap: 12, alignItems: 'flex-start',
         transition: 'all 0.15s', opacity: task.done ? 0.5 : 1,
@@ -598,14 +598,14 @@ function TaskCard({ task, hovered, selected, onHover, toggleDone, onSelect }: {
 
       {/* Content */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 500, color: '#e8eaf0', textDecoration: task.done ? 'line-through' : 'none' }}>
+        <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', textDecoration: task.done ? 'line-through' : 'none' }}>
           {task.title}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-          <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#22283a', fontSize: 8, fontWeight: 700, color: '#e8eaf0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--border)', fontSize: 8, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             {task.leadInitials}
           </div>
-          <span style={{ fontSize: 12, color: '#6b7280' }}>{task.leadName}{task.leadCompany ? ` · ${task.leadCompany}` : ''}</span>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{task.leadName}{task.leadCompany ? ` · ${task.leadCompany}` : ''}</span>
           {task.stageBadge && (
             <span style={{ background: `${task.stageColor}1F`, color: task.stageColor, borderRadius: 999, padding: '1px 7px', fontSize: 10, fontWeight: 500, flexShrink: 0 }}>
               {task.stageBadge}
@@ -620,7 +620,7 @@ function TaskCard({ task, hovered, selected, onHover, toggleDone, onSelect }: {
               Atrasada · {task.time}
             </span>
           ) : task.time ? (
-            <span style={{ fontSize: 12, color: '#9ca3af' }}>{task.time}</span>
+            <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{task.time}</span>
           ) : null}
         </div>
       </div>
@@ -630,9 +630,9 @@ function TaskCard({ task, hovered, selected, onHover, toggleDone, onSelect }: {
         onMouseEnter={() => setBtnHov(true)} onMouseLeave={() => setBtnHov(false)}
         style={{
           background: btnHov ? 'rgba(249,115,22,0.06)' : 'transparent',
-          border: `1px solid ${btnHov ? '#f97316' : '#22283a'}`,
+          border: `1px solid ${btnHov ? '#f97316' : 'var(--border)'}`,
           borderRadius: 6, padding: '5px 10px', fontSize: 12,
-          color: btnHov ? '#f97316' : '#9ca3af', cursor: 'pointer',
+          color: btnHov ? '#f97316' : 'var(--text-secondary)', cursor: 'pointer',
           display: 'flex', alignItems: 'center', gap: 4,
           flexShrink: 0, alignSelf: 'center', transition: 'all 0.15s', whiteSpace: 'nowrap',
         }}>
@@ -646,8 +646,8 @@ function TaskCard({ task, hovered, selected, onHover, toggleDone, onSelect }: {
 
 function SummaryCard({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <div style={{ background: '#0f1117', borderRadius: 8, padding: 10, marginBottom: 8 }}>
-      <div style={{ fontSize: 10, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '1px' }}>{label}</div>
+    <div style={{ background: 'var(--bg)', borderRadius: 8, padding: 10, marginBottom: 8 }}>
+      <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>{label}</div>
       <div style={{ fontSize: 20, fontWeight: 800, color, marginTop: 2 }}>{value}</div>
     </div>
   )

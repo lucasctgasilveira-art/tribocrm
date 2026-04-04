@@ -9,9 +9,9 @@ type Period = 'month' | 'quarter' | 'year'
 function fmt(v: number) { return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 }) }
 function metaColor(p: number) { return p >= 80 ? '#22c55e' : p >= 50 ? '#f97316' : '#ef4444' }
 
-const thStyle: React.CSSProperties = { padding: '10px 16px', fontSize: 11, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, textAlign: 'left' }
-const tdStyle: React.CSSProperties = { padding: '12px 16px', fontSize: 13, color: '#e8eaf0', borderBottom: '1px solid #22283a' }
-const card: React.CSSProperties = { background: '#161a22', border: '1px solid #22283a', borderRadius: 12, overflow: 'hidden' }
+const thStyle: React.CSSProperties = { padding: '10px 16px', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, textAlign: 'left' }
+const tdStyle: React.CSSProperties = { padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', borderBottom: '1px solid #22283a' }
+const card: React.CSSProperties = { background: 'var(--bg-card)', border: '1px solid #22283a', borderRadius: 12, overflow: 'hidden' }
 
 export default function ReportsPage() {
   const [period, setPeriod] = useState<Period>('month')
@@ -54,14 +54,14 @@ export default function ReportsPage() {
     <AppLayout menuItems={gestaoMenuItems}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 700, color: '#e8eaf0', margin: 0 }}>Relatórios</h1>
+        <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Relatórios</h1>
         <div style={{ display: 'flex', gap: 4 }}>
           {periods.map(p => (
             <button key={p.key} onClick={() => setPeriod(p.key)} style={{
               borderRadius: 999, padding: '6px 14px', fontSize: 12, fontWeight: 500, cursor: 'pointer',
-              background: period === p.key ? 'rgba(249,115,22,0.12)' : '#161a22',
-              border: `1px solid ${period === p.key ? '#f97316' : '#22283a'}`,
-              color: period === p.key ? '#f97316' : '#6b7280', transition: 'all 0.15s',
+              background: period === p.key ? 'rgba(249,115,22,0.12)' : 'var(--bg-card)',
+              border: `1px solid ${period === p.key ? '#f97316' : 'var(--border)'}`,
+              color: period === p.key ? '#f97316' : 'var(--text-muted)', transition: 'all 0.15s',
             }}>{p.label}</button>
           ))}
         </div>
@@ -86,10 +86,10 @@ export default function ReportsPage() {
             {kpis.map(k => {
               const Icon = k.icon
               return (
-                <div key={k.label} style={{ background: '#161a22', border: '1px solid #22283a', borderRadius: 12, padding: 20, position: 'relative' }}>
+                <div key={k.label} style={{ background: 'var(--bg-card)', border: '1px solid #22283a', borderRadius: 12, padding: 20, position: 'relative' }}>
                   <Icon size={20} color={k.iconColor} strokeWidth={1.5} style={{ position: 'absolute', top: 20, right: 20 }} />
-                  <span style={{ fontSize: 12, color: '#6b7280', display: 'block', marginBottom: 6 }}>{k.label}</span>
-                  <span style={{ fontSize: 28, fontWeight: 700, color: '#e8eaf0', display: 'block' }}>{k.value}</span>
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>{k.label}</span>
+                  <span style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-primary)', display: 'block' }}>{k.value}</span>
                 </div>
               )
             })}
@@ -100,14 +100,14 @@ export default function ReportsPage() {
             {/* Performance */}
             <div style={card}>
               <div style={{ padding: '16px 16px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: '#e8eaf0' }}>Performance por vendedor</span>
-                <span style={{ fontSize: 12, color: '#6b7280' }}>Por receita</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Performance por vendedor</span>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Por receita</span>
               </div>
               {team.length === 0 ? (
-                <div style={{ padding: 40, textAlign: 'center', color: '#6b7280', fontSize: 13 }}>Nenhum vendedor encontrado</div>
+                <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Nenhum vendedor encontrado</div>
               ) : (
                 <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 12 }}>
-                  <thead><tr style={{ background: '#0f1117' }}>
+                  <thead><tr style={{ background: 'var(--bg)' }}>
                     {['Vendedor', 'Leads', 'Conv.', 'Receita', 'Meta %'].map(h => <th key={h} style={thStyle}>{h}</th>)}
                   </tr></thead>
                   <tbody>
@@ -115,7 +115,7 @@ export default function ReportsPage() {
                       <tr key={m.id}>
                         <td style={tdStyle}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#22283a', fontSize: 9, fontWeight: 700, color: '#e8eaf0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--border)', fontSize: 9, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                               {m.name.split(' ').map((w: string) => w[0]).join('').slice(0, 2)}
                             </div>
                             <span>{m.name}</span>
@@ -126,7 +126,7 @@ export default function ReportsPage() {
                         <td style={{ ...tdStyle, fontWeight: 700, color: '#22c55e' }}>{fmt(m.revenue)}</td>
                         <td style={{ ...tdStyle, minWidth: 90 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <div style={{ flex: 1, background: '#22283a', borderRadius: 2, height: 4 }}>
+                            <div style={{ flex: 1, background: 'var(--border)', borderRadius: 2, height: 4 }}>
                               <div style={{ width: `${Math.min(m.goalPercentage, 100)}%`, height: '100%', background: metaColor(m.goalPercentage), borderRadius: 2 }} />
                             </div>
                             <span style={{ fontSize: 11, color: metaColor(m.goalPercentage), fontWeight: 600, minWidth: 28 }}>{m.goalPercentage}%</span>
@@ -135,7 +135,7 @@ export default function ReportsPage() {
                       </tr>
                     ))}
                     {/* Total row */}
-                    <tr style={{ background: '#0f1117' }}>
+                    <tr style={{ background: 'var(--bg)' }}>
                       <td style={{ ...tdStyle, fontWeight: 700, borderBottom: 'none' }}>TOTAL</td>
                       <td style={{ ...tdStyle, fontWeight: 700, borderBottom: 'none' }}>{team.reduce((s: number, m: any) => s + m.leadsCount, 0)}</td>
                       <td style={{ ...tdStyle, fontWeight: 700, borderBottom: 'none' }}>{data.kpis.conversionRate}%</td>
@@ -150,20 +150,20 @@ export default function ReportsPage() {
             {/* Loss reasons */}
             <div style={{ ...card, padding: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: '#e8eaf0' }}>Motivos de perda</span>
-                <span style={{ fontSize: 12, color: '#6b7280' }}>{lossReasons.reduce((s: number, r: any) => s + r.count, 0)} leads perdidos</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Motivos de perda</span>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{lossReasons.reduce((s: number, r: any) => s + r.count, 0)} leads perdidos</span>
               </div>
               {lossReasons.length === 0 ? (
-                <div style={{ padding: 40, textAlign: 'center', color: '#6b7280', fontSize: 13 }}>Nenhum lead perdido no período</div>
+                <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Nenhum lead perdido no período</div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                   {lossReasons.map((lr: any) => (
                     <div key={lr.reason}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                        <span style={{ fontSize: 13, color: '#e8eaf0' }}>{lr.reason}</span>
-                        <span style={{ fontSize: 12, color: '#6b7280' }}>{lr.count} leads · {lr.percentage}%</span>
+                        <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{lr.reason}</span>
+                        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{lr.count} leads · {lr.percentage}%</span>
                       </div>
-                      <div style={{ background: '#22283a', borderRadius: 3, height: 6 }}>
+                      <div style={{ background: 'var(--border)', borderRadius: 3, height: 6 }}>
                         <div style={{ width: `${lr.percentage}%`, height: '100%', background: '#ef4444', borderRadius: 3 }} />
                       </div>
                     </div>
@@ -178,8 +178,8 @@ export default function ReportsPage() {
             {/* Activities */}
             <div style={{ ...card, padding: 20 }}>
               <div style={{ marginBottom: 20 }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: '#e8eaf0' }}>Atividades da equipe</span>
-                <span style={{ fontSize: 12, color: '#6b7280', marginLeft: 8 }}>{totalActivities} total</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Atividades da equipe</span>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 8 }}>{totalActivities} total</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 {[
@@ -191,10 +191,10 @@ export default function ReportsPage() {
                 ].map(a => (
                   <div key={a.label}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                      <span style={{ fontSize: 13, color: '#e8eaf0' }}>{a.label}</span>
-                      <span style={{ fontSize: 12, color: '#6b7280' }}>{a.value}</span>
+                      <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{a.label}</span>
+                      <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{a.value}</span>
                     </div>
-                    <div style={{ background: '#22283a', borderRadius: 3, height: 6 }}>
+                    <div style={{ background: 'var(--border)', borderRadius: 3, height: 6 }}>
                       <div style={{ width: totalActivities > 0 ? `${(a.value / totalActivities) * 100}%` : '0%', height: '100%', background: a.color, borderRadius: 3, minWidth: a.value > 0 ? 4 : 0 }} />
                     </div>
                   </div>
@@ -205,10 +205,10 @@ export default function ReportsPage() {
             {/* Pipeline by stage */}
             <div style={{ ...card, padding: 20 }}>
               <div style={{ marginBottom: 20 }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: '#e8eaf0' }}>Pipeline por etapa</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Pipeline por etapa</span>
               </div>
               {pipelineStages.length === 0 ? (
-                <div style={{ padding: 40, textAlign: 'center', color: '#6b7280', fontSize: 13 }}>Nenhum pipeline configurado</div>
+                <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Nenhum pipeline configurado</div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   {pipelineStages.map((s: any) => (
@@ -216,13 +216,13 @@ export default function ReportsPage() {
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <div style={{ width: 8, height: 8, borderRadius: '50%', background: s.color, flexShrink: 0 }} />
-                          <span style={{ fontSize: 13, color: '#e8eaf0' }}>{s.stageName}</span>
+                          <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{s.stageName}</span>
                         </div>
-                        <span style={{ fontSize: 12, color: '#6b7280' }}>
+                        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                           {s.count} leads{s.value > 0 ? ` · ${fmt(s.value)}` : ''}
                         </span>
                       </div>
-                      <div style={{ background: '#22283a', borderRadius: 3, height: 6 }}>
+                      <div style={{ background: 'var(--border)', borderRadius: 3, height: 6 }}>
                         <div style={{ width: maxPipelineValue > 0 ? `${(s.value / maxPipelineValue) * 100}%` : '0%', height: '100%', background: s.color, borderRadius: 3, minWidth: s.value > 0 ? 4 : 0 }} />
                       </div>
                     </div>
@@ -234,12 +234,12 @@ export default function ReportsPage() {
 
           {/* Export row */}
           <div style={{ ...card, padding: '16px 20px', marginTop: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 14, fontWeight: 500, color: '#e8eaf0' }}>Exportar dados</span>
+            <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)' }}>Exportar dados</span>
             <div style={{ display: 'flex', gap: 8 }}>
               <button style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: '1px solid rgba(249,115,22,0.3)', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 500, color: '#f97316', cursor: 'pointer' }}>
                 <Download size={14} strokeWidth={1.5} /> Exportar Excel
               </button>
-              <button style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: '1px solid #22283a', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 500, color: '#9ca3af', cursor: 'pointer' }}>
+              <button style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: '1px solid #22283a', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', cursor: 'pointer' }}>
                 <Download size={14} strokeWidth={1.5} /> Exportar CSV
               </button>
             </div>

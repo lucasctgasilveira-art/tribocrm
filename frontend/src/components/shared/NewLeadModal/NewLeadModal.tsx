@@ -113,17 +113,17 @@ const CSS = `
   @keyframes modalFadeIn{from{opacity:0}to{opacity:1}}
   @keyframes modalScaleIn{from{opacity:0;transform:translate(-50%,-50%) scale(0.95)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
   .nlm-body::-webkit-scrollbar{width:4px}.nlm-body::-webkit-scrollbar-track{background:transparent}
-  .nlm-body::-webkit-scrollbar-thumb{background:#22283a;border-radius:4px}.nlm-body{scrollbar-width:thin;scrollbar-color:#22283a transparent}
+  .nlm-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}.nlm-body{scrollbar-width:thin;scrollbar-color:var(--border) transparent}
 `
 
 function getInputStyle(status: FieldStatus): React.CSSProperties {
-  const b = status === 'error' ? '#ef4444' : status === 'valid' ? '#22c55e' : '#22283a'
+  const b = status === 'error' ? '#ef4444' : status === 'valid' ? '#22c55e' : 'var(--border)'
   const sh = status === 'error' ? '0 0 0 3px rgba(239,68,68,0.10)' : status === 'valid' ? '0 0 0 3px rgba(34,197,94,0.10)' : 'none'
-  return { width: '100%', background: '#111318', border: `1px solid ${b}`, borderRadius: 8, padding: '9px 12px', fontSize: 13, color: '#e8eaf0', outline: 'none', boxSizing: 'border-box' as const, transition: 'border-color 0.2s, box-shadow 0.2s', boxShadow: sh }
+  return { width: '100%', background: 'var(--bg-surface)', border: `1px solid ${b}`, borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' as const, transition: 'border-color 0.2s, box-shadow 0.2s', boxShadow: sh }
 }
 const baseInput = getInputStyle('idle')
 function focusEv(e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) { e.target.style.borderColor = '#f97316'; e.target.style.boxShadow = '0 0 0 3px rgba(249,115,22,0.10)' }
-function blurEv(e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) { e.target.style.borderColor = '#22283a'; e.target.style.boxShadow = 'none' }
+function blurEv(e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none' }
 
 // ── Phone Input Component ──
 
@@ -146,40 +146,40 @@ function PhoneInput({ entry, onChange, onRemove, showRemove }: { entry: PhoneEnt
       {/* Country selector */}
       <div ref={wrapRef} style={{ position: 'relative' }}>
         <button type="button" onClick={() => setDropOpen(!dropOpen)} style={{
-          background: '#111318', border: '1px solid #22283a', borderRadius: '8px 0 0 8px',
+          background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '8px 0 0 8px',
           padding: '0 12px', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer',
-          height: '100%', color: '#e8eaf0', fontSize: 13, whiteSpace: 'nowrap', minWidth: 90,
+          height: '100%', color: 'var(--text-primary)', fontSize: 13, whiteSpace: 'nowrap', minWidth: 90,
         }}>
           <span style={{ fontSize: 16 }}>{country.flag}</span>
-          <span style={{ color: '#9ca3af', fontSize: 12 }}>{country.ddi}</span>
+          <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{country.ddi}</span>
           <ChevronDown size={12} color="#6b7280" strokeWidth={1.5} />
         </button>
 
         {dropOpen && (
           <div style={{
             position: 'absolute', top: '100%', left: 0, marginTop: 4, width: 280, maxHeight: 240,
-            background: '#161a22', border: '1px solid #22283a', borderRadius: 8, zIndex: 100,
+            background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, zIndex: 100,
             boxShadow: '0 8px 24px rgba(0,0,0,0.4)', display: 'flex', flexDirection: 'column',
           }}>
-            <div style={{ borderBottom: '1px solid #22283a', flexShrink: 0 }}>
+            <div style={{ borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 14px' }}>
                 <Search size={14} color="#6b7280" strokeWidth={1.5} />
                 <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar país..."
-                  autoFocus style={{ background: 'transparent', border: 'none', padding: '10px 0', fontSize: 13, color: '#e8eaf0', outline: 'none', width: '100%' }} />
+                  autoFocus style={{ background: 'transparent', border: 'none', padding: '10px 0', fontSize: 13, color: 'var(--text-primary)', outline: 'none', width: '100%' }} />
               </div>
             </div>
             <div style={{ overflowY: 'auto', flex: 1 }}>
               {filtered.map(c => (
                 <div key={c.code + c.ddi} onClick={() => { onChange({ ddi: c.ddi, number: '' }); setDropOpen(false); setSearch('') }}
                   style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 13, transition: 'background 0.1s' }}
-                  onMouseEnter={e => { e.currentTarget.style.background = '#22283a' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--border)' }}
                   onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
                   <span style={{ fontSize: 18 }}>{c.flag}</span>
-                  <span style={{ color: '#e8eaf0' }}>{c.name}</span>
-                  <span style={{ color: '#6b7280', marginLeft: 'auto', fontSize: 12 }}>{c.ddi}</span>
+                  <span style={{ color: 'var(--text-primary)' }}>{c.name}</span>
+                  <span style={{ color: 'var(--text-muted)', marginLeft: 'auto', fontSize: 12 }}>{c.ddi}</span>
                 </div>
               ))}
-              {filtered.length === 0 && <div style={{ padding: 14, color: '#6b7280', fontSize: 13, textAlign: 'center' }}>Nenhum país encontrado</div>}
+              {filtered.length === 0 && <div style={{ padding: 14, color: 'var(--text-muted)', fontSize: 13, textAlign: 'center' }}>Nenhum país encontrado</div>}
             </div>
           </div>
         )}
@@ -194,7 +194,7 @@ function PhoneInput({ entry, onChange, onRemove, showRemove }: { entry: PhoneEnt
 
       {/* Remove button */}
       {showRemove && (
-        <button type="button" onClick={onRemove} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b7280', padding: '0 6px', display: 'flex', alignItems: 'center', marginLeft: 4 }}>
+        <button type="button" onClick={onRemove} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '0 6px', display: 'flex', alignItems: 'center', marginLeft: 4 }}>
           <X size={14} strokeWidth={1.5} />
         </button>
       )}
@@ -281,11 +281,11 @@ export default function NewLeadModal({ open, onClose, onSubmit, defaultStage }: 
       <style>{CSS}</style>
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50, animation: 'modalFadeIn 0.2s ease-out' }} />
 
-      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 560, maxWidth: '90vw', maxHeight: '90vh', background: '#161a22', border: '1px solid #22283a', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column', animation: 'modalScaleIn 0.2s ease-out' }}>
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 560, maxWidth: '90vw', maxHeight: '90vh', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column', animation: 'modalScaleIn 0.2s ease-out' }}>
         {/* Header */}
-        <div style={{ padding: '20px 24px', borderBottom: '1px solid #22283a', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexShrink: 0 }}>
-          <div><h2 style={{ fontSize: 17, fontWeight: 700, color: '#e8eaf0', margin: 0 }}>Novo Lead</h2><p style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>Preencha os dados do novo lead</p></div>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b7280', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexShrink: 0 }}>
+          <div><h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Novo Lead</h2><p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>Preencha os dados do novo lead</p></div>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
         </div>
 
         {/* Body */}
@@ -347,18 +347,18 @@ export default function NewLeadModal({ open, onClose, onSubmit, defaultStage }: 
           <SectionLabel style={{ marginTop: 20 }}>Observações</SectionLabel>
           <textarea rows={4} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Observações iniciais..." style={{ ...baseInput, resize: 'none' as const }}
             onFocus={e => { e.target.style.borderColor = '#f97316'; e.target.style.boxShadow = '0 0 0 3px rgba(249,115,22,0.10)' }}
-            onBlur={e => { e.target.style.borderColor = '#22283a'; e.target.style.boxShadow = 'none' }} />
+            onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none' }} />
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '16px 24px', borderTop: '1px solid #22283a', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
-          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid #22283a', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: '#9ca3af', cursor: 'pointer' }}>Cancelar</button>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
           <button onClick={handleSubmit} disabled={!canSubmit} style={{
-            background: canSubmit ? '#f97316' : '#22283a', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600,
-            color: canSubmit ? '#fff' : '#6b7280', cursor: canSubmit ? 'pointer' : 'not-allowed',
+            background: canSubmit ? '#f97316' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600,
+            color: canSubmit ? '#fff' : 'var(--text-muted)', cursor: canSubmit ? 'pointer' : 'not-allowed',
             display: 'flex', alignItems: 'center', gap: 6, transition: 'background 0.15s',
           }} onMouseEnter={e => { if (canSubmit) e.currentTarget.style.background = '#fb923c' }}
-             onMouseLeave={e => { e.currentTarget.style.background = canSubmit ? '#f97316' : '#22283a' }}>
+             onMouseLeave={e => { e.currentTarget.style.background = canSubmit ? '#f97316' : 'var(--border)' }}>
             {saving && <Loader2 size={14} className="animate-spin" />}
             {saving ? 'Criando...' : 'Criar Lead'}
           </button>
@@ -371,13 +371,13 @@ export default function NewLeadModal({ open, onClose, onSubmit, defaultStage }: 
 // ── Sub-components ──
 
 function SectionLabel({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
-  return <div style={{ fontSize: 11, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 12, fontWeight: 600, ...style }}>{children}</div>
+  return <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 12, fontWeight: 600, ...style }}>{children}</div>
 }
 
 function Field({ label, required, error, children }: { label: string; required?: boolean; error?: string; children: React.ReactNode }) {
   return (
     <div>
-      <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#9ca3af', marginBottom: 6 }}>
+      <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 6 }}>
         {label}{required && <span style={{ color: '#f97316', marginLeft: 2 }}>*</span>}
       </label>
       {children}

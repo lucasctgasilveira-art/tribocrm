@@ -57,7 +57,7 @@ const distLabels: Record<string, string> = {
 
 const menuOpts = ['Ativar/Desativar', 'Excluir']
 
-const inputS: React.CSSProperties = { width: '100%', background: '#111318', border: '1px solid #22283a', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: '#e8eaf0', outline: 'none', boxSizing: 'border-box' }
+const inputS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
 
 // ── Component ──
 
@@ -117,12 +117,12 @@ export default function FormsPage() {
 
   return (
     <AppLayout menuItems={gestaoMenuItems}>
-      {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: '#161a22', border: '1px solid #22283a', borderLeft: '4px solid #22c55e', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: '#e8eaf0', zIndex: 60, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>{toast}</div>}
+      {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: '4px solid #22c55e', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 60, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>{toast}</div>}
 
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
         <div>
-          <h1 style={{ fontSize: 20, fontWeight: 700, color: '#e8eaf0', margin: 0 }}>Formulários</h1>
-          <p style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>Capture leads direto do seu site</p>
+          <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Formulários</h1>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>Capture leads direto do seu site</p>
         </div>
         <button onClick={() => setNewModal(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
           <Plus size={15} strokeWidth={2} /> Novo Formulário
@@ -130,59 +130,59 @@ export default function FormsPage() {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', fontSize: 13, marginBottom: 16 }}>
-        <span style={{ color: '#6b7280' }}>Total</span><span style={{ color: '#e8eaf0', fontWeight: 700, marginLeft: 4 }}>{stats.totalForms}</span>
-        <span style={{ color: '#22283a', margin: '0 10px' }}>|</span>
-        <span style={{ color: '#6b7280' }}>Ativos</span><span style={{ color: '#22c55e', fontWeight: 700, marginLeft: 4 }}>{stats.activeForms}</span>
-        <span style={{ color: '#22283a', margin: '0 10px' }}>|</span>
-        <span style={{ color: '#6b7280' }}>Leads captados</span><span style={{ color: '#e8eaf0', fontWeight: 700, marginLeft: 4 }}>{stats.totalLeadsCaptured}</span>
-        <span style={{ color: '#22283a', margin: '0 10px' }}>|</span>
-        <span style={{ color: '#6b7280' }}>Esta semana</span><span style={{ color: '#e8eaf0', fontWeight: 700, marginLeft: 4 }}>{stats.thisWeekLeads}</span>
+        <span style={{ color: 'var(--text-muted)' }}>Total</span><span style={{ color: 'var(--text-primary)', fontWeight: 700, marginLeft: 4 }}>{stats.totalForms}</span>
+        <span style={{ color: 'var(--border)', margin: '0 10px' }}>|</span>
+        <span style={{ color: 'var(--text-muted)' }}>Ativos</span><span style={{ color: '#22c55e', fontWeight: 700, marginLeft: 4 }}>{stats.activeForms}</span>
+        <span style={{ color: 'var(--border)', margin: '0 10px' }}>|</span>
+        <span style={{ color: 'var(--text-muted)' }}>Leads captados</span><span style={{ color: 'var(--text-primary)', fontWeight: 700, marginLeft: 4 }}>{stats.totalLeadsCaptured}</span>
+        <span style={{ color: 'var(--border)', margin: '0 10px' }}>|</span>
+        <span style={{ color: 'var(--text-muted)' }}>Esta semana</span><span style={{ color: 'var(--text-primary)', fontWeight: 700, marginLeft: 4 }}>{stats.thisWeekLeads}</span>
       </div>
 
       <div style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 8, padding: '12px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
         <Globe size={16} color="#3b82f6" strokeWidth={1.5} style={{ flexShrink: 0 }} />
-        <span style={{ color: '#9ca3af' }}>Cole o código embed no seu site para capturar leads automaticamente no pipeline.</span>
+        <span style={{ color: 'var(--text-secondary)' }}>Cole o código embed no seu site para capturar leads automaticamente no pipeline.</span>
       </div>
 
       {loading ? (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 60, gap: 10 }}>
           <Loader2 size={22} color="#f97316" strokeWidth={1.5} className="animate-spin" />
-          <span style={{ fontSize: 14, color: '#6b7280' }}>Carregando formulários...</span>
+          <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>Carregando formulários...</span>
         </div>
       ) : forms.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 60, color: '#6b7280', fontSize: 14 }}>Nenhum formulário criado</div>
+        <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-muted)', fontSize: 14 }}>Nenhum formulário criado</div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
           {forms.map(f => {
             const fields = (f.fieldsConfig as FieldConfig[]) ?? []
             return (
-              <div key={f.id} style={{ background: '#161a22', border: '1px solid #22283a', borderRadius: 12, padding: 20, display: 'flex', flexDirection: 'column', transition: 'border-color 0.2s' }}
+              <div key={f.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, display: 'flex', flexDirection: 'column', transition: 'border-color 0.2s' }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(249,115,22,0.3)' }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = '#22283a' }}>
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                  <span style={{ fontSize: 15, fontWeight: 600, color: '#e8eaf0', flex: 1 }}>{f.name}</span>
-                  <span style={{ background: f.isActive ? 'rgba(34,197,94,0.12)' : 'rgba(107,114,128,0.12)', color: f.isActive ? '#22c55e' : '#6b7280', borderRadius: 999, padding: '2px 8px', fontSize: 10, fontWeight: 500 }}>{f.isActive ? 'Ativo' : 'Inativo'}</span>
+                  <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', flex: 1 }}>{f.name}</span>
+                  <span style={{ background: f.isActive ? 'rgba(34,197,94,0.12)' : 'rgba(107,114,128,0.12)', color: f.isActive ? '#22c55e' : 'var(--text-muted)', borderRadius: 999, padding: '2px 8px', fontSize: 10, fontWeight: 500 }}>{f.isActive ? 'Ativo' : 'Inativo'}</span>
                 </div>
-                <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Pipeline: <span style={{ color: '#e8eaf0' }}>{f.pipeline.name} → {f.stage.name}</span></div>
-                <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 8 }}>Responsável: <span style={{ color: '#e8eaf0' }}>{distLabels[f.distributionType] ?? f.distributionType}</span></div>
-                <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 12 }}>{f.leadsCount} leads captados · Última submissão {formatTimeAgo(f.lastSubmission)}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>Pipeline: <span style={{ color: 'var(--text-primary)' }}>{f.pipeline.name} → {f.stage.name}</span></div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>Responsável: <span style={{ color: 'var(--text-primary)' }}>{distLabels[f.distributionType] ?? f.distributionType}</span></div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>{f.leadsCount} leads captados · Última submissão {formatTimeAgo(f.lastSubmission)}</div>
                 {fields.length > 0 && (
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
                     {fields.map(field => (
-                      <span key={field.label} style={{ background: '#22283a', color: field.required ? '#e8eaf0' : '#6b7280', borderRadius: 4, padding: '2px 8px', fontSize: 11 }}>{field.label}{field.required ? '*' : ''}</span>
+                      <span key={field.label} style={{ background: 'var(--border)', color: field.required ? 'var(--text-primary)' : 'var(--text-muted)', borderRadius: 4, padding: '2px 8px', fontSize: 11 }}>{field.label}{field.required ? '*' : ''}</span>
                     ))}
                   </div>
                 )}
-                <div style={{ marginTop: 'auto', paddingTop: 14, borderTop: '1px solid #22283a', display: 'flex', gap: 6, position: 'relative' }}>
-                  <button onClick={() => setEmbedModal(f)} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: '1px solid #22283a', borderRadius: 6, padding: '5px 12px', fontSize: 12, color: '#9ca3af', cursor: 'pointer' }}>
+                <div style={{ marginTop: 'auto', paddingTop: 14, borderTop: '1px solid var(--border)', display: 'flex', gap: 6, position: 'relative' }}>
+                  <button onClick={() => setEmbedModal(f)} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 12px', fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}>
                     <Code size={12} strokeWidth={1.5} /> Ver código embed
                   </button>
-                  <button style={{ background: 'transparent', border: '1px solid #22283a', borderRadius: 6, padding: '5px 12px', fontSize: 12, color: '#9ca3af', cursor: 'pointer' }}>Editar</button>
-                  <button onClick={() => setOpenMenu(openMenu === f.id ? null : f.id)} style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid #22283a', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', marginLeft: 'auto' }}>
+                  <button style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 12px', fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}>Editar</button>
+                  <button onClick={() => setOpenMenu(openMenu === f.id ? null : f.id)} style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--border)', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', marginLeft: 'auto' }}>
                     <MoreHorizontal size={14} strokeWidth={1.5} />
                   </button>
                   {openMenu === f.id && (
-                    <div style={{ position: 'absolute', right: 0, bottom: 36, zIndex: 20, background: '#161a22', border: '1px solid #22283a', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', minWidth: 150, padding: '4px 0' }}>
+                    <div style={{ position: 'absolute', right: 0, bottom: 36, zIndex: 20, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', minWidth: 150, padding: '4px 0' }}>
                       {menuOpts.map(opt => (
                         <div key={opt}
                           onClick={() => {
@@ -190,7 +190,7 @@ export default function FormsPage() {
                             else if (opt === 'Excluir') handleDelete(f.id)
                             else setOpenMenu(null)
                           }}
-                          style={{ padding: '8px 14px', fontSize: 13, color: opt === 'Excluir' ? '#ef4444' : '#e8eaf0', cursor: 'pointer' }}
+                          style={{ padding: '8px 14px', fontSize: 13, color: opt === 'Excluir' ? '#ef4444' : 'var(--text-primary)', cursor: 'pointer' }}
                           onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
                           onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>{opt}</div>
                       ))}
@@ -223,32 +223,32 @@ function EmbedModal({ form, onClose, onCopy }: { form: FormItem; onClose: () => 
   return (
     <>
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
-      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 560, maxWidth: '90vw', maxHeight: '90vh', background: '#161a22', border: '1px solid #22283a', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ padding: '20px 24px', borderBottom: '1px solid #22283a', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
-          <h2 style={{ fontSize: 17, fontWeight: 700, color: '#e8eaf0', margin: 0 }}>Código Embed</h2>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b7280', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 560, maxWidth: '90vw', maxHeight: '90vh', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Código Embed</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
         </div>
         <div style={{ padding: 24, flex: 1, overflowY: 'auto' }}>
-          <p style={{ fontSize: 13, color: '#9ca3af', marginBottom: 12 }}>Cole este código no HTML do seu site onde deseja exibir o formulário.</p>
-          <pre style={{ background: '#0f1117', border: '1px solid #22283a', borderRadius: 8, padding: 16, fontFamily: 'monospace', fontSize: 12, color: '#22c55e', whiteSpace: 'pre-wrap', marginBottom: 12, overflowX: 'auto' }}>{code}</pre>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>Cole este código no HTML do seu site onde deseja exibir o formulário.</p>
+          <pre style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: 16, fontFamily: 'monospace', fontSize: 12, color: '#22c55e', whiteSpace: 'pre-wrap', marginBottom: 12, overflowX: 'auto' }}>{code}</pre>
           <button onClick={handleCopy} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginBottom: 20 }}>
             <Copy size={14} strokeWidth={1.5} /> Copiar código
           </button>
-          <div style={{ fontSize: 10, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8, fontWeight: 600 }}>Preview</div>
+          <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8, fontWeight: 600 }}>Preview</div>
           <div style={{ background: '#f8f9fc', borderRadius: 8, padding: 20 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 320 }}>
               {fields.filter(f => f.required || true).map(f => (
                 <div key={f.label}>
-                  <div style={{ fontSize: 11, color: '#374151', marginBottom: 4 }}>{f.label}</div>
-                  <div style={{ background: '#fff', border: '1px solid #d1d5db', borderRadius: 6, padding: '8px 10px', fontSize: 12, color: '#9ca3af' }}>Digite aqui...</div>
+                  <div style={{ fontSize: 11, color: 'var(--border)', marginBottom: 4 }}>{f.label}</div>
+                  <div style={{ background: '#fff', border: '1px solid #d1d5db', borderRadius: 6, padding: '8px 10px', fontSize: 12, color: 'var(--text-secondary)' }}>Digite aqui...</div>
                 </div>
               ))}
               <button style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 6, padding: '10px 0', fontSize: 13, fontWeight: 600, marginTop: 4 }}>Enviar</button>
             </div>
           </div>
         </div>
-        <div style={{ padding: '16px 24px', borderTop: '1px solid #22283a', flexShrink: 0 }}>
-          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid #22283a', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: '#9ca3af', cursor: 'pointer' }}>Fechar</button>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Fechar</button>
         </div>
       </div>
     </>
@@ -291,36 +291,36 @@ function NewFormModal({ pipelines, onClose, onSave }: { pipelines: PipelineOptio
   return (
     <>
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
-      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 600, maxWidth: '90vw', maxHeight: '90vh', background: '#161a22', border: '1px solid #22283a', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ padding: '20px 24px', borderBottom: '1px solid #22283a', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
-          <h2 style={{ fontSize: 17, fontWeight: 700, color: '#e8eaf0', margin: 0 }}>Novo Formulário</h2>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b7280', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 600, maxWidth: '90vw', maxHeight: '90vh', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Novo Formulário</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
         </div>
         <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
           <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 12, fontWeight: 500, color: '#9ca3af', display: 'block', marginBottom: 6 }}>Nome do formulário <span style={{ color: '#f97316' }}>*</span></label>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Nome do formulário <span style={{ color: '#f97316' }}>*</span></label>
             <input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Formulário do Site" style={inputS} />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
             <div>
-              <label style={{ fontSize: 12, fontWeight: 500, color: '#9ca3af', display: 'block', marginBottom: 6 }}>Pipeline destino</label>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Pipeline destino</label>
               <select value={pipelineId} onChange={e => { setPipelineId(e.target.value); setStageId('') }} style={{ ...inputS, appearance: 'none' as const, cursor: 'pointer' }}>
                 {pipelines.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </div>
             <div>
-              <label style={{ fontSize: 12, fontWeight: 500, color: '#9ca3af', display: 'block', marginBottom: 6 }}>Etapa inicial</label>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Etapa inicial</label>
               <select value={stageId} onChange={e => setStageId(e.target.value)} style={{ ...inputS, appearance: 'none' as const, cursor: 'pointer' }}>
                 {stages.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
           </div>
           <div style={{ marginBottom: 20 }}>
-            <label style={{ fontSize: 12, fontWeight: 500, color: '#9ca3af', display: 'block', marginBottom: 8 }}>Atribuir para</label>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 8 }}>Atribuir para</label>
             <div style={{ display: 'flex', gap: 12 }}>
               {(['ROUND_ROBIN_ALL', 'SPECIFIC_USER'] as const).map(v => (
-                <label key={v} onClick={() => setAssign(v)} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: '#e8eaf0' }}>
-                  <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${assign === v ? '#f97316' : '#22283a'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <label key={v} onClick={() => setAssign(v)} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)' }}>
+                  <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${assign === v ? '#f97316' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {assign === v && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f97316' }} />}
                   </div>
                   {v === 'ROUND_ROBIN_ALL' ? 'Round-robin automático' : 'Vendedor específico'}
@@ -329,14 +329,14 @@ function NewFormModal({ pipelines, onClose, onSave }: { pipelines: PipelineOptio
             </div>
           </div>
 
-          <div style={{ fontSize: 10, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 10, fontWeight: 600 }}>Campos do formulário</div>
-          <div style={{ background: '#0f1117', border: '1px solid #22283a', borderRadius: 8, overflow: 'hidden', marginBottom: 20 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px 80px', padding: '8px 14px', background: '#0a0b0f', fontSize: 10, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '1px' }}>
+          <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 10, fontWeight: 600 }}>Campos do formulário</div>
+          <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden', marginBottom: 20 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px 80px', padding: '8px 14px', background: 'var(--bg)', fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>
               <span>Campo</span><span style={{ textAlign: 'center' }}>Ativo</span><span style={{ textAlign: 'center' }}>Obrigatório</span>
             </div>
             {fields.map((f, i) => (
-              <div key={f.label} style={{ display: 'grid', gridTemplateColumns: '1fr 60px 80px', padding: '10px 14px', borderBottom: i < fields.length - 1 ? '1px solid #22283a' : 'none', alignItems: 'center' }}>
-                <span style={{ fontSize: 13, color: f.enabled ? '#e8eaf0' : '#6b7280' }}>{f.label}</span>
+              <div key={f.label} style={{ display: 'grid', gridTemplateColumns: '1fr 60px 80px', padding: '10px 14px', borderBottom: i < fields.length - 1 ? '1px solid var(--border)' : 'none', alignItems: 'center' }}>
+                <span style={{ fontSize: 13, color: f.enabled ? 'var(--text-primary)' : 'var(--text-muted)' }}>{f.label}</span>
                 <div style={{ textAlign: 'center' }}>
                   <Toggle on={f.enabled} onToggle={() => toggleField(i, 'enabled')} />
                 </div>
@@ -347,9 +347,9 @@ function NewFormModal({ pipelines, onClose, onSave }: { pipelines: PipelineOptio
             ))}
           </div>
         </div>
-        <div style={{ padding: '16px 24px', borderTop: '1px solid #22283a', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
-          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid #22283a', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: '#9ca3af', cursor: 'pointer' }}>Cancelar</button>
-          <button onClick={handleSave} disabled={!name.trim() || !pipelineId || !stageId} style={{ background: name.trim() && pipelineId && stageId ? '#f97316' : '#22283a', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: name.trim() && pipelineId && stageId ? '#fff' : '#6b7280', cursor: name.trim() && pipelineId && stageId ? 'pointer' : 'not-allowed' }}>Criar formulário</button>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
+          <button onClick={handleSave} disabled={!name.trim() || !pipelineId || !stageId} style={{ background: name.trim() && pipelineId && stageId ? '#f97316' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: name.trim() && pipelineId && stageId ? '#fff' : 'var(--text-muted)', cursor: name.trim() && pipelineId && stageId ? 'pointer' : 'not-allowed' }}>Criar formulário</button>
         </div>
       </div>
     </>
@@ -361,8 +361,8 @@ function NewFormModal({ pipelines, onClose, onSave }: { pipelines: PipelineOptio
 function Toggle({ on, onToggle, small }: { on: boolean; onToggle: () => void; small?: boolean }) {
   const w = small ? 28 : 36; const h = small ? 16 : 20; const d = small ? 12 : 16
   return (
-    <div onClick={onToggle} style={{ width: w, height: h, borderRadius: 999, background: on ? '#f97316' : '#22283a', display: 'inline-flex', alignItems: 'center', padding: '0 2px', justifyContent: on ? 'flex-end' : 'flex-start', cursor: 'pointer', transition: 'all 0.2s' }}>
-      <div style={{ width: d, height: d, borderRadius: '50%', background: on ? '#fff' : '#6b7280', transition: 'all 0.2s' }} />
+    <div onClick={onToggle} style={{ width: w, height: h, borderRadius: 999, background: on ? '#f97316' : 'var(--border)', display: 'inline-flex', alignItems: 'center', padding: '0 2px', justifyContent: on ? 'flex-end' : 'flex-start', cursor: 'pointer', transition: 'all 0.2s' }}>
+      <div style={{ width: d, height: d, borderRadius: '50%', background: on ? '#fff' : 'var(--text-muted)', transition: 'all 0.2s' }} />
     </div>
   )
 }

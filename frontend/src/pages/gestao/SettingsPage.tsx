@@ -9,7 +9,7 @@ type Tab = 'pipeline' | 'loss' | 'tasks' | 'integrations'
 
 interface Stage { id: string; name: string; color: string; active: boolean; fixed: boolean }
 const initialStages: Stage[] = [
-  { id: 's1', name: 'Sem Contato', color: '#6b7280', active: true, fixed: false },
+  { id: 's1', name: 'Sem Contato', color: 'var(--text-muted)', active: true, fixed: false },
   { id: 's2', name: 'Em Contato', color: '#3b82f6', active: true, fixed: false },
   { id: 's3', name: 'Negociando', color: '#f59e0b', active: true, fixed: false },
   { id: 's4', name: 'Proposta Enviada', color: '#a855f7', active: true, fixed: false },
@@ -29,7 +29,7 @@ const mgrTasks: MgrTask[] = [
   { id: 'm5', name: '1:1 com liderança', active: false, recurrence: 'Mensal' },
 ]
 
-const card: React.CSSProperties = { background: '#161a22', border: '1px solid #22283a', borderRadius: 12, overflow: 'hidden' }
+const card: React.CSSProperties = { background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }
 
 // ── Component ──
 
@@ -46,15 +46,15 @@ export default function SettingsPage() {
   return (
     <AppLayout menuItems={gestaoMenuItems}>
       <div style={{ marginBottom: 16 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 700, color: '#e8eaf0', margin: 0 }}>Configurações</h1>
-        <p style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>Configure seu pipeline e preferências</p>
+        <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Configurações</h1>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>Configure seu pipeline e preferências</p>
       </div>
 
-      <div style={{ display: 'flex', borderBottom: '1px solid #22283a', marginBottom: 24 }}>
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 24 }}>
         {tabs.map(t => (
           <button key={t.key} onClick={() => setTab(t.key)} style={{
             background: 'transparent', border: 'none', cursor: 'pointer', padding: '10px 16px', fontSize: 13,
-            color: tab === t.key ? '#f97316' : '#6b7280', fontWeight: tab === t.key ? 500 : 400,
+            color: tab === t.key ? '#f97316' : 'var(--text-muted)', fontWeight: tab === t.key ? 500 : 400,
             borderBottom: tab === t.key ? '2px solid #f97316' : '2px solid transparent', marginBottom: -1,
           }}>{t.label}</button>
         ))}
@@ -93,9 +93,9 @@ function PipelineTab() {
       {pipelines.map(p => (
         <button key={p} onClick={() => setActivePipeline(p)} style={{
           borderRadius: 999, padding: '6px 14px', fontSize: 12, fontWeight: 500, cursor: 'pointer',
-          background: activePipeline === p ? 'rgba(249,115,22,0.12)' : '#22283a',
-          border: `1px solid ${activePipeline === p ? '#f97316' : '#22283a'}`,
-          color: activePipeline === p ? '#f97316' : '#6b7280', transition: 'all 0.15s',
+          background: activePipeline === p ? 'rgba(249,115,22,0.12)' : 'var(--border)',
+          border: `1px solid ${activePipeline === p ? '#f97316' : 'var(--border)'}`,
+          color: activePipeline === p ? '#f97316' : 'var(--text-muted)', transition: 'all 0.15s',
           display: 'flex', alignItems: 'center', gap: 4,
         }}>
           {p}{activePipeline === p && ' ✓'}
@@ -111,21 +111,21 @@ function PipelineTab() {
     </div>
 
     <div style={card}>
-      <div style={{ padding: '16px 20px', borderBottom: '1px solid #22283a', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: 14, fontWeight: 600, color: '#e8eaf0' }}>Etapas — {activePipeline}</span>
+      <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Etapas — {activePipeline}</span>
       </div>
       {stages.map(s => (
-        <div key={s.id} style={{ padding: '14px 20px', borderBottom: '1px solid #22283a', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <GripVertical size={16} color="#22283a" style={{ cursor: 'grab', flexShrink: 0 }} />
+        <div key={s.id} style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <GripVertical size={16} color="var(--border)" style={{ cursor: 'grab', flexShrink: 0 }} />
           <div style={{ width: 4, height: 20, borderRadius: 2, background: s.color, flexShrink: 0 }} />
-          <input value={s.name} onChange={e => renameSt(s.id, e.target.value)} style={{ flex: 1, background: 'transparent', border: 'none', fontSize: 14, fontWeight: 500, color: '#e8eaf0', outline: 'none' }} />
-          {s.fixed && <span style={{ background: '#22283a', color: '#6b7280', borderRadius: 4, padding: '2px 8px', fontSize: 10 }}>Fixa</span>}
-          <div onClick={() => toggleStage(s.id)} style={{ width: 36, height: 20, borderRadius: 999, background: s.active ? '#f97316' : '#22283a', display: 'flex', alignItems: 'center', padding: '0 2px', justifyContent: s.active ? 'flex-end' : 'flex-start', cursor: s.fixed ? 'not-allowed' : 'pointer', transition: 'all 0.2s', opacity: s.fixed ? 0.5 : 1 }}>
-            <div style={{ width: 16, height: 16, borderRadius: '50%', background: s.active ? '#fff' : '#6b7280', transition: 'all 0.2s' }} />
+          <input value={s.name} onChange={e => renameSt(s.id, e.target.value)} style={{ flex: 1, background: 'transparent', border: 'none', fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', outline: 'none' }} />
+          {s.fixed && <span style={{ background: 'var(--border)', color: 'var(--text-muted)', borderRadius: 4, padding: '2px 8px', fontSize: 10 }}>Fixa</span>}
+          <div onClick={() => toggleStage(s.id)} style={{ width: 36, height: 20, borderRadius: 999, background: s.active ? '#f97316' : 'var(--border)', display: 'flex', alignItems: 'center', padding: '0 2px', justifyContent: s.active ? 'flex-end' : 'flex-start', cursor: s.fixed ? 'not-allowed' : 'pointer', transition: 'all 0.2s', opacity: s.fixed ? 0.5 : 1 }}>
+            <div style={{ width: 16, height: 16, borderRadius: '50%', background: s.active ? '#fff' : 'var(--text-muted)', transition: 'all 0.2s' }} />
           </div>
           {!s.fixed && (
-            <button onClick={() => removeStage(s.id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b7280', padding: 4, transition: 'color 0.15s' }}
-              onMouseEnter={e => { e.currentTarget.style.color = '#ef4444' }} onMouseLeave={e => { e.currentTarget.style.color = '#6b7280' }}>
+            <button onClick={() => removeStage(s.id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4, transition: 'color 0.15s' }}
+              onMouseEnter={e => { e.currentTarget.style.color = '#ef4444' }} onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)' }}>
               <X size={14} strokeWidth={1.5} />
             </button>
           )}
@@ -134,7 +134,7 @@ function PipelineTab() {
       <button style={{ width: '100%', padding: 10, background: 'transparent', border: 'none', color: '#f97316', fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
         <Plus size={14} strokeWidth={1.5} /> Adicionar etapa
       </button>
-      <div style={{ padding: '8px 20px 16px', fontSize: 12, color: '#6b7280' }}>As etapas Venda Realizada e Perdido são fixas e não podem ser removidas.</div>
+      <div style={{ padding: '8px 20px 16px', fontSize: 12, color: 'var(--text-muted)' }}>As etapas Venda Realizada e Perdido são fixas e não podem ser removidas.</div>
     </div>
 
     {newFunnelModal && <NewFunnelModal onClose={() => setNewFunnelModal(false)} onCreate={handleCreateFunnel} currentCount={pipelines.length} />}
@@ -146,31 +146,31 @@ function PipelineTab() {
 
 function NewFunnelModal({ onClose, onCreate, currentCount }: { onClose: () => void; onCreate: (name: string) => void; currentCount: number }) {
   const [name, setName] = useState('')
-  const inputS: React.CSSProperties = { width: '100%', background: '#111318', border: '1px solid #22283a', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: '#e8eaf0', outline: 'none', boxSizing: 'border-box' }
+  const inputS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
 
   return (
     <>
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
-      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 480, maxWidth: '90vw', background: '#161a22', border: '1px solid #22283a', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ padding: '20px 24px', borderBottom: '1px solid #22283a', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
-          <h2 style={{ fontSize: 17, fontWeight: 700, color: '#e8eaf0', margin: 0 }}>Criar novo funil</h2>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b7280', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 480, maxWidth: '90vw', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Criar novo funil</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
         </div>
         <div style={{ padding: 24 }}>
           <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 12, fontWeight: 500, color: '#9ca3af', display: 'block', marginBottom: 6 }}>Nome do funil <span style={{ color: '#f97316' }}>*</span></label>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Nome do funil <span style={{ color: '#f97316' }}>*</span></label>
             <input autoFocus value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Pós-Venda, Parceiros, Franquias..." style={inputS} />
           </div>
-          <div style={{ background: '#0f1117', border: '1px solid #22283a', borderRadius: 8, padding: 12, fontSize: 13, color: '#6b7280', marginBottom: 12, lineHeight: 1.5 }}>
+          <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: 12, fontSize: 13, color: 'var(--text-muted)', marginBottom: 12, lineHeight: 1.5 }}>
             O novo funil começa com as 7 etapas padrão. Você pode personalizar depois.
           </div>
-          <div style={{ fontSize: 12, color: '#6b7280' }}>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
             Seu plano Pro permite até 10 funis. Você está usando {currentCount} de 10.
           </div>
         </div>
-        <div style={{ padding: '16px 24px', borderTop: '1px solid #22283a', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
-          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid #22283a', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: '#9ca3af', cursor: 'pointer' }}>Cancelar</button>
-          <button onClick={() => { if (name.trim()) onCreate(name.trim()) }} disabled={!name.trim()} style={{ background: name.trim() ? '#f97316' : '#22283a', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: name.trim() ? '#fff' : '#6b7280', cursor: name.trim() ? 'pointer' : 'not-allowed' }}>Criar funil</button>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
+          <button onClick={() => { if (name.trim()) onCreate(name.trim()) }} disabled={!name.trim()} style={{ background: name.trim() ? '#f97316' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: name.trim() ? '#fff' : 'var(--text-muted)', cursor: name.trim() ? 'pointer' : 'not-allowed' }}>Criar funil</button>
         </div>
       </div>
     </>
@@ -188,26 +188,26 @@ function LossReasonsTab() {
 
   return (
     <div style={card}>
-      <div style={{ padding: '16px 20px', borderBottom: '1px solid #22283a', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <span style={{ fontSize: 14, fontWeight: 600, color: '#e8eaf0' }}>Motivos de Perda</span>
-          <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>Obrigatório selecionar ao mover lead para Perdido</div>
+          <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Motivos de Perda</span>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Obrigatório selecionar ao mover lead para Perdido</div>
         </div>
         <button style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
           <Plus size={14} strokeWidth={2} /> Adicionar motivo
         </button>
       </div>
       {reasons.map((r, i) => (
-        <div key={i} style={{ padding: '12px 20px', borderBottom: i < reasons.length - 1 ? '1px solid #22283a' : 'none', display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div key={i} style={{ padding: '12px 20px', borderBottom: i < reasons.length - 1 ? '1px solid var(--border)' : 'none', display: 'flex', alignItems: 'center', gap: 12 }}>
           {editing === i ? (
             <input autoFocus value={r} onChange={e => rename(i, e.target.value)} onBlur={() => setEditing(null)} onKeyDown={e => { if (e.key === 'Enter') setEditing(null) }}
-              style={{ flex: 1, background: '#111318', border: '1px solid #f97316', borderRadius: 6, padding: '6px 10px', fontSize: 13, color: '#e8eaf0', outline: 'none' }} />
+              style={{ flex: 1, background: 'var(--bg-surface)', border: '1px solid #f97316', borderRadius: 6, padding: '6px 10px', fontSize: 13, color: 'var(--text-primary)', outline: 'none' }} />
           ) : (
-            <span style={{ flex: 1, fontSize: 13, color: '#e8eaf0' }}>{r}</span>
+            <span style={{ flex: 1, fontSize: 13, color: 'var(--text-primary)' }}>{r}</span>
           )}
-          <button onClick={() => setEditing(i)} style={{ background: 'transparent', border: '1px solid #22283a', borderRadius: 6, padding: '4px 10px', fontSize: 11, color: '#9ca3af', cursor: 'pointer' }}>Editar</button>
-          <button onClick={() => remove(i)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b7280', padding: 4 }}
-            onMouseEnter={e => { e.currentTarget.style.color = '#ef4444' }} onMouseLeave={e => { e.currentTarget.style.color = '#6b7280' }}>
+          <button onClick={() => setEditing(i)} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', fontSize: 11, color: 'var(--text-secondary)', cursor: 'pointer' }}>Editar</button>
+          <button onClick={() => remove(i)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#ef4444' }} onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)' }}>
             <X size={14} strokeWidth={1.5} />
           </button>
         </div>
@@ -226,30 +226,30 @@ function ManagerialTasksTab() {
 
   return (
     <div style={card}>
-      <div style={{ padding: '16px 20px', borderBottom: '1px solid #22283a', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <span style={{ fontSize: 14, fontWeight: 600, color: '#e8eaf0' }}>Tipos de Tarefa Gerencial</span>
-          <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>Tarefas criadas pelo gestor para a equipe — não vinculadas a leads</div>
+          <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Tipos de Tarefa Gerencial</span>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Tarefas criadas pelo gestor para a equipe — não vinculadas a leads</div>
         </div>
         <button style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
           <Plus size={14} strokeWidth={2} /> Novo tipo
         </button>
       </div>
       {tasks.map(t => (
-        <div key={t.id} style={{ padding: '14px 20px', borderBottom: '1px solid #22283a', display: 'flex', alignItems: 'center', gap: 12, opacity: t.active ? 1 : 0.6 }}>
+        <div key={t.id} style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12, opacity: t.active ? 1 : 0.6 }}>
           <CheckSquare size={16} color="#f97316" strokeWidth={1.5} style={{ flexShrink: 0 }} />
-          <span style={{ flex: 1, fontSize: 13, color: '#e8eaf0', fontWeight: 500 }}>{t.name}</span>
-          <span style={{ background: '#22283a', color: '#9ca3af', borderRadius: 4, padding: '2px 8px', fontSize: 10 }}>{t.recurrence}</span>
-          <div onClick={() => toggle(t.id)} style={{ width: 36, height: 20, borderRadius: 999, background: t.active ? '#f97316' : '#22283a', display: 'flex', alignItems: 'center', padding: '0 2px', justifyContent: t.active ? 'flex-end' : 'flex-start', cursor: 'pointer', transition: 'all 0.2s' }}>
-            <div style={{ width: 16, height: 16, borderRadius: '50%', background: t.active ? '#fff' : '#6b7280', transition: 'all 0.2s' }} />
+          <span style={{ flex: 1, fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{t.name}</span>
+          <span style={{ background: 'var(--border)', color: 'var(--text-secondary)', borderRadius: 4, padding: '2px 8px', fontSize: 10 }}>{t.recurrence}</span>
+          <div onClick={() => toggle(t.id)} style={{ width: 36, height: 20, borderRadius: 999, background: t.active ? '#f97316' : 'var(--border)', display: 'flex', alignItems: 'center', padding: '0 2px', justifyContent: t.active ? 'flex-end' : 'flex-start', cursor: 'pointer', transition: 'all 0.2s' }}>
+            <div style={{ width: 16, height: 16, borderRadius: '50%', background: t.active ? '#fff' : 'var(--text-muted)', transition: 'all 0.2s' }} />
           </div>
           <div style={{ position: 'relative' }}>
-            <button onClick={() => setOpenMenu(openMenu === t.id ? null : t.id)} style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid #22283a', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af' }}>
+            <button onClick={() => setOpenMenu(openMenu === t.id ? null : t.id)} style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--border)', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
               <MoreHorizontal size={14} strokeWidth={1.5} />
             </button>
             {openMenu === t.id && (
-              <div style={{ position: 'absolute', right: 0, top: 32, zIndex: 20, background: '#161a22', border: '1px solid #22283a', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', minWidth: 130, padding: '4px 0' }}>
-                {['Editar', 'Excluir'].map(opt => <div key={opt} onClick={() => setOpenMenu(null)} style={{ padding: '8px 14px', fontSize: 13, color: opt === 'Excluir' ? '#ef4444' : '#e8eaf0', cursor: 'pointer' }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>{opt}</div>)}
+              <div style={{ position: 'absolute', right: 0, top: 32, zIndex: 20, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', minWidth: 130, padding: '4px 0' }}>
+                {['Editar', 'Excluir'].map(opt => <div key={opt} onClick={() => setOpenMenu(null)} style={{ padding: '8px 14px', fontSize: 13, color: opt === 'Excluir' ? '#ef4444' : 'var(--text-primary)', cursor: 'pointer' }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>{opt}</div>)}
               </div>
             )}
           </div>
@@ -273,26 +273,26 @@ function IntegrationsTab() {
       {integrations.map(ig => {
         const Icon = ig.icon
         return (
-          <div key={ig.name} style={{ background: '#161a22', border: '1px solid #22283a', borderRadius: 12, padding: 20 }}>
+          <div key={ig.name} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
               <div style={{ width: 40, height: 40, borderRadius: 10, background: `${ig.iconColor}1F`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Icon size={20} color={ig.iconColor} strokeWidth={1.5} />
               </div>
               <div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: '#e8eaf0' }}>{ig.name}</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{ig.name}</div>
                 <span style={{
                   fontSize: 10, fontWeight: 500, borderRadius: 999, padding: '2px 8px',
                   background: ig.connected ? 'rgba(34,197,94,0.12)' : 'rgba(107,114,128,0.12)',
-                  color: ig.connected ? '#22c55e' : '#6b7280',
+                  color: ig.connected ? '#22c55e' : 'var(--text-muted)',
                 }}>{ig.connectedLabel || (ig.connected ? 'Conectado' : 'Não conectado')}</span>
               </div>
             </div>
-            <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 14, lineHeight: 1.5 }}>{ig.desc}</p>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 14, lineHeight: 1.5 }}>{ig.desc}</p>
             {ig.btnStyle === 'orange' && <button style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>{ig.btnLabel}</button>}
             {ig.btnStyle === 'green' && (
               <>
                 <button style={{ background: 'rgba(34,197,94,0.12)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 8, padding: '9px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginBottom: 8 }}>{ig.btnLabel}</button>
-                {ig.link && <div style={{ fontSize: 12, color: '#6b7280', cursor: 'pointer' }}>{ig.link}</div>}
+                {ig.link && <div style={{ fontSize: 12, color: 'var(--text-muted)', cursor: 'pointer' }}>{ig.link}</div>}
               </>
             )}
           </div>

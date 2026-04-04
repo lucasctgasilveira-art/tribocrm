@@ -145,8 +145,8 @@ export default function Topbar({ onOpenSearch }: TopbarProps) {
         left: 0,
         right: 0,
         height: 60,
-        background: '#111318',
-        borderBottom: '1px solid #22283a',
+        background: 'var(--bg-surface)',
+        borderBottom: '1px solid var(--border)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -162,8 +162,8 @@ export default function Topbar({ onOpenSearch }: TopbarProps) {
           left: '50%',
           transform: 'translateX(-50%)',
           width: 240,
-          background: '#111318',
-          border: '1px solid #22283a',
+          background: 'var(--bg-surface)',
+          border: '1px solid var(--border)',
           borderRadius: 8,
           padding: '6px 12px',
           display: 'flex',
@@ -172,12 +172,12 @@ export default function Topbar({ onOpenSearch }: TopbarProps) {
           cursor: 'pointer',
         }}
       >
-        <Search size={16} color="#6b7280" />
-        <span style={{ fontSize: 13, color: '#6b7280', flex: 1 }}>Buscar...</span>
+        <Search size={16} color="var(--text-muted)" />
+        <span style={{ fontSize: 13, color: 'var(--text-muted)', flex: 1 }}>Buscar...</span>
         <span
           style={{
-            background: '#22283a',
-            color: '#6b7280',
+            background: 'var(--border)',
+            color: 'var(--text-muted)',
             borderRadius: 4,
             padding: '1px 6px',
             fontSize: 10,
@@ -196,14 +196,14 @@ export default function Topbar({ onOpenSearch }: TopbarProps) {
             onClick={() => setShowNotif(!showNotif)}
             style={{ position: 'relative', cursor: 'pointer' }}
           >
-            <Bell size={18} color="#9ca3af" strokeWidth={1.5} />
+            <Bell size={18} color="var(--text-secondary)" strokeWidth={1.5} />
             {unreadCount > 0 && (
               <span
                 style={{
                   position: 'absolute',
                   top: -6,
                   right: -8,
-                  background: '#ef4444',
+                  background: 'var(--red)',
                   color: '#fff',
                   fontSize: 10,
                   fontWeight: 700,
@@ -229,10 +229,10 @@ export default function Topbar({ onOpenSearch }: TopbarProps) {
                 top: 48,
                 right: 0,
                 width: 360,
-                background: '#161a22',
-                border: '1px solid #22283a',
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
                 borderRadius: 12,
-                boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                boxShadow: 'var(--shadow-dropdown)',
                 zIndex: 50,
                 overflow: 'hidden',
               }}
@@ -244,17 +244,17 @@ export default function Topbar({ onOpenSearch }: TopbarProps) {
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   padding: '14px 16px',
-                  borderBottom: '1px solid #22283a',
+                  borderBottom: '1px solid var(--border)',
                 }}
               >
-                <span style={{ fontSize: 14, fontWeight: 600, color: '#e8eaf0' }}>Notificações</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Notificações</span>
                 {unreadCount > 0 && (
                   <button
                     onClick={markAllRead}
                     style={{
                       background: 'none',
                       border: 'none',
-                      color: '#f97316',
+                      color: 'var(--accent)',
                       fontSize: 12,
                       cursor: 'pointer',
                       padding: 0,
@@ -268,7 +268,7 @@ export default function Topbar({ onOpenSearch }: TopbarProps) {
               {/* list */}
               <div style={{ maxHeight: 360, overflowY: 'auto' }}>
                 {notifications.length === 0 ? (
-                  <div style={{ padding: 32, textAlign: 'center', color: '#6b7280', fontSize: 13 }}>
+                  <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
                     Nenhuma notificação
                   </div>
                 ) : notifications.map((n) => {
@@ -279,15 +279,15 @@ export default function Topbar({ onOpenSearch }: TopbarProps) {
                       onClick={() => { if (!n.read) markRead(n.id) }}
                       style={{
                         padding: '12px 16px',
-                        borderBottom: '1px solid #22283a',
+                        borderBottom: '1px solid var(--border)',
                         display: 'flex',
                         gap: 10,
                         cursor: 'pointer',
                         background: n.read ? 'transparent' : 'rgba(249,115,22,0.04)',
-                        borderLeft: n.read ? 'none' : '2px solid #f97316',
+                        borderLeft: n.read ? 'none' : '2px solid var(--accent)',
                         opacity: n.read ? 0.7 : 1,
                       }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = n.read ? 'rgba(255,255,255,0.03)' : 'rgba(249,115,22,0.06)')}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = n.read ? 'var(--hover-bg)' : 'rgba(249,115,22,0.06)')}
                       onMouseLeave={(e) => (e.currentTarget.style.background = n.read ? 'transparent' : 'rgba(249,115,22,0.04)')}
                     >
                       <div
@@ -305,9 +305,9 @@ export default function Topbar({ onOpenSearch }: TopbarProps) {
                         <Icon size={16} color={n.iconColor} />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: 500, color: '#e8eaf0' }}>{n.title}</div>
-                        <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{n.subtitle}</div>
-                        <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>{n.time}</div>
+                        <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{n.title}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{n.subtitle}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{n.time}</div>
                       </div>
                     </div>
                   )
@@ -318,14 +318,14 @@ export default function Topbar({ onOpenSearch }: TopbarProps) {
               <div
                 style={{
                   padding: 12,
-                  borderTop: '1px solid #22283a',
+                  borderTop: '1px solid var(--border)',
                   textAlign: 'center',
                   cursor: 'pointer',
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
+                onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--hover-bg)')}
                 onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
               >
-                <span style={{ fontSize: 13, color: '#f97316' }}>Ver todas as notificações →</span>
+                <span style={{ fontSize: 13, color: 'var(--accent)' }}>Ver todas as notificações →</span>
               </div>
             </div>
           )}
@@ -337,7 +337,7 @@ export default function Topbar({ onOpenSearch }: TopbarProps) {
             width: 32,
             height: 32,
             borderRadius: '50%',
-            background: '#f97316',
+            background: 'var(--accent)',
             color: '#fff',
             fontSize: 13,
             fontWeight: 700,
