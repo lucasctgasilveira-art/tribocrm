@@ -10,6 +10,7 @@ import leadsRoutes from './routes/leads.routes'
 import tasksRoutes from './routes/tasks.routes'
 import reportsRoutes from './routes/reports.routes'
 import usersRoutes from './routes/users.routes'
+import productsRoutes from './routes/products.routes'
 
 const app = express()
 
@@ -50,5 +51,6 @@ app.use('/leads', leadsRoutes)
 app.use('/tasks', tasksRoutes)
 app.use('/reports', reportsRoutes)
 app.use(usersRoutes)
+app.use('/products', productsRoutes)
 
 export default app

@@ -1,29 +1,88 @@
-import { useState } from 'react'
-import { Plus, MoreHorizontal } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { Plus, MoreHorizontal, Search, Loader2 } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
+import { getProducts, updateProduct } from '../../services/products.service'
+
+// ── Types ──
 
 interface Product {
-  id: string; name: string; category: string; value: number; maxDiscount: number
-  approval: 'auto' | 'manager' | 'none'; active: boolean
+  id: string
+  name: string
+  description: string | null
+  category: string | null
+  price: string | number
+  allowsDiscount: boolean
+  maxDiscount: string | number | null
+  approvalType: string | null
+  isActive: boolean
+  createdAt: string
 }
 
-const products: Product[] = [
-  { id: '1', name: 'Consultoria Premium', category: 'Serviços', value: 5000, maxDiscount: 10, approval: 'auto', active: true },
-  { id: '2', name: 'Treinamento Equipe', category: 'Treinamentos', value: 3500, maxDiscount: 15, approval: 'manager', active: true },
-  { id: '3', name: 'Plano Pro — Anual', category: 'Assinaturas', value: 12000, maxDiscount: 20, approval: 'manager', active: true },
-  { id: '4', name: 'Plano Enterprise — Anual', category: 'Assinaturas', value: 28000, maxDiscount: 15, approval: 'manager', active: true },
-  { id: '5', name: 'Consultoria Express', category: 'Serviços', value: 1500, maxDiscount: 5, approval: 'auto', active: true },
-  { id: '6', name: 'Implementação Completa', category: 'Serviços', value: 8500, maxDiscount: 10, approval: 'manager', active: true },
-  { id: '7', name: 'Suporte Mensal', category: 'Suporte', value: 890, maxDiscount: 0, approval: 'none', active: false },
-  { id: '8', name: 'Licença Adicional', category: 'Licenças', value: 350, maxDiscount: 5, approval: 'auto', active: false },
-]
+// ── Helpers ──
 
 function fmt(v: number) { return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 }) }
+
 const menuOpts = ['Editar', 'Duplicar', 'Desativar']
 
+const dd: React.CSSProperties = {
+  background: '#161a22', border: '1px solid #22283a', borderRadius: 8,
+  padding: '0 28px 0 12px', fontSize: 13, color: '#e8eaf0', outline: 'none', height: 36,
+  cursor: 'pointer', appearance: 'none',
+  backgroundImage: `url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%236b7280' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
+  backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center',
+}
+
+// ── Component ──
+
 export default function ProductsPage() {
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [activeF, setActiveF] = useState('')
   const [openMenu, setOpenMenu] = useState<string | null>(null)
+
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const handleSearch = useCallback((value: string) => {
+    setSearch(value)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => setDebouncedSearch(value), 500)
+  }, [])
+
+  const loadProducts = useCallback(async () => {
+    setLoading(true)
+    try {
+      const params: Record<string, string> = {}
+      if (debouncedSearch) params.search = debouncedSearch
+      if (activeF) params.isActive = activeF
+      const data = await getProducts(params)
+      setProducts(data)
+    } catch {
+      setProducts([])
+    } finally {
+      setLoading(false)
+    }
+  }, [debouncedSearch, activeF])
+
+  useEffect(() => { loadProducts() }, [loadProducts])
+
+  async function handleDeactivate(id: string) {
+    try {
+      await updateProduct(id, { isActive: false })
+      setOpenMenu(null)
+      loadProducts()
+    } catch { /* ignore */ }
+  }
+
+  const stats = useMemo(() => {
+    const total = products.length
+    const active = products.filter(p => p.isActive).length
+    const withDiscount = products.filter(p => p.allowsDiscount && Number(p.maxDiscount) > 0).length
+    const prices = products.filter(p => p.isActive).map(p => Number(p.price))
+    const avgTicket = prices.length > 0 ? Math.round(prices.reduce((s, v) => s + v, 0) / prices.length) : 0
+    return { total, active, withDiscount, avgTicket }
+  }, [products])
 
   return (
     <AppLayout menuItems={gestaoMenuItems}>
@@ -34,66 +93,103 @@ export default function ProductsPage() {
         </button>
       </div>
 
+      {/* Stats */}
       <div style={{ display: 'flex', alignItems: 'center', fontSize: 13, marginBottom: 16 }}>
-        <span style={{ color: '#6b7280' }}>Total</span><span style={{ color: '#e8eaf0', fontWeight: 700, marginLeft: 4 }}>8</span>
+        <span style={{ color: '#6b7280' }}>Total</span><span style={{ color: '#e8eaf0', fontWeight: 700, marginLeft: 4 }}>{stats.total}</span>
         <span style={{ color: '#22283a', margin: '0 10px' }}>|</span>
-        <span style={{ color: '#6b7280' }}>Ativos</span><span style={{ color: '#22c55e', fontWeight: 700, marginLeft: 4 }}>6</span>
+        <span style={{ color: '#6b7280' }}>Ativos</span><span style={{ color: '#22c55e', fontWeight: 700, marginLeft: 4 }}>{stats.active}</span>
         <span style={{ color: '#22283a', margin: '0 10px' }}>|</span>
-        <span style={{ color: '#6b7280' }}>Com desconto</span><span style={{ color: '#e8eaf0', fontWeight: 700, marginLeft: 4 }}>4</span>
+        <span style={{ color: '#6b7280' }}>Com desconto</span><span style={{ color: '#e8eaf0', fontWeight: 700, marginLeft: 4 }}>{stats.withDiscount}</span>
         <span style={{ color: '#22283a', margin: '0 10px' }}>|</span>
-        <span style={{ color: '#6b7280' }}>Ticket médio</span><span style={{ color: '#e8eaf0', fontWeight: 700, marginLeft: 4 }}>R$ 12.750</span>
+        <span style={{ color: '#6b7280' }}>Ticket médio</span><span style={{ color: '#e8eaf0', fontWeight: 700, marginLeft: 4 }}>{fmt(stats.avgTicket)}</span>
       </div>
 
-      <div style={{ background: '#161a22', border: '1px solid #22283a', borderRadius: 12, overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ background: '#0f1117' }}>
-              {['Produto', 'Valor', 'Desconto máx.', 'Aprovação', 'Status', 'Ações'].map(h => (
-                <th key={h} style={{ padding: '12px 20px', fontSize: 11, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, textAlign: 'left' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {products.map(p => (
-              <tr key={p.id} style={{ borderBottom: '1px solid #22283a' }}
-                onMouseEnter={e => { e.currentTarget.style.background = '#1c2130' }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
-                <td style={{ padding: '14px 20px' }}>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: '#e8eaf0' }}>{p.name}</div>
-                  <div style={{ fontSize: 12, color: '#6b7280' }}>{p.category}</div>
-                </td>
-                <td style={{ padding: '14px 20px', fontSize: 13, fontWeight: 700, color: '#e8eaf0' }}>{fmt(p.value)}</td>
-                <td style={{ padding: '14px 20px' }}>
-                  {p.maxDiscount > 0 ? <span style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b', borderRadius: 4, padding: '2px 8px', fontSize: 11, fontWeight: 500 }}>{p.maxDiscount}%</span> : <span style={{ color: '#6b7280' }}>—</span>}
-                </td>
-                <td style={{ padding: '14px 20px' }}>
-                  {p.approval === 'auto' && <span style={{ background: 'rgba(34,197,94,0.12)', color: '#22c55e', borderRadius: 999, padding: '3px 10px', fontSize: 11, fontWeight: 500 }}>Automática</span>}
-                  {p.approval === 'manager' && <span style={{ background: 'rgba(249,115,22,0.12)', color: '#f97316', borderRadius: 999, padding: '3px 10px', fontSize: 11, fontWeight: 500 }}>Gestor</span>}
-                  {p.approval === 'none' && <span style={{ color: '#6b7280' }}>—</span>}
-                </td>
-                <td style={{ padding: '14px 20px' }}>
-                  <span style={{ background: p.active ? 'rgba(34,197,94,0.12)' : 'rgba(107,114,128,0.12)', color: p.active ? '#22c55e' : '#6b7280', borderRadius: 999, padding: '3px 10px', fontSize: 11, fontWeight: 500 }}>{p.active ? 'Ativo' : 'Inativo'}</span>
-                </td>
-                <td style={{ padding: '14px 20px', position: 'relative' }}>
-                  <button onClick={() => setOpenMenu(openMenu === p.id ? null : p.id)}
-                    style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid #22283a', background: openMenu === p.id ? '#22283a' : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af' }}>
-                    <MoreHorizontal size={14} strokeWidth={1.5} />
-                  </button>
-                  {openMenu === p.id && (
-                    <div style={{ position: 'absolute', right: 20, top: 48, zIndex: 20, background: '#161a22', border: '1px solid #22283a', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', minWidth: 140, padding: '4px 0' }}>
-                      {menuOpts.map(opt => (
-                        <div key={opt} onClick={() => setOpenMenu(null)} style={{ padding: '8px 14px', fontSize: 13, color: opt === 'Desativar' ? '#ef4444' : '#e8eaf0', cursor: 'pointer' }}
-                          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
-                          onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>{opt}</div>
-                      ))}
-                    </div>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Filters */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20, alignItems: 'center' }}>
+        <div style={{ position: 'relative', flex: 1, maxWidth: 260 }}>
+          <Search size={15} color="#6b7280" strokeWidth={1.5} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
+          <input type="text" value={search} onChange={e => handleSearch(e.target.value)} placeholder="Buscar produto..."
+            style={{ width: '100%', background: '#161a22', border: '1px solid #22283a', borderRadius: 8, padding: '0 12px 0 34px', fontSize: 13, color: '#e8eaf0', outline: 'none', height: 36, boxSizing: 'border-box' }} />
+        </div>
+        <select value={activeF} onChange={e => setActiveF(e.target.value)} style={dd}>
+          <option value="">Todos</option>
+          <option value="true">Ativo</option>
+          <option value="false">Inativo</option>
+        </select>
       </div>
+
+      {/* Loading */}
+      {loading ? (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 60, gap: 10 }}>
+          <Loader2 size={22} color="#f97316" strokeWidth={1.5} className="animate-spin" />
+          <span style={{ fontSize: 14, color: '#6b7280' }}>Carregando produtos...</span>
+        </div>
+      ) : products.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 60, color: '#6b7280', fontSize: 14 }}>Nenhum produto cadastrado</div>
+      ) : (
+        <div style={{ background: '#161a22', border: '1px solid #22283a', borderRadius: 12, overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: '#0f1117' }}>
+                {['Produto', 'Valor', 'Desconto máx.', 'Aprovação', 'Status', 'Ações'].map(h => (
+                  <th key={h} style={{ padding: '12px 20px', fontSize: 11, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, textAlign: 'left' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {products.map(p => {
+                const maxDisc = Number(p.maxDiscount) || 0
+                return (
+                  <tr key={p.id} style={{ borderBottom: '1px solid #22283a' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = '#1c2130' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
+                    <td style={{ padding: '14px 20px' }}>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: '#e8eaf0' }}>{p.name}</div>
+                      <div style={{ fontSize: 12, color: '#6b7280' }}>{p.category ?? '—'}</div>
+                    </td>
+                    <td style={{ padding: '14px 20px', fontSize: 13, fontWeight: 700, color: '#e8eaf0' }}>{fmt(Number(p.price))}</td>
+                    <td style={{ padding: '14px 20px' }}>
+                      {maxDisc > 0 ? <span style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b', borderRadius: 4, padding: '2px 8px', fontSize: 11, fontWeight: 500 }}>{maxDisc}%</span> : <span style={{ color: '#6b7280' }}>—</span>}
+                    </td>
+                    <td style={{ padding: '14px 20px' }}>
+                      {p.approvalType === 'VALIDATION_QUEUE' || p.approvalType === 'BOTH' ? (
+                        <span style={{ background: 'rgba(249,115,22,0.12)', color: '#f97316', borderRadius: 999, padding: '3px 10px', fontSize: 11, fontWeight: 500 }}>Gestor</span>
+                      ) : p.allowsDiscount ? (
+                        <span style={{ background: 'rgba(34,197,94,0.12)', color: '#22c55e', borderRadius: 999, padding: '3px 10px', fontSize: 11, fontWeight: 500 }}>Automática</span>
+                      ) : (
+                        <span style={{ color: '#6b7280' }}>—</span>
+                      )}
+                    </td>
+                    <td style={{ padding: '14px 20px' }}>
+                      <span style={{ background: p.isActive ? 'rgba(34,197,94,0.12)' : 'rgba(107,114,128,0.12)', color: p.isActive ? '#22c55e' : '#6b7280', borderRadius: 999, padding: '3px 10px', fontSize: 11, fontWeight: 500 }}>{p.isActive ? 'Ativo' : 'Inativo'}</span>
+                    </td>
+                    <td style={{ padding: '14px 20px', position: 'relative' }}>
+                      <button onClick={() => setOpenMenu(openMenu === p.id ? null : p.id)}
+                        style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid #22283a', background: openMenu === p.id ? '#22283a' : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af' }}>
+                        <MoreHorizontal size={14} strokeWidth={1.5} />
+                      </button>
+                      {openMenu === p.id && (
+                        <div style={{ position: 'absolute', right: 20, top: 48, zIndex: 20, background: '#161a22', border: '1px solid #22283a', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', minWidth: 140, padding: '4px 0' }}>
+                          {menuOpts.map(opt => (
+                            <div key={opt}
+                              onClick={() => {
+                                if (opt === 'Desativar') handleDeactivate(p.id)
+                                else setOpenMenu(null)
+                              }}
+                              style={{ padding: '8px 14px', fontSize: 13, color: opt === 'Desativar' ? '#ef4444' : '#e8eaf0', cursor: 'pointer' }}
+                              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+                              onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>{opt}</div>
+                          ))}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </AppLayout>
   )
 }
