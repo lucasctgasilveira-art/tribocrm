@@ -15,6 +15,7 @@ import notificationsRoutes from './routes/notifications.routes'
 import goalsRoutes from './routes/goals.routes'
 import templatesRoutes from './routes/templates.routes'
 import formsRoutes from './routes/forms.routes'
+import automationsRoutes from './routes/automations.routes'
 
 const app = express()
 
@@ -60,5 +61,6 @@ app.use('/notifications', notificationsRoutes)
 app.use('/goals', goalsRoutes)
 app.use('/templates', templatesRoutes)
 app.use('/forms', formsRoutes)
+app.use('/automations', automationsRoutes)
 
 export default app
