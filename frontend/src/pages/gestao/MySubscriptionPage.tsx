@@ -26,16 +26,16 @@ const plans = [
 
 const features = ['Usuários', 'Leads', 'Funis', 'Automações', 'Formulários', 'Rastreamento e-mail', 'Suporte']
 
-const thS: React.CSSProperties = { padding: '12px 20px', fontSize: 11, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, textAlign: 'left' }
-const tdS: React.CSSProperties = { padding: '14px 20px', fontSize: 13, color: '#e8eaf0', borderBottom: '1px solid #22283a' }
-const card: React.CSSProperties = { background: '#161a22', border: '1px solid #22283a', borderRadius: 12 }
+const thS: React.CSSProperties = { padding: '12px 20px', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, textAlign: 'left' }
+const tdS: React.CSSProperties = { padding: '14px 20px', fontSize: 13, color: 'var(--text-primary)', borderBottom: '1px solid var(--border)' }
+const card: React.CSSProperties = { background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12 }
 
 export default function MySubscriptionPage() {
   return (
     <AppLayout menuItems={gestaoMenuItems}>
       <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 700, color: '#e8eaf0', margin: 0 }}>Minha Assinatura</h1>
-        <p style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>Gerencie seu plano e pagamentos</p>
+        <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Minha Assinatura</h1>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>Gerencie seu plano e pagamentos</p>
       </div>
 
       {/* Row 1: Plan + Payment */}
@@ -46,10 +46,10 @@ export default function MySubscriptionPage() {
             <span style={{ background: 'rgba(249,115,22,0.12)', color: '#f97316', borderRadius: 999, padding: '4px 12px', fontSize: 12, fontWeight: 600 }}>Plano Pro</span>
             <span style={{ background: 'rgba(34,197,94,0.12)', color: '#22c55e', borderRadius: 999, padding: '2px 8px', fontSize: 10, fontWeight: 500 }}>Ativo</span>
           </div>
-          <div style={{ fontSize: 28, fontWeight: 800, color: '#e8eaf0', marginTop: 8 }}>R$ 349<span style={{ fontSize: 14, fontWeight: 400, color: '#6b7280' }}>/mês</span></div>
-          <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>ou R$ 297/mês no plano anual (15% de desconto)</div>
+          <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--text-primary)', marginTop: 8 }}>R$ 349<span style={{ fontSize: 14, fontWeight: 400, color: 'var(--text-muted)' }}>/mês</span></div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>ou R$ 297/mês no plano anual (15% de desconto)</div>
 
-          <div style={{ borderTop: '1px solid #22283a', marginTop: 16, paddingTop: 16, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div style={{ borderTop: '1px solid var(--border)', marginTop: 16, paddingTop: 16, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <Info label="Próximo vencimento" value="05/05/2026" />
             <Info label="Ciclo" value="Mensal" />
             <Info label="Usuários" value="4 / 5 incluídos" />
@@ -59,10 +59,10 @@ export default function MySubscriptionPage() {
           </div>
 
           <div style={{ marginTop: 12 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#6b7280', marginBottom: 4 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>
               <span>Leads ativos</span><span>847 de 10.000 (8%)</span>
             </div>
-            <div style={{ background: '#22283a', borderRadius: 3, height: 6 }}>
+            <div style={{ background: 'var(--border)', borderRadius: 3, height: 6 }}>
               <div style={{ width: '8%', height: '100%', background: '#22c55e', borderRadius: 3, minWidth: 4 }} />
             </div>
           </div>
@@ -76,19 +76,19 @@ export default function MySubscriptionPage() {
 
         {/* Payment method */}
         <div style={{ ...card, padding: 24 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: '#e8eaf0', marginBottom: 16 }}>Método de pagamento</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 16 }}>Método de pagamento</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
             <CreditCard size={20} color="#f97316" strokeWidth={1.5} />
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14, color: '#e8eaf0' }}>•••• •••• •••• 4411</div>
-              <div style={{ fontSize: 12, color: '#6b7280' }}>Vence 08/2028</div>
+              <div style={{ fontSize: 14, color: 'var(--text-primary)' }}>•••• •••• •••• 4411</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Vence 08/2028</div>
             </div>
-            <span style={{ background: '#22283a', color: '#9ca3af', borderRadius: 4, padding: '2px 8px', fontSize: 10 }}>Principal</span>
+            <span style={{ background: 'var(--border)', color: 'var(--text-secondary)', borderRadius: 4, padding: '2px 8px', fontSize: 10 }}>Principal</span>
           </div>
-          <button style={{ background: 'transparent', border: '1px solid #22283a', borderRadius: 6, padding: '5px 12px', fontSize: 12, color: '#9ca3af', cursor: 'pointer', marginBottom: 16 }}>Trocar método</button>
+          <button style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 12px', fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer', marginBottom: 16 }}>Trocar método</button>
 
-          <div style={{ borderTop: '1px solid #22283a', paddingTop: 16 }}>
-            <div style={{ fontSize: 10, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 10, fontWeight: 600 }}>Também aceito</div>
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+            <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 10, fontWeight: 600 }}>Também aceito</div>
             <div style={{ display: 'flex', gap: 10 }}>
               <PayOpt icon={<QrCode size={18} strokeWidth={1.5} />} color="#22c55e" label="PIX" />
               <PayOpt icon={<FileText size={18} strokeWidth={1.5} />} color="#3b82f6" label="Boleto" />
@@ -100,14 +100,14 @@ export default function MySubscriptionPage() {
 
       {/* Payment history */}
       <div style={{ ...card, overflow: 'hidden', marginBottom: 20 }}>
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid #22283a', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: '#e8eaf0' }}>Histórico de pagamentos</span>
-          <button style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: '1px solid #22283a', borderRadius: 6, padding: '4px 10px', fontSize: 11, color: '#9ca3af', cursor: 'pointer' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Histórico de pagamentos</span>
+          <button style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', fontSize: 11, color: 'var(--text-secondary)', cursor: 'pointer' }}>
             <Download size={12} strokeWidth={1.5} /> Exportar CSV
           </button>
         </div>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead><tr style={{ background: '#0f1117' }}>
+          <thead><tr style={{ background: 'var(--bg)' }}>
             {['Período', 'Valor', 'Vencimento', 'Pagamento', 'Status', 'Ações'].map(h => <th key={h} style={thS}>{h}</th>)}
           </tr></thead>
           <tbody>
@@ -121,7 +121,7 @@ export default function MySubscriptionPage() {
                   <td style={tdS}>{p.paid}</td>
                   <td style={tdS}><span style={{ background: s.bg, color: s.color, borderRadius: 999, padding: '3px 10px', fontSize: 11, fontWeight: 500 }}>{p.status}</span></td>
                   <td style={tdS}>
-                    <button style={{ background: 'transparent', border: '1px solid #22283a', borderRadius: 6, padding: '4px 10px', fontSize: 11, color: p.status === 'Vencido' ? '#ef4444' : '#9ca3af', cursor: 'pointer' }}>
+                    <button style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', fontSize: 11, color: p.status === 'Vencido' ? '#ef4444' : 'var(--text-secondary)', cursor: 'pointer' }}>
                       {p.status === 'Vencido' ? 'Pagar agora' : 'Ver boleto'}
                     </button>
                   </td>
@@ -135,35 +135,35 @@ export default function MySubscriptionPage() {
       {/* Plan comparison */}
       <div style={{ ...card, padding: 20 }}>
         <div style={{ marginBottom: 20 }}>
-          <span style={{ fontSize: 16, fontWeight: 700, color: '#e8eaf0' }}>Compare os planos</span>
-          <p style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>Faça upgrade para desbloquear mais recursos</p>
+          <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>Compare os planos</span>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>Faça upgrade para desbloquear mais recursos</p>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
           {plans.map(p => (
-            <div key={p.name} style={{ background: '#0f1117', border: p.current ? '2px solid #f97316' : '1px solid #22283a', borderRadius: 12, padding: 16, position: 'relative' }}>
+            <div key={p.name} style={{ background: 'var(--bg)', border: p.current ? '2px solid #f97316' : '1px solid var(--border)', borderRadius: 12, padding: 16, position: 'relative' }}>
               {p.current && <div style={{ position: 'absolute', top: -1, left: '50%', transform: 'translateX(-50%) translateY(-50%)', background: '#f97316', color: '#fff', borderRadius: 999, padding: '2px 10px', fontSize: 10, fontWeight: 700 }}>Seu plano</div>}
               <div style={{ textAlign: 'center', marginBottom: 12, paddingTop: p.current ? 8 : 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: '#e8eaf0' }}>{p.name}</div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: p.current ? '#f97316' : '#e8eaf0', marginTop: 4 }}>{p.price}<span style={{ fontSize: 12, fontWeight: 400, color: '#6b7280' }}>/mês</span></div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: p.current ? '#f97316' : 'var(--text-primary)', marginTop: 4 }}>{p.price}<span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}>/mês</span></div>
               </div>
-              <div style={{ borderTop: '1px solid #22283a', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {features.map((feat, fi) => {
                   const vals = [p.users, p.leads, p.funnels, p.automations, p.forms, p.tracking ? '✅' : '❌', p.support]
                   return (
                     <div key={feat} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                      <span style={{ color: '#6b7280' }}>{feat}</span>
-                      <span style={{ color: '#e8eaf0', fontWeight: 500 }}>{vals[fi]}</span>
+                      <span style={{ color: 'var(--text-muted)' }}>{feat}</span>
+                      <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{vals[fi]}</span>
                     </div>
                   )
                 })}
               </div>
               <div style={{ marginTop: 16 }}>
                 {p.current ? (
-                  <button disabled style={{ width: '100%', background: '#22283a', color: '#6b7280', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'not-allowed' }}>Plano atual</button>
+                  <button disabled style={{ width: '100%', background: 'var(--border)', color: 'var(--text-muted)', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'not-allowed' }}>Plano atual</button>
                 ) : p.name === 'Enterprise' ? (
                   <button style={{ width: '100%', background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Fazer upgrade</button>
                 ) : (
-                  <button style={{ width: '100%', background: 'transparent', border: '1px solid #22283a', color: '#9ca3af', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'pointer' }}>Fazer downgrade</button>
+                  <button style={{ width: '100%', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-secondary)', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'pointer' }}>Fazer downgrade</button>
                 )}
               </div>
             </div>
@@ -180,17 +180,17 @@ export default function MySubscriptionPage() {
 function Info({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div style={{ fontSize: 11, color: '#6b7280' }}>{label}</div>
-      <div style={{ fontSize: 13, color: '#e8eaf0', fontWeight: 500, marginTop: 2 }}>{value}</div>
+      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{label}</div>
+      <div style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500, marginTop: 2 }}>{value}</div>
     </div>
   )
 }
 
 function PayOpt({ icon, color, label }: { icon: React.ReactNode; color: string; label: string }) {
   return (
-    <div style={{ background: '#0f1117', border: '1px solid #22283a', borderRadius: 8, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#9ca3af', cursor: 'pointer', transition: 'all 0.15s', flex: 1, justifyContent: 'center' }}
+    <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer', transition: 'all 0.15s', flex: 1, justifyContent: 'center' }}
       onMouseEnter={e => { e.currentTarget.style.borderColor = color; e.currentTarget.style.color = color }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = '#22283a'; e.currentTarget.style.color = '#9ca3af' }}>
+      onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)' }}>
       <span style={{ color: 'inherit' }}>{icon}</span>{label}
     </div>
   )

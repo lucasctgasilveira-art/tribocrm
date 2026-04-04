@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
   Mail, MessageCircle, Phone, Video, FileText, Handshake, ShieldCheck,
-  Check, Plus, ChevronRight, Users, BarChart2, BookOpen, Loader2,
+  Check, Plus, ChevronRight, Users, BarChart2, BookOpen, Loader2, X,
   type LucideIcon,
 } from 'lucide-react'
 import AppLayout from '../AppLayout/AppLayout'
@@ -10,7 +10,9 @@ import TaskDrawer from '../TaskDrawer/TaskDrawer'
 import {
   getTasks, completeTask as completeTaskApi,
   getManagerialTasks, completeManagerialTask as completeManagerialApi,
+  createManagerialTask,
 } from '../../../services/tasks.service'
+import { getUsers } from '../../../services/users.service'
 
 // ── Types ──
 
@@ -223,6 +225,12 @@ export default function TasksView({ menuItems }: TasksViewProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   const [selectedTask, setSelectedTask] = useState<DisplayTask | null>(null)
   const [toast, setToast] = useState('')
+  const [newTaskModal, setNewTaskModal] = useState(false)
+  const [availableUsers, setAvailableUsers] = useState<{ id: string; name: string }[]>([])
+
+  useEffect(() => {
+    getUsers().then((data: { id: string; name: string }[]) => setAvailableUsers(data)).catch(() => {})
+  }, [])
 
   // Load counts for period pills
   const loadCounts = useCallback(async () => {
@@ -304,6 +312,16 @@ export default function TasksView({ menuItems }: TasksViewProps) {
     setSelectedTask(null)
   }
 
+  async function handleCreateManagerialTask(payload: { title: string; typeId: string; description?: string; dueDate?: string; participantIds?: string[] }) {
+    try {
+      await createManagerialTask(payload)
+      setNewTaskModal(false)
+      setCategory('gerenciais')
+      setToast('Tarefa gerencial criada!')
+      setTimeout(() => setToast(''), 3000)
+    } catch { /* ignore */ }
+  }
+
   async function handleManagerialComplete(id: string) {
     try {
       await completeManagerialApi(id)
@@ -355,7 +373,7 @@ export default function TasksView({ menuItems }: TasksViewProps) {
                 )
               })}
             </div>
-            <button style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
+            <button onClick={() => setNewTaskModal(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
               onMouseEnter={(e) => { e.currentTarget.style.background = '#fb923c' }}
               onMouseLeave={(e) => { e.currentTarget.style.background = '#f97316' }}>
               <Plus size={15} strokeWidth={2} /> Nova Tarefa
@@ -528,6 +546,7 @@ export default function TasksView({ menuItems }: TasksViewProps) {
       </div>
       {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid #22283a', borderLeft: '4px solid #22c55e', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 60, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>{toast}</div>}
       {selectedTask && <TaskDrawer task={selectedTask} onClose={() => setSelectedTask(null)} onComplete={handleDrawerComplete} />}
+      {newTaskModal && <NewManagerialTaskModal users={availableUsers} onClose={() => setNewTaskModal(false)} onSave={handleCreateManagerialTask} />}
     </AppLayout>
   )
 }
@@ -650,5 +669,86 @@ function SummaryCard({ label, value, color }: { label: string; value: string; co
       <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>{label}</div>
       <div style={{ fontSize: 20, fontWeight: 800, color, marginTop: 2 }}>{value}</div>
     </div>
+  )
+}
+
+// ── New Managerial Task Modal ──
+
+function NewManagerialTaskModal({ users, onClose, onSave }: {
+  users: { id: string; name: string }[]
+  onClose: () => void
+  onSave: (p: { title: string; typeId: string; description?: string; dueDate?: string; participantIds?: string[] }) => void
+}) {
+  const [title, setTitle] = useState('')
+  const [typeId] = useState('default')
+  const [description, setDescription] = useState('')
+  const [dueDate, setDueDate] = useState('')
+  const [recurrence, setRecurrence] = useState('NONE')
+  const [participantIds, setParticipantIds] = useState<string[]>([])
+
+  const inputS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
+  const canSave = title.trim().length > 0
+
+  function toggleParticipant(id: string) {
+    setParticipantIds(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id])
+  }
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 520, maxWidth: '90vw', maxHeight: '90vh', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Nova Tarefa Gerencial</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+        </div>
+        <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Título <span style={{ color: 'var(--accent)' }}>*</span></label>
+            <input autoFocus value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: Reunião de alinhamento semanal" style={inputS} />
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Descrição</label>
+            <textarea rows={3} value={description} onChange={e => setDescription(e.target.value)} placeholder="Detalhes da tarefa..." style={{ ...inputS, resize: 'none' }} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Prazo</label>
+              <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} style={inputS} />
+            </div>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Recorrência</label>
+              <select value={recurrence} onChange={e => setRecurrence(e.target.value)} style={{ ...inputS, appearance: 'none' as const, cursor: 'pointer' }}>
+                <option value="NONE">Nenhuma</option>
+                <option value="DAILY">Diária</option>
+                <option value="WEEKLY">Semanal</option>
+                <option value="BIWEEKLY">Quinzenal</option>
+                <option value="MONTHLY">Mensal</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 8 }}>Participantes</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {users.map(u => {
+                const selected = participantIds.includes(u.id)
+                return (
+                  <button key={u.id} onClick={() => toggleParticipant(u.id)} style={{
+                    padding: '5px 12px', borderRadius: 999, fontSize: 12, cursor: 'pointer',
+                    background: selected ? 'rgba(249,115,22,0.12)' : 'transparent',
+                    border: `1px solid ${selected ? 'var(--accent)' : 'var(--border)'}`,
+                    color: selected ? 'var(--accent)' : 'var(--text-secondary)',
+                    transition: 'all 0.15s',
+                  }}>{u.name.split(' ')[0]}{selected ? ' ✓' : ''}</button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
+          <button onClick={() => { if (canSave) onSave({ title, typeId, description: description || undefined, dueDate: dueDate || undefined, participantIds: participantIds.length > 0 ? participantIds : undefined }) }} disabled={!canSave} style={{ background: canSave ? 'var(--accent)' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: canSave ? '#fff' : 'var(--text-muted)', cursor: canSave ? 'pointer' : 'not-allowed' }}>Criar Tarefa</button>
+        </div>
+      </div>
+    </>
   )
 }

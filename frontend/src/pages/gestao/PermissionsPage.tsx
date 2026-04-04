@@ -45,8 +45,8 @@ export default function PermissionsPage() {
   return (
     <AppLayout menuItems={gestaoMenuItems}>
       <div style={{ marginBottom: 16 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 700, color: '#e8eaf0', margin: 0 }}>Permissões</h1>
-        <p style={{ fontSize: 14, color: '#6b7280', marginTop: 4 }}>Configure as permissões individuais de cada usuário</p>
+        <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Permissões</h1>
+        <p style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 4 }}>Configure as permissões individuais de cada usuário</p>
       </div>
 
       {/* Info card */}
@@ -56,17 +56,17 @@ export default function PermissionsPage() {
       </div>
 
       {/* Table */}
-      <div style={{ background: '#161a22', border: '1px solid #22283a', borderRadius: 12, overflow: 'auto' }}>
+      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 700 }}>
           <thead>
-            <tr style={{ background: '#0f1117' }}>
-              <th style={{ width: 220, padding: '12px 16px', fontSize: 11, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, textAlign: 'left', position: 'sticky', left: 0, background: '#0f1117', zIndex: 2 }}>Permissão</th>
+            <tr style={{ background: 'var(--bg)' }}>
+              <th style={{ width: 220, padding: '12px 16px', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, textAlign: 'left', position: 'sticky', left: 0, background: 'var(--bg)', zIndex: 2 }}>Permissão</th>
               {perms.map(u => (
                 <th key={u.initials} style={{ padding: '12px 16px', textAlign: 'center', minWidth: 100 }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, opacity: u.active ? 1 : 0.4 }}>
-                    <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#22283a', color: '#e8eaf0', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{u.initials}</div>
-                    <span style={{ fontSize: 11, color: '#e8eaf0', fontWeight: 500 }}>{u.name.split(' ')[0]}</span>
-                    <span style={{ fontSize: 9, color: '#6b7280' }}>{u.role}</span>
+                    <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--border)', color: 'var(--text-primary)', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{u.initials}</div>
+                    <span style={{ fontSize: 11, color: 'var(--text-primary)', fontWeight: 500 }}>{u.name.split(' ')[0]}</span>
+                    <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>{u.role}</span>
                   </div>
                 </th>
               ))}
@@ -76,15 +76,15 @@ export default function PermissionsPage() {
             {permGroups.map(group => (
               <>
                 <tr key={`g-${group.label}`}>
-                  <td colSpan={1 + perms.length} style={{ padding: '10px 16px', fontSize: 10, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, background: '#0f1117', borderBottom: '1px solid #22283a' }}>{group.label}</td>
+                  <td colSpan={1 + perms.length} style={{ padding: '10px 16px', fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, background: 'var(--bg)', borderBottom: '1px solid var(--border)' }}>{group.label}</td>
                 </tr>
                 {group.keys.map(key => (
-                  <tr key={key} style={{ borderBottom: '1px solid #22283a' }}>
-                    <td style={{ padding: '10px 16px', fontSize: 13, color: '#e8eaf0', position: 'sticky', left: 0, background: '#161a22', zIndex: 1 }}>{key}</td>
+                  <tr key={key} style={{ borderBottom: '1px solid var(--border)' }}>
+                    <td style={{ padding: '10px 16px', fontSize: 13, color: 'var(--text-primary)', position: 'sticky', left: 0, background: 'var(--bg-card)', zIndex: 1 }}>{key}</td>
                     {perms.map((u, ui) => {
                       const val = u.perms[key] ?? 'off'
                       const isOn = val !== 'off'
-                      const bgColor = val === 'custom' ? '#a855f7' : val === 'on' ? '#f97316' : '#22283a'
+                      const bgColor = val === 'custom' ? '#a855f7' : val === 'on' ? '#f97316' : 'var(--border)'
                       return (
                         <td key={u.initials} style={{ padding: '10px 16px', textAlign: 'center', opacity: u.active ? 1 : 0.4 }}>
                           <div onClick={() => toggle(ui, key)} style={{
@@ -94,7 +94,7 @@ export default function PermissionsPage() {
                             justifyContent: isOn ? 'flex-end' : 'flex-start',
                             transition: 'all 0.2s',
                           }}>
-                            <div style={{ width: 16, height: 16, borderRadius: '50%', background: isOn ? '#fff' : '#6b7280', transition: 'all 0.2s' }} />
+                            <div style={{ width: 16, height: 16, borderRadius: '50%', background: isOn ? '#fff' : 'var(--text-muted)', transition: 'all 0.2s' }} />
                           </div>
                         </td>
                       )
