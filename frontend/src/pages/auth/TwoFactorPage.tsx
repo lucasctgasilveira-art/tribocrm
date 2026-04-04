@@ -77,14 +77,14 @@ export default function TwoFactorPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#0a0b0f',
+        background: 'var(--bg)',
         padding: 16,
       }}
     >
       <div
         style={{
-          background: '#161a22',
-          border: '1px solid #22283a',
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border)',
           borderRadius: 16,
           padding: 40,
           width: '100%',
@@ -95,7 +95,7 @@ export default function TwoFactorPage() {
         {/* logo */}
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <h1 style={{ fontSize: 28, margin: 0, lineHeight: 1 }}>
-            <span style={{ fontWeight: 400, color: '#e8eaf0' }}>Tribo</span>
+            <span style={{ fontWeight: 400, color: 'var(--text-primary)' }}>Tribo</span>
             <span style={{ fontWeight: 800, color: '#f97316' }}>CRM</span>
           </h1>
         </div>
@@ -109,7 +109,7 @@ export default function TwoFactorPage() {
           style={{
             fontSize: 18,
             fontWeight: 700,
-            color: '#e8eaf0',
+            color: 'var(--text-primary)',
             textAlign: 'center',
             margin: '0 0 4px',
           }}
@@ -119,7 +119,7 @@ export default function TwoFactorPage() {
         <p
           style={{
             fontSize: 13,
-            color: '#6b7280',
+            color: 'var(--text-muted)',
             textAlign: 'center',
             marginBottom: 24,
             marginTop: 0,
@@ -155,12 +155,12 @@ export default function TwoFactorPage() {
                 width: 48,
                 height: 56,
                 borderRadius: 8,
-                background: '#111318',
-                border: `1px solid ${error ? '#ef4444' : '#22283a'}`,
+                background: 'var(--bg-surface)',
+                border: `1px solid ${error ? '#ef4444' : 'var(--border)'}`,
                 fontSize: 24,
                 fontWeight: 700,
                 textAlign: 'center',
-                color: '#e8eaf0',
+                color: 'var(--text-primary)',
                 outline: 'none',
                 transition: 'border-color 0.2s, box-shadow 0.2s',
                 caretColor: '#f97316',
@@ -172,7 +172,7 @@ export default function TwoFactorPage() {
                 }
               }}
               onBlur={(e) => {
-                e.target.style.borderColor = error ? '#ef4444' : '#22283a'
+                e.target.style.borderColor = error ? '#ef4444' : 'var(--border)'
                 e.target.style.boxShadow = 'none'
               }}
             />
@@ -244,7 +244,7 @@ export default function TwoFactorPage() {
         <div style={{ textAlign: 'center', marginTop: 20, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <a
             href="#"
-            style={{ fontSize: 12, color: '#6b7280', textDecoration: 'none' }}
+            style={{ fontSize: 12, color: 'var(--text-muted)', textDecoration: 'none' }}
             onClick={(e) => e.preventDefault()}
           >
             Não consigo acessar meu autenticador
@@ -253,7 +253,7 @@ export default function TwoFactorPage() {
             href="/login"
             style={{
               fontSize: 12,
-              color: '#6b7280',
+              color: 'var(--text-muted)',
               textDecoration: 'none',
               display: 'inline-flex',
               alignItems: 'center',

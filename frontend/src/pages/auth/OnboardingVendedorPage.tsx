@@ -18,7 +18,7 @@ function StepBar({ current }: { current: number }) {
                 style={{
                   width: 48,
                   height: 2,
-                  background: done ? '#f97316' : '#22283a',
+                  background: done ? '#f97316' : 'var(--border)',
                   transition: 'background 0.3s',
                 }}
               />
@@ -34,14 +34,14 @@ function StepBar({ current }: { current: number }) {
                   justifyContent: 'center',
                   fontSize: 14,
                   fontWeight: 700,
-                  color: done || active ? '#fff' : '#6b7280',
-                  background: done || active ? '#f97316' : '#22283a',
+                  color: done || active ? '#fff' : 'var(--text-muted)',
+                  background: done || active ? '#f97316' : 'var(--border)',
                   transition: 'all 0.3s',
                 }}
               >
                 {done ? <Check size={16} /> : step}
               </div>
-              <span style={{ fontSize: 11, color: active ? '#e8eaf0' : '#6b7280' }}>{label}</span>
+              <span style={{ fontSize: 11, color: active ? 'var(--text-primary)' : 'var(--text-muted)' }}>{label}</span>
             </div>
           </div>
         )
@@ -53,12 +53,12 @@ function StepBar({ current }: { current: number }) {
 /* ─── shared ─── */
 const inputBase: React.CSSProperties = {
   width: '100%',
-  background: '#111318',
-  border: '1px solid #22283a',
+  background: 'var(--bg-surface)',
+  border: '1px solid var(--border)',
   borderRadius: 8,
   padding: '10px 14px',
   fontSize: 14,
-  color: '#e8eaf0',
+  color: 'var(--text-primary)',
   outline: 'none',
   boxSizing: 'border-box',
   transition: 'border-color 0.2s, box-shadow 0.2s',
@@ -96,15 +96,15 @@ export default function OnboardingVendedorPage() {
     if (step === 1) {
       return (
         <>
-          <h2 style={{ fontSize: 20, fontWeight: 700, color: '#e8eaf0', margin: 0 }}>Conecte seu Gmail</h2>
-          <p style={{ fontSize: 13, color: '#6b7280', marginTop: 4, marginBottom: 24 }}>
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Conecte seu Gmail</h2>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4, marginBottom: 24 }}>
             Envie e-mails para leads sem sair do TriboCRM.
           </p>
 
           <div
             style={{
-              background: '#111318',
-              border: '1px solid #22283a',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border)',
               borderRadius: 12,
               padding: 24,
               display: 'flex',
@@ -114,8 +114,8 @@ export default function OnboardingVendedorPage() {
             }}
           >
             <Mail size={40} color="#ef4444" />
-            <span style={{ fontSize: 16, fontWeight: 600, color: '#e8eaf0' }}>Gmail</span>
-            <span style={{ fontSize: 12, color: '#6b7280', textAlign: 'center' }}>
+            <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)' }}>Gmail</span>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>
               Usamos OAuth2 — nunca compartilhamos sua senha
             </span>
             <button style={{ ...btnOrange, marginTop: 12 }}>Conectar Gmail</button>
@@ -123,7 +123,7 @@ export default function OnboardingVendedorPage() {
 
           <div style={{ textAlign: 'center', marginTop: 16 }}>
             <button
-              style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: 13, cursor: 'pointer' }}
+              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}
               onClick={() => setStep(2)}
             >
               Pular por agora &rarr;
@@ -136,15 +136,15 @@ export default function OnboardingVendedorPage() {
     if (step === 2) {
       return (
         <>
-          <h2 style={{ fontSize: 20, fontWeight: 700, color: '#e8eaf0', margin: 0 }}>Veja como usar o Pipeline</h2>
-          <p style={{ fontSize: 13, color: '#6b7280', marginTop: 4, marginBottom: 24 }}>
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Veja como usar o Pipeline</h2>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4, marginBottom: 24 }}>
             5 minutos que vão transformar sua rotina de vendas.
           </p>
 
           <div
             style={{
-              background: '#0f1117',
-              border: '1px solid #22283a',
+              background: 'var(--bg)',
+              border: '1px solid var(--border)',
               borderRadius: 12,
               height: 200,
               display: 'flex',
@@ -154,7 +154,7 @@ export default function OnboardingVendedorPage() {
             }}
           >
             <PlayCircle size={48} color="#f97316" />
-            <span style={{ fontSize: 13, color: '#6b7280', marginTop: 8, textAlign: 'center' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 8, textAlign: 'center' }}>
               Como usar o Pipeline Kanban — 5 min
             </span>
           </div>
@@ -165,7 +165,7 @@ export default function OnboardingVendedorPage() {
 
           <div style={{ textAlign: 'center', marginTop: 12 }}>
             <button
-              style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: 13, cursor: 'pointer' }}
+              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}
               onClick={() => setStep(3)}
             >
               Pular por agora &rarr;
@@ -178,8 +178,8 @@ export default function OnboardingVendedorPage() {
     /* step 3 */
     return (
       <>
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: '#e8eaf0', margin: 0 }}>Cadastre seu primeiro lead</h2>
-        <p style={{ fontSize: 13, color: '#6b7280', marginTop: 4, marginBottom: 24 }}>
+        <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Cadastre seu primeiro lead</h2>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4, marginBottom: 24 }}>
           Comece com um lead real para ver o sistema funcionando.
         </p>
 
@@ -191,7 +191,7 @@ export default function OnboardingVendedorPage() {
             { label: 'E-mail', value: leadEmail, set: setLeadEmail, ph: 'joao@empresa.com' },
           ].map((f) => (
             <div key={f.label}>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#e8eaf0', marginBottom: 6 }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 6 }}>
                 {f.label}
               </label>
               <input
@@ -204,7 +204,7 @@ export default function OnboardingVendedorPage() {
                   e.target.style.boxShadow = '0 0 0 3px rgba(249,115,22,0.10)'
                 }}
                 onBlur={(e) => {
-                  e.target.style.borderColor = '#22283a'
+                  e.target.style.borderColor = 'var(--border)'
                   e.target.style.boxShadow = 'none'
                 }}
               />
@@ -218,7 +218,7 @@ export default function OnboardingVendedorPage() {
 
         <div style={{ textAlign: 'center', marginTop: 12 }}>
           <button
-            style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: 13, cursor: 'pointer' }}
+            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}
             onClick={finish}
           >
             Fazer depois &rarr;
@@ -236,14 +236,14 @@ export default function OnboardingVendedorPage() {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#0a0b0f',
+        background: 'var(--bg)',
         padding: 16,
       }}
     >
       {/* logo */}
       <div style={{ textAlign: 'center', marginBottom: 24 }}>
         <h1 style={{ fontSize: 28, margin: 0, lineHeight: 1 }}>
-          <span style={{ fontWeight: 400, color: '#e8eaf0' }}>Tribo</span>
+          <span style={{ fontWeight: 400, color: 'var(--text-primary)' }}>Tribo</span>
           <span style={{ fontWeight: 800, color: '#f97316' }}>CRM</span>
         </h1>
       </div>
@@ -253,8 +253,8 @@ export default function OnboardingVendedorPage() {
         style={{
           width: '100%',
           maxWidth: 640,
-          background: '#161a22',
-          border: '1px solid #22283a',
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border)',
           borderRadius: 16,
           padding: '32px 36px',
           boxShadow: '0 24px 64px rgba(0,0,0,0.4)',

@@ -13,7 +13,7 @@ import AppLayout from '../AppLayout/AppLayout'
 interface StageConfig { name: string; color: string }
 
 const stages: StageConfig[] = [
-  { name: 'Sem Contato', color: '#6b7280' },
+  { name: 'Sem Contato', color: 'var(--text-muted)' },
   { name: 'Em Contato', color: '#3b82f6' },
   { name: 'Negociando', color: '#f59e0b' },
   { name: 'Proposta Enviada', color: '#a855f7' },
@@ -74,14 +74,14 @@ export default function LeadDetailView({ menuItems, instance }: LeadDetailViewPr
   if (!lead) {
     return (
       <AppLayout menuItems={menuItems}>
-        <div style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>Lead não encontrado.</div>
+        <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Lead não encontrado.</div>
       </AppLayout>
     )
   }
 
   const temp = tempConfig[lead.temperature] ?? tempConfig.COLD!
   const stageObj = stages.find((s) => s.name === lead.stage)
-  const stageColor = stageObj?.color ?? '#6b7280'
+  const stageColor = stageObj?.color ?? 'var(--text-muted)'
   const respName = responsibleNames[lead.responsible] ?? lead.responsible
 
   // Prev/Next within same stage
@@ -90,18 +90,18 @@ export default function LeadDetailView({ menuItems, instance }: LeadDetailViewPr
   const prevLead = idx > 0 ? sameStage[idx - 1] : null
   const nextLead = idx < sameStage.length - 1 ? sameStage[idx + 1] : null
 
-  const ghost: React.CSSProperties = { background: '#161a22', border: '1px solid #22283a', borderRadius: 6, padding: '6px 12px', fontSize: 12, color: '#9ca3af', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }
+  const ghost: React.CSSProperties = { background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }
 
   return (
     <AppLayout menuItems={menuItems}>
       {/* Breadcrumb + nav */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 12, color: '#6b7280', cursor: 'pointer' }} onClick={() => navigate(`/${instance}/pipeline`)}>Pipeline</span>
-          <span style={{ fontSize: 12, color: '#6b7280' }}>›</span>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)', cursor: 'pointer' }} onClick={() => navigate(`/${instance}/pipeline`)}>Pipeline</span>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>›</span>
           <span style={{ fontSize: 12, color: stageColor }}>{lead.stage}</span>
-          <span style={{ fontSize: 12, color: '#6b7280' }}>›</span>
-          <span style={{ fontSize: 12, color: '#e8eaf0' }}>{lead.name}</span>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>›</span>
+          <span style={{ fontSize: 12, color: 'var(--text-primary)' }}>{lead.name}</span>
           <div style={{ display: 'flex', gap: 4, marginLeft: 12 }}>
             <button disabled={!prevLead} onClick={() => prevLead && navigate(`/${instance}/leads/${prevLead.id}`)}
               style={{ ...ghost, opacity: prevLead ? 1 : 0.4, cursor: prevLead ? 'pointer' : 'not-allowed' }}>
@@ -124,28 +124,28 @@ export default function LeadDetailView({ menuItems, instance }: LeadDetailViewPr
       </div>
 
       {/* Hero */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', paddingBottom: 20, marginBottom: 20, borderBottom: '1px solid #22283a' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', paddingBottom: 20, marginBottom: 20, borderBottom: '1px solid var(--border)' }}>
         <div style={{ display: 'flex', gap: 16 }}>
           <div style={{ width: 56, height: 56, borderRadius: 12, background: 'rgba(249,115,22,0.2)', color: '#f97316', fontSize: 20, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             {lead.name.split(' ').map(w => w[0]).join('').slice(0, 2)}
           </div>
           <div>
-            <h1 style={{ fontSize: 22, fontWeight: 700, color: '#e8eaf0', margin: 0 }}>{lead.name}</h1>
-            <p style={{ fontSize: 14, color: '#6b7280', marginTop: 2 }}>{lead.company}</p>
+            <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{lead.name}</h1>
+            <p style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 2 }}>{lead.company}</p>
             <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
               <Badge bg={temp.bg} color={temp.color}>{temp.label}</Badge>
               <Badge bg={`${stageColor}1F`} color={stageColor}>{lead.stage}</Badge>
               <Badge bg="rgba(34,197,94,0.12)" color="#22c55e">Score 88</Badge>
             </div>
-            <div style={{ fontSize: 12, color: '#6b7280', marginTop: 8 }}>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>
               Última interação {lead.lastContact ?? '—'} · Criado em 12/01/2026
             </div>
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: 10, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '2px' }}>Valor estimado</div>
+          <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '2px' }}>Valor estimado</div>
           <div style={{ fontSize: 32, fontWeight: 800, color: '#f97316', marginTop: 2 }}>{fmt(lead.value)}</div>
-          <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>Plano Pro · anual</div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Plano Pro · anual</div>
         </div>
       </div>
 
@@ -154,9 +154,9 @@ export default function LeadDetailView({ menuItems, instance }: LeadDetailViewPr
         <ActBtn icon={<MessageCircle size={16} strokeWidth={1.5} />} label="WhatsApp" color="#25d166" border="rgba(37,209,102,0.3)" />
         <ActBtn icon={<Mail size={16} strokeWidth={1.5} />} label="Enviar E-mail" color="#3b82f6" border="rgba(59,130,246,0.3)" />
         <ActBtn icon={<Phone size={16} strokeWidth={1.5} />} label="Ligar" color="#f97316" border="rgba(249,115,22,0.3)" />
-        <ActBtn icon={<Calendar size={16} strokeWidth={1.5} />} label="Agendar" color="#9ca3af" border="#22283a" />
-        <ActBtn icon={<FileText size={16} strokeWidth={1.5} />} label="Proposta" color="#9ca3af" border="#22283a" />
-        <button style={{ background: '#161a22', border: '1px solid #22283a', borderRadius: 8, padding: '8px 12px', cursor: 'pointer', color: '#9ca3af', display: 'flex', alignItems: 'center' }}>
+        <ActBtn icon={<Calendar size={16} strokeWidth={1.5} />} label="Agendar" color="var(--text-secondary)" border="var(--border)" />
+        <ActBtn icon={<FileText size={16} strokeWidth={1.5} />} label="Proposta" color="var(--text-secondary)" border="var(--border)" />
+        <button style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>
           <MoreHorizontal size={16} strokeWidth={1.5} />
         </button>
       </div>
@@ -175,7 +175,7 @@ export default function LeadDetailView({ menuItems, instance }: LeadDetailViewPr
               <Field label="Responsável">
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
                   <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'rgba(249,115,22,0.2)', color: '#f97316', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{lead.responsible}</div>
-                  <span style={{ fontSize: 13, color: '#e8eaf0' }}>{respName} · Vendedora</span>
+                  <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{respName} · Vendedora</span>
                 </div>
               </Field>
             </div>
@@ -190,18 +190,18 @@ export default function LeadDetailView({ menuItems, instance }: LeadDetailViewPr
         {/* Right column */}
         <div style={{ width: 360, flexShrink: 0 }}>
           {/* Right tabs */}
-          <div style={{ display: 'flex', borderBottom: '1px solid #22283a', marginBottom: 16 }}>
+          <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 16 }}>
             {([['tasks', 'Tarefas'], ['products', 'Produtos'], ['notes', 'Notas']] as const).map(([key, label]) => (
               <button key={key} onClick={() => setRightTab(key)}
-                style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '10px 16px', fontSize: 13, color: rightTab === key ? '#f97316' : '#6b7280', fontWeight: rightTab === key ? 500 : 400, borderBottom: rightTab === key ? '2px solid #f97316' : '2px solid transparent', marginBottom: -1 }}>
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '10px 16px', fontSize: 13, color: rightTab === key ? '#f97316' : 'var(--text-muted)', fontWeight: rightTab === key ? 500 : 400, borderBottom: rightTab === key ? '2px solid #f97316' : '2px solid transparent', marginBottom: -1 }}>
                 {label}
               </button>
             ))}
           </div>
 
           {rightTab === 'tasks' && <TasksPanel />}
-          {rightTab === 'products' && <EmptyState icon={<Package size={32} color="#6b7280" strokeWidth={1.5} />} text="Nenhum produto vinculado" btnLabel="+ Vincular produto" />}
-          {rightTab === 'notes' && <EmptyState icon={<FileText size={32} color="#6b7280" strokeWidth={1.5} />} text="Nenhuma nota ainda" btnLabel="+ Adicionar nota" />}
+          {rightTab === 'products' && <EmptyState icon={<Package size={32} color="var(--text-muted)" strokeWidth={1.5} />} text="Nenhum produto vinculado" btnLabel="+ Vincular produto" />}
+          {rightTab === 'notes' && <EmptyState icon={<FileText size={32} color="var(--text-muted)" strokeWidth={1.5} />} text="Nenhuma nota ainda" btnLabel="+ Adicionar nota" />}
         </div>
       </div>
     </AppLayout>
@@ -212,9 +212,9 @@ export default function LeadDetailView({ menuItems, instance }: LeadDetailViewPr
 
 function Section({ title, action, children }: { title: string; action: string; children: React.ReactNode }) {
   return (
-    <div style={{ background: '#161a22', border: '1px solid #22283a', borderRadius: 12, padding: 20, marginBottom: 20 }}>
+    <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <span style={{ fontSize: 14, fontWeight: 600, color: '#e8eaf0' }}>{title}</span>
+        <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{title}</span>
         <span style={{ fontSize: 12, color: '#f97316', cursor: 'pointer' }}>{action}</span>
       </div>
       {children}
@@ -226,9 +226,9 @@ function Section({ title, action, children }: { title: string; action: string; c
 
 function Field({ label, value, valueColor, children }: { label: string; value?: string; valueColor?: string; children?: React.ReactNode }) {
   return (
-    <div style={{ background: '#0f1117', border: '1px solid #22283a', borderRadius: 8, padding: 12 }}>
-      <div style={{ fontSize: 10, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</div>
-      {value && <div style={{ fontSize: 13, color: valueColor ?? '#e8eaf0', marginTop: 2 }}>{value}</div>}
+    <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: 12 }}>
+      <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</div>
+      {value && <div style={{ fontSize: 13, color: valueColor ?? 'var(--text-primary)', marginTop: 2 }}>{value}</div>}
       {children}
     </div>
   )
@@ -245,7 +245,7 @@ function HistoryList() {
     },
     { icon: Phone, iconColor: '#f97316', title: 'Ligação realizada', note: 'Cliente demonstrou interesse alto. Pediu proposta para fechar no plano anual.', date: 'Ontem · 14:30 · Ana Souza' },
     { icon: MessageCircle, iconColor: '#25d166', title: 'WhatsApp', note: 'Primeiro contato — cliente respondeu e demonstrou interesse.', date: '12/01/2026 · 10:00 · Ana Souza' },
-    { icon: UserPlus, iconColor: '#6b7280', title: 'Lead criado', note: 'Lead captado via Instagram · atribuído via round-robin', date: '12/01/2026 · 09:00 · Sistema' },
+    { icon: UserPlus, iconColor: 'var(--text-muted)', title: 'Lead criado', note: 'Lead captado via Instagram · atribuído via round-robin', date: '12/01/2026 · 09:00 · Sistema' },
   ]
 
   return (
@@ -253,15 +253,15 @@ function HistoryList() {
       {items.map((item, i) => {
         const Icon = item.icon
         return (
-          <div key={i} style={{ display: 'flex', gap: 12, padding: '12px 0', borderBottom: i < items.length - 1 ? '1px solid #22283a' : 'none' }}>
+          <div key={i} style={{ display: 'flex', gap: 12, padding: '12px 0', borderBottom: i < items.length - 1 ? '1px solid var(--border)' : 'none' }}>
             <div style={{ width: 32, height: 32, borderRadius: 8, background: `${item.iconColor}1F`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <Icon size={16} color={item.iconColor} strokeWidth={1.5} />
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 500, color: '#e8eaf0' }}>{item.title}</div>
+              <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{item.title}</div>
               {item.subCard && (
-                <div style={{ background: '#0f1117', border: '1px solid #22283a', borderRadius: 6, padding: 10, marginTop: 6 }}>
-                  <div style={{ fontSize: 12, color: '#e8eaf0', fontWeight: 500 }}>{item.subCard.title}</div>
+                <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6, padding: 10, marginTop: 6 }}>
+                  <div style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 500 }}>{item.subCard.title}</div>
                   <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
                     {item.subCard.badges.map((b) => (
                       <span key={b.text} style={{ fontSize: 10, padding: '2px 6px', borderRadius: 999, background: b.bg, color: b.color, fontWeight: 500 }}>{b.text}</span>
@@ -269,8 +269,8 @@ function HistoryList() {
                   </div>
                 </div>
               )}
-              {item.note && <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>{item.note}</div>}
-              <div style={{ fontSize: 11, color: '#6b7280', marginTop: 4 }}>{item.date}</div>
+              {item.note && <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>{item.note}</div>}
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{item.date}</div>
             </div>
           </div>
         )
@@ -284,39 +284,39 @@ function HistoryList() {
 function TasksPanel() {
   const tasks = [
     { icon: Phone, iconColor: '#f97316', title: 'Follow-up sobre desconto', due: 'Vence hoje · 14:00', dueColor: '#f59e0b', done: false },
-    { icon: Video, iconColor: '#a855f7', title: 'Demo ao vivo para o time', due: '25/03/2026 · 10:00', dueColor: '#9ca3af', done: false, badge: 'Google Calendar' },
+    { icon: Video, iconColor: '#a855f7', title: 'Demo ao vivo para o time', due: '25/03/2026 · 10:00', dueColor: 'var(--text-secondary)', done: false, badge: 'Google Calendar' },
     { icon: Mail, iconColor: '#3b82f6', title: 'Enviar material de apresentação', due: 'Concluída · 13/03', dueColor: '#22c55e', done: true },
   ]
 
   return (
     <div>
       {/* New task form */}
-      <div style={{ background: '#161a22', border: '1px solid #22283a', borderRadius: 12, padding: 16, marginBottom: 16 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: '#e8eaf0', marginBottom: 10 }}>Nova atividade</div>
+      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 10 }}>Nova atividade</div>
         <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-          <select style={{ flex: 1, background: '#0f1117', border: '1px solid #22283a', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: '#e8eaf0', outline: 'none' }}>
+          <select style={{ flex: 1, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: 'var(--text-primary)', outline: 'none' }}>
             <option>Ligação</option><option>E-mail</option><option>Reunião</option><option>WhatsApp</option><option>Proposta</option>
           </select>
-          <input type="date" style={{ background: '#0f1117', border: '1px solid #22283a', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: '#e8eaf0', outline: 'none' }} />
+          <input type="date" style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: 'var(--text-primary)', outline: 'none' }} />
         </div>
-        <textarea rows={3} placeholder="Descrição da atividade..." style={{ width: '100%', background: '#0f1117', border: '1px solid #22283a', borderRadius: 6, padding: '8px 10px', fontSize: 12, color: '#e8eaf0', outline: 'none', resize: 'none', boxSizing: 'border-box' }} />
+        <textarea rows={3} placeholder="Descrição da atividade..." style={{ width: '100%', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6, padding: '8px 10px', fontSize: 12, color: 'var(--text-primary)', outline: 'none', resize: 'none', boxSizing: 'border-box' }} />
         <button style={{ width: '100%', marginTop: 8, background: '#f97316', color: '#fff', border: 'none', borderRadius: 6, padding: '8px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Adicionar tarefa</button>
       </div>
 
       {/* Tasks list */}
-      <div style={{ background: '#161a22', border: '1px solid #22283a', borderRadius: 12, padding: 16 }}>
+      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 16 }}>
         {tasks.map((task, i) => {
           const Icon = task.icon
           return (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: i < tasks.length - 1 ? '1px solid #22283a' : 'none', opacity: task.done ? 0.5 : 1 }}>
-              <div style={{ width: 18, height: 18, borderRadius: 4, flexShrink: 0, border: task.done ? 'none' : '1px solid #22283a', background: task.done ? '#22c55e' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: i < tasks.length - 1 ? '1px solid var(--border)' : 'none', opacity: task.done ? 0.5 : 1 }}>
+              <div style={{ width: 18, height: 18, borderRadius: 4, flexShrink: 0, border: task.done ? 'none' : '1px solid var(--border)', background: task.done ? '#22c55e' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {task.done && <Check size={12} color="#fff" strokeWidth={2.5} />}
               </div>
               <div style={{ width: 28, height: 28, borderRadius: 6, background: `${task.iconColor}1F`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <Icon size={14} color={task.iconColor} strokeWidth={1.5} />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 500, color: '#e8eaf0', textDecoration: task.done ? 'line-through' : 'none' }}>{task.title}</div>
+                <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', textDecoration: task.done ? 'line-through' : 'none' }}>{task.title}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
                   <span style={{ fontSize: 11, color: task.dueColor }}>{task.due}</span>
                   {task.badge && <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, background: 'rgba(59,130,246,0.12)', color: '#3b82f6' }}>{task.badge}</span>}
@@ -334,9 +334,9 @@ function TasksPanel() {
 
 function EmptyState({ icon, text, btnLabel }: { icon: React.ReactNode; text: string; btnLabel: string }) {
   return (
-    <div style={{ background: '#161a22', border: '1px solid #22283a', borderRadius: 12, padding: 40, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+    <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 40, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
       {icon}
-      <span style={{ fontSize: 13, color: '#6b7280' }}>{text}</span>
+      <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{text}</span>
       <button style={{ background: 'transparent', border: '1px solid rgba(249,115,22,0.3)', color: '#f97316', borderRadius: 6, padding: '6px 14px', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>{btnLabel}</button>
     </div>
   )

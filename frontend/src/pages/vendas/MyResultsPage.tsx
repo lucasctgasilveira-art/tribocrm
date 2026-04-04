@@ -33,7 +33,7 @@ function getUserId(): string {
   } catch { return '' }
 }
 
-const card: React.CSSProperties = { background: '#161a22', border: '1px solid #22283a', borderRadius: 12, overflow: 'hidden' }
+const card: React.CSSProperties = { background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }
 
 // ── Component ──
 
@@ -65,7 +65,7 @@ export default function MyResultsPage() {
       <AppLayout menuItems={vendasMenuItems}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 'calc(100vh - 108px)', gap: 10 }}>
           <Loader2 size={24} color="#f97316" strokeWidth={1.5} className="animate-spin" />
-          <span style={{ fontSize: 14, color: '#6b7280' }}>Carregando resultados...</span>
+          <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>Carregando resultados...</span>
         </div>
       </AppLayout>
     )
@@ -84,8 +84,8 @@ export default function MyResultsPage() {
   return (
     <AppLayout menuItems={vendasMenuItems}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 700, color: '#e8eaf0', margin: 0 }}>Meus Resultados</h1>
-        <span style={{ fontSize: 13, color: '#6b7280' }}>{new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' }).replace(/^\w/, c => c.toUpperCase())}</span>
+        <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Meus Resultados</h1>
+        <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' }).replace(/^\w/, c => c.toUpperCase())}</span>
       </div>
 
       {/* KPIs */}
@@ -93,10 +93,10 @@ export default function MyResultsPage() {
         {kpiCards.map(k => {
           const Icon = k.icon
           return (
-            <div key={k.label} style={{ background: '#161a22', border: '1px solid #22283a', borderRadius: 12, padding: 20, position: 'relative' }}>
+            <div key={k.label} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, position: 'relative' }}>
               <Icon size={20} color={k.iconColor} strokeWidth={1.5} style={{ position: 'absolute', top: 20, right: 20 }} />
-              <span style={{ fontSize: 12, color: '#6b7280', display: 'block', marginBottom: 6 }}>{k.label}</span>
-              <span style={{ fontSize: 28, fontWeight: 700, color: '#e8eaf0', display: 'block' }}>{k.value}</span>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>{k.label}</span>
+              <span style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-primary)', display: 'block' }}>{k.value}</span>
             </div>
           )
         })}
@@ -107,31 +107,31 @@ export default function MyResultsPage() {
         {myGoal ? (
           <>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 14, fontWeight: 600, color: '#e8eaf0' }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
                 Minha Meta de {new Date().toLocaleString('pt-BR', { month: 'long' }).replace(/^\w/, c => c.toUpperCase())}
               </span>
               <span style={{ fontSize: 13, fontWeight: 600, color: barColor(myGoal.percentage) }}>{myGoal.percentage}% concluído</span>
             </div>
-            <div style={{ background: '#22283a', borderRadius: 999, height: 8, margin: '12px 0' }}>
+            <div style={{ background: 'var(--border)', borderRadius: 999, height: 8, margin: '12px 0' }}>
               <div style={{ width: `${Math.min(myGoal.percentage, 100)}%`, height: '100%', background: 'linear-gradient(to right, #f97316, #fb923c)', borderRadius: 999 }} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-              <span style={{ color: '#e8eaf0' }}>{fmt(myGoal.current)} realizados</span>
-              <span style={{ color: '#6b7280' }}>Meta: {fmt(myGoal.revenueGoal)}</span>
+              <span style={{ color: 'var(--text-primary)' }}>{fmt(myGoal.current)} realizados</span>
+              <span style={{ color: 'var(--text-muted)' }}>Meta: {fmt(myGoal.revenueGoal)}</span>
               <span style={{ color: '#22c55e' }}>Faltam {fmt(Math.max(0, myGoal.revenueGoal - myGoal.current))}</span>
             </div>
-            {goalInfo?.goal && <div style={{ fontSize: 11, color: '#6b7280', marginTop: 8 }}>{goalInfo.goal.daysRemaining} dias restantes</div>}
+            {goalInfo?.goal && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>{goalInfo.goal.daysRemaining} dias restantes</div>}
           </>
         ) : (
-          <div style={{ textAlign: 'center', padding: 12, color: '#6b7280', fontSize: 13 }}>Nenhuma meta configurada para este mês.</div>
+          <div style={{ textAlign: 'center', padding: 12, color: 'var(--text-muted)', fontSize: 13 }}>Nenhuma meta configurada para este mês.</div>
         )}
       </div>
 
       {/* Ranking placeholder */}
-      <div style={{ background: '#0f1117', border: '1px solid #22283a', borderRadius: 12, padding: 20, marginTop: 20, textAlign: 'center' }}>
+      <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginTop: 20, textAlign: 'center' }}>
         <Trophy size={24} color="#f59e0b" strokeWidth={1.5} />
-        <div style={{ fontSize: 14, fontWeight: 600, color: '#e8eaf0', marginTop: 8 }}>Ranking disponível em breve</div>
-        <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>O ranking completo é visível apenas para o gestor.</div>
+        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginTop: 8 }}>Ranking disponível em breve</div>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>O ranking completo é visível apenas para o gestor.</div>
       </div>
     </AppLayout>
   )

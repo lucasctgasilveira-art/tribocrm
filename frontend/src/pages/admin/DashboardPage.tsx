@@ -53,7 +53,7 @@ export default function AdminDashboardPage() {
       <AppLayout menuItems={adminMenuItems}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 'calc(100vh - 108px)', gap: 10 }}>
           <Loader2 size={24} color="#f97316" strokeWidth={1.5} className="animate-spin" />
-          <span style={{ fontSize: 14, color: '#6b7280' }}>Carregando dashboard...</span>
+          <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>Carregando dashboard...</span>
         </div>
       </AppLayout>
     )
@@ -77,14 +77,14 @@ export default function AdminDashboardPage() {
     { label: 'MRR', value: fmt(kpis.mrr), icon: TrendingUp, iconColor: '#f97316' },
     { label: 'ARR', value: fmt(kpis.arr), icon: BarChart2, iconColor: '#f97316' },
     { label: 'Novos este mês', value: String(kpis.newTenantsThisMonth), icon: UserPlus, iconColor: '#f97316' },
-    { label: 'Inadimplentes', value: String(kpis.delinquentCount), variation: kpis.delinquentCount > 0 ? `⚠️ ${kpis.delinquentCount} pendente(s)` : 'Nenhum', variationColor: kpis.delinquentCount > 0 ? '#f59e0b' : '#22c55e', icon: AlertCircle, iconColor: kpis.delinquentCount > 0 ? '#ef4444' : '#6b7280' },
+    { label: 'Inadimplentes', value: String(kpis.delinquentCount), variation: kpis.delinquentCount > 0 ? `⚠️ ${kpis.delinquentCount} pendente(s)` : 'Nenhum', variationColor: kpis.delinquentCount > 0 ? '#f59e0b' : '#22c55e', icon: AlertCircle, iconColor: kpis.delinquentCount > 0 ? '#ef4444' : 'var(--text-muted)' },
   ]
 
   return (
     <AppLayout menuItems={adminMenuItems}>
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#e8eaf0', margin: 0 }}>Dashboard</h1>
-        <p style={{ fontSize: 14, color: '#6b7280', marginTop: 4 }}>Visão geral da plataforma</p>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Dashboard</h1>
+        <p style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 4 }}>Visão geral da plataforma</p>
       </div>
 
       {/* KPI Row */}
@@ -92,10 +92,10 @@ export default function AdminDashboardPage() {
         {kpiCards.map((kpi) => {
           const Icon = kpi.icon
           return (
-            <div key={kpi.label} style={{ background: '#161a22', border: '1px solid #22283a', borderRadius: 12, padding: 20, position: 'relative' }}>
+            <div key={kpi.label} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, position: 'relative' }}>
               <Icon size={20} color={kpi.iconColor} strokeWidth={1.5} style={{ position: 'absolute', top: 20, right: 20 }} />
-              <span style={{ fontSize: 12, color: '#6b7280', display: 'block', marginBottom: 6 }}>{kpi.label}</span>
-              <span style={{ fontSize: 28, fontWeight: 700, color: '#e8eaf0', display: 'block' }}>{kpi.value}</span>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>{kpi.label}</span>
+              <span style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-primary)', display: 'block' }}>{kpi.value}</span>
               {kpi.variation && <span style={{ fontSize: 12, color: kpi.variationColor, marginTop: 4, display: 'block' }}>{kpi.variation}</span>}
             </div>
           )
@@ -103,16 +103,16 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* MRR Chart */}
-      <div style={{ background: '#161a22', border: '1px solid #22283a', borderRadius: 12, padding: 20, marginTop: 20 }}>
+      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginTop: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: '#e8eaf0' }}>Crescimento do MRR</span>
-          <span style={{ background: '#22283a', color: '#9ca3af', borderRadius: 999, padding: '3px 10px', fontSize: 11 }}>Últimos 6 meses</span>
+          <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Crescimento do MRR</span>
+          <span style={{ background: 'var(--border)', color: 'var(--text-secondary)', borderRadius: 999, padding: '3px 10px', fontSize: 11 }}>Últimos 6 meses</span>
         </div>
         {mrrHistory.length > 0 ? (
           <>
             <div style={{ display: 'flex', gap: 12, marginTop: 16, padding: '0 8px' }}>
               {mrrHistory.map(d => (
-                <div key={d.month} style={{ flex: 1, textAlign: 'center', fontSize: 11, color: '#9ca3af' }}>{formatK(d.value)}</div>
+                <div key={d.month} style={{ flex: 1, textAlign: 'center', fontSize: 11, color: 'var(--text-secondary)' }}>{formatK(d.value)}</div>
               ))}
             </div>
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, height: 120, padding: '0 8px', marginTop: 6 }}>
@@ -120,54 +120,54 @@ export default function AdminDashboardPage() {
                 <div key={d.month} style={{ flex: 1, height: `${(d.value / mrrMax) * 100}%`, minHeight: 8, background: 'linear-gradient(to top, #f97316, #fb923c)', borderRadius: '6px 6px 0 0' }} />
               ))}
             </div>
-            <div style={{ borderTop: '1px solid #22283a', margin: '0 8px' }} />
+            <div style={{ borderTop: '1px solid var(--border)', margin: '0 8px' }} />
             <div style={{ display: 'flex', gap: 12, marginTop: 6, padding: '0 8px' }}>
               {mrrHistory.map(d => (
-                <div key={d.month} style={{ flex: 1, textAlign: 'center', fontSize: 11, color: '#6b7280' }}>{d.month}</div>
+                <div key={d.month} style={{ flex: 1, textAlign: 'center', fontSize: 11, color: 'var(--text-muted)' }}>{d.month}</div>
               ))}
             </div>
           </>
         ) : (
-          <div style={{ padding: 32, textAlign: 'center', color: '#6b7280', fontSize: 13 }}>Sem dados de MRR</div>
+          <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Sem dados de MRR</div>
         )}
       </div>
 
       {/* Alerts + Trials row */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 20 }}>
         {/* Alerts */}
-        <div style={{ background: '#161a22', border: '1px solid #22283a', borderRadius: 12, padding: 20 }}>
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <span style={{ fontSize: 14, fontWeight: 600, color: '#e8eaf0' }}>Alertas</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Alertas</span>
             {alerts.length > 0 && <span style={{ background: 'rgba(239,68,68,0.12)', color: '#ef4444', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>{alerts.length}</span>}
           </div>
           {alerts.length === 0 ? (
-            <div style={{ padding: 20, textAlign: 'center', color: '#6b7280', fontSize: 13 }}>Nenhum alerta</div>
+            <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Nenhum alerta</div>
           ) : alerts.map((alert, i) => (
-            <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '12px 0', borderBottom: i < alerts.length - 1 ? '1px solid #22283a' : 'none' }}>
+            <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '12px 0', borderBottom: i < alerts.length - 1 ? '1px solid var(--border)' : 'none' }}>
               <AlertTriangle size={16} color="#ef4444" strokeWidth={1.5} style={{ marginTop: 2, flexShrink: 0 }} />
-              <span style={{ fontSize: 13, color: '#e8eaf0', flex: 1 }}>{alert.text}</span>
+              <span style={{ fontSize: 13, color: 'var(--text-primary)', flex: 1 }}>{alert.text}</span>
               <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, fontWeight: 600, background: 'rgba(239,68,68,0.12)', color: '#ef4444', whiteSpace: 'nowrap', flexShrink: 0 }}>Crítico</span>
             </div>
           ))}
         </div>
 
         {/* Trials expiring */}
-        <div style={{ background: '#161a22', border: '1px solid #22283a', borderRadius: 12, padding: 20 }}>
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <span style={{ fontSize: 14, fontWeight: 600, color: '#e8eaf0' }}>Trials expirando</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Trials expirando</span>
             {trialsExpiring.length > 0 && <span style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>{trialsExpiring.length}</span>}
           </div>
           {trialsExpiring.length === 0 ? (
-            <div style={{ padding: 20, textAlign: 'center', color: '#6b7280', fontSize: 13 }}>Nenhum trial expirando</div>
+            <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Nenhum trial expirando</div>
           ) : trialsExpiring.map((trial, i) => {
             const ini = trial.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
-            const daysColor = trial.daysLeft <= 2 ? '#ef4444' : trial.daysLeft <= 3 ? '#f59e0b' : '#9ca3af'
+            const daysColor = trial.daysLeft <= 2 ? '#ef4444' : trial.daysLeft <= 3 ? '#f59e0b' : 'var(--text-secondary)'
             return (
-              <div key={trial.id} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '10px 0', borderBottom: i < trialsExpiring.length - 1 ? '1px solid #22283a' : 'none' }}>
-                <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#22283a', fontSize: 11, fontWeight: 700, color: '#e8eaf0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{ini}</div>
+              <div key={trial.id} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '10px 0', borderBottom: i < trialsExpiring.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--border)', fontSize: 11, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{ini}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: '#e8eaf0' }}>{trial.name}</div>
-                  <div style={{ fontSize: 12, color: '#6b7280' }}>{trial.plan}</div>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{trial.name}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{trial.plan}</div>
                 </div>
                 <span style={{ fontSize: 12, color: daysColor, whiteSpace: 'nowrap', flexShrink: 0 }}>
                   Expira em {trial.daysLeft} dia{trial.daysLeft !== 1 ? 's' : ''}

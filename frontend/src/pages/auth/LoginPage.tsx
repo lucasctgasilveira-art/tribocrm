@@ -75,7 +75,7 @@ export default function LoginPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#0a0b0f',
+        background: 'var(--bg)',
         padding: '16px',
       }}
     >
@@ -86,7 +86,7 @@ export default function LoginPage() {
             position: 'fixed',
             top: 24,
             right: 24,
-            background: '#161a22',
+            background: 'var(--bg-card)',
             borderLeft: '4px solid #ef4444',
             borderRadius: 8,
             padding: '12px 16px',
@@ -99,15 +99,15 @@ export default function LoginPage() {
           }}
         >
           <XCircle size={18} color="#ef4444" strokeWidth={1.5} />
-          <span style={{ fontSize: 13, color: '#e8eaf0' }}>{toast.message}</span>
+          <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{toast.message}</span>
         </div>
       )}
 
       {/* Card */}
       <div
         style={{
-          background: '#161a22',
-          border: '1px solid #22283a',
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border)',
           borderRadius: 16,
           padding: 40,
           width: '100%',
@@ -118,7 +118,7 @@ export default function LoginPage() {
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 8 }}>
           <h1 style={{ fontSize: 28, margin: 0, lineHeight: 1 }}>
-            <span style={{ fontWeight: 400, color: '#e8eaf0' }}>Tribo</span>
+            <span style={{ fontWeight: 400, color: 'var(--text-primary)' }}>Tribo</span>
             <span style={{ fontWeight: 800, color: '#f97316' }}>CRM</span>
           </h1>
         </div>
@@ -129,7 +129,7 @@ export default function LoginPage() {
             textAlign: 'center',
             fontSize: 11,
             letterSpacing: '0.2em',
-            color: '#6b7280',
+            color: 'var(--text-muted)',
             textTransform: 'uppercase',
             marginBottom: 32,
             marginTop: 0,
@@ -148,7 +148,7 @@ export default function LoginPage() {
                   display: 'block',
                   fontSize: 13,
                   fontWeight: 500,
-                  color: '#e8eaf0',
+                  color: 'var(--text-primary)',
                   marginBottom: 6,
                 }}
               >
@@ -162,12 +162,12 @@ export default function LoginPage() {
                 required
                 style={{
                   width: '100%',
-                  background: '#111318',
-                  border: '1px solid #22283a',
+                  background: 'var(--bg-surface)',
+                  border: '1px solid var(--border)',
                   borderRadius: 8,
                   padding: '10px 14px',
                   fontSize: 14,
-                  color: '#e8eaf0',
+                  color: 'var(--text-primary)',
                   outline: 'none',
                   transition: 'border-color 0.2s, box-shadow 0.2s',
                   boxSizing: 'border-box',
@@ -177,7 +177,7 @@ export default function LoginPage() {
                   e.target.style.boxShadow = '0 0 0 3px rgba(249,115,22,0.10)'
                 }}
                 onBlur={(e) => {
-                  e.target.style.borderColor = '#22283a'
+                  e.target.style.borderColor = 'var(--border)'
                   e.target.style.boxShadow = 'none'
                 }}
               />
@@ -190,7 +190,7 @@ export default function LoginPage() {
                   display: 'block',
                   fontSize: 13,
                   fontWeight: 500,
-                  color: '#e8eaf0',
+                  color: 'var(--text-primary)',
                   marginBottom: 6,
                 }}
               >
@@ -205,12 +205,12 @@ export default function LoginPage() {
                   required
                   style={{
                     width: '100%',
-                    background: '#111318',
-                    border: '1px solid #22283a',
+                    background: 'var(--bg-surface)',
+                    border: '1px solid var(--border)',
                     borderRadius: 8,
                     padding: '10px 44px 10px 14px',
                     fontSize: 14,
-                    color: '#e8eaf0',
+                    color: 'var(--text-primary)',
                     outline: 'none',
                     transition: 'border-color 0.2s, box-shadow 0.2s',
                     boxSizing: 'border-box',
@@ -220,7 +220,7 @@ export default function LoginPage() {
                     e.target.style.boxShadow = '0 0 0 3px rgba(249,115,22,0.10)'
                   }}
                   onBlur={(e) => {
-                    e.target.style.borderColor = '#22283a'
+                    e.target.style.borderColor = 'var(--border)'
                     e.target.style.boxShadow = 'none'
                   }}
                 />
@@ -241,9 +241,9 @@ export default function LoginPage() {
                   }}
                 >
                   {showPassword ? (
-                    <Eye size={18} color="#6b7280" strokeWidth={1.5} />
+                    <Eye size={18} color="var(--text-muted)" strokeWidth={1.5} />
                   ) : (
-                    <EyeOff size={18} color="#6b7280" strokeWidth={1.5} />
+                    <EyeOff size={18} color="var(--text-muted)" strokeWidth={1.5} />
                   )}
                 </button>
               </div>
@@ -256,12 +256,12 @@ export default function LoginPage() {
               href="#"
               style={{
                 fontSize: 13,
-                color: '#9ca3af',
+                color: 'var(--text-secondary)',
                 textDecoration: 'none',
                 transition: 'color 0.2s',
               }}
               onMouseEnter={(e) => ((e.target as HTMLAnchorElement).style.color = '#f97316')}
-              onMouseLeave={(e) => ((e.target as HTMLAnchorElement).style.color = '#9ca3af')}
+              onMouseLeave={(e) => ((e.target as HTMLAnchorElement).style.color = 'var(--text-secondary)')}
             >
               Esqueci minha senha
             </a>
@@ -313,7 +313,7 @@ export default function LoginPage() {
           from { opacity: 0; transform: translateY(-8px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        ::placeholder { color: #6b7280 !important; }
+        ::placeholder { color: var(--text-muted) !important; }
       `}</style>
     </div>
   )

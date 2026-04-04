@@ -152,7 +152,7 @@ function PhoneInput({ entry, onChange, onRemove, showRemove }: { entry: PhoneEnt
         }}>
           <span style={{ fontSize: 16 }}>{country.flag}</span>
           <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{country.ddi}</span>
-          <ChevronDown size={12} color="#6b7280" strokeWidth={1.5} />
+          <ChevronDown size={12} color="var(--text-muted)" strokeWidth={1.5} />
         </button>
 
         {dropOpen && (
@@ -163,7 +163,7 @@ function PhoneInput({ entry, onChange, onRemove, showRemove }: { entry: PhoneEnt
           }}>
             <div style={{ borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 14px' }}>
-                <Search size={14} color="#6b7280" strokeWidth={1.5} />
+                <Search size={14} color="var(--text-muted)" strokeWidth={1.5} />
                 <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar país..."
                   autoFocus style={{ background: 'transparent', border: 'none', padding: '10px 0', fontSize: 13, color: 'var(--text-primary)', outline: 'none', width: '100%' }} />
               </div>

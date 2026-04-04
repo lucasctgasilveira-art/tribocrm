@@ -77,71 +77,71 @@ export default function VendasLeadsPage() {
     <AppLayout menuItems={vendasMenuItems}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 700, color: '#e8eaf0', margin: 0 }}>Meus Leads</h1>
-        <span style={{ fontSize: 13, color: '#6b7280' }}>{meta.total} lead{meta.total !== 1 ? 's' : ''}</span>
+        <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Meus Leads</h1>
+        <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{meta.total} lead{meta.total !== 1 ? 's' : ''}</span>
       </div>
 
       {/* Search */}
       <div style={{ position: 'relative', maxWidth: 280, marginBottom: 16 }}>
-        <Search size={15} color="#6b7280" strokeWidth={1.5} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
+        <Search size={15} color="var(--text-muted)" strokeWidth={1.5} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
         <input type="text" value={search} onChange={e => handleSearch(e.target.value)} placeholder="Buscar por nome ou empresa..."
-          style={{ width: '100%', background: '#161a22', border: '1px solid #22283a', borderRadius: 8, padding: '0 12px 0 34px', fontSize: 13, color: '#e8eaf0', outline: 'none', height: 36, boxSizing: 'border-box' }} />
+          style={{ width: '100%', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '0 12px 0 34px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', height: 36, boxSizing: 'border-box' }} />
       </div>
 
       {loading ? (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 60, gap: 10 }}>
           <Loader2 size={22} color="#f97316" strokeWidth={1.5} className="animate-spin" />
-          <span style={{ fontSize: 14, color: '#6b7280' }}>Carregando leads...</span>
+          <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>Carregando leads...</span>
         </div>
       ) : (
-        <div style={{ background: '#161a22', border: '1px solid #22283a', borderRadius: 12, overflow: 'hidden' }}>
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ background: '#0f1117' }}>
+              <tr style={{ background: 'var(--bg)' }}>
                 {['Lead', 'Etapa', 'Temperatura', 'Valor', 'Última atividade'].map(h => (
-                  <th key={h} style={{ padding: '12px 20px', fontSize: 11, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, textAlign: 'left', whiteSpace: 'nowrap' }}>{h}</th>
+                  <th key={h} style={{ padding: '12px 20px', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, textAlign: 'left', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {leads.length === 0 ? (
-                <tr><td colSpan={5} style={{ padding: 40, textAlign: 'center', color: '#6b7280', fontSize: 14 }}>Nenhum lead encontrado</td></tr>
+                <tr><td colSpan={5} style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>Nenhum lead encontrado</td></tr>
               ) : leads.map(l => {
                 const td = tempDisplay[l.temperature]
                 return (
-                  <tr key={l.id} style={{ borderBottom: '1px solid #22283a' }}
-                    onMouseEnter={e => { e.currentTarget.style.background = '#1c2130' }}
+                  <tr key={l.id} style={{ borderBottom: '1px solid var(--border)' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-elevated)' }}
                     onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
                     <td style={{ padding: '14px 20px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{ width: 32, height: 32, borderRadius: 8, background: '#22283a', fontSize: 11, fontWeight: 700, color: '#e8eaf0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{ini(l.name)}</div>
+                        <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--border)', fontSize: 11, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{ini(l.name)}</div>
                         <div>
-                          <div style={{ fontSize: 13, fontWeight: 500, color: '#e8eaf0' }}>{l.name}</div>
-                          <div style={{ fontSize: 12, color: '#6b7280' }}>{l.company ?? '—'}</div>
+                          <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{l.name}</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{l.company ?? '—'}</div>
                         </div>
                       </div>
                     </td>
                     <td style={{ padding: '14px 20px' }}>
                       <span style={{ background: `${l.stage.color}1F`, color: l.stage.color, borderRadius: 999, padding: '3px 10px', fontSize: 11, fontWeight: 500 }}>{l.stage.name}</span>
                     </td>
-                    <td style={{ padding: '14px 20px', fontSize: 12, color: td?.color ?? '#6b7280' }}>{td?.label ?? l.temperature}</td>
-                    <td style={{ padding: '14px 20px', fontSize: 13, fontWeight: 700, color: '#e8eaf0' }}>{fmt(Number(l.expectedValue) || 0)}</td>
-                    <td style={{ padding: '14px 20px', fontSize: 12, color: '#6b7280' }}>{formatTimeAgo(l.lastActivityAt)}</td>
+                    <td style={{ padding: '14px 20px', fontSize: 12, color: td?.color ?? 'var(--text-muted)' }}>{td?.label ?? l.temperature}</td>
+                    <td style={{ padding: '14px 20px', fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{fmt(Number(l.expectedValue) || 0)}</td>
+                    <td style={{ padding: '14px 20px', fontSize: 12, color: 'var(--text-muted)' }}>{formatTimeAgo(l.lastActivityAt)}</td>
                   </tr>
                 )
               })}
             </tbody>
           </table>
 
-          <div style={{ padding: '12px 20px', borderTop: '1px solid #22283a', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 12, color: '#6b7280' }}>
+          <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
               Mostrando {leads.length === 0 ? 0 : (meta.page - 1) * meta.perPage + 1}-{Math.min(meta.page * meta.perPage, meta.total)} de {meta.total}
             </span>
             <div style={{ display: 'flex', gap: 6 }}>
               <button disabled={page <= 1} onClick={() => setPage(p => p - 1)}
-                style={{ padding: '6px 14px', fontSize: 12, fontWeight: 500, borderRadius: 6, border: '1px solid #22283a', cursor: page <= 1 ? 'not-allowed' : 'pointer', background: 'transparent', color: page <= 1 ? '#6b7280' : '#e8eaf0', opacity: page <= 1 ? 0.5 : 1 }}>Anterior</button>
+                style={{ padding: '6px 14px', fontSize: 12, fontWeight: 500, borderRadius: 6, border: '1px solid var(--border)', cursor: page <= 1 ? 'not-allowed' : 'pointer', background: 'transparent', color: page <= 1 ? 'var(--text-muted)' : 'var(--text-primary)', opacity: page <= 1 ? 0.5 : 1 }}>Anterior</button>
               <button disabled={page >= meta.totalPages} onClick={() => setPage(p => p + 1)}
-                style={{ padding: '6px 14px', fontSize: 12, fontWeight: 500, borderRadius: 6, border: '1px solid #22283a', cursor: page >= meta.totalPages ? 'not-allowed' : 'pointer', background: '#161a22', color: page >= meta.totalPages ? '#6b7280' : '#e8eaf0', opacity: page >= meta.totalPages ? 0.5 : 1 }}>Próximo</button>
+                style={{ padding: '6px 14px', fontSize: 12, fontWeight: 500, borderRadius: 6, border: '1px solid var(--border)', cursor: page >= meta.totalPages ? 'not-allowed' : 'pointer', background: 'var(--bg-card)', color: page >= meta.totalPages ? 'var(--text-muted)' : 'var(--text-primary)', opacity: page >= meta.totalPages ? 0.5 : 1 }}>Próximo</button>
             </div>
           </div>
         </div>

@@ -126,7 +126,7 @@ function CommonContent({ task, onClose, onComplete }: { task: TaskDrawerData; on
       <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
         <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 10 }}>Detalhes</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, fontSize: 13, color: 'var(--text-primary)' }}>
-          <Clock size={14} color="#6b7280" strokeWidth={1.5} />
+          <Clock size={14} color="var(--text-muted)" strokeWidth={1.5} />
           <span>Hoje · {task.time || '—'}</span>
           {task.calendarBadge && <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, background: 'rgba(59,130,246,0.12)', color: '#3b82f6' }}>Google Calendar</span>}
         </div>
@@ -220,7 +220,7 @@ function ApproveContent({ task, onClose, onComplete }: { task: TaskDrawerData; o
       <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
         <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 10 }}>Valores</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-          <ValueCard label="Valor original" value="R$ 12.000" color="#e8eaf0" />
+          <ValueCard label="Valor original" value="R$ 12.000" color="var(--text-primary)" />
           <ValueCard label="Desconto" value="20%" color="#ef4444" />
           <ValueCard label="Valor final" value="R$ 9.600" color="#22c55e" />
         </div>

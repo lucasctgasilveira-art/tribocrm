@@ -10,7 +10,7 @@ interface Stage {
 }
 
 const defaultStages: Stage[] = [
-  { name: 'Sem Contato', color: '#6b7280', fixed: false },
+  { name: 'Sem Contato', color: 'var(--text-muted)', fixed: false },
   { name: 'Em Contato', color: '#3b82f6', fixed: false },
   { name: 'Negociando', color: '#f59e0b', fixed: false },
   { name: 'Proposta Enviada', color: '#a855f7', fixed: false },
@@ -40,7 +40,7 @@ function StepBar({ current }: { current: number }) {
                 style={{
                   width: 48,
                   height: 2,
-                  background: done ? '#f97316' : '#22283a',
+                  background: done ? '#f97316' : 'var(--border)',
                   transition: 'background 0.3s',
                 }}
               />
@@ -56,14 +56,14 @@ function StepBar({ current }: { current: number }) {
                   justifyContent: 'center',
                   fontSize: 14,
                   fontWeight: 700,
-                  color: done || active ? '#fff' : '#6b7280',
-                  background: done || active ? '#f97316' : '#22283a',
+                  color: done || active ? '#fff' : 'var(--text-muted)',
+                  background: done || active ? '#f97316' : 'var(--border)',
                   transition: 'all 0.3s',
                 }}
               >
                 {done ? <Check size={16} /> : step}
               </div>
-              <span style={{ fontSize: 11, color: active ? '#e8eaf0' : '#6b7280' }}>{label}</span>
+              <span style={{ fontSize: 11, color: active ? 'var(--text-primary)' : 'var(--text-muted)' }}>{label}</span>
             </div>
           </div>
         )
@@ -75,12 +75,12 @@ function StepBar({ current }: { current: number }) {
 /* ─── shared styles ─── */
 const inputBase: React.CSSProperties = {
   width: '100%',
-  background: '#111318',
-  border: '1px solid #22283a',
+  background: 'var(--bg-surface)',
+  border: '1px solid var(--border)',
   borderRadius: 8,
   padding: '10px 14px',
   fontSize: 14,
-  color: '#e8eaf0',
+  color: 'var(--text-primary)',
   outline: 'none',
   boxSizing: 'border-box',
   transition: 'border-color 0.2s, box-shadow 0.2s',
@@ -99,7 +99,7 @@ const btnOrange: React.CSSProperties = {
 
 const btnGhost: React.CSSProperties = {
   background: 'none',
-  color: '#6b7280',
+  color: 'var(--text-muted)',
   fontWeight: 500,
   fontSize: 14,
   borderRadius: 8,
@@ -148,8 +148,8 @@ export default function OnboardingGestorPage() {
     if (step === 1) {
       return (
         <>
-          <h2 style={{ fontSize: 20, fontWeight: 700, color: '#e8eaf0', margin: 0 }}>Configure seu pipeline</h2>
-          <p style={{ fontSize: 13, color: '#6b7280', marginTop: 4, marginBottom: 24 }}>
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Configure seu pipeline</h2>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4, marginBottom: 24 }}>
             Seu pipeline já foi criado com as etapas padrão. Você pode renomear as etapas agora ou depois.
           </p>
 
@@ -173,7 +173,7 @@ export default function OnboardingGestorPage() {
                     }
                   }}
                   onBlur={(e) => {
-                    e.target.style.borderColor = '#22283a'
+                    e.target.style.borderColor = 'var(--border)'
                     e.target.style.boxShadow = 'none'
                   }}
                 />
@@ -183,8 +183,8 @@ export default function OnboardingGestorPage() {
                       flexShrink: 0,
                       fontSize: 11,
                       fontWeight: 600,
-                      color: '#6b7280',
-                      background: '#22283a',
+                      color: 'var(--text-muted)',
+                      background: 'var(--border)',
                       borderRadius: 4,
                       padding: '2px 8px',
                     }}
@@ -196,7 +196,7 @@ export default function OnboardingGestorPage() {
             ))}
           </div>
 
-          <p style={{ fontSize: 12, color: '#6b7280', marginTop: 12 }}>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 12 }}>
             As etapas Venda Realizada e Perdido são fixas.
           </p>
 
@@ -212,8 +212,8 @@ export default function OnboardingGestorPage() {
     if (step === 2) {
       return (
         <>
-          <h2 style={{ fontSize: 20, fontWeight: 700, color: '#e8eaf0', margin: 0 }}>Cadastre sua equipe</h2>
-          <p style={{ fontSize: 13, color: '#6b7280', marginTop: 4, marginBottom: 24 }}>
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Cadastre sua equipe</h2>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4, marginBottom: 24 }}>
             Adicione os vendedores que vão usar o TriboCRM. Eles receberão um convite por e-mail.
           </p>
 
@@ -231,7 +231,7 @@ export default function OnboardingGestorPage() {
                 e.target.style.boxShadow = '0 0 0 3px rgba(249,115,22,0.10)'
               }}
               onBlur={(e) => {
-                e.target.style.borderColor = '#22283a'
+                e.target.style.borderColor = 'var(--border)'
                 e.target.style.boxShadow = 'none'
               }}
             />
@@ -249,7 +249,7 @@ export default function OnboardingGestorPage() {
                 alignItems: 'center',
                 gap: 8,
                 padding: '32px 0',
-                color: '#6b7280',
+                color: 'var(--text-muted)',
               }}
             >
               <Users size={32} />
@@ -264,8 +264,8 @@ export default function OnboardingGestorPage() {
                     display: 'flex',
                     alignItems: 'center',
                     gap: 10,
-                    background: '#111318',
-                    border: '1px solid #22283a',
+                    background: 'var(--bg-surface)',
+                    border: '1px solid var(--border)',
                     borderRadius: 8,
                     padding: '8px 12px',
                   }}
@@ -287,7 +287,7 @@ export default function OnboardingGestorPage() {
                   >
                     {initials(m.email)}
                   </div>
-                  <span style={{ flex: 1, fontSize: 13, color: '#e8eaf0' }}>{m.email}</span>
+                  <span style={{ flex: 1, fontSize: 13, color: 'var(--text-primary)' }}>{m.email}</span>
                   <span
                     style={{
                       fontSize: 11,
@@ -304,14 +304,14 @@ export default function OnboardingGestorPage() {
                     style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}
                     onClick={() => removeMember(m.email)}
                   >
-                    <X size={16} color="#6b7280" />
+                    <X size={16} color="var(--text-muted)" />
                   </button>
                 </div>
               ))}
             </div>
           )}
 
-          <p style={{ fontSize: 12, color: '#6b7280', marginTop: 12 }}>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 12 }}>
             Você pode adicionar mais vendedores depois em Equipe &rarr; Usuários
           </p>
 
@@ -330,8 +330,8 @@ export default function OnboardingGestorPage() {
     /* step 3 */
     return (
       <>
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: '#e8eaf0', margin: 0 }}>Importe seus leads</h2>
-        <p style={{ fontSize: 13, color: '#6b7280', marginTop: 4, marginBottom: 24 }}>
+        <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Importe seus leads</h2>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4, marginBottom: 24 }}>
           Você tem leads em uma planilha? Importe agora ou cadastre manualmente depois.
         </p>
 
@@ -339,8 +339,8 @@ export default function OnboardingGestorPage() {
           {/* card 1 — import */}
           <div
             style={{
-              background: '#111318',
-              border: '1px solid #22283a',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border)',
               borderRadius: 12,
               padding: 20,
               display: 'flex',
@@ -350,8 +350,8 @@ export default function OnboardingGestorPage() {
             }}
           >
             <Upload size={28} color="#f97316" />
-            <span style={{ fontSize: 14, fontWeight: 600, color: '#e8eaf0' }}>Importar via Excel</span>
-            <span style={{ fontSize: 12, color: '#6b7280', textAlign: 'center' }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Importar via Excel</span>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>
               Importe todos os seus leads de uma vez
             </span>
             <button
@@ -373,13 +373,13 @@ export default function OnboardingGestorPage() {
               style={{
                 width: '100%',
                 height: 48,
-                border: '1px dashed #22283a',
+                border: '1px dashed var(--border)',
                 borderRadius: 8,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontSize: 12,
-                color: '#6b7280',
+                color: 'var(--text-muted)',
                 marginTop: 4,
               }}
             >
@@ -390,8 +390,8 @@ export default function OnboardingGestorPage() {
           {/* card 2 — manual */}
           <div
             style={{
-              background: '#111318',
-              border: '1px solid #22283a',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border)',
               borderRadius: 12,
               padding: 20,
               display: 'flex',
@@ -400,12 +400,12 @@ export default function OnboardingGestorPage() {
               gap: 8,
             }}
           >
-            <Plus size={28} color="#6b7280" />
-            <span style={{ fontSize: 14, fontWeight: 600, color: '#e8eaf0' }}>Cadastrar manualmente</span>
-            <span style={{ fontSize: 12, color: '#6b7280', textAlign: 'center' }}>
+            <Plus size={28} color="var(--text-muted)" />
+            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Cadastrar manualmente</span>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>
               Adicione leads um a um pelo pipeline
             </span>
-            <span style={{ fontSize: 12, color: '#6b7280', marginTop: 8 }}>Você pode fazer isso depois</span>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>Você pode fazer isso depois</span>
           </div>
         </div>
 
@@ -429,14 +429,14 @@ export default function OnboardingGestorPage() {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#0a0b0f',
+        background: 'var(--bg)',
         padding: 16,
       }}
     >
       {/* logo */}
       <div style={{ textAlign: 'center', marginBottom: 24 }}>
         <h1 style={{ fontSize: 28, margin: 0, lineHeight: 1 }}>
-          <span style={{ fontWeight: 400, color: '#e8eaf0' }}>Tribo</span>
+          <span style={{ fontWeight: 400, color: 'var(--text-primary)' }}>Tribo</span>
           <span style={{ fontWeight: 800, color: '#f97316' }}>CRM</span>
         </h1>
       </div>
@@ -446,8 +446,8 @@ export default function OnboardingGestorPage() {
         style={{
           width: '100%',
           maxWidth: 640,
-          background: '#161a22',
-          border: '1px solid #22283a',
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border)',
           borderRadius: 16,
           padding: '32px 36px',
           boxShadow: '0 24px 64px rgba(0,0,0,0.4)',

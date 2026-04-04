@@ -19,7 +19,7 @@ interface Plan {
 const plans: Plan[] = [
   {
     name: 'Gratuito',
-    color: '#6b7280',
+    color: 'var(--text-muted)',
     bg: 'rgba(107,114,128,0.12)',
     active: true,
     price: 'R$ 0',
@@ -29,7 +29,7 @@ const plans: Plan[] = [
   },
   {
     name: 'Solo',
-    color: '#6b7280',
+    color: 'var(--text-muted)',
     bg: 'rgba(107,114,128,0.12)',
     active: true,
     price: 'R$ 69',
@@ -85,7 +85,7 @@ export default function PlansPage() {
     <AppLayout menuItems={adminMenuItems}>
       {/* header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 700, color: '#e8eaf0', margin: 0 }}>Planos</h1>
+        <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Planos</h1>
         <button
           style={{
             display: 'flex',
@@ -111,17 +111,17 @@ export default function PlansPage() {
           <div
             key={s.label}
             style={{
-              background: '#161a22',
-              border: '1px solid #22283a',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
               borderRadius: 10,
               padding: '12px 20px',
               flex: 1,
             }}
           >
-            <span style={{ fontSize: 11, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>
               {s.label}
             </span>
-            <p style={{ fontSize: 20, fontWeight: 700, color: '#e8eaf0', margin: '4px 0 0' }}>{s.value}</p>
+            <p style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: '4px 0 0' }}>{s.value}</p>
           </div>
         ))}
       </div>
@@ -132,8 +132,8 @@ export default function PlansPage() {
           <div
             key={p.name}
             style={{
-              background: '#161a22',
-              border: p.highlight ? '2px solid #f97316' : '1px solid #22283a',
+              background: 'var(--bg-card)',
+              border: p.highlight ? '2px solid #f97316' : '1px solid var(--border)',
               borderRadius: 12,
               padding: 24,
               position: 'relative',
@@ -185,8 +185,8 @@ export default function PlansPage() {
 
             {/* price */}
             <div style={{ marginBottom: 16 }}>
-              <span style={{ fontSize: 28, fontWeight: 800, color: '#e8eaf0' }}>{p.price}</span>
-              <span style={{ fontSize: 13, color: '#6b7280', marginLeft: 4 }}>{p.cycle}</span>
+              <span style={{ fontSize: 28, fontWeight: 800, color: 'var(--text-primary)' }}>{p.price}</span>
+              <span style={{ fontSize: 13, color: 'var(--text-muted)', marginLeft: 4 }}>{p.cycle}</span>
             </div>
 
             {/* limits */}
@@ -196,11 +196,11 @@ export default function PlansPage() {
                   key={l}
                   style={{
                     fontSize: 11,
-                    color: '#9ca3af',
-                    background: '#0f1117',
+                    color: 'var(--text-secondary)',
+                    background: 'var(--bg)',
                     borderRadius: 6,
                     padding: '4px 10px',
-                    border: '1px solid #22283a',
+                    border: '1px solid var(--border)',
                   }}
                 >
                   {l}
@@ -209,7 +209,7 @@ export default function PlansPage() {
             </div>
 
             {/* customers */}
-            <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 16px' }}>{p.customers}</p>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 16px' }}>{p.customers}</p>
 
             {/* actions */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -217,8 +217,8 @@ export default function PlansPage() {
                 style={{
                   fontSize: 12,
                   fontWeight: 500,
-                  color: '#e8eaf0',
-                  background: '#22283a',
+                  color: 'var(--text-primary)',
+                  background: 'var(--border)',
                   border: 'none',
                   borderRadius: 6,
                   padding: '6px 14px',
@@ -232,7 +232,7 @@ export default function PlansPage() {
                   onClick={() => setMenuOpen(menuOpen === p.name ? null : p.name)}
                   style={{
                     background: 'none',
-                    border: '1px solid #22283a',
+                    border: '1px solid var(--border)',
                     borderRadius: 6,
                     padding: '5px 8px',
                     cursor: 'pointer',
@@ -240,7 +240,7 @@ export default function PlansPage() {
                     alignItems: 'center',
                   }}
                 >
-                  <MoreHorizontal size={16} color="#6b7280" />
+                  <MoreHorizontal size={16} color="var(--text-muted)" />
                 </button>
                 {menuOpen === p.name && (
                   <div
@@ -249,8 +249,8 @@ export default function PlansPage() {
                       right: 0,
                       top: '100%',
                       marginTop: 4,
-                      background: '#161a22',
-                      border: '1px solid #22283a',
+                      background: 'var(--bg-card)',
+                      border: '1px solid var(--border)',
                       borderRadius: 8,
                       padding: 4,
                       minWidth: 140,
@@ -270,11 +270,11 @@ export default function PlansPage() {
                           border: 'none',
                           padding: '8px 12px',
                           fontSize: 13,
-                          color: action === 'Desativar' ? '#ef4444' : '#e8eaf0',
+                          color: action === 'Desativar' ? '#ef4444' : 'var(--text-primary)',
                           cursor: 'pointer',
                           borderRadius: 6,
                         }}
-                        onMouseEnter={(e) => (e.currentTarget.style.background = '#22283a')}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--border)')}
                         onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
                       >
                         {action}

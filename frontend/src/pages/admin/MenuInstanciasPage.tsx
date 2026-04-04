@@ -14,12 +14,12 @@ interface MenuButton {
 
 const inputS: React.CSSProperties = {
   width: '100%',
-  background: '#111318',
-  border: '1px solid #22283a',
+  background: 'var(--bg-surface)',
+  border: '1px solid var(--border)',
   borderRadius: 8,
   padding: '10px 14px',
   fontSize: 13,
-  color: '#e8eaf0',
+  color: 'var(--text-primary)',
   outline: 'none',
   boxSizing: 'border-box',
   transition: 'border-color 0.2s, box-shadow 0.2s',
@@ -30,7 +30,7 @@ const focusH = (e: React.FocusEvent<HTMLInputElement>) => {
   e.target.style.boxShadow = '0 0 0 3px rgba(249,115,22,0.10)'
 }
 const blurH = (e: React.FocusEvent<HTMLInputElement>) => {
-  e.target.style.borderColor = '#22283a'
+  e.target.style.borderColor = 'var(--border)'
   e.target.style.boxShadow = 'none'
 }
 
@@ -49,7 +49,7 @@ function Toggle({ active, onToggle }: { active: boolean; onToggle: () => void })
         height: 24,
         borderRadius: 12,
         border: 'none',
-        background: active ? '#f97316' : '#22283a',
+        background: active ? '#f97316' : 'var(--border)',
         cursor: 'pointer',
         position: 'relative',
         transition: 'background 0.2s',
@@ -75,8 +75,8 @@ function Toggle({ active, onToggle }: { active: boolean; onToggle: () => void })
 function MenuPreviewItem({ icon: Icon, label }: { icon: typeof GraduationCap; label: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px' }}>
-      <Icon size={16} color="#9ca3af" />
-      <span style={{ fontSize: 13, color: '#9ca3af' }}>{label}</span>
+      <Icon size={16} color="var(--text-secondary)" />
+      <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{label}</span>
     </div>
   )
 }
@@ -105,13 +105,13 @@ export default function MenuInstanciasPage() {
             position: 'fixed',
             top: 24,
             right: 24,
-            background: '#161a22',
-            border: '1px solid #22283a',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border)',
             borderLeft: '4px solid #22c55e',
             borderRadius: 8,
             padding: '12px 16px',
             fontSize: 13,
-            color: '#e8eaf0',
+            color: 'var(--text-primary)',
             zIndex: 60,
             boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
           }}
@@ -122,8 +122,8 @@ export default function MenuInstanciasPage() {
 
       {/* header */}
       <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 700, color: '#e8eaf0', margin: 0 }}>Menu das Instâncias</h1>
-        <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>
+        <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Menu das Instâncias</h1>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '4px 0 0' }}>
           Configure os botões de Mentoria e Treinamentos exibidos para os clientes
         </p>
       </div>
@@ -155,8 +155,8 @@ export default function MenuInstanciasPage() {
             <div
               key={btn.title}
               style={{
-                background: '#161a22',
-                border: '1px solid #22283a',
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
                 borderRadius: 12,
                 padding: 20,
               }}
@@ -165,7 +165,7 @@ export default function MenuInstanciasPage() {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <Icon size={24} color="#f97316" />
-                  <span style={{ fontSize: 16, fontWeight: 700, color: '#e8eaf0' }}>{btn.title}</span>
+                  <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>{btn.title}</span>
                 </div>
                 <Toggle active={btn.active} onToggle={() => update(idx, { active: !btn.active })} />
               </div>
@@ -173,7 +173,7 @@ export default function MenuInstanciasPage() {
               {/* fields */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#9ca3af', marginBottom: 4 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 4 }}>
                     Label do botão
                   </label>
                   <input
@@ -185,7 +185,7 @@ export default function MenuInstanciasPage() {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#9ca3af', marginBottom: 4 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 4 }}>
                     URL de destino
                   </label>
                   <input
@@ -197,7 +197,7 @@ export default function MenuInstanciasPage() {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#9ca3af', marginBottom: 4 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 4 }}>
                     Ordem de exibição
                   </label>
                   <input
@@ -218,7 +218,7 @@ export default function MenuInstanciasPage() {
                     display: 'block',
                     fontSize: 10,
                     fontWeight: 600,
-                    color: '#6b7280',
+                    color: 'var(--text-muted)',
                     textTransform: 'uppercase',
                     letterSpacing: '0.5px',
                     marginBottom: 8,
@@ -228,17 +228,17 @@ export default function MenuInstanciasPage() {
                 </span>
                 <div
                   style={{
-                    background: '#0f1117',
-                    border: '1px solid #22283a',
+                    background: 'var(--bg)',
+                    border: '1px solid var(--border)',
                     borderRadius: 8,
                     padding: 12,
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <Icon size={16} color="#9ca3af" />
-                    <span style={{ fontSize: 13, color: '#9ca3af' }}>{btn.label}</span>
+                    <Icon size={16} color="var(--text-secondary)" />
+                    <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{btn.label}</span>
                   </div>
-                  <span style={{ display: 'block', fontSize: 10, color: '#6b7280', marginTop: 6, fontStyle: 'italic' }}>
+                  <span style={{ display: 'block', fontSize: 10, color: 'var(--text-muted)', marginTop: 6, fontStyle: 'italic' }}>
                     (ao passar o mouse fica laranja)
                   </span>
                 </div>
@@ -270,35 +270,35 @@ export default function MenuInstanciasPage() {
       {/* preview geral */}
       <div
         style={{
-          background: '#161a22',
-          border: '1px solid #22283a',
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border)',
           borderRadius: 12,
           padding: 20,
           marginTop: 20,
         }}
       >
-        <h3 style={{ fontSize: 15, fontWeight: 700, color: '#e8eaf0', margin: 0 }}>Preview do menu lateral dos clientes</h3>
-        <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>
+        <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Preview do menu lateral dos clientes</h3>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '4px 0 0' }}>
           Veja como os botões aparecem no menu de Gestor e Vendedor
         </p>
 
         <div
           style={{
-            background: '#111318',
+            background: 'var(--bg-surface)',
             borderRadius: 8,
             padding: 12,
             maxWidth: 220,
             margin: '16px auto 0',
           }}
         >
-          <div style={{ height: 1, background: '#22283a', margin: '4px 0 8px' }} />
+          <div style={{ height: 1, background: 'var(--border)', margin: '4px 0 8px' }} />
           {buttons
             .filter((b) => b.active)
             .sort((a, b) => a.order - b.order)
             .map((b) => (
               <MenuPreviewItem key={b.title} icon={b.icon} label={b.label} />
             ))}
-          <div style={{ height: 1, background: '#22283a', margin: '8px 0' }} />
+          <div style={{ height: 1, background: 'var(--border)', margin: '8px 0' }} />
           <MenuPreviewItem icon={Moon} label="Modo escuro" />
         </div>
       </div>
@@ -306,20 +306,20 @@ export default function MenuInstanciasPage() {
       {/* histórico */}
       <div
         style={{
-          background: '#161a22',
-          border: '1px solid #22283a',
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border)',
           borderRadius: 12,
           padding: 20,
           marginTop: 20,
         }}
       >
-        <h3 style={{ fontSize: 15, fontWeight: 700, color: '#e8eaf0', margin: '0 0 16px' }}>Histórico de alterações</h3>
+        <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 16px' }}>Histórico de alterações</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {history.map((h, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontSize: 13, color: '#e8eaf0', flex: 1 }}>{h.action}</span>
-              <span style={{ fontSize: 13, color: '#6b7280', flexShrink: 0 }}>{h.user}</span>
-              <span style={{ fontSize: 13, color: '#6b7280', flexShrink: 0, minWidth: 90, textAlign: 'right' }}>{h.time}</span>
+              <span style={{ fontSize: 13, color: 'var(--text-primary)', flex: 1 }}>{h.action}</span>
+              <span style={{ fontSize: 13, color: 'var(--text-muted)', flexShrink: 0 }}>{h.user}</span>
+              <span style={{ fontSize: 13, color: 'var(--text-muted)', flexShrink: 0, minWidth: 90, textAlign: 'right' }}>{h.time}</span>
             </div>
           ))}
         </div>

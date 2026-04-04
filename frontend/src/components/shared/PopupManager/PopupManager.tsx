@@ -151,32 +151,32 @@ export default function PopupManager({ popups }: Props) {
     <>
       <style>{CSS}</style>
       <div onClick={dismiss} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 70, animation: 'popFadeIn 0.2s ease-out' }} />
-      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 480, maxWidth: '90vw', background: '#161a22', border: '1px solid #22283a', borderRadius: 16, zIndex: 71, overflow: 'hidden', animation: 'popScaleIn 0.2s ease-out' }}>
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 480, maxWidth: '90vw', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 71, overflow: 'hidden', animation: 'popScaleIn 0.2s ease-out' }}>
 
         {/* Header */}
-        <div style={{ background: tc.headerBg, padding: '20px 24px', borderBottom: '1px solid #22283a' }}>
+        <div style={{ background: tc.headerBg, padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
             <span style={{ background: target.bg, color: target.color, borderRadius: 4, padding: '2px 8px', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px' }}>{target.label}</span>
             <Icon size={20} color={tc.color} strokeWidth={1.5} />
           </div>
-          <h2 style={{ fontSize: 16, fontWeight: 700, color: '#e8eaf0', margin: 0 }}>{current.title}</h2>
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{current.title}</h2>
         </div>
 
         {/* Body */}
         <div style={{ padding: 24 }}>
-          <p style={{ fontSize: 14, color: '#e8eaf0', lineHeight: 1.6, margin: 0 }}>{current.message}</p>
+          <p style={{ fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.6, margin: 0 }}>{current.message}</p>
           {current.type === 'OVERDUE' && (
             <p style={{ fontSize: 12, color: '#ef4444', marginTop: 8 }}>Acesso completo bloqueado em 5 dias se não regularizado.</p>
           )}
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '16px 24px', borderTop: '1px solid #22283a', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 11, color: '#6b7280' }}>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
             {totalInQueue > 1 ? `Exibindo 1 de ${totalInQueue}` : ''}
           </span>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={dismiss} style={{ background: 'transparent', border: '1px solid #22283a', borderRadius: 8, padding: '8px 16px', fontSize: 13, color: '#9ca3af', cursor: 'pointer' }}>
+            <button onClick={dismiss} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 16px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>
               <X size={14} strokeWidth={1.5} style={{ marginRight: 4, verticalAlign: 'middle' }} />Fechar
             </button>
             {current.ctaLabel && (

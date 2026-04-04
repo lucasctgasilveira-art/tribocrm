@@ -10,8 +10,8 @@ function fmt(v: number) { return v.toLocaleString('pt-BR', { style: 'currency', 
 function metaColor(p: number) { return p >= 80 ? '#22c55e' : p >= 50 ? '#f97316' : '#ef4444' }
 
 const thStyle: React.CSSProperties = { padding: '10px 16px', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, textAlign: 'left' }
-const tdStyle: React.CSSProperties = { padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', borderBottom: '1px solid #22283a' }
-const card: React.CSSProperties = { background: 'var(--bg-card)', border: '1px solid #22283a', borderRadius: 12, overflow: 'hidden' }
+const tdStyle: React.CSSProperties = { padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', borderBottom: '1px solid var(--border)' }
+const card: React.CSSProperties = { background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }
 
 export default function ReportsPage() {
   const [period, setPeriod] = useState<Period>('month')
@@ -86,7 +86,7 @@ export default function ReportsPage() {
             {kpis.map(k => {
               const Icon = k.icon
               return (
-                <div key={k.label} style={{ background: 'var(--bg-card)', border: '1px solid #22283a', borderRadius: 12, padding: 20, position: 'relative' }}>
+                <div key={k.label} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, position: 'relative' }}>
                   <Icon size={20} color={k.iconColor} strokeWidth={1.5} style={{ position: 'absolute', top: 20, right: 20 }} />
                   <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>{k.label}</span>
                   <span style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-primary)', display: 'block' }}>{k.value}</span>
@@ -239,7 +239,7 @@ export default function ReportsPage() {
               <button style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: '1px solid rgba(249,115,22,0.3)', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 500, color: '#f97316', cursor: 'pointer' }}>
                 <Download size={14} strokeWidth={1.5} /> Exportar Excel
               </button>
-              <button style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: '1px solid #22283a', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', cursor: 'pointer' }}>
+              <button style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', cursor: 'pointer' }}>
                 <Download size={14} strokeWidth={1.5} /> Exportar CSV
               </button>
             </div>

@@ -461,7 +461,7 @@ export default function TasksView({ menuItems }: TasksViewProps) {
                       <div
                         key={mt.id}
                         style={{
-                          background: 'var(--bg-card)', border: '1px solid #22283a', borderRadius: 10,
+                          background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10,
                           padding: 14, marginBottom: 8, display: 'flex', gap: 12, alignItems: 'center',
                         }}
                         onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-elevated)'; e.currentTarget.style.borderColor = 'var(--border)' }}
@@ -489,7 +489,7 @@ export default function TasksView({ menuItems }: TasksViewProps) {
                           {mt.participants.map((p, i) => (
                             <div key={p} style={{
                               width: 24, height: 24, borderRadius: '50%',
-                              background: 'var(--border)', border: '2px solid #161a22',
+                              background: 'var(--border)', border: '2px solid var(--bg-card)',
                               fontSize: 9, fontWeight: 700, color: 'var(--text-primary)',
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
                               marginLeft: i > 0 ? -8 : 0, zIndex: mt.participants.length - i,
@@ -499,7 +499,7 @@ export default function TasksView({ menuItems }: TasksViewProps) {
                         <button
                           onClick={() => handleManagerialComplete(mt.id)}
                           style={{
-                            background: 'transparent', border: '1px solid #22283a',
+                            background: 'transparent', border: '1px solid var(--border)',
                             borderRadius: 6, padding: '5px 10px', fontSize: 12,
                             color: 'var(--text-secondary)', cursor: 'pointer',
                             display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0,
@@ -518,19 +518,19 @@ export default function TasksView({ menuItems }: TasksViewProps) {
         {/* Right column — Summary */}
         <div style={{ width: 220, flexShrink: 0 }}>
           <div style={{ position: 'sticky', top: 24 }}>
-            <div style={{ background: 'var(--bg-card)', border: '1px solid #22283a', borderRadius: 12, padding: 16 }}>
+            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 16 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 16 }}>Resumo da semana</div>
 
               <SummaryCard label="Atrasadas" value={String(taskCounts.overdue)} color="#ef4444" />
               <SummaryCard label="Para hoje" value={String(taskCounts.today)} color="#f97316" />
-              <SummaryCard label="Esta semana" value={String(taskCounts.week)} color="#e8eaf0" />
+              <SummaryCard label="Esta semana" value={String(taskCounts.week)} color="var(--text-primary)" />
               <SummaryCard label="Concluídas" value={String(taskCounts.done)} color="#22c55e" />
 
-              <div style={{ borderTop: '1px solid #22283a', margin: '16px 0' }} />
+              <div style={{ borderTop: '1px solid var(--border)', margin: '16px 0' }} />
 
               <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8 }}>Nova tarefa rápida</div>
               <input placeholder="Título da tarefa..." style={{
-                width: '100%', background: 'var(--bg)', border: '1px solid #22283a', borderRadius: 8,
+                width: '100%', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8,
                 padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box',
               }} />
               <button style={{
@@ -544,7 +544,7 @@ export default function TasksView({ menuItems }: TasksViewProps) {
           </div>
         </div>
       </div>
-      {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid #22283a', borderLeft: '4px solid #22c55e', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 60, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>{toast}</div>}
+      {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: '4px solid #22c55e', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 60, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>{toast}</div>}
       {selectedTask && <TaskDrawer task={selectedTask} onClose={() => setSelectedTask(null)} onComplete={handleDrawerComplete} />}
       {newTaskModal && <NewManagerialTaskModal users={availableUsers} onClose={() => setNewTaskModal(false)} onSave={handleCreateManagerialTask} />}
     </AppLayout>
@@ -560,7 +560,7 @@ function TaskGroup({ label, tasks, hoveredId, setHoveredId, toggleDone, selected
 }) {
   return (
     <div style={{ marginBottom: 24 }}>
-      <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', borderBottom: '1px solid #22283a', paddingBottom: 8, marginBottom: 12 }}>
+      <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', borderBottom: '1px solid var(--border)', paddingBottom: 8, marginBottom: 12 }}>
         {label}
       </div>
       {tasks.map((task) => (
@@ -598,7 +598,7 @@ function TaskCard({ task, hovered, selected, onHover, toggleDone, onSelect }: {
         onClick={() => { if (!task.done) toggleDone(task.id) }}
         style={{
           width: 18, height: 18, borderRadius: 4, flexShrink: 0, cursor: task.done ? 'default' : 'pointer', marginTop: 2,
-          border: task.done ? 'none' : '1px solid #22283a',
+          border: task.done ? 'none' : '1px solid var(--border)',
           background: task.done ? '#22c55e' : 'transparent',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}

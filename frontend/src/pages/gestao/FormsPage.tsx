@@ -240,7 +240,7 @@ function EmbedModal({ form, onClose, onCopy }: { form: FormItem; onClose: () => 
               {fields.filter(f => f.required || true).map(f => (
                 <div key={f.label}>
                   <div style={{ fontSize: 11, color: 'var(--border)', marginBottom: 4 }}>{f.label}</div>
-                  <div style={{ background: '#fff', border: '1px solid #d1d5db', borderRadius: 6, padding: '8px 10px', fontSize: 12, color: 'var(--text-secondary)' }}>Digite aqui...</div>
+                  <div style={{ background: '#fff', border: '1px solid var(--text-secondary)', borderRadius: 6, padding: '8px 10px', fontSize: 12, color: 'var(--text-secondary)' }}>Digite aqui...</div>
                 </div>
               ))}
               <button style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 6, padding: '10px 0', fontSize: 13, fontWeight: 600, marginTop: 4 }}>Enviar</button>

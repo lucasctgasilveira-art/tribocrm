@@ -170,7 +170,7 @@ export default function GestaoDashboardPage() {
         {kpiCards.map((kpi) => {
           const Icon = kpi.icon
           return (
-            <div key={kpi.label} style={{ background: 'var(--bg-card)', border: '1px solid #22283a', borderRadius: 12, padding: 20, position: 'relative' }}>
+            <div key={kpi.label} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, position: 'relative' }}>
               <Icon size={20} color={kpi.iconColor} strokeWidth={1.5} style={{ position: 'absolute', top: 20, right: 20 }} />
               <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>{kpi.label}</span>
               <span style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-primary)', display: 'block' }}>{kpi.value}</span>
@@ -180,7 +180,7 @@ export default function GestaoDashboardPage() {
       </div>
 
       {/* Goal Progress */}
-      <div style={{ background: 'var(--bg-card)', border: '1px solid #22283a', borderRadius: 12, padding: 20, marginTop: 20 }}>
+      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginTop: 20 }}>
         {goal ? (
           <>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -204,8 +204,8 @@ export default function GestaoDashboardPage() {
       </div>
 
       {/* Team Performance Table */}
-      <div style={{ background: 'var(--bg-card)', border: '1px solid #22283a', borderRadius: 12, marginTop: 20, overflow: 'hidden' }}>
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid #22283a', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, marginTop: 20, overflow: 'hidden' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Performance da equipe</span>
           <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Por receita · {new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' }).replace(/^\w/, c => c.toUpperCase())}</span>
         </div>
@@ -224,7 +224,7 @@ export default function GestaoDashboardPage() {
             </thead>
             <tbody>
               {teamPerformance.map((m) => (
-                <tr key={m.id} style={{ borderBottom: '1px solid #22283a' }}>
+                <tr key={m.id} style={{ borderBottom: '1px solid var(--border)' }}>
                   <td style={{ padding: '14px 20px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--border)', fontSize: 10, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -250,7 +250,7 @@ export default function GestaoDashboardPage() {
       {/* Approvals + Stale Leads row */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 20 }}>
         {/* Approvals */}
-        <div style={{ background: 'var(--bg-card)', border: '1px solid #22283a', borderRadius: 12, padding: 20 }}>
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
             <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Aprovações pendentes</span>
             {kpis.pendingApprovalsCount > 0 && (
@@ -260,7 +260,7 @@ export default function GestaoDashboardPage() {
           {pendingApprovals.length === 0 ? (
             <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)', fontSize: 13 }}>Nenhuma aprovação pendente</div>
           ) : pendingApprovals.map((a, i) => (
-            <div key={a.id} style={{ padding: '12px 0', borderBottom: i < pendingApprovals.length - 1 ? '1px solid #22283a' : 'none' }}>
+            <div key={a.id} style={{ padding: '12px 0', borderBottom: i < pendingApprovals.length - 1 ? '1px solid var(--border)' : 'none' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                 <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>Desconto {a.discountPercent}% — {a.product.name}</span>
                 <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{timeAgo(a.createdAt)}</span>
@@ -280,7 +280,7 @@ export default function GestaoDashboardPage() {
         </div>
 
         {/* Stale Leads */}
-        <div style={{ background: 'var(--bg-card)', border: '1px solid #22283a', borderRadius: 12, padding: 20 }}>
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
             <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Leads sem interação</span>
             {inactiveLeads.length > 0 && (
@@ -293,7 +293,7 @@ export default function GestaoDashboardPage() {
             const days = lead.daysSinceContact
             const dayColor = days !== null && days >= 6 ? '#ef4444' : '#f59e0b'
             return (
-              <div key={lead.id} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '10px 0', borderBottom: i < inactiveLeads.length - 1 ? '1px solid #22283a' : 'none' }}>
+              <div key={lead.id} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '10px 0', borderBottom: i < inactiveLeads.length - 1 ? '1px solid var(--border)' : 'none' }}>
                 <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--border)', fontSize: 10, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   {ini(lead.responsible.name)}
                 </div>

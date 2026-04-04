@@ -45,20 +45,20 @@ export default function InstanceSelectorPage() {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#0a0b0f',
+        background: 'var(--bg)',
         padding: 16,
       }}
     >
       {/* Logo */}
       <div style={{ textAlign: 'center', marginBottom: 12 }}>
         <h1 style={{ fontSize: 28, margin: 0, lineHeight: 1 }}>
-          <span style={{ fontWeight: 400, color: '#e8eaf0' }}>Tribo</span>
+          <span style={{ fontWeight: 400, color: 'var(--text-primary)' }}>Tribo</span>
           <span style={{ fontWeight: 800, color: '#f97316' }}>CRM</span>
         </h1>
       </div>
 
       {/* Subtitle */}
-      <p style={{ fontSize: 16, color: '#9ca3af', marginBottom: 40, marginTop: 0 }}>
+      <p style={{ fontSize: 16, color: 'var(--text-secondary)', marginBottom: 40, marginTop: 0 }}>
         Como deseja entrar?
       </p>
 
@@ -74,8 +74,8 @@ export default function InstanceSelectorPage() {
               onMouseEnter={() => setHoveredIndex(index)}
               onMouseLeave={() => setHoveredIndex(null)}
               style={{
-                background: isHovered ? '#1c2130' : '#161a22',
-                border: `1px solid ${isHovered ? '#f97316' : '#22283a'}`,
+                background: isHovered ? 'var(--bg-elevated)' : 'var(--bg-card)',
+                border: `1px solid ${isHovered ? '#f97316' : 'var(--border)'}`,
                 borderRadius: 16,
                 padding: '32px 40px',
                 cursor: 'pointer',
@@ -88,8 +88,8 @@ export default function InstanceSelectorPage() {
               }}
             >
               <Icon size={32} color="#f97316" strokeWidth={1.5} style={{ marginBottom: 16 }} />
-              <span style={{ fontSize: 17, fontWeight: 700, color: '#e8eaf0' }}>{card.title}</span>
-              <span style={{ fontSize: 13, color: '#6b7280', marginTop: 6 }}>{card.subtitle}</span>
+              <span style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)' }}>{card.title}</span>
+              <span style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 6 }}>{card.subtitle}</span>
             </div>
           )
         })}

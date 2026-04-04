@@ -38,7 +38,7 @@ const logs: LogEntry[] = [
 const thS: React.CSSProperties = {
   padding: '12px 20px',
   fontSize: 11,
-  color: '#6b7280',
+  color: 'var(--text-muted)',
   textTransform: 'uppercase',
   letterSpacing: '1px',
   fontWeight: 600,
@@ -47,17 +47,17 @@ const thS: React.CSSProperties = {
 const tdS: React.CSSProperties = {
   padding: '14px 20px',
   fontSize: 13,
-  color: '#e8eaf0',
-  borderBottom: '1px solid #22283a',
+  color: 'var(--text-primary)',
+  borderBottom: '1px solid var(--border)',
 }
 
 const selectS: React.CSSProperties = {
-  background: '#111318',
-  border: '1px solid #22283a',
+  background: 'var(--bg-surface)',
+  border: '1px solid var(--border)',
   borderRadius: 8,
   padding: '8px 12px',
   fontSize: 13,
-  color: '#e8eaf0',
+  color: 'var(--text-primary)',
   outline: 'none',
   cursor: 'pointer',
   appearance: 'none',
@@ -95,8 +95,8 @@ export default function LogsPage() {
     <AppLayout menuItems={adminMenuItems}>
       {/* header */}
       <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 700, color: '#e8eaf0', margin: 0 }}>Logs do Sistema</h1>
-        <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>Auditoria e monitoramento</p>
+        <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Logs do Sistema</h1>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '4px 0 0' }}>Auditoria e monitoramento</p>
       </div>
 
       {/* filters */}
@@ -114,24 +114,24 @@ export default function LogsPage() {
         </select>
 
         <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
-          <Search size={16} color="#6b7280" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
+          <Search size={16} color="var(--text-muted)" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar por usuário ou ação..."
             style={{
               width: '100%',
-              background: '#111318',
-              border: '1px solid #22283a',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border)',
               borderRadius: 8,
               padding: '8px 12px 8px 36px',
               fontSize: 13,
-              color: '#e8eaf0',
+              color: 'var(--text-primary)',
               outline: 'none',
               boxSizing: 'border-box',
             }}
             onFocus={(e) => { e.target.style.borderColor = '#f97316'; e.target.style.boxShadow = '0 0 0 3px rgba(249,115,22,0.10)' }}
-            onBlur={(e) => { e.target.style.borderColor = '#22283a'; e.target.style.boxShadow = 'none' }}
+            onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none' }}
           />
         </div>
 
@@ -141,11 +141,11 @@ export default function LogsPage() {
             alignItems: 'center',
             gap: 6,
             background: 'none',
-            border: '1px solid #22283a',
+            border: '1px solid var(--border)',
             borderRadius: 8,
             padding: '8px 14px',
             fontSize: 13,
-            color: '#e8eaf0',
+            color: 'var(--text-primary)',
             cursor: 'pointer',
           }}
         >
@@ -165,9 +165,9 @@ export default function LogsPage() {
               fontSize: 12,
               fontWeight: 500,
               cursor: 'pointer',
-              background: tab === t.key ? 'rgba(249,115,22,0.12)' : '#161a22',
-              border: `1px solid ${tab === t.key ? '#f97316' : '#22283a'}`,
-              color: tab === t.key ? '#f97316' : '#6b7280',
+              background: tab === t.key ? 'rgba(249,115,22,0.12)' : 'var(--bg-card)',
+              border: `1px solid ${tab === t.key ? '#f97316' : 'var(--border)'}`,
+              color: tab === t.key ? '#f97316' : 'var(--text-muted)',
             }}
           >
             {t.label}
@@ -176,10 +176,10 @@ export default function LogsPage() {
       </div>
 
       {/* table */}
-      <div style={{ background: '#161a22', border: '1px solid #22283a', borderRadius: 12, overflow: 'hidden' }}>
+      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ borderBottom: '1px solid #22283a' }}>
+            <tr style={{ borderBottom: '1px solid var(--border)' }}>
               <th style={thS}>Tipo</th>
               <th style={thS}>Descrição</th>
               <th style={thS}>Usuário / Tenant</th>
@@ -198,15 +198,15 @@ export default function LogsPage() {
                     </span>
                   </td>
                   <td style={tdS}>{l.description}</td>
-                  <td style={{ ...tdS, color: '#9ca3af' }}>{l.user}</td>
-                  <td style={{ ...tdS, fontFamily: 'monospace', fontSize: 12, color: '#6b7280' }}>{l.ip}</td>
-                  <td style={{ ...tdS, color: '#6b7280', fontSize: 12, whiteSpace: 'nowrap' }}>{l.date}</td>
+                  <td style={{ ...tdS, color: 'var(--text-secondary)' }}>{l.user}</td>
+                  <td style={{ ...tdS, fontFamily: 'monospace', fontSize: 12, color: 'var(--text-muted)' }}>{l.ip}</td>
+                  <td style={{ ...tdS, color: 'var(--text-muted)', fontSize: 12, whiteSpace: 'nowrap' }}>{l.date}</td>
                 </tr>
               )
             })}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={5} style={{ ...tdS, textAlign: 'center', color: '#6b7280', padding: 32 }}>
+                <td colSpan={5} style={{ ...tdS, textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>
                   Nenhum log encontrado
                 </td>
               </tr>

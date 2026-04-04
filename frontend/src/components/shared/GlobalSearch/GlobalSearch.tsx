@@ -22,7 +22,7 @@ const mockResults: SearchResult[] = [
     group: 'LEADS',
     items: [
       { type: 'lead', initials: 'CT', title: 'Camila Torres', subtitle: 'Torres & Filhos', badge: 'Negociando', badgeColor: '#f59e0b', url: '/gestao/leads/1' },
-      { type: 'lead', initials: 'RM', title: 'Rafael Mendes', subtitle: 'MendesNet', badge: 'Sem Contato', badgeColor: '#6b7280', url: '/gestao/leads/2' },
+      { type: 'lead', initials: 'RM', title: 'Rafael Mendes', subtitle: 'MendesNet', badge: 'Sem Contato', badgeColor: 'var(--text-muted)', url: '/gestao/leads/2' },
     ],
   },
   {
@@ -93,8 +93,8 @@ export default function GlobalSearch({ open, onClose }: GlobalSearchProps) {
         style={{
           width: 560,
           maxWidth: '90vw',
-          background: '#161a22',
-          border: '1px solid #22283a',
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border)',
           borderRadius: 16,
           boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
           overflow: 'hidden',
@@ -110,10 +110,10 @@ export default function GlobalSearch({ open, onClose }: GlobalSearchProps) {
             alignItems: 'center',
             gap: 10,
             padding: '16px 20px',
-            borderBottom: '1px solid #22283a',
+            borderBottom: '1px solid var(--border)',
           }}
         >
-          <Search size={18} color="#6b7280" style={{ flexShrink: 0 }} />
+          <Search size={18} color="var(--text-muted)" style={{ flexShrink: 0 }} />
           <input
             ref={inputRef}
             value={query}
@@ -125,13 +125,13 @@ export default function GlobalSearch({ open, onClose }: GlobalSearchProps) {
               border: 'none',
               outline: 'none',
               fontSize: 16,
-              color: '#e8eaf0',
+              color: 'var(--text-primary)',
             }}
           />
           <span
             style={{
-              background: '#22283a',
-              color: '#6b7280',
+              background: 'var(--border)',
+              color: 'var(--text-muted)',
               borderRadius: 4,
               padding: '2px 6px',
               fontSize: 11,
@@ -146,10 +146,10 @@ export default function GlobalSearch({ open, onClose }: GlobalSearchProps) {
         <div style={{ overflowY: 'auto', flex: 1 }}>
           {!showResults ? (
             <div style={{ padding: 32, textAlign: 'center' }}>
-              <p style={{ color: '#6b7280', fontSize: 14, margin: '0 0 8px' }}>
+              <p style={{ color: 'var(--text-muted)', fontSize: 14, margin: '0 0 8px' }}>
                 Busque por leads, tarefas ou contatos
               </p>
-              <p style={{ color: '#6b7280', fontSize: 12, margin: 0 }}>
+              <p style={{ color: 'var(--text-muted)', fontSize: 12, margin: 0 }}>
                 Dica: use ↑↓ para navegar e Enter para abrir
               </p>
             </div>
@@ -161,7 +161,7 @@ export default function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                     style={{
                       fontSize: 10,
                       fontWeight: 600,
-                      color: '#6b7280',
+                      color: 'var(--text-muted)',
                       textTransform: 'uppercase',
                       letterSpacing: '0.5px',
                       padding: '12px 20px 4px',
@@ -192,13 +192,13 @@ export default function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                               width: 32,
                               height: 32,
                               borderRadius: '50%',
-                              background: '#22283a',
+                              background: 'var(--border)',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
                               fontSize: 11,
                               fontWeight: 700,
-                              color: '#e8eaf0',
+                              color: 'var(--text-primary)',
                               flexShrink: 0,
                             }}
                           >
@@ -222,11 +222,11 @@ export default function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                         ) : null}
 
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 500, color: '#e8eaf0' }}>{item.title}</div>
+                          <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{item.title}</div>
                           <div
                             style={{
                               fontSize: 12,
-                              color: item.subtitle.includes('Atrasada') ? '#ef4444' : '#6b7280',
+                              color: item.subtitle.includes('Atrasada') ? '#ef4444' : 'var(--text-muted)',
                               marginTop: 1,
                             }}
                           >
@@ -259,7 +259,7 @@ export default function GlobalSearch({ open, onClose }: GlobalSearchProps) {
         </div>
       </div>
 
-      <style>{`::placeholder { color: #6b7280 !important; }`}</style>
+      <style>{`::placeholder { color: var(--text-muted) !important; }`}</style>
     </div>
   )
 }

@@ -93,7 +93,7 @@ export default function VendasDashboardPage() {
       <AppLayout menuItems={vendasMenuItems}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 'calc(100vh - 108px)', gap: 10 }}>
           <Loader2 size={24} color="#f97316" strokeWidth={1.5} className="animate-spin" />
-          <span style={{ fontSize: 14, color: '#6b7280' }}>Carregando dashboard...</span>
+          <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>Carregando dashboard...</span>
         </div>
       </AppLayout>
     )
@@ -118,10 +118,10 @@ export default function VendasDashboardPage() {
     <AppLayout menuItems={vendasMenuItems}>
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#e8eaf0', margin: 0 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
           {getGreeting()}, {getUserFirstName()}!
         </h1>
-        <p style={{ fontSize: 14, color: '#6b7280', marginTop: 4 }}>Veja como está seu desempenho hoje.</p>
+        <p style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 4 }}>Veja como está seu desempenho hoje.</p>
       </div>
 
       {/* KPI Row */}
@@ -129,54 +129,54 @@ export default function VendasDashboardPage() {
         {kpiCards.map((kpi) => {
           const Icon = kpi.icon
           return (
-            <div key={kpi.label} style={{ background: '#161a22', border: '1px solid #22283a', borderRadius: 12, padding: 20, position: 'relative' }}>
+            <div key={kpi.label} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, position: 'relative' }}>
               <Icon size={20} color={kpi.iconColor} strokeWidth={1.5} style={{ position: 'absolute', top: 20, right: 20 }} />
-              <span style={{ fontSize: 12, color: '#6b7280', display: 'block', marginBottom: 6 }}>{kpi.label}</span>
-              <span style={{ fontSize: 28, fontWeight: 700, color: '#e8eaf0', display: 'block' }}>{kpi.value}</span>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>{kpi.label}</span>
+              <span style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-primary)', display: 'block' }}>{kpi.value}</span>
             </div>
           )
         })}
       </div>
 
       {/* Goal Progress */}
-      <div style={{ background: '#161a22', border: '1px solid #22283a', borderRadius: 12, padding: 20, marginTop: 20 }}>
+      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginTop: 20 }}>
         {myGoal ? (
           <>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 14, fontWeight: 600, color: '#e8eaf0' }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
                 Minha Meta de {new Date().toLocaleString('pt-BR', { month: 'long' }).replace(/^\w/, c => c.toUpperCase())}
               </span>
               <span style={{ fontSize: 13, fontWeight: 600, color: barColor(myGoal.percentage) }}>{myGoal.percentage}% concluído</span>
             </div>
-            <div style={{ background: '#22283a', borderRadius: 999, height: 8, margin: '12px 0' }}>
+            <div style={{ background: 'var(--border)', borderRadius: 999, height: 8, margin: '12px 0' }}>
               <div style={{ width: `${Math.min(myGoal.percentage, 100)}%`, height: '100%', background: 'linear-gradient(to right, #f97316, #fb923c)', borderRadius: 999 }} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-              <span style={{ color: '#e8eaf0' }}>{fmt(myGoal.current)} realizados</span>
-              <span style={{ color: '#6b7280' }}>Meta: {fmt(myGoal.revenueGoal)}</span>
+              <span style={{ color: 'var(--text-primary)' }}>{fmt(myGoal.current)} realizados</span>
+              <span style={{ color: 'var(--text-muted)' }}>Meta: {fmt(myGoal.revenueGoal)}</span>
               <span style={{ color: '#22c55e' }}>Faltam {fmt(Math.max(0, myGoal.revenueGoal - myGoal.current))}</span>
             </div>
-            {goalData && <div style={{ fontSize: 11, color: '#6b7280', marginTop: 8 }}>{goalData.daysRemaining} dias restantes</div>}
+            {goalData && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>{goalData.daysRemaining} dias restantes</div>}
           </>
         ) : (
-          <div style={{ textAlign: 'center', padding: 12, color: '#6b7280', fontSize: 13 }}>Nenhuma meta configurada para este mês.</div>
+          <div style={{ textAlign: 'center', padding: 12, color: 'var(--text-muted)', fontSize: 13 }}>Nenhuma meta configurada para este mês.</div>
         )}
       </div>
 
       {/* Inactive leads */}
-      <div style={{ background: '#161a22', border: '1px solid #22283a', borderRadius: 12, padding: 20, marginTop: 20 }}>
+      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginTop: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: '#e8eaf0' }}>Leads sem interação</span>
+          <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Leads sem interação</span>
           <span onClick={() => navigate('/vendas/pipeline')} style={{ fontSize: 12, color: '#f97316', cursor: 'pointer' }}>Ver pipeline →</span>
         </div>
         {inactiveLeads.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 12, color: '#6b7280', fontSize: 13 }}>Todos os leads estão em dia</div>
+          <div style={{ textAlign: 'center', padding: 12, color: 'var(--text-muted)', fontSize: 13 }}>Todos os leads estão em dia</div>
         ) : inactiveLeads.map((lead, i) => (
-          <div key={lead.id} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '10px 0', borderBottom: i < inactiveLeads.length - 1 ? '1px solid #22283a' : 'none' }}>
-            <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#22283a', fontSize: 10, fontWeight: 700, color: '#e8eaf0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{ini(lead.name)}</div>
+          <div key={lead.id} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '10px 0', borderBottom: i < inactiveLeads.length - 1 ? '1px solid var(--border)' : 'none' }}>
+            <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--border)', fontSize: 10, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{ini(lead.name)}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 500, color: '#e8eaf0' }}>{lead.name}</div>
-              <div style={{ fontSize: 12, color: '#6b7280' }}>{lead.company ?? '—'} · {lead.stage.name}</div>
+              <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{lead.name}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{lead.company ?? '—'} · {lead.stage.name}</div>
             </div>
             <span style={{ fontSize: 11, color: lead.daysSinceContact !== null && lead.daysSinceContact >= 6 ? '#ef4444' : '#f59e0b', background: lead.daysSinceContact !== null && lead.daysSinceContact >= 6 ? 'rgba(239,68,68,0.12)' : 'rgba(245,158,11,0.12)', padding: '2px 8px', borderRadius: 999, fontWeight: 600, flexShrink: 0 }}>
               {lead.daysSinceContact !== null ? `${lead.daysSinceContact}d` : 'Nunca'}

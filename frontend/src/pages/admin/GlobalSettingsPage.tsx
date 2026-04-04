@@ -64,12 +64,12 @@ const emailTemplates: EmailTemplate[] = [
 
 const inputS: React.CSSProperties = {
   width: '100%',
-  background: '#111318',
-  border: '1px solid #22283a',
+  background: 'var(--bg-surface)',
+  border: '1px solid var(--border)',
   borderRadius: 8,
   padding: '10px 14px',
   fontSize: 13,
-  color: '#e8eaf0',
+  color: 'var(--text-primary)',
   outline: 'none',
   boxSizing: 'border-box',
   transition: 'border-color 0.2s, box-shadow 0.2s',
@@ -80,7 +80,7 @@ const focusH = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => 
   e.target.style.boxShadow = '0 0 0 3px rgba(249,115,22,0.10)'
 }
 const blurH = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-  e.target.style.borderColor = '#22283a'
+  e.target.style.borderColor = 'var(--border)'
   e.target.style.boxShadow = 'none'
 }
 
@@ -141,7 +141,7 @@ export default function GlobalSettingsPage() {
   const thS: React.CSSProperties = {
     padding: '10px 14px',
     fontSize: 11,
-    color: '#6b7280',
+    color: 'var(--text-muted)',
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
     fontWeight: 600,
@@ -149,7 +149,7 @@ export default function GlobalSettingsPage() {
   }
   const tdS: React.CSSProperties = {
     padding: '8px 14px',
-    borderBottom: '1px solid #22283a',
+    borderBottom: '1px solid var(--border)',
   }
 
   return (
@@ -160,13 +160,13 @@ export default function GlobalSettingsPage() {
             position: 'fixed',
             top: 24,
             right: 24,
-            background: '#161a22',
-            border: '1px solid #22283a',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border)',
             borderLeft: '4px solid #22c55e',
             borderRadius: 8,
             padding: '12px 16px',
             fontSize: 13,
-            color: '#e8eaf0',
+            color: 'var(--text-primary)',
             zIndex: 60,
             boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
           }}
@@ -177,8 +177,8 @@ export default function GlobalSettingsPage() {
 
       {/* header */}
       <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 700, color: '#e8eaf0', margin: 0 }}>Configurações Globais</h1>
-        <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>Parâmetros do sistema e textos automáticos</p>
+        <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Configurações Globais</h1>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '4px 0 0' }}>Parâmetros do sistema e textos automáticos</p>
       </div>
 
       {/* tabs */}
@@ -193,9 +193,9 @@ export default function GlobalSettingsPage() {
               fontSize: 12,
               fontWeight: 500,
               cursor: 'pointer',
-              background: tab === t.key ? 'rgba(249,115,22,0.12)' : '#161a22',
-              border: `1px solid ${tab === t.key ? '#f97316' : '#22283a'}`,
-              color: tab === t.key ? '#f97316' : '#6b7280',
+              background: tab === t.key ? 'rgba(249,115,22,0.12)' : 'var(--bg-card)',
+              border: `1px solid ${tab === t.key ? '#f97316' : 'var(--border)'}`,
+              color: tab === t.key ? '#f97316' : 'var(--text-muted)',
             }}
           >
             {t.label}
@@ -210,14 +210,14 @@ export default function GlobalSettingsPage() {
             <div
               key={tpl.label}
               style={{
-                background: '#161a22',
-                border: '1px solid #22283a',
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
                 borderRadius: 12,
                 padding: 20,
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: '#e8eaf0' }}>{tpl.label}</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{tpl.label}</span>
                 <span
                   style={{
                     fontSize: 10,
@@ -230,10 +230,10 @@ export default function GlobalSettingsPage() {
                 >
                   {tpl.badge}
                 </span>
-                <span style={{ fontSize: 11, color: '#6b7280' }}>{tpl.note}</span>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{tpl.note}</span>
               </div>
 
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#9ca3af', marginBottom: 4 }}>Assunto</label>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 4 }}>Assunto</label>
               <input
                 value={subjects[i]}
                 onChange={(e) => {
@@ -246,7 +246,7 @@ export default function GlobalSettingsPage() {
                 onBlur={blurH}
               />
 
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#9ca3af', marginBottom: 4 }}>Corpo</label>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 4 }}>Corpo</label>
               <textarea
                 value={bodies[i]}
                 onChange={(e) => {
@@ -286,8 +286,8 @@ export default function GlobalSettingsPage() {
       {tab === 'security' && (
         <div
           style={{
-            background: '#161a22',
-            border: '1px solid #22283a',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border)',
             borderRadius: 12,
             padding: 24,
           }}
@@ -301,7 +301,7 @@ export default function GlobalSettingsPage() {
               { label: 'Rate limit (requisições por 15 min por IP)', key: 'rateLimit' as const, value: security.rateLimit },
             ].map((f) => (
               <div key={f.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-                <label style={{ fontSize: 13, color: '#e8eaf0', fontWeight: 500 }}>{f.label}</label>
+                <label style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{f.label}</label>
                 <input
                   type="number"
                   value={f.value}
@@ -315,7 +315,7 @@ export default function GlobalSettingsPage() {
 
             {/* toggle */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <label style={{ fontSize: 13, color: '#e8eaf0', fontWeight: 500 }}>Forçar 2FA para todos os Super Admins</label>
+              <label style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>Forçar 2FA para todos os Super Admins</label>
               <button
                 onClick={() => setSecurity({ ...security, force2FA: !security.force2FA })}
                 style={{
@@ -323,7 +323,7 @@ export default function GlobalSettingsPage() {
                   height: 24,
                   borderRadius: 12,
                   border: 'none',
-                  background: security.force2FA ? '#f97316' : '#22283a',
+                  background: security.force2FA ? '#f97316' : 'var(--border)',
                   cursor: 'pointer',
                   position: 'relative',
                   transition: 'background 0.2s',
@@ -370,15 +370,15 @@ export default function GlobalSettingsPage() {
       {tab === 'limits' && (
         <div
           style={{
-            background: '#161a22',
-            border: '1px solid #22283a',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border)',
             borderRadius: 12,
             overflow: 'hidden',
           }}
         >
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid #22283a' }}>
+              <tr style={{ borderBottom: '1px solid var(--border)' }}>
                 {['Plano', 'Usuários', 'Leads', 'Pipelines', 'Automações', 'Formulários', 'Modelos E-mail', 'Modelos WPP'].map((h) => (
                   <th key={h} style={thS}>{h}</th>
                 ))}
@@ -387,7 +387,7 @@ export default function GlobalSettingsPage() {
             <tbody>
               {limits.map((row, ri) => (
                 <tr key={row.plan}>
-                  <td style={{ ...tdS, fontSize: 13, fontWeight: 600, color: '#e8eaf0' }}>{row.plan}</td>
+                  <td style={{ ...tdS, fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{row.plan}</td>
                   {(['users', 'leads', 'pipelines', 'automations', 'forms', 'emailTemplates', 'wppTemplates'] as const).map((col) => (
                     <td key={col} style={tdS}>
                       <input
@@ -400,17 +400,17 @@ export default function GlobalSettingsPage() {
                         }}
                         style={{
                           width: 72,
-                          background: '#111318',
-                          border: '1px solid #22283a',
+                          background: 'var(--bg-surface)',
+                          border: '1px solid var(--border)',
                           borderRadius: 6,
                           padding: '6px 8px',
                           fontSize: 13,
-                          color: '#e8eaf0',
+                          color: 'var(--text-primary)',
                           textAlign: 'center',
                           outline: 'none',
                         }}
                         onFocus={(e) => { e.target.style.borderColor = '#f97316' }}
-                        onBlur={(e) => { e.target.style.borderColor = '#22283a' }}
+                        onBlur={(e) => { e.target.style.borderColor = 'var(--border)' }}
                       />
                     </td>
                   ))}
@@ -419,7 +419,7 @@ export default function GlobalSettingsPage() {
             </tbody>
           </table>
 
-          <div style={{ padding: '16px 20px', display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #22283a' }}>
+          <div style={{ padding: '16px 20px', display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--border)' }}>
             <button
               onClick={() => showToast('Limites dos planos salvos')}
               style={{
