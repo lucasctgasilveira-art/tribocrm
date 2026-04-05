@@ -81,19 +81,20 @@ export async function createPixCharge(tenantId: string, chargeData: PixChargeDat
 
   console.log('[Efi PIX] Creating charge:', JSON.stringify({ txid, value: valueStr, debtor: cobBody.devedor, chave: cobBody.chave }))
 
-  // Step 1: Create immediate charge
-  const cob = await efi.pixCreateImmediateCharge({ txid } as any, cobBody) as any
+  // Step 1: Create immediate charge — SDK returns object directly (no .data wrapper)
+  const cob = await efi.pixCreateImmediateCharge([] as any, cobBody) as any
+  console.log('[Efi PIX] cob keys:', Object.keys(cob || {}))
   console.log('[Efi PIX] Full response:', JSON.stringify(cob, null, 2))
 
   const locId = cob?.loc?.id
   const pixCopiaECola = cob?.pixCopiaECola ?? cob?.location ?? ''
 
-  // Step 2: Generate QR Code (may fail in sandbox)
+  // Step 2: Generate QR Code — SDK returns object directly (no .data wrapper)
   let qrCode = ''
   if (locId) {
     try {
       const qr = await efi.pixGenerateQRCode({ id: locId } as any) as any
-      console.log('[Efi PIX] QR response keys:', qr ? Object.keys(qr) : 'null')
+      console.log('[Efi PIX] QR keys:', Object.keys(qr || {}))
       qrCode = qr?.imagemQrcode ?? ''
     } catch (qrErr: any) {
       console.warn('[Efi PIX] QR code generation failed (sandbox?):', qrErr.message ?? qrErr)
@@ -178,11 +179,13 @@ export async function createBoletoCharge(tenantId: string, chargeData: BoletoCha
     },
   } as any) as any
 
+  console.log('[Efi Boleto] keys:', Object.keys(charge || {}))
   console.log('[Efi Boleto] Charge response:', JSON.stringify(charge, null, 2))
 
-  const chargeId = String(charge.data?.charge_id ?? charge.charge_id ?? Date.now())
-  const boletoUrl = charge.data?.billet_link ?? charge.data?.pdf?.charge ?? charge.billet_link ?? ''
-  const barCode = charge.data?.barcode ?? charge.barcode ?? ''
+  // SDK returns object directly — no .data wrapper
+  const chargeId = String(charge?.charge_id ?? charge?.data?.charge_id ?? Date.now())
+  const boletoUrl = charge?.billet_link ?? charge?.pdf?.charge ?? charge?.data?.billet_link ?? ''
+  const barCode = charge?.barcode ?? charge?.data?.barcode ?? ''
 
   // Save to database
   await prisma.charge.create({
