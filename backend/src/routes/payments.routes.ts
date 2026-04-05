@@ -5,6 +5,7 @@ import {
   createBoletoCharge,
   getChargeStatus,
   processWebhookPayment,
+  registerPixWebhook,
 } from '../services/efi.service'
 
 const router = Router()
@@ -55,6 +56,24 @@ router.get('/:txid/status', authMiddleware, async (req: Request, res: Response) 
     res.json({ success: true, data: result })
   } catch (error: any) {
     res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: error.message } })
+  }
+})
+
+// ── Setup Webhook ──
+
+router.post('/setup-webhook', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { role } = req.user!
+    if (role !== 'OWNER') {
+      res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Apenas o dono pode configurar webhooks' } })
+      return
+    }
+
+    const result = await registerPixWebhook()
+    res.json({ success: true, data: result })
+  } catch (error: any) {
+    console.error('[Payments] setup-webhook error:', error)
+    res.status(500).json({ success: false, error: { code: 'WEBHOOK_ERROR', message: error.message } })
   }
 })
 

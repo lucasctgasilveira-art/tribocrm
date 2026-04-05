@@ -169,6 +169,21 @@ export async function cancelCharge(txid: string): Promise<void> {
   })
 }
 
+// ── Webhook Registration ──
+
+const WEBHOOK_URL = 'https://tribocrm-production.up.railway.app/payments/webhook/efi'
+
+export async function registerPixWebhook(): Promise<{ url: string }> {
+  const efi = getClient()
+  const pixKey = process.env.EFI_PIX_KEY ?? ''
+
+  if (!pixKey) throw new Error('EFI_PIX_KEY not configured')
+
+  await efi.pixConfigWebhook({ chave: pixKey } as any, { webhookUrl: WEBHOOK_URL } as any)
+
+  return { url: WEBHOOK_URL }
+}
+
 // ── Webhook Processing ──
 
 export async function processWebhookPayment(txid: string): Promise<void> {
