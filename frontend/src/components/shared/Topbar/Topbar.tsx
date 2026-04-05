@@ -418,7 +418,7 @@ function ProfileModal({ userName, onClose }: { userName: string; onClose: () => 
     try {
       const fd = new FormData()
       fd.append('avatar', file)
-      const res = await api.patch('/users/me', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+      const res = await api.patch('/users/me', fd)
       const url = res.data.data.avatarUrl
       setAvatarUrl(url)
       const s = JSON.parse(localStorage.getItem('user') ?? '{}')
