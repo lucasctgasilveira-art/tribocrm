@@ -86,8 +86,14 @@ interface TopbarProps {
 }
 
 export default function Topbar({ onOpenSearch }: TopbarProps) {
-  const user = JSON.parse(localStorage.getItem('user') ?? '{}') as { name?: string }
-  const initials = getInitials(user.name ?? 'U')
+  const [userState, setUserState] = useState(() => JSON.parse(localStorage.getItem('user') ?? '{}') as { name?: string; avatarUrl?: string; email?: string })
+  const initials = getInitials(userState.name ?? 'U')
+
+  useEffect(() => {
+    function onUserUpdated() { setUserState(JSON.parse(localStorage.getItem('user') ?? '{}')) }
+    window.addEventListener('userUpdated', onUserUpdated)
+    return () => window.removeEventListener('userUpdated', onUserUpdated)
+  }, [])
 
   const [showNotif, setShowNotif] = useState(false)
   const [notifications, setNotifications] = useState<DisplayNotification[]>([])
@@ -334,7 +340,7 @@ export default function Topbar({ onOpenSearch }: TopbarProps) {
         </div>
 
         {/* Avatar + User Menu */}
-        <UserMenu initials={initials} userName={user.name ?? ''} userEmail={JSON.parse(localStorage.getItem('user') ?? '{}').email ?? ''} />
+        <UserMenu initials={initials} userName={userState.name ?? ''} userEmail={userState.email ?? ''} avatarUrl={userState.avatarUrl ?? ''} />
       </div>
     </header>
   )
@@ -342,7 +348,7 @@ export default function Topbar({ onOpenSearch }: TopbarProps) {
 
 // ── User Menu ──
 
-function UserMenu({ initials, userName, userEmail }: { initials: string; userName: string; userEmail: string }) {
+function UserMenu({ initials, userName, userEmail, avatarUrl }: { initials: string; userName: string; userEmail: string; avatarUrl: string }) {
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const [profileModal, setProfileModal] = useState(false)
@@ -364,9 +370,13 @@ function UserMenu({ initials, userName, userEmail }: { initials: string; userNam
 
   return (
     <div ref={menuRef} style={{ position: 'relative' }}>
-      <div onClick={() => setOpen(!open)} style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)', color: '#fff', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-        {initials}
-      </div>
+      {avatarUrl ? (
+        <img onClick={() => setOpen(!open)} src={avatarUrl} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', cursor: 'pointer' }} />
+      ) : (
+        <div onClick={() => setOpen(!open)} style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)', color: '#fff', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+          {initials}
+        </div>
+      )}
 
       {open && (
         <div style={{ position: 'absolute', top: 44, right: 0, width: 260, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, boxShadow: 'var(--shadow-dropdown)', zIndex: 50, overflow: 'hidden' }}>
@@ -424,6 +434,7 @@ function ProfileModal({ userName, onClose }: { userName: string; onClose: () => 
       const s = JSON.parse(localStorage.getItem('user') ?? '{}')
       s.avatarUrl = url
       localStorage.setItem('user', JSON.stringify(s))
+      window.dispatchEvent(new Event('userUpdated'))
     } catch { /* ignore */ }
     setUploading(false)
   }
@@ -435,6 +446,7 @@ function ProfileModal({ userName, onClose }: { userName: string; onClose: () => 
       const s = JSON.parse(localStorage.getItem('user') ?? '{}')
       s.name = name
       localStorage.setItem('user', JSON.stringify(s))
+      window.dispatchEvent(new Event('userUpdated'))
       setToast('Perfil atualizado!')
       setTimeout(() => { setToast(''); onClose() }, 1500)
     } catch { setSaving(false) }

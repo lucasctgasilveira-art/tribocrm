@@ -205,6 +205,7 @@ function AccountTab() {
       const s = JSON.parse(localStorage.getItem('user') ?? '{}')
       s.name = name; s.phone = phone
       localStorage.setItem('user', JSON.stringify(s))
+      window.dispatchEvent(new Event('userUpdated'))
       setToast('Dados salvos!'); setTimeout(() => setToast(''), 3000)
     } catch { /* ignore */ }
     setSaving(false)
@@ -305,6 +306,7 @@ function AvatarUpload({ initials }: { initials: string }) {
       const s = JSON.parse(localStorage.getItem('user') ?? '{}')
       s.avatarUrl = url
       localStorage.setItem('user', JSON.stringify(s))
+      window.dispatchEvent(new Event('userUpdated'))
     } catch { /* ignore */ }
     setUploading(false)
   }
