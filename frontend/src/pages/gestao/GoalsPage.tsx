@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Loader2, X } from 'lucide-react'
+import { Plus, Loader2, X, Info } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
-import { getGoalDashboard, getGoals, createGoal } from '../../services/goals.service'
+import { getGoalDashboard, getGoals, createGoal, updateGoal } from '../../services/goals.service'
 import { getPipelines } from '../../services/pipeline.service'
+import { getUsers } from '../../services/users.service'
 
 // ── Types ──
 
@@ -49,6 +50,12 @@ interface PipelineOption {
   name: string
 }
 
+interface UserOption {
+  id: string
+  name: string
+  role: string
+}
+
 // ── Helpers ──
 
 function fmt(v: number) { return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 }) }
@@ -88,20 +95,25 @@ export default function GoalsPage() {
   const [dashboard, setDashboard] = useState<DashboardData | null>(null)
   const [history, setHistory] = useState<HistoryGoal[]>([])
   const [pipelines, setPipelines] = useState<PipelineOption[]>([])
+  const [users, setUsers] = useState<UserOption[]>([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
+  const [editModalOpen, setEditModalOpen] = useState(false)
+  const [rampModalOpen, setRampModalOpen] = useState(false)
 
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      const [dashData, goalsData, pipelinesData] = await Promise.all([
+      const [dashData, goalsData, pipelinesData, usersData] = await Promise.all([
         getGoalDashboard(),
         getGoals({ year: String(new Date().getFullYear()) }),
         getPipelines(),
+        getUsers(),
       ])
       setDashboard(dashData)
       setHistory(goalsData)
       setPipelines(pipelinesData)
+      setUsers(usersData)
     } catch {
       setDashboard({ goal: null, userGoals: [] })
       setHistory([])
@@ -111,6 +123,15 @@ export default function GoalsPage() {
   }, [])
 
   useEffect(() => { loadData() }, [loadData])
+
+  async function handleEditGoal(payload: { goalType: string; totalRevenueGoal: number; distributionType: string }) {
+    if (!goal) return
+    try {
+      await updateGoal(goal.id, payload)
+      setEditModalOpen(false)
+      loadData()
+    } catch { /* ignore */ }
+  }
 
   async function handleCreateGoal(payload: { periodType: string; goalType: string; totalRevenueGoal: number; distributionType: string; pipelineId: string }) {
     try {
@@ -240,7 +261,7 @@ export default function GoalsPage() {
                 <ConfigRow label="Meta receita" value={fmt(goal.totalRevenueGoal)} valueColor="var(--accent)" />
                 {goal.totalDealsGoal && <ConfigRow label="Meta vendas" value={`${goal.totalDealsGoal} fechamentos`} />}
               </div>
-              <button style={{ width: '100%', background: 'transparent', border: '1px solid rgba(249,115,22,0.3)', color: 'var(--accent)', borderRadius: 8, padding: '9px 0', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+              <button onClick={() => setEditModalOpen(true)} style={{ width: '100%', background: 'transparent', border: '1px solid rgba(249,115,22,0.3)', color: 'var(--accent)', borderRadius: 8, padding: '9px 0', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
                 Editar configuração
               </button>
 
@@ -250,7 +271,7 @@ export default function GoalsPage() {
               {userGoals.filter(ug => ug.isRamping).length === 0 ? (
                 <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: 16, textAlign: 'center' }}>
                   <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 10 }}>Nenhum vendedor em rampagem</div>
-                  <button style={{ background: 'transparent', border: '1px solid rgba(249,115,22,0.3)', color: 'var(--accent)', borderRadius: 6, padding: '5px 12px', fontSize: 12, cursor: 'pointer' }}>
+                  <button onClick={() => setRampModalOpen(true)} style={{ background: 'transparent', border: '1px solid rgba(249,115,22,0.3)', color: 'var(--accent)', borderRadius: 6, padding: '5px 12px', fontSize: 12, cursor: 'pointer' }}>
                     + Configurar rampagem
                   </button>
                 </div>
@@ -294,15 +315,18 @@ export default function GoalsPage() {
         </div>
       )}
 
-      {modalOpen && <NewGoalModal pipelines={pipelines} onClose={() => setModalOpen(false)} onSave={handleCreateGoal} />}
+      {modalOpen && <NewGoalModal pipelines={pipelines} users={users} onClose={() => setModalOpen(false)} onSave={handleCreateGoal} />}
+      {editModalOpen && goal && <EditGoalModal goal={goal} onClose={() => setEditModalOpen(false)} onSave={handleEditGoal} />}
+      {rampModalOpen && goal && <RampModal goalId={goal.id} onClose={() => setRampModalOpen(false)} onSaved={loadData} />}
     </AppLayout>
   )
 }
 
 // ── New Goal Modal ──
 
-function NewGoalModal({ pipelines, onClose, onSave }: {
+function NewGoalModal({ pipelines, users, onClose, onSave }: {
   pipelines: PipelineOption[]
+  users: UserOption[]
   onClose: () => void
   onSave: (p: { periodType: string; goalType: string; totalRevenueGoal: number; distributionType: string; pipelineId: string }) => void
 }) {
@@ -312,13 +336,21 @@ function NewGoalModal({ pipelines, onClose, onSave }: {
   const [distributionType, setDistributionType] = useState('GENERAL')
   const [pipelineId, setPipelineId] = useState(pipelines[0]?.id ?? '')
   const [saving, setSaving] = useState(false)
+  const [userGoalValues, setUserGoalValues] = useState<Record<string, string>>({})
 
-  const canSave = totalRevenueGoal.trim() && parseFloat(totalRevenueGoal) > 0 && pipelineId
+  const sellers = users.filter(u => u.role === 'SELLER' || u.role === 'TEAM_LEADER')
+  const individualTotal = Object.values(userGoalValues).reduce((s, v) => s + (parseFloat(v) || 0), 0)
+  const effectiveTotal = distributionType === 'INDIVIDUAL' ? individualTotal : parseFloat(totalRevenueGoal) || 0
+  const canSave = effectiveTotal > 0 && pipelineId
 
   function handleSave() {
     if (!canSave) return
     setSaving(true)
-    onSave({ periodType, goalType, totalRevenueGoal: parseFloat(totalRevenueGoal), distributionType, pipelineId })
+    onSave({ periodType, goalType, totalRevenueGoal: effectiveTotal, distributionType, pipelineId })
+  }
+
+  function setUserGoal(userId: string, value: string) {
+    setUserGoalValues(prev => ({ ...prev, [userId]: value }))
   }
 
   const inputS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
@@ -386,6 +418,26 @@ function NewGoalModal({ pipelines, onClose, onSave }: {
               ))}
             </div>
           </div>
+
+          {/* Individual user goals */}
+          {distributionType === 'INDIVIDUAL' && sellers.length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 8 }}>Meta por vendedor (R$)</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {sellers.map(u => (
+                  <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--border)', fontSize: 9, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{ini(u.name)}</div>
+                    <span style={{ fontSize: 13, color: 'var(--text-primary)', flex: 1, minWidth: 100 }}>{u.name}</span>
+                    <input type="number" value={userGoalValues[u.id] ?? ''} onChange={e => setUserGoal(u.id, e.target.value)} placeholder="0" style={{ ...inputS, width: 120, textAlign: 'right' }} />
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10, fontSize: 13, fontWeight: 600 }}>
+                <span style={{ color: 'var(--text-muted)', marginRight: 8 }}>Total:</span>
+                <span style={{ color: 'var(--accent)' }}>{fmt(individualTotal)}</span>
+              </div>
+            </div>
+          )}
         </div>
         <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
           <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
@@ -396,6 +448,130 @@ function NewGoalModal({ pipelines, onClose, onSave }: {
           }}>
             {saving && <Loader2 size={14} className="animate-spin" />}
             {saving ? 'Criando...' : 'Criar Meta'}
+          </button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ── Edit Goal Modal ──
+
+function EditGoalModal({ goal, onClose, onSave }: { goal: GoalData; onClose: () => void; onSave: (p: { goalType: string; totalRevenueGoal: number; distributionType: string }) => void }) {
+  const [goalType, setGoalType] = useState(goal.goalType)
+  const [totalRevenueGoal, setTotalRevenueGoal] = useState(String(goal.totalRevenueGoal))
+  const [distributionType, setDistributionType] = useState(goal.distributionType)
+
+  const inputS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
+  const canSave = totalRevenueGoal.trim() && parseFloat(totalRevenueGoal) > 0
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 480, maxWidth: '90vw', maxHeight: '90vh', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Editar Meta</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+        </div>
+        <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Tipo de meta</label>
+            <select value={goalType} onChange={e => setGoalType(e.target.value)} style={{ ...inputS, appearance: 'none' as const, cursor: 'pointer' }}>
+              <option value="REVENUE">Receita</option>
+              <option value="DEALS">Vendas</option>
+              <option value="BOTH">Receita e Vendas</option>
+            </select>
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Valor da meta (R$) <span style={{ color: 'var(--accent)' }}>*</span></label>
+            <input type="number" value={totalRevenueGoal} onChange={e => setTotalRevenueGoal(e.target.value)} style={inputS} />
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 8 }}>Distribuição</label>
+            <div style={{ display: 'flex', gap: 10 }}>
+              {(['GENERAL', 'INDIVIDUAL'] as const).map(v => (
+                <label key={v} onClick={() => setDistributionType(v)} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)' }}>
+                  <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${distributionType === v ? 'var(--accent)' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {distributionType === v && <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)' }} />}
+                  </div>
+                  {v === 'GENERAL' ? 'Geral para equipe' : 'Por operador'}
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
+          <button onClick={() => { if (canSave) onSave({ goalType, totalRevenueGoal: parseFloat(totalRevenueGoal), distributionType }) }} disabled={!canSave} style={{ background: canSave ? 'var(--accent)' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: canSave ? '#fff' : 'var(--text-muted)', cursor: canSave ? 'pointer' : 'not-allowed' }}>Salvar</button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ── Ramp Modal ──
+
+function RampModal({ goalId, onClose, onSaved }: { goalId: string; onClose: () => void; onSaved: () => void }) {
+  const [m1, setM1] = useState('50')
+  const [m2, setM2] = useState('75')
+  const [m3, setM3] = useState('100')
+  const [saving, setSaving] = useState(false)
+
+  const inputS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box', textAlign: 'center' }
+
+  async function handleSave() {
+    setSaving(true)
+    try {
+      await updateGoal(goalId, { rampConfig: { month1: parseInt(m1), month2: parseInt(m2), month3: parseInt(m3) } })
+      onSaved()
+      onClose()
+    } catch {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 420, maxWidth: '90vw', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Configurar Rampagem</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+        </div>
+        <div style={{ padding: 24 }}>
+          <div style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 8, padding: '10px 14px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+            <Info size={14} color="#3b82f6" strokeWidth={1.5} style={{ flexShrink: 0 }} />
+            <span style={{ color: 'var(--text-secondary)' }}>Vendedores em rampagem terão meta reduzida nos primeiros meses.</span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+            {[
+              { label: 'Mês 1', value: m1, set: setM1 },
+              { label: 'Mês 2', value: m2, set: setM2 },
+              { label: 'Mês 3', value: m3, set: setM3 },
+            ].map(item => (
+              <div key={item.label}>
+                <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6, textAlign: 'center' }}>{item.label}</label>
+                <div style={{ position: 'relative' }}>
+                  <input type="number" value={item.value} onChange={e => item.set(e.target.value)} style={inputS} />
+                  <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 13, color: 'var(--text-muted)', pointerEvents: 'none' }}>%</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 16 }}>
+            {[m1, m2, m3].map((v, i) => (
+              <div key={i} style={{ textAlign: 'center' }}>
+                <div style={{ width: 48, height: 48, borderRadius: '50%', border: `3px solid ${parseInt(v) >= 100 ? '#22c55e' : parseInt(v) >= 75 ? '#f97316' : '#f59e0b'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{v}%</div>
+                <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>Mês {i + 1}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
+          <button onClick={handleSave} disabled={saving} style={{ background: 'var(--accent)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+            {saving && <Loader2 size={14} className="animate-spin" />}
+            {saving ? 'Salvando...' : 'Salvar Rampagem'}
           </button>
         </div>
       </div>
