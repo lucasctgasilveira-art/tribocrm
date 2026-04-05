@@ -131,12 +131,12 @@ export default function FinancialPage() {
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: 'var(--bg)' }}>
-              {['Empresa', 'Plano', 'Valor', 'Vencimento', 'Pagamento', 'Status'].map(h => <th key={h} style={thS}>{h}</th>)}
+              {['Empresa', 'Plano', 'Valor', 'Vencimento', 'Pagamento', 'Status', 'Ações'].map(h => <th key={h} style={thS}>{h}</th>)}
             </tr>
           </thead>
           <tbody>
             {charges.length === 0 ? (
-              <tr><td colSpan={6} style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>Nenhuma cobrança encontrada</td></tr>
+              <tr><td colSpan={7} style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>Nenhuma cobrança encontrada</td></tr>
             ) : charges.map(c => {
               const s = statusS[c.status] ?? statusS.PENDING!
               const pc = planColors[c.tenant.plan.slug] ?? planColors.solo
@@ -148,6 +148,13 @@ export default function FinancialPage() {
                   <td style={tdS}>{new Date(c.dueDate).toLocaleDateString('pt-BR')}</td>
                   <td style={tdS}>{c.paidAt ? new Date(c.paidAt).toLocaleDateString('pt-BR') : '—'}</td>
                   <td style={tdS}><span style={{ background: s.bg, color: s.color, borderRadius: 999, padding: '3px 10px', fontSize: 11, fontWeight: 500 }}>{s.label}</span></td>
+                  <td style={tdS}>
+                    {c.status === 'OVERDUE' || c.status === 'PENDING' ? (
+                      <button style={{ background: 'rgba(249,115,22,0.12)', color: '#f97316', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>Cobrar agora</button>
+                    ) : c.status === 'PAID' ? (
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>—</span>
+                    ) : null}
+                  </td>
                 </tr>
               )
             })}

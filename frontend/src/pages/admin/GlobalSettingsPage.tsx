@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Plus, X } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { adminMenuItems } from '../../config/adminMenu'
 
@@ -126,6 +127,15 @@ export default function GlobalSettingsPage() {
   const [security, setSecurity] = useState<SecurityConfig>(defaultSecurity)
   const [limits, setLimits] = useState<PlanLimits[]>(defaultLimits)
   const [toast, setToast] = useState('')
+  const [emailModal, setEmailModal] = useState(false)
+  const [smtpAccounts, setSmtpAccounts] = useState([
+    { label: 'Remetente padrão', email: 'noreply@tribocrm.com.br', type: 'Padrão', active: true },
+    { label: 'Cobrança', email: 'cobranca@tribocrm.com.br', type: 'Cobrança', active: true },
+  ])
+
+  function toggleSmtp(idx: number) { setSmtpAccounts(p => p.map((a, i) => i === idx ? { ...a, active: !a.active } : a)) }
+  function removeSmtp(idx: number) { if (confirm('Remover esta conta?')) setSmtpAccounts(p => p.filter((_, i) => i !== idx)) }
+  function addSmtp(acc: { label: string; email: string; type: string }) { setSmtpAccounts(p => [...p, { ...acc, active: true }]); setEmailModal(false); showToast('Conta de e-mail adicionada') }
 
   function showToast(msg: string) {
     setToast(msg)
@@ -206,6 +216,28 @@ export default function GlobalSettingsPage() {
       {/* ─── emails ─── */}
       {tab === 'emails' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* SMTP accounts */}
+          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Contas de e-mail (SMTP)</span>
+              <button onClick={() => setEmailModal(true)} style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}><Plus size={14} strokeWidth={2} /> Novo E-mail</button>
+            </div>
+            {smtpAccounts.map((acc, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: i < smtpAccounts.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{acc.label}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{acc.email} · {acc.type}</div>
+                </div>
+                <div onClick={() => toggleSmtp(i)} style={{ width: 36, height: 20, borderRadius: 999, background: acc.active ? '#f97316' : 'var(--border)', display: 'flex', alignItems: 'center', padding: '0 2px', justifyContent: acc.active ? 'flex-end' : 'flex-start', cursor: 'pointer', transition: 'all 0.2s' }}>
+                  <div style={{ width: 16, height: 16, borderRadius: '50%', background: acc.active ? '#fff' : 'var(--text-muted)', transition: 'all 0.2s' }} />
+                </div>
+                <button onClick={() => removeSmtp(i)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }} onMouseEnter={e => { e.currentTarget.style.color = '#ef4444' }} onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)' }}><X size={14} strokeWidth={1.5} /></button>
+              </div>
+            ))}
+            {smtpAccounts.length === 0 && <div style={{ textAlign: 'center', padding: 16, color: 'var(--text-muted)', fontSize: 13 }}>Nenhuma conta configurada</div>}
+          </div>
+
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600 }}>Templates de e-mail automáticos</div>
           {emailTemplates.map((tpl, i) => (
             <div
               key={tpl.label}
@@ -438,6 +470,51 @@ export default function GlobalSettingsPage() {
           </div>
         </div>
       )}
+      {emailModal && <NewEmailModal onClose={() => setEmailModal(false)} onSave={addSmtp} />}
     </AppLayout>
+  )
+}
+
+function NewEmailModal({ onClose, onSave }: { onClose: () => void; onSave: (a: { label: string; email: string; type: string }) => void }) {
+  const [label, setLabel] = useState('')
+  const [email, setEmail] = useState('')
+  const [type, setType] = useState('Padrão')
+  const [smtpHost, setSmtpHost] = useState('')
+  const [smtpPort, setSmtpPort] = useState('587')
+  const [smtpUser, setSmtpUser] = useState('')
+  const [smtpPass, setSmtpPass] = useState('')
+  const inputS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
+  const canSave = label.trim() && email.trim()
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 480, maxWidth: '90vw', maxHeight: '90vh', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Nova conta de e-mail</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+        </div>
+        <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+            <div><label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Nome (label) *</label><input value={label} onChange={e => setLabel(e.target.value)} placeholder="Ex: Remetente padrão" style={inputS} /></div>
+            <div><label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Endereço de e-mail *</label><input value={email} onChange={e => setEmail(e.target.value)} placeholder="noreply@empresa.com" style={inputS} /></div>
+          </div>
+          <div style={{ marginBottom: 16 }}><label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Tipo</label><select value={type} onChange={e => setType(e.target.value)} style={{ ...inputS, appearance: 'none' as const, cursor: 'pointer' }}><option>Padrão</option><option>Suporte</option><option>Cobrança</option><option>Notificações</option></select></div>
+          <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 10, fontWeight: 600 }}>Configuração SMTP</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12, marginBottom: 12 }}>
+            <div><label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Host SMTP</label><input value={smtpHost} onChange={e => setSmtpHost(e.target.value)} placeholder="smtp.gmail.com" style={inputS} /></div>
+            <div><label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Porta</label><input value={smtpPort} onChange={e => setSmtpPort(e.target.value)} style={inputS} /></div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div><label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Usuário</label><input value={smtpUser} onChange={e => setSmtpUser(e.target.value)} placeholder="usuario@empresa.com" style={inputS} /></div>
+            <div><label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Senha</label><input type="password" value={smtpPass} onChange={e => setSmtpPass(e.target.value)} placeholder="••••••••" style={inputS} /></div>
+          </div>
+        </div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
+          <button onClick={() => { if (canSave) onSave({ label, email, type }) }} disabled={!canSave} style={{ background: canSave ? '#f97316' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: canSave ? '#fff' : 'var(--text-muted)', cursor: canSave ? 'pointer' : 'not-allowed' }}>Salvar conta</button>
+        </div>
+      </div>
+    </>
   )
 }

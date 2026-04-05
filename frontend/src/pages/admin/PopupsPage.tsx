@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Plus, X } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { adminMenuItems } from '../../config/adminMenu'
@@ -81,6 +81,19 @@ export default function PopupsPage() {
 
 function NewPopupModal({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState('')
+  const [popupMode, setPopupMode] = useState<'text' | 'image'>('text')
+  const [imagePreview, setImagePreview] = useState('')
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  function handleImageFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 2 * 1024 * 1024) { alert('Imagem muito grande. Máximo 2MB.'); return }
+    const reader = new FileReader()
+    reader.onload = () => setImagePreview(reader.result as string)
+    reader.readAsDataURL(file)
+  }
+
   return (
     <>
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
@@ -90,6 +103,35 @@ function NewPopupModal({ onClose }: { onClose: () => void }) {
           <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
         </div>
         <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
+          {/* Mode selector */}
+          <Fld label="Formato">
+            <div style={{ display: 'flex', gap: 10 }}>
+              {([{ k: 'text' as const, l: 'Padrão (texto)' }, { k: 'image' as const, l: 'Com imagem (criativo)' }]).map(m => (
+                <label key={m.k} onClick={() => setPopupMode(m.k)} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)' }}>
+                  <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${popupMode === m.k ? '#f97316' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {popupMode === m.k && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f97316' }} />}
+                  </div>
+                  {m.l}
+                </label>
+              ))}
+            </div>
+          </Fld>
+          {popupMode === 'image' && (
+            <Fld label="Imagem do criativo">
+              <input ref={fileRef} type="file" accept="image/jpeg,image/png" style={{ display: 'none' }} onChange={handleImageFile} />
+              {imagePreview ? (
+                <div style={{ marginBottom: 8 }}>
+                  <img src={imagePreview} alt="Preview" style={{ width: '100%', borderRadius: 8, maxHeight: 200, objectFit: 'cover' }} />
+                  <button onClick={() => { setImagePreview(''); if (fileRef.current) fileRef.current.value = '' }} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', fontSize: 11, color: 'var(--text-secondary)', cursor: 'pointer', marginTop: 6 }}>Remover imagem</button>
+                </div>
+              ) : (
+                <div onClick={() => fileRef.current?.click()} style={{ border: '2px dashed var(--border)', borderRadius: 8, padding: 24, textAlign: 'center', cursor: 'pointer' }}>
+                  <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 4 }}>Clique para selecionar imagem</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>JPG ou PNG, 16:9, mín 1200x675px, máx 2MB</div>
+                </div>
+              )}
+            </Fld>
+          )}
           <Fld label="Nome interno *"><input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Aviso de inadimplência" style={inputS} /></Fld>
           <Fld label="Tipo"><select style={{ ...inputS, appearance: 'none' as const, cursor: 'pointer' }}><option>Inadimplência</option><option>Novidade</option><option>Promoção</option><option>Pesquisa</option><option>Manutenção</option><option>Boas-vindas</option></select></Fld>
           <Fld label="Instância"><div style={{ display: 'flex', gap: 8 }}>{['Gestor', 'Vendedor', 'Ambos'].map(v => <label key={v} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: 'var(--text-primary)', cursor: 'pointer' }}><input type="checkbox" defaultChecked={v === 'Ambos'} style={{ accentColor: '#f97316' }} />{v}</label>)}</div></Fld>
