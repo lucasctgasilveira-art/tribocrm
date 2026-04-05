@@ -51,6 +51,11 @@ app.get('/health', (_req, res) => {
   res.json({ success: true, data: { status: 'ok', timestamp: new Date().toISOString() } })
 })
 
+// Debug: test route without any middleware
+app.get('/oauth/test', (_req, res) => {
+  res.json({ ok: true, query: _req.query })
+})
+
 // Routes
 app.use('/auth', authRoutes)
 app.use('/pipelines', pipelineRoutes)
