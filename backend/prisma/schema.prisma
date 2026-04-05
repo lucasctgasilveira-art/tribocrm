@@ -349,7 +349,7 @@ model User {
   cpf             String?         @db.VarChar(14)
   birthday        DateTime?       @db.Date
   phone           String?         @db.VarChar(20)
-  avatarUrl       String?         @map("avatar_url") @db.VarChar(500)
+  avatarUrl       String?         @map("avatar_url") @db.Text
   themePreference ThemePreference @default(DARK) @map("theme_preference")
   leadVisibility  VisibilityType  @default(OWN) @map("lead_visibility")
   isActive        Boolean         @default(true) @map("is_active")

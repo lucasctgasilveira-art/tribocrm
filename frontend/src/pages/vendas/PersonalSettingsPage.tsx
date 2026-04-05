@@ -1,5 +1,7 @@
 import { useState, useRef } from 'react'
 import { Mail, Calendar, Download, Check, MessageCircle, Clock, Linkedin } from 'lucide-react'
+import PhoneInput from 'react-phone-input-2'
+import 'react-phone-input-2/lib/style.css'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { vendasMenuItems } from '../../config/vendasMenu'
 import api from '../../services/api'
@@ -239,7 +241,7 @@ function AccountTab() {
             </div>
             <div>
               <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Telefone / WhatsApp</label>
-              <input value={phone} onChange={e => setPhone(e.target.value)} style={inputS} />
+              <PhoneInput country="br" value={phone} onChange={v => setPhone(v)} inputStyle={{ width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px 9px 48px', fontSize: 13, color: 'var(--text-primary)', height: 38 }} buttonStyle={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '8px 0 0 8px' }} dropdownStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
             </div>
             <div>
               <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Cargo</label>
