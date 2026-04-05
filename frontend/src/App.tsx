@@ -72,6 +72,11 @@ export default function App() {
       <Route path="/preview/2fa" element={<TwoFactorPage />} />
       <Route path="/preview/gestao/tarefas" element={<GestaoTasksPage />} />
 
+      {/* Redirects */}
+      <Route path="/gestao" element={<Navigate to="/gestao/dashboard" replace />} />
+      <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+      <Route path="/vendas" element={<Navigate to="/vendas/dashboard" replace />} />
+
       {/* Admin */}
       <Route path="/admin/dashboard" element={<PrivateRoute allowed={['admin']}><AdminDashboardPage /></PrivateRoute>} />
       <Route path="/admin/clientes" element={<PrivateRoute allowed={['admin']}><TenantsPage /></PrivateRoute>} />
