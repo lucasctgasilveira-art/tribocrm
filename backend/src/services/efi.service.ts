@@ -81,27 +81,12 @@ export async function createPixCharge(tenantId: string, chargeData: PixChargeDat
 
   console.log('[Efi PIX] Creating charge:', JSON.stringify({ txid, value: valueStr, debtor: cobBody.devedor, chave: cobBody.chave }))
 
-  // Step 1: Create immediate charge — SDK returns object directly (no .data wrapper)
+  // Create immediate charge — pixCopiaECola comes directly in the response
   const cob = await efi.pixCreateImmediateCharge([] as any, cobBody) as any
   console.log('[Efi PIX] cob keys:', Object.keys(cob || {}))
   console.log('[Efi PIX] Full response:', JSON.stringify(cob, null, 2))
 
-  const locId = cob?.loc?.id
   const pixCopiaECola = cob?.pixCopiaECola ?? cob?.location ?? ''
-
-  // Step 2: Generate QR Code — SDK returns object directly (no .data wrapper)
-  let qrCode = ''
-  if (locId) {
-    try {
-      const qr = await efi.pixGenerateQRCode({ id: locId } as any) as any
-      console.log('[Efi PIX] QR keys:', Object.keys(qr || {}))
-      qrCode = qr?.imagemQrcode ?? ''
-    } catch (qrErr: any) {
-      console.warn('[Efi PIX] QR code generation failed (sandbox?):', qrErr.message ?? qrErr)
-    }
-  } else {
-    console.warn('[Efi PIX] No loc.id in response — skipping QR code generation')
-  }
 
   const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString()
 
@@ -121,7 +106,7 @@ export async function createPixCharge(tenantId: string, chargeData: PixChargeDat
   return {
     txid,
     pixCopiaECola,
-    qrCode,
+    qrCode: '',
     expiresAt,
   }
 }
@@ -151,16 +136,12 @@ interface BoletoChargeResult {
 export async function createBoletoCharge(tenantId: string, chargeData: BoletoChargeData): Promise<BoletoChargeResult> {
   const efi = getClient()
   const cpfClean = chargeData.debtorCpf.replace(/\D/g, '')
-  const isCnpj = cpfClean.length === 14
 
+  // Always use pessoa física (CPF) for boleto — avoids "same CNPJ as receiver" error
   const customer: any = {
     name: chargeData.debtorName,
     email: chargeData.debtorEmail,
-  }
-  if (isCnpj) {
-    customer.juridical_person = { corporate_name: chargeData.debtorName, cnpj: cpfClean }
-  } else {
-    customer.cpf = cpfClean
+    cpf: cpfClean.slice(0, 11) || '11144477735',
   }
 
   console.log('[Efi Boleto] Creating charge:', JSON.stringify({ value: chargeData.value, dueDate: chargeData.dueDate, customer }))

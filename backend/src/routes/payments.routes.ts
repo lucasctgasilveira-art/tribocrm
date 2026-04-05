@@ -13,7 +13,7 @@ const router = Router()
 
 const SANDBOX_CPF = '11144477735'
 
-async function getTenantData(tenantId: string, userId: string) {
+async function getPixDebtorData(tenantId: string, userId: string) {
   const [tenant, user] = await Promise.all([
     prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true, cnpj: true, email: true } }),
     prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true, cpf: true } }),
@@ -30,6 +30,22 @@ async function getTenantData(tenantId: string, userId: string) {
   }
 }
 
+async function getBoletoDebtorData(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { name: true, email: true, cpf: true },
+  })
+
+  const isSandbox = process.env.EFI_SANDBOX === 'true'
+  const cpfClean = user?.cpf?.replace(/\D/g, '') ?? ''
+
+  return {
+    debtorName: user?.name ?? 'Cliente TriboCRM',
+    debtorCpf: cpfClean || (isSandbox ? SANDBOX_CPF : ''),
+    debtorEmail: user?.email ?? '',
+  }
+}
+
 // ── PIX ──
 
 router.post('/pix', authMiddleware, async (req: Request, res: Response) => {
@@ -41,12 +57,12 @@ router.post('/pix', authMiddleware, async (req: Request, res: Response) => {
     }
 
     const { value, description, expiresIn } = req.body
-    const tenantData = await getTenantData(tenantId, userId)
+    const debtor = await getPixDebtorData(tenantId, userId)
 
     const result = await createPixCharge(tenantId, {
       value, description, expiresIn,
-      debtorName: tenantData.debtorName,
-      debtorCpf: tenantData.debtorCpf,
+      debtorName: debtor.debtorName,
+      debtorCpf: debtor.debtorCpf,
     })
     res.json({ success: true, data: result })
   } catch (error: any) {
@@ -66,13 +82,13 @@ router.post('/boleto', authMiddleware, async (req: Request, res: Response) => {
     }
 
     const { value, description, dueDate, debtorStreet, debtorCity, debtorState, debtorZipCode } = req.body
-    const tenantData = await getTenantData(tenantId, userId)
+    const debtor = await getBoletoDebtorData(userId)
 
     const result = await createBoletoCharge(tenantId, {
       value, description, dueDate,
-      debtorName: tenantData.debtorName,
-      debtorCpf: tenantData.debtorCpf,
-      debtorEmail: tenantData.debtorEmail,
+      debtorName: debtor.debtorName,
+      debtorCpf: debtor.debtorCpf,
+      debtorEmail: debtor.debtorEmail,
       debtorStreet: debtorStreet ?? 'Rua não informada',
       debtorCity: debtorCity ?? 'São Paulo',
       debtorState: debtorState ?? 'SP',
