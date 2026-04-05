@@ -52,10 +52,16 @@ app.get('/health', (_req, res) => {
   res.json({ success: true, data: { status: 'ok', timestamp: new Date().toISOString() } })
 })
 
-// Debug: test route without any middleware
+// Debug: test routes without any middleware
 app.get('/oauth/test', (_req, res) => {
   res.json({ ok: true, query: _req.query })
 })
+app.get('/oauth/ping2', (_req, res) => {
+  res.json({ ping2: true })
+})
+
+// OAuth routes — registered BEFORE all other routes
+app.use('/oauth', oauthRoutes)
 
 // Routes
 app.use('/auth', authRoutes)
@@ -71,6 +77,5 @@ app.use('/templates', templatesRoutes)
 app.use('/forms', formsRoutes)
 app.use('/automations', automationsRoutes)
 app.use('/admin', adminRoutes)
-app.use('/oauth', oauthRoutes)
 
 export default app
