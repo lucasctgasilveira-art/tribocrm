@@ -1,23 +1,42 @@
 import path from 'path'
+import fs from 'fs'
+import os from 'os'
 import EfiPay from 'sdk-typescript-apis-efi'
 import { prisma } from '../lib/prisma'
 
 const isSandbox = process.env.EFI_SANDBOX === 'true'
 
+function loadCertificate(): string {
+  const certPath = isSandbox
+    ? path.resolve(__dirname, '../../certs/efi-sandbox-cert.p12')
+    : path.resolve(__dirname, '../../certs/efi-cert.p12')
+
+  // 1. Try physical file (local development)
+  if (fs.existsSync(certPath)) {
+    return certPath
+  }
+
+  // 2. Try environment variable base64 (Railway production)
+  const certEnvVar = isSandbox ? process.env.EFI_SANDBOX_CERT_BASE64 : process.env.EFI_PROD_CERT_BASE64
+
+  if (certEnvVar) {
+    const tmpPath = path.join(os.tmpdir(), isSandbox ? 'efi-sandbox-cert.p12' : 'efi-cert.p12')
+    fs.writeFileSync(tmpPath, Buffer.from(certEnvVar, 'base64'))
+    return tmpPath
+  }
+
+  throw new Error('Certificado Efi não encontrado — configure o arquivo .p12 ou a variável EFI_SANDBOX_CERT_BASE64 / EFI_PROD_CERT_BASE64')
+}
+
 function getClient(): EfiPay {
-  const options: any = {
+  const certificate = loadCertificate()
+
+  return new EfiPay({
     client_id: process.env.EFI_CLIENT_ID,
     client_secret: process.env.EFI_CLIENT_SECRET,
     sandbox: isSandbox,
-  }
-
-  if (isSandbox) {
-    options.certificate = path.resolve(__dirname, '../../certs/efi-sandbox-cert.p12')
-  } else {
-    options.certificate = path.resolve(__dirname, '../../certs/efi-cert.p12')
-  }
-
-  return new EfiPay(options)
+    certificate,
+  } as any)
 }
 
 // ── PIX ──
