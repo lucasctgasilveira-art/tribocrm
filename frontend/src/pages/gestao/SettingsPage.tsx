@@ -348,23 +348,34 @@ function IntegrationsTab() {
   const [gmailConnected, setGmailConnected] = useState(false)
   const [gmailEmail, setGmailEmail] = useState<string | null>(null)
   const [gmailLoading, setGmailLoading] = useState(false)
+  const [calendarConnected, setCalendarConnected] = useState(false)
+  const [calendarEmail, setCalendarEmail] = useState<string | null>(null)
+  const [calendarLoading, setCalendarLoading] = useState(false)
   const [toast, setToast] = useState('')
 
-  // Check Gmail status on mount
+  // Check status on mount
   useState(() => {
     api.get('/oauth/google/status').then(res => {
       const data = res.data?.data
-      if (data?.connected) {
-        setGmailConnected(true)
-        setGmailEmail(data.email)
-      }
+      if (data?.connected) { setGmailConnected(true); setGmailEmail(data.email) }
+    }).catch(() => {})
+
+    api.get('/oauth/calendar/status').then(res => {
+      const data = res.data?.data
+      if (data?.connected) { setCalendarConnected(true); setCalendarEmail(data.email) }
     }).catch(() => {})
 
     // Check URL params for successful connection
     const params = new URLSearchParams(window.location.search)
-    if (params.get('connected') === 'gmail') {
+    const connected = params.get('connected')
+    if (connected === 'gmail') {
       setGmailConnected(true)
       setToast('Gmail conectado com sucesso!')
+      setTimeout(() => setToast(''), 4000)
+      window.history.replaceState({}, '', window.location.pathname)
+    } else if (connected === 'calendar') {
+      setCalendarConnected(true)
+      setToast('Google Calendar conectado com sucesso!')
       setTimeout(() => setToast(''), 4000)
       window.history.replaceState({}, '', window.location.pathname)
     }
@@ -376,9 +387,49 @@ function IntegrationsTab() {
       const res = await api.get('/oauth/google/authorize')
       const url = res.data?.data?.url
       if (url) window.location.href = url
-    } catch {
-      setGmailLoading(false)
-    }
+    } catch { setGmailLoading(false) }
+  }
+
+  async function handleConnectCalendar() {
+    setCalendarLoading(true)
+    try {
+      const res = await api.get('/oauth/calendar/authorize')
+      const url = res.data?.data?.url
+      if (url) window.location.href = url
+    } catch { setCalendarLoading(false) }
+  }
+
+  function IntegrationCard({ icon: Icon, iconColor, iconBg, name, desc, connected, email, loading: isLoading, onConnect, btnLabel }: {
+    icon: typeof Mail; iconColor: string; iconBg: string; name: string; desc: string
+    connected: boolean; email: string | null; loading: boolean
+    onConnect: () => void; btnLabel: string
+  }) {
+    return (
+      <div style={{ background: 'var(--bg-card)', border: `1px solid ${connected ? 'rgba(34,197,94,0.3)' : 'var(--border)'}`, borderRadius: 12, padding: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Icon size={20} color={iconColor} strokeWidth={1.5} />
+          </div>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{name}</div>
+            <span style={{ fontSize: 10, fontWeight: 500, borderRadius: 999, padding: '2px 8px', background: connected ? 'rgba(34,197,94,0.12)' : 'rgba(107,114,128,0.12)', color: connected ? '#22c55e' : 'var(--text-muted)' }}>
+              {connected ? 'Conectado' : 'Não conectado'}
+            </span>
+          </div>
+        </div>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 6, lineHeight: 1.5 }}>{desc}</p>
+        {email && <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 14 }}>{email}</p>}
+        {!email && <div style={{ marginBottom: 14 }} />}
+        {connected ? (
+          <button style={{ background: 'rgba(34,197,94,0.12)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 8, padding: '9px 16px', fontSize: 13, fontWeight: 600, cursor: 'default' }}>Conectado ✓</button>
+        ) : (
+          <button onClick={onConnect} disabled={isLoading} style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+            {isLoading && <Loader2 size={14} className="animate-spin" />}
+            {isLoading ? 'Redirecionando...' : btnLabel}
+          </button>
+        )}
+      </div>
+    )
   }
 
   return (
@@ -386,46 +437,8 @@ function IntegrationsTab() {
       {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: '4px solid #22c55e', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 60, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>{toast}</div>}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-        {/* Gmail */}
-        <div style={{ background: 'var(--bg-card)', border: `1px solid ${gmailConnected ? 'rgba(34,197,94,0.3)' : 'var(--border)'}`, borderRadius: 12, padding: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(239,68,68,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Mail size={20} color="#ef4444" strokeWidth={1.5} />
-            </div>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Gmail</div>
-              <span style={{ fontSize: 10, fontWeight: 500, borderRadius: 999, padding: '2px 8px', background: gmailConnected ? 'rgba(34,197,94,0.12)' : 'rgba(107,114,128,0.12)', color: gmailConnected ? '#22c55e' : 'var(--text-muted)' }}>
-                {gmailConnected ? 'Conectado' : 'Não conectado'}
-              </span>
-            </div>
-          </div>
-          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 6, lineHeight: 1.5 }}>Envie e-mails para leads diretamente pelo TriboCRM com rastreamento de abertura</p>
-          {gmailEmail && <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 14 }}>{gmailEmail}</p>}
-          {!gmailEmail && <div style={{ marginBottom: 14 }} />}
-          {gmailConnected ? (
-            <button style={{ background: 'rgba(34,197,94,0.12)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 8, padding: '9px 16px', fontSize: 13, fontWeight: 600, cursor: 'default' }}>Conectado ✓</button>
-          ) : (
-            <button onClick={handleConnectGmail} disabled={gmailLoading} style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-              {gmailLoading && <Loader2 size={14} className="animate-spin" />}
-              {gmailLoading ? 'Redirecionando...' : 'Conectar Gmail'}
-            </button>
-          )}
-        </div>
-
-        {/* Google Calendar */}
-        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(59,130,246,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Calendar size={20} color="#3b82f6" strokeWidth={1.5} />
-            </div>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Google Calendar</div>
-              <span style={{ fontSize: 10, fontWeight: 500, borderRadius: 999, padding: '2px 8px', background: 'rgba(107,114,128,0.12)', color: 'var(--text-muted)' }}>Não conectado</span>
-            </div>
-          </div>
-          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 14, lineHeight: 1.5 }}>Crie eventos automaticamente ao agendar tarefas no TriboCRM</p>
-          <button onClick={() => setComingSoon(true)} style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Conectar Calendar</button>
-        </div>
+        <IntegrationCard icon={Mail} iconColor="#ef4444" iconBg="rgba(239,68,68,0.12)" name="Gmail" desc="Envie e-mails para leads diretamente pelo TriboCRM com rastreamento de abertura" connected={gmailConnected} email={gmailEmail} loading={gmailLoading} onConnect={handleConnectGmail} btnLabel="Conectar Gmail" />
+        <IntegrationCard icon={Calendar} iconColor="#3b82f6" iconBg="rgba(59,130,246,0.12)" name="Google Calendar" desc="Crie eventos automaticamente ao agendar tarefas no TriboCRM" connected={calendarConnected} email={calendarEmail} loading={calendarLoading} onConnect={handleConnectCalendar} btnLabel="Conectar Calendar" />
 
         {/* Chrome Extension */}
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
