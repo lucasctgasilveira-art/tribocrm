@@ -1,38 +1,23 @@
 import path from 'path'
-import fs from 'fs'
 import EfiPay from 'sdk-typescript-apis-efi'
 import { prisma } from '../lib/prisma'
 
 const isSandbox = process.env.EFI_SANDBOX === 'true'
 
-function getCertPath(): string | undefined {
-  if (process.env.EFI_PIX_CERT) {
-    const p = path.resolve(process.cwd(), process.env.EFI_PIX_CERT)
-    if (fs.existsSync(p)) return p
-  }
-
-  const prodCert = path.resolve(__dirname, '../../certs/efi-cert.p12')
-  const sandboxCert = path.resolve(__dirname, '../../certs/efi-sandbox-cert.p12')
-
-  if (!isSandbox && fs.existsSync(prodCert)) return prodCert
-  if (isSandbox && fs.existsSync(sandboxCert)) return sandboxCert
-  if (fs.existsSync(prodCert)) return prodCert
-
-  return undefined
-}
-
 function getClient(): EfiPay {
-  const cert = getCertPath()
-
-  const options: Record<string, unknown> = {
-    client_id: process.env.EFI_CLIENT_ID!,
-    client_secret: process.env.EFI_CLIENT_SECRET!,
+  const options: any = {
+    client_id: process.env.EFI_CLIENT_ID,
+    client_secret: process.env.EFI_CLIENT_SECRET,
     sandbox: isSandbox,
   }
 
-  if (cert) options.certificate = cert
+  if (isSandbox) {
+    options.certificate = path.resolve(__dirname, '../../certs/efi-sandbox-cert.p12')
+  } else {
+    options.certificate = path.resolve(__dirname, '../../certs/efi-cert.p12')
+  }
 
-  return new EfiPay(options as any)
+  return new EfiPay(options)
 }
 
 // ── PIX ──
