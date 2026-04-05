@@ -17,6 +17,7 @@ import templatesRoutes from './routes/templates.routes'
 import formsRoutes from './routes/forms.routes'
 import automationsRoutes from './routes/automations.routes'
 import adminRoutes from './routes/admin.routes'
+import oauthRoutes from './routes/oauth.routes'
 
 const app = express()
 
@@ -64,5 +65,6 @@ app.use('/templates', templatesRoutes)
 app.use('/forms', formsRoutes)
 app.use('/automations', automationsRoutes)
 app.use('/admin', adminRoutes)
+app.use('/oauth', oauthRoutes)
 
 export default app

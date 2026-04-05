@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { GripVertical, Plus, X, CheckSquare, Mail, Calendar, Globe, MoreHorizontal, Info } from 'lucide-react'
+import { GripVertical, Plus, X, CheckSquare, Mail, Calendar, Globe, MoreHorizontal, Info, Loader2 } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
-// API calls will be connected when backend endpoints are ready
+import api from '../../services/api'
 
 type Tab = 'pipeline' | 'loss' | 'tasks' | 'integrations'
 
@@ -345,35 +345,102 @@ function NewTaskTypeModal({ onClose, onSave }: { onClose: () => void; onSave: (n
 
 function IntegrationsTab() {
   const [comingSoon, setComingSoon] = useState(false)
+  const [gmailConnected, setGmailConnected] = useState(false)
+  const [gmailEmail, setGmailEmail] = useState<string | null>(null)
+  const [gmailLoading, setGmailLoading] = useState(false)
+  const [toast, setToast] = useState('')
 
-  const integrations = [
-    { icon: Mail, iconColor: '#ef4444', name: 'Gmail', desc: 'Envie e-mails para leads diretamente pelo TriboCRM com rastreamento de abertura', btnLabel: 'Conectar Gmail', btnStyle: 'orange' as const },
-    { icon: Calendar, iconColor: '#3b82f6', name: 'Google Calendar', desc: 'Crie eventos automaticamente ao agendar tarefas no TriboCRM', btnLabel: 'Conectar Calendar', btnStyle: 'orange' as const },
-    { icon: Globe, iconColor: '#22c55e', name: 'Extensão do Chrome', desc: 'Capture leads do LinkedIn, Gmail e envie WhatsApp direto pelo CRM', btnLabel: 'Instalar extensão', btnStyle: 'green' as const },
-  ]
+  // Check Gmail status on mount
+  useState(() => {
+    api.get('/oauth/google/status').then(res => {
+      const data = res.data?.data
+      if (data?.connected) {
+        setGmailConnected(true)
+        setGmailEmail(data.email)
+      }
+    }).catch(() => {})
+
+    // Check URL params for successful connection
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('connected') === 'gmail') {
+      setGmailConnected(true)
+      setToast('Gmail conectado com sucesso!')
+      setTimeout(() => setToast(''), 4000)
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+  })
+
+  async function handleConnectGmail() {
+    setGmailLoading(true)
+    try {
+      const res = await api.get('/oauth/google/authorize')
+      const url = res.data?.data?.url
+      if (url) window.location.href = url
+    } catch {
+      setGmailLoading(false)
+    }
+  }
 
   return (
     <>
+      {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: '4px solid #22c55e', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 60, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>{toast}</div>}
+
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-        {integrations.map(ig => {
-          const Icon = ig.icon
-          return (
-            <div key={ig.name} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                <div style={{ width: 40, height: 40, borderRadius: 10, background: `${ig.iconColor}1F`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Icon size={20} color={ig.iconColor} strokeWidth={1.5} />
-                </div>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{ig.name}</div>
-                  <span style={{ fontSize: 10, fontWeight: 500, borderRadius: 999, padding: '2px 8px', background: 'rgba(107,114,128,0.12)', color: 'var(--text-muted)' }}>Não conectado</span>
-                </div>
-              </div>
-              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 14, lineHeight: 1.5 }}>{ig.desc}</p>
-              {ig.btnStyle === 'orange' && <button onClick={() => setComingSoon(true)} style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>{ig.btnLabel}</button>}
-              {ig.btnStyle === 'green' && <button onClick={() => setComingSoon(true)} style={{ background: 'rgba(34,197,94,0.12)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 8, padding: '9px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>{ig.btnLabel}</button>}
+        {/* Gmail */}
+        <div style={{ background: 'var(--bg-card)', border: `1px solid ${gmailConnected ? 'rgba(34,197,94,0.3)' : 'var(--border)'}`, borderRadius: 12, padding: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(239,68,68,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Mail size={20} color="#ef4444" strokeWidth={1.5} />
             </div>
-          )
-        })}
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Gmail</div>
+              <span style={{ fontSize: 10, fontWeight: 500, borderRadius: 999, padding: '2px 8px', background: gmailConnected ? 'rgba(34,197,94,0.12)' : 'rgba(107,114,128,0.12)', color: gmailConnected ? '#22c55e' : 'var(--text-muted)' }}>
+                {gmailConnected ? 'Conectado' : 'Não conectado'}
+              </span>
+            </div>
+          </div>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 6, lineHeight: 1.5 }}>Envie e-mails para leads diretamente pelo TriboCRM com rastreamento de abertura</p>
+          {gmailEmail && <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 14 }}>{gmailEmail}</p>}
+          {!gmailEmail && <div style={{ marginBottom: 14 }} />}
+          {gmailConnected ? (
+            <button style={{ background: 'rgba(34,197,94,0.12)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 8, padding: '9px 16px', fontSize: 13, fontWeight: 600, cursor: 'default' }}>Conectado ✓</button>
+          ) : (
+            <button onClick={handleConnectGmail} disabled={gmailLoading} style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+              {gmailLoading && <Loader2 size={14} className="animate-spin" />}
+              {gmailLoading ? 'Redirecionando...' : 'Conectar Gmail'}
+            </button>
+          )}
+        </div>
+
+        {/* Google Calendar */}
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(59,130,246,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Calendar size={20} color="#3b82f6" strokeWidth={1.5} />
+            </div>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Google Calendar</div>
+              <span style={{ fontSize: 10, fontWeight: 500, borderRadius: 999, padding: '2px 8px', background: 'rgba(107,114,128,0.12)', color: 'var(--text-muted)' }}>Não conectado</span>
+            </div>
+          </div>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 14, lineHeight: 1.5 }}>Crie eventos automaticamente ao agendar tarefas no TriboCRM</p>
+          <button onClick={() => setComingSoon(true)} style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Conectar Calendar</button>
+        </div>
+
+        {/* Chrome Extension */}
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(34,197,94,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Globe size={20} color="#22c55e" strokeWidth={1.5} />
+            </div>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Extensão do Chrome</div>
+              <span style={{ fontSize: 10, fontWeight: 500, borderRadius: 999, padding: '2px 8px', background: 'rgba(107,114,128,0.12)', color: 'var(--text-muted)' }}>Não instalada</span>
+            </div>
+          </div>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 14, lineHeight: 1.5 }}>Capture leads do LinkedIn, Gmail e envie WhatsApp direto pelo CRM</p>
+          <button onClick={() => setComingSoon(true)} style={{ background: 'rgba(34,197,94,0.12)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 8, padding: '9px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Instalar extensão</button>
+        </div>
       </div>
       {comingSoon && <ComingSoonModal onClose={() => setComingSoon(false)} />}
     </>
