@@ -41,6 +41,7 @@ export default function MySubscriptionPage() {
   const [annualModal, setAnnualModal] = useState(false)
   const [cancelModal, setCancelModal] = useState(false)
   const [payNowModal, setPayNowModal] = useState(false)
+  const [changeMethodModal, setChangeMethodModal] = useState(false)
   const [toast, setToast] = useState('')
 
   return (
@@ -97,7 +98,7 @@ export default function MySubscriptionPage() {
             </div>
             <span style={{ background: 'var(--border)', color: 'var(--text-secondary)', borderRadius: 4, padding: '2px 8px', fontSize: 10 }}>Principal</span>
           </div>
-          <button style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 12px', fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer', marginBottom: 16 }}>Trocar método</button>
+          <button onClick={() => setChangeMethodModal(true)} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 12px', fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer', marginBottom: 16 }}>Trocar método</button>
 
           <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
             <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 10, fontWeight: 600 }}>Também aceito</div>
@@ -195,6 +196,7 @@ export default function MySubscriptionPage() {
       {annualModal && <AnnualModal onClose={() => setAnnualModal(false)} />}
       {cancelModal && <CancelModal onClose={() => setCancelModal(false)} onCancelled={() => { setCancelModal(false); setToast('Cancelamento agendado'); setTimeout(() => setToast(''), 4000) }} />}
       {payNowModal && <PayNowModal onClose={() => setPayNowModal(false)} />}
+      {changeMethodModal && <ChangeMethodModal onClose={() => setChangeMethodModal(false)} onSaved={() => { setChangeMethodModal(false); setToast('Método de pagamento atualizado!'); setTimeout(() => setToast(''), 4000) }} />}
     </AppLayout>
   )
 }
@@ -705,7 +707,78 @@ function PayNowModal({ onClose }: { onClose: () => void }) {
   )
 }
 
-// ── Sub-components ─��
+// ── Change Method Modal ──
+
+function ChangeMethodModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+  const [selected, setSelected] = useState<'PIX' | 'BOLETO' | 'CARTAO'>('PIX')
+  const [saving, setSaving] = useState(false)
+
+  const options = [
+    { key: 'PIX' as const, label: 'PIX', desc: 'Pague manualmente via QR Code a cada vencimento', icon: QrCode, color: '#22c55e' },
+    { key: 'BOLETO' as const, label: 'Boleto', desc: 'Boleto gerado automaticamente a cada vencimento', icon: FileText, color: '#3b82f6' },
+    { key: 'CARTAO' as const, label: 'Cartao (recorrente)', desc: 'Cobrado automaticamente no cartao de credito', icon: CreditCard, color: '#f97316' },
+  ]
+
+  async function handleSave() {
+    setSaving(true)
+    try {
+      await api.patch('/users/me', { preferredPaymentMethod: selected })
+      onSaved()
+    } catch { setSaving(false) }
+  }
+
+  async function handleCard(cardData: { cardNumber: string; holderName: string; expirationMonth: string; expirationYear: string; cvv: string }) {
+    setSaving(true)
+    try {
+      await api.post('/payments/card-subscription', cardData)
+      onSaved()
+    } catch { setSaving(false) }
+  }
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 460, maxWidth: '90vw', maxHeight: '90vh', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Trocar metodo de pagamento</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+        </div>
+        <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+            {options.map(opt => {
+              const Icon = opt.icon
+              const active = selected === opt.key
+              return (
+                <div key={opt.key} onClick={() => setSelected(opt.key)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 10, border: `1px solid ${active ? opt.color : 'var(--border)'}`, background: active ? `${opt.color}0D` : 'transparent', cursor: 'pointer', transition: 'all 0.15s' }}>
+                  <Icon size={20} color={active ? opt.color : 'var(--text-muted)'} strokeWidth={1.5} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{opt.label}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{opt.desc}</div>
+                  </div>
+                  <div style={{ width: 18, height: 18, borderRadius: '50%', border: `2px solid ${active ? opt.color : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {active && <div style={{ width: 8, height: 8, borderRadius: '50%', background: opt.color }} />}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          {selected === 'CARTAO' && <CardForm onCard={handleCard} />}
+        </div>
+        {selected !== 'CARTAO' && (
+          <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+            <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
+            <button onClick={handleSave} disabled={saving} style={{ background: 'var(--accent)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+              {saving && <Loader2 size={14} className="animate-spin" />}
+              {saving ? 'Salvando...' : 'Confirmar'}
+            </button>
+          </div>
+        )}
+      </div>
+    </>
+  )
+}
+
+// ── Sub-components ──
 
 function InfoItem({ label, value }: { label: string; value: string }) {
   return (
