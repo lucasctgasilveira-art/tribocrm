@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Mail, Calendar, Download, Check, MessageCircle, Clock, Linkedin } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { vendasMenuItems } from '../../config/vendasMenu'
+import api from '../../services/api'
 
 type Tab = 'integrations' | 'preferences' | 'account'
 
@@ -205,10 +206,7 @@ function AccountTab() {
             </div>
           </div>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-          <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(249,115,22,0.2)', color: '#f97316', fontSize: 22, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>AS</div>
-          <button style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', fontSize: 11, color: 'var(--text-secondary)', cursor: 'pointer' }}>Alterar foto</button>
-        </div>
+        <AvatarUpload initials="AS" />
       </div>
 
       <SectionLabel style={{ marginTop: 20 }}>Segurança</SectionLabel>
@@ -239,6 +237,44 @@ function AccountTab() {
 }
 
 // ── Shared ──
+
+function AvatarUpload({ initials }: { initials: string }) {
+  const fileRef = useRef<HTMLInputElement>(null)
+  const stored = JSON.parse(localStorage.getItem('user') ?? '{}') as { avatarUrl?: string }
+  const [avatarUrl, setAvatarUrl] = useState(stored.avatarUrl ?? '')
+  const [uploading, setUploading] = useState(false)
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('avatar', file)
+      const res = await api.patch('/users/me', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+      const url = res.data.data.avatarUrl
+      setAvatarUrl(url)
+      const s = JSON.parse(localStorage.getItem('user') ?? '{}')
+      s.avatarUrl = url
+      localStorage.setItem('user', JSON.stringify(s))
+    } catch { /* ignore */ }
+    setUploading(false)
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+      {avatarUrl ? (
+        <img src={avatarUrl} alt="Avatar" style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover' }} />
+      ) : (
+        <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(249,115,22,0.2)', color: '#f97316', fontSize: 22, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{initials}</div>
+      )}
+      <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFile} />
+      <button onClick={() => fileRef.current?.click()} disabled={uploading} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', fontSize: 11, color: 'var(--text-secondary)', cursor: 'pointer' }}>
+        {uploading ? 'Enviando...' : 'Alterar foto'}
+      </button>
+    </div>
+  )
+}
 
 function SectionLabel({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 12, fontWeight: 600, ...style }}>{children}</div>

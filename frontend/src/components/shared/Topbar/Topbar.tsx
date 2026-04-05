@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, type ChangeEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Bell, Search, Mail, ShieldCheck, AlertCircle, CheckCircle2, UserPlus, User, Key, LogOut, X, Loader2,
@@ -404,14 +404,37 @@ function ProfileModal({ userName, onClose }: { userName: string; onClose: () => 
   const [phone, setPhone] = useState('')
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState('')
+  const stored = JSON.parse(localStorage.getItem('user') ?? '{}') as { avatarUrl?: string; name?: string }
+  const [avatarUrl, setAvatarUrl] = useState(stored.avatarUrl ?? '')
+  const [uploading, setUploading] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const ini = (stored.name ?? userName).split(' ').filter(Boolean).slice(0, 2).map(w => w[0]?.toUpperCase()).join('')
+
+  async function handleAvatarChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('avatar', file)
+      const res = await api.patch('/users/me', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+      const url = res.data.data.avatarUrl
+      setAvatarUrl(url)
+      const s = JSON.parse(localStorage.getItem('user') ?? '{}')
+      s.avatarUrl = url
+      localStorage.setItem('user', JSON.stringify(s))
+    } catch { /* ignore */ }
+    setUploading(false)
+  }
 
   async function handleSave() {
     setSaving(true)
     try {
       await api.patch('/users/me', { name, phone })
-      const stored = JSON.parse(localStorage.getItem('user') ?? '{}')
-      stored.name = name
-      localStorage.setItem('user', JSON.stringify(stored))
+      const s = JSON.parse(localStorage.getItem('user') ?? '{}')
+      s.name = name
+      localStorage.setItem('user', JSON.stringify(s))
       setToast('Perfil atualizado!')
       setTimeout(() => { setToast(''); onClose() }, 1500)
     } catch { setSaving(false) }
@@ -429,6 +452,18 @@ function ProfileModal({ userName, onClose }: { userName: string; onClose: () => 
           <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
         </div>
         <div style={{ padding: 24 }}>
+          {/* Avatar */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="Avatar" style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover' }} />
+            ) : (
+              <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'rgba(249,115,22,0.2)', color: '#f97316', fontSize: 24, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{ini}</div>
+            )}
+            <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarChange} />
+            <button onClick={() => fileRef.current?.click()} disabled={uploading} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 12px', fontSize: 11, color: 'var(--text-secondary)', cursor: 'pointer' }}>
+              {uploading ? 'Enviando...' : 'Alterar foto'}
+            </button>
+          </div>
           <div style={{ marginBottom: 16 }}>
             <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Nome</label>
             <input value={name} onChange={e => setName(e.target.value)} style={inputS} />
