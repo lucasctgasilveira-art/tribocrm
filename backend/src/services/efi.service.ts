@@ -1,11 +1,17 @@
+import path from 'path'
 import EfiPay from 'sdk-typescript-apis-efi'
 import { prisma } from '../lib/prisma'
 
 function getClient(): EfiPay {
+  const certPath = process.env.EFI_PIX_CERT
+    ? path.resolve(process.cwd(), process.env.EFI_PIX_CERT)
+    : path.resolve(__dirname, '../../certs/efi-cert.p12')
+
   return new EfiPay({
     client_id: process.env.EFI_CLIENT_ID!,
     client_secret: process.env.EFI_CLIENT_SECRET!,
     sandbox: process.env.EFI_SANDBOX === 'true',
+    certificate: certPath,
   })
 }
 
