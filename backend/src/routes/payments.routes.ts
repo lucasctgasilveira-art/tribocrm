@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express'
 import { authMiddleware } from '../middleware/auth.middleware'
+import { prisma } from '../lib/prisma'
 import {
   createPixCharge,
   createBoletoCharge,
@@ -10,18 +11,43 @@ import {
 
 const router = Router()
 
+const SANDBOX_CPF = '11144477735'
+
+async function getTenantData(tenantId: string, userId: string) {
+  const [tenant, user] = await Promise.all([
+    prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true, cnpj: true, email: true } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true, cpf: true } }),
+  ])
+
+  const isSandbox = process.env.EFI_SANDBOX === 'true'
+  const cnpjClean = tenant?.cnpj?.replace(/\D/g, '') ?? ''
+  const cpfClean = user?.cpf?.replace(/\D/g, '') ?? ''
+
+  return {
+    debtorName: tenant?.name ?? user?.name ?? 'Cliente TriboCRM',
+    debtorCpf: cnpjClean || cpfClean || (isSandbox ? SANDBOX_CPF : ''),
+    debtorEmail: tenant?.email ?? user?.email ?? '',
+  }
+}
+
 // ── PIX ──
 
 router.post('/pix', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const { role, tenantId } = req.user!
+    const { role, tenantId, userId } = req.user!
     if (role !== 'OWNER' && role !== 'MANAGER') {
       res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Apenas donos e gestores podem gerar cobranças' } })
       return
     }
 
-    const { value, description, expiresIn, debtorName, debtorCpf } = req.body
-    const result = await createPixCharge(tenantId, { value, description, expiresIn, debtorName, debtorCpf })
+    const { value, description, expiresIn } = req.body
+    const tenantData = await getTenantData(tenantId, userId)
+
+    const result = await createPixCharge(tenantId, {
+      value, description, expiresIn,
+      debtorName: tenantData.debtorName,
+      debtorCpf: tenantData.debtorCpf,
+    })
     res.json({ success: true, data: result })
   } catch (error: any) {
     console.error('[Payments] PIX error:', error)
@@ -33,14 +59,25 @@ router.post('/pix', authMiddleware, async (req: Request, res: Response) => {
 
 router.post('/boleto', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const { role, tenantId } = req.user!
+    const { role, tenantId, userId } = req.user!
     if (role !== 'OWNER' && role !== 'MANAGER') {
       res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Apenas donos e gestores podem gerar cobranças' } })
       return
     }
 
-    const { value, description, dueDate, debtorName, debtorCpf, debtorEmail, debtorStreet, debtorCity, debtorState, debtorZipCode } = req.body
-    const result = await createBoletoCharge(tenantId, { value, description, dueDate, debtorName, debtorCpf, debtorEmail, debtorStreet, debtorCity, debtorState, debtorZipCode })
+    const { value, description, dueDate, debtorStreet, debtorCity, debtorState, debtorZipCode } = req.body
+    const tenantData = await getTenantData(tenantId, userId)
+
+    const result = await createBoletoCharge(tenantId, {
+      value, description, dueDate,
+      debtorName: tenantData.debtorName,
+      debtorCpf: tenantData.debtorCpf,
+      debtorEmail: tenantData.debtorEmail,
+      debtorStreet: debtorStreet ?? 'Rua não informada',
+      debtorCity: debtorCity ?? 'São Paulo',
+      debtorState: debtorState ?? 'SP',
+      debtorZipCode: debtorZipCode ?? '01000000',
+    })
     res.json({ success: true, data: result })
   } catch (error: any) {
     console.error('[Payments] Boleto error:', error)

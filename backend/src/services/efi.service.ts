@@ -61,20 +61,36 @@ export async function createPixCharge(tenantId: string, chargeData: PixChargeDat
   const txid = `tribo${Date.now()}${Math.random().toString(36).slice(2, 8)}`
 
   const expiresIn = chargeData.expiresIn ?? 1800
-  const valueCents = Math.round(chargeData.value * 100).toString().padStart(1, '0')
-  const valueStr = `${Math.floor(chargeData.value)}.${(valueCents.slice(-2)).padStart(2, '0')}`
+  const valueStr = chargeData.value.toFixed(2)
+  const cpfClean = chargeData.debtorCpf.replace(/\D/g, '')
 
   // Create immediate charge (cob)
-  const cob = await efi.pixCreateImmediateCharge({ txid } as any, {
+  const cobBody: any = {
     calendario: { expiracao: expiresIn },
-    devedor: { cpf: chargeData.debtorCpf.replace(/\D/g, ''), nome: chargeData.debtorName },
     valor: { original: valueStr },
     chave: process.env.EFI_PIX_KEY ?? '',
     solicitacaoPagador: chargeData.description,
-  } as any) as any
+  }
+
+  // Add debtor — use cpf (11 digits) or cnpj (14 digits)
+  if (cpfClean.length === 14) {
+    cobBody.devedor = { cnpj: cpfClean, nome: chargeData.debtorName }
+  } else if (cpfClean.length === 11) {
+    cobBody.devedor = { cpf: cpfClean, nome: chargeData.debtorName }
+  }
+
+  console.log('[Efi PIX] Creating charge:', JSON.stringify({ txid, value: valueStr, debtor: cobBody.devedor }))
+
+  const cob = await efi.pixCreateImmediateCharge({ txid } as any, cobBody) as any
+  console.log('[Efi PIX] Charge response:', JSON.stringify(cob, null, 2))
+
+  if (!cob || !cob.loc) {
+    throw new Error(`Resposta inesperada do Efi PIX: ${JSON.stringify(cob)}`)
+  }
 
   // Generate QR Code
   const qr = await efi.pixGenerateQRCode({ id: cob.loc.id } as any) as any
+  console.log('[Efi PIX] QR response keys:', qr ? Object.keys(qr) : 'null')
 
   const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString()
 
@@ -93,8 +109,8 @@ export async function createPixCharge(tenantId: string, chargeData: PixChargeDat
 
   return {
     txid,
-    pixCopiaECola: qr.qrcode ?? cob.pixCopiaECola ?? '',
-    qrCode: qr.imagemQrcode ?? '',
+    pixCopiaECola: qr?.qrcode ?? cob.pixCopiaECola ?? '',
+    qrCode: qr?.imagemQrcode ?? '',
     expiresAt,
   }
 }
@@ -123,8 +139,21 @@ interface BoletoChargeResult {
 
 export async function createBoletoCharge(tenantId: string, chargeData: BoletoChargeData): Promise<BoletoChargeResult> {
   const efi = getClient()
+  const cpfClean = chargeData.debtorCpf.replace(/\D/g, '')
+  const isCnpj = cpfClean.length === 14
 
-  // Step 1: Create charge
+  const customer: any = {
+    name: chargeData.debtorName,
+    email: chargeData.debtorEmail,
+  }
+  if (isCnpj) {
+    customer.juridical_person = { corporate_name: chargeData.debtorName, cnpj: cpfClean }
+  } else {
+    customer.cpf = cpfClean
+  }
+
+  console.log('[Efi Boleto] Creating charge:', JSON.stringify({ value: chargeData.value, dueDate: chargeData.dueDate, customer }))
+
   const charge = await efi.createOneStepCharge([] as any, {
     items: [{
       name: chargeData.description,
@@ -134,18 +163,16 @@ export async function createBoletoCharge(tenantId: string, chargeData: BoletoCha
     payment: {
       banking_billet: {
         expire_at: chargeData.dueDate,
-        customer: {
-          name: chargeData.debtorName,
-          cpf: chargeData.debtorCpf.replace(/\D/g, ''),
-          email: chargeData.debtorEmail,
-        },
+        customer,
       },
     },
   } as any) as any
 
+  console.log('[Efi Boleto] Charge response:', JSON.stringify(charge, null, 2))
+
   const chargeId = String(charge.data?.charge_id ?? charge.charge_id ?? Date.now())
-  const boletoUrl = charge.data?.billet_link ?? charge.data?.pdf?.charge ?? ''
-  const barCode = charge.data?.barcode ?? ''
+  const boletoUrl = charge.data?.billet_link ?? charge.data?.pdf?.charge ?? charge.billet_link ?? ''
+  const barCode = charge.data?.barcode ?? charge.barcode ?? ''
 
   // Save to database
   await prisma.charge.create({
