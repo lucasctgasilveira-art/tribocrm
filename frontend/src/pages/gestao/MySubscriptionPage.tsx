@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { CreditCard, QrCode, FileText, Download, X, Copy, Loader2, Info } from 'lucide-react'
+import { QRCodeSVG } from 'qrcode.react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
 import api from '../../services/api'
@@ -253,9 +254,9 @@ function PixModal({ onClose }: { onClose: () => void }) {
               <div style={{ fontSize: 24, fontWeight: 800, color: '#22c55e', marginBottom: 4 }}>R$ 349,00</div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16 }}>TriboCRM Pro — Mensal</div>
 
-              {pixData.qrCode ? (
+              {pixData.pixCopiaECola ? (
                 <div style={{ background: '#fff', borderRadius: 12, padding: 16, display: 'inline-block', marginBottom: 16 }}>
-                  <img src={pixData.qrCode} alt="QR Code PIX" style={{ width: 200, height: 200 }} />
+                  <QRCodeSVG value={pixData.pixCopiaECola} size={200} level="M" includeMargin={true} />
                 </div>
               ) : (
                 <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 12, padding: 40, marginBottom: 16 }}>
