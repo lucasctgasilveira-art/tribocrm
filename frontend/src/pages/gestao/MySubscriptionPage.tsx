@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { CreditCard, QrCode, FileText, Download, X, Copy, Loader2, Info } from 'lucide-react'
+import { CreditCard, QrCode, FileText, Download, X, Copy, Loader2 } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
@@ -191,7 +191,7 @@ export default function MySubscriptionPage() {
       {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: '4px solid #22c55e', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 60 }}>{toast}</div>}
       {pixModal && <PixModal onClose={() => setPixModal(false)} />}
       {boletoModal && <BoletoModal onClose={() => setBoletoModal(false)} />}
-      {cardModal && <ComingSoonModal onClose={() => setCardModal(false)} />}
+      {cardModal && <CardPaymentModal onClose={() => setCardModal(false)} />}
       {upgradeModal && <UpgradeModal onClose={() => setUpgradeModal(false)} />}
       {annualModal && <AnnualModal onClose={() => setAnnualModal(false)} />}
       {cancelModal && <CancelModal onClose={() => setCancelModal(false)} onCancelled={() => { setCancelModal(false); setToast('Cancelamento agendado'); setTimeout(() => setToast(''), 4000) }} />}
@@ -380,15 +380,41 @@ function BoletoModal({ onClose }: { onClose: () => void }) {
 
 // ── Coming Soon Modal ──
 
-function ComingSoonModal({ onClose }: { onClose: () => void }) {
+// ── Card Payment Modal ──
+
+function CardPaymentModal({ onClose }: { onClose: () => void }) {
+  const [loading, setLoading] = useState(false)
+  const [toast, setToast] = useState('')
+
+  async function handleCard(cardData: { cardNumber: string; holderName: string; expirationMonth: string; expirationYear: string; cvv: string }) {
+    setLoading(true)
+    try {
+      await api.post('/payments/card-subscription', cardData)
+      setToast('Pagamento realizado com sucesso!')
+      setTimeout(() => { setToast(''); onClose() }, 2000)
+    } catch { setLoading(false) }
+  }
+
   return (
     <>
+      {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: '4px solid #22c55e', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 70 }}>{toast}</div>}
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
-      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 400, maxWidth: '90vw', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, padding: 24, textAlign: 'center' }}>
-        <Info size={32} color="#3b82f6" strokeWidth={1.5} style={{ marginBottom: 12 }} />
-        <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 8px' }}>Em breve</h3>
-        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20, lineHeight: 1.5 }}>Pagamento por cartão de crédito estará disponível em breve.</p>
-        <button onClick={onClose} style={{ background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 24px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Entendi</button>
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 420, maxWidth: '90vw', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Pagar com Cartao</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+        </div>
+        <div style={{ padding: 24 }}>
+          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 16, textAlign: 'center' }}>R$ 349,00</div>
+          {loading ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 20 }}>
+              <Loader2 size={18} color="var(--accent)" className="animate-spin" />
+              <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Processando pagamento...</span>
+            </div>
+          ) : (
+            <CardForm onCard={handleCard} />
+          )}
+        </div>
       </div>
     </>
   )
