@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { MoreHorizontal, Plus } from 'lucide-react'
+import { MoreHorizontal, Plus, X, Loader2 } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { adminMenuItems } from '../../config/adminMenu'
+import api from '../../services/api'
 
 interface Plan {
   name: string
@@ -80,6 +81,8 @@ const stats = [
 
 export default function PlansPage() {
   const [menuOpen, setMenuOpen] = useState<string | null>(null)
+  const [editPlan, setEditPlan] = useState<Plan | null>(null)
+  const [toast, setToast] = useState('')
 
   return (
     <AppLayout menuItems={adminMenuItems}>
@@ -213,18 +216,10 @@ export default function PlansPage() {
 
             {/* actions */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <button
-                style={{
-                  fontSize: 12,
-                  fontWeight: 500,
-                  color: 'var(--text-primary)',
-                  background: 'var(--border)',
-                  border: 'none',
-                  borderRadius: 6,
-                  padding: '6px 14px',
-                  cursor: 'pointer',
-                }}
-              >
+              <button onClick={() => setEditPlan(p)} style={{ fontSize: 12, fontWeight: 500, color: '#f97316', background: 'rgba(249,115,22,0.12)', border: 'none', borderRadius: 6, padding: '6px 14px', cursor: 'pointer' }}>
+                Editar preço
+              </button>
+              <button style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', background: 'var(--border)', border: 'none', borderRadius: 6, padding: '6px 14px', cursor: 'pointer' }}>
                 Editar limites
               </button>
               <div style={{ position: 'relative' }}>
@@ -287,6 +282,110 @@ export default function PlansPage() {
           </div>
         ))}
       </div>
+
+      {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: '4px solid #22c55e', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 60 }}>{toast}</div>}
+      {editPlan && <EditPriceModal plan={editPlan} onClose={() => setEditPlan(null)} onSaved={() => { setEditPlan(null); setToast('Preco atualizado com sucesso!'); setTimeout(() => setToast(''), 4000) }} />}
     </AppLayout>
+  )
+}
+
+// ── Edit Price Modal ──
+
+function EditPriceModal({ plan, onClose, onSaved }: { plan: Plan; onClose: () => void; onSaved: () => void }) {
+  const currentMonthly = parseInt(plan.price.replace(/\D/g, ''))
+  const [monthly, setMonthly] = useState(String(currentMonthly))
+  const [yearly, setYearly] = useState(String(Math.round(currentMonthly * 12 * 0.85)))
+  const [applyMode, setApplyMode] = useState<'NEW_ONLY' | 'NEW_AND_RENEWALS'>('NEW_ONLY')
+  const [validFrom, setValidFrom] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const monthlyNum = parseFloat(monthly) || 0
+  const yearlyNum = parseFloat(yearly) || 0
+  const yearlyPerMonth = yearlyNum > 0 ? Math.round(yearlyNum / 12) : 0
+  const savings = (monthlyNum * 12) - yearlyNum
+
+  function handleMonthlyChange(v: string) {
+    setMonthly(v)
+    const n = parseFloat(v) || 0
+    setYearly(String(Math.round(n * 12 * 0.85)))
+  }
+
+  async function handleSave() {
+    setSaving(true)
+    try {
+      await api.patch(`/admin/plans/${plan.name.toLowerCase()}/price`, { priceMonthly: monthlyNum, priceYearly: yearlyNum })
+      onSaved()
+    } catch { setSaving(false) }
+  }
+
+  const inputS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 480, maxWidth: '90vw', maxHeight: '90vh', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Editar preco — {plan.name}</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+        </div>
+        <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Valor mensal (R$)</label>
+              <input type="number" value={monthly} onChange={e => handleMonthlyChange(e.target.value)} style={inputS} />
+            </div>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Valor anual (R$)</label>
+              <input type="number" value={yearly} onChange={e => setYearly(e.target.value)} style={inputS} />
+            </div>
+          </div>
+
+          {savings > 0 && (
+            <div style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 8, padding: 10, marginBottom: 16, fontSize: 12, color: '#22c55e', textAlign: 'center' }}>
+              Anual: R$ {yearlyPerMonth}/mes — Economia de R$ {savings}/ano
+            </div>
+          )}
+
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Quando aplicar este preco?</div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <label onClick={() => setApplyMode('NEW_ONLY')} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px', borderRadius: 8, border: `1px solid ${applyMode === 'NEW_ONLY' ? 'var(--accent)' : 'var(--border)'}`, background: applyMode === 'NEW_ONLY' ? 'rgba(249,115,22,0.06)' : 'transparent', cursor: 'pointer' }}>
+              <div style={{ width: 18, height: 18, borderRadius: '50%', border: `2px solid ${applyMode === 'NEW_ONLY' ? 'var(--accent)' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+                {applyMode === 'NEW_ONLY' && <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)' }} />}
+              </div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>Apenas novas contratacoes</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Contratos existentes nao serao afetados</div>
+              </div>
+            </label>
+
+            <label onClick={() => setApplyMode('NEW_AND_RENEWALS')} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px', borderRadius: 8, border: `1px solid ${applyMode === 'NEW_AND_RENEWALS' ? 'var(--accent)' : 'var(--border)'}`, background: applyMode === 'NEW_AND_RENEWALS' ? 'rgba(249,115,22,0.06)' : 'transparent', cursor: 'pointer' }}>
+              <div style={{ width: 18, height: 18, borderRadius: '50%', border: `2px solid ${applyMode === 'NEW_AND_RENEWALS' ? 'var(--accent)' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+                {applyMode === 'NEW_AND_RENEWALS' && <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)' }} />}
+              </div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>Novas contratacoes e renovacoes</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Clientes existentes terao o novo valor na renovacao</div>
+              </div>
+            </label>
+          </div>
+
+          {applyMode === 'NEW_AND_RENEWALS' && (
+            <div style={{ marginTop: 12 }}>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Valido a partir de:</label>
+              <input type="date" value={validFrom} onChange={e => setValidFrom(e.target.value)} style={inputS} />
+              {validFrom && <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 8, padding: 10, marginTop: 8, fontSize: 12, color: '#f59e0b' }}>Clientes que renovarem apos {new Date(validFrom).toLocaleDateString('pt-BR')} pagarao R$ {monthlyNum}/mes</div>}
+            </div>
+          )}
+        </div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
+          <button onClick={handleSave} disabled={saving || !monthlyNum} style={{ background: monthlyNum ? 'var(--accent)' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: monthlyNum ? '#fff' : 'var(--text-muted)', cursor: monthlyNum ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 6 }}>
+            {saving && <Loader2 size={14} className="animate-spin" />}
+            {saving ? 'Salvando...' : 'Salvar alteracao'}
+          </button>
+        </div>
+      </div>
+    </>
   )
 }

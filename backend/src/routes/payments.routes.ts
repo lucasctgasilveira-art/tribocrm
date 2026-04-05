@@ -13,6 +13,17 @@ import {
 
 const router = Router()
 
+// ── Public: list plans ──
+
+router.get('/plans', async (_req: Request, res: Response) => {
+  try {
+    const plans = await prisma.plan.findMany({ where: { isActive: true }, orderBy: { priceMonthly: 'asc' } })
+    res.json({ success: true, data: plans.map(p => ({ id: p.id, name: p.name, slug: p.slug, priceMonthly: Number(p.priceMonthly), priceYearly: Number(p.priceYearly), maxUsers: p.maxUsers, maxLeads: p.maxLeads, maxPipelines: p.maxPipelines, maxAutomations: p.maxAutomations, maxForms: p.maxForms, features: p.features })) })
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } })
+  }
+})
+
 const SANDBOX_CPF = '11144477735'
 
 async function getPixDebtorData(tenantId: string, userId: string) {
