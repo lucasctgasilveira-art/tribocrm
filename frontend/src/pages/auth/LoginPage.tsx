@@ -11,11 +11,12 @@ interface ToastState {
 function redirectByRole(role: string): string {
   switch (role) {
     case 'SUPER_ADMIN':
-      return '/auth/2fa'
+      return '/admin/dashboard'
     case 'OWNER':
-      return '/auth/select-instance'
     case 'MANAGER':
+    case 'TEAM_LEADER':
       return '/gestao/dashboard'
+    case 'SELLER':
     default:
       return '/vendas/dashboard'
   }

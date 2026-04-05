@@ -17,9 +17,10 @@ function getDefaultRoute(role: string): string {
     case 'SUPER_ADMIN':
       return '/admin/dashboard'
     case 'OWNER':
-      return '/auth/select-instance'
     case 'MANAGER':
+    case 'TEAM_LEADER':
       return '/gestao/dashboard'
+    case 'SELLER':
     default:
       return '/vendas/dashboard'
   }
@@ -28,11 +29,13 @@ function getDefaultRoute(role: string): string {
 function getAllowedInstances(role: string): AllowedInstance[] {
   switch (role) {
     case 'SUPER_ADMIN':
-      return ['admin']
+      return ['admin', 'gestao', 'vendas']
     case 'OWNER':
-      return ['admin', 'gestao']
+      return ['gestao', 'vendas']
     case 'MANAGER':
-      return ['gestao']
+    case 'TEAM_LEADER':
+      return ['gestao', 'vendas']
+    case 'SELLER':
     default:
       return ['vendas']
   }
