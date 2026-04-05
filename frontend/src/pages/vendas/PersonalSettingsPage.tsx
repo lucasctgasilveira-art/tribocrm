@@ -194,6 +194,7 @@ function AccountTab() {
   const [pwError, setPwError] = useState('')
 
   const ini = (stored.name ?? 'U').split(' ').filter(Boolean).slice(0, 2).map(w => w[0]?.toUpperCase()).join('')
+  const roleLabels: Record<string, string> = { SELLER: 'Vendedor', MANAGER: 'Gerente', OWNER: 'Proprietário', TEAM_LEADER: 'Líder de Equipe', SUPER_ADMIN: 'Administrador' }
 
   async function handleSave() {
     setSaving(true)
@@ -208,8 +209,8 @@ function AccountTab() {
   }
 
   async function handleChangePassword() {
-    if (newPw !== confirmPw) { setPwError('Senhas nao conferem'); return }
-    if (newPw.length < 8) { setPwError('Minimo 8 caracteres'); return }
+    if (newPw !== confirmPw) { setPwError('Senhas não conferem'); return }
+    if (newPw.length < 8) { setPwError('Mínimo 8 caracteres'); return }
     setPwSaving(true); setPwError('')
     try {
       await api.post('/auth/change-password', { currentPassword: curPw, newPassword: newPw })
@@ -242,7 +243,7 @@ function AccountTab() {
             </div>
             <div>
               <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Cargo</label>
-              <input defaultValue={stored.role ?? ''} disabled style={{ ...inputS, opacity: 0.6, cursor: 'not-allowed' }} />
+              <input defaultValue={roleLabels[stored.role ?? ''] ?? stored.role ?? ''} disabled style={{ ...inputS, opacity: 0.6, cursor: 'not-allowed' }} />
             </div>
           </div>
         </div>
@@ -250,10 +251,10 @@ function AccountTab() {
       </div>
 
       <button onClick={handleSave} disabled={saving} style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-        {saving ? 'Salvando...' : 'Salvar alteracoes'}
+        {saving ? 'Salvando...' : 'Salvar alterações'}
       </button>
 
-      <SectionLabel style={{ marginTop: 20 }}>Seguranca</SectionLabel>
+      <SectionLabel style={{ marginTop: 20 }}>Segurança</SectionLabel>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 8 }}>
         <div>
           <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Senha atual</label>
@@ -269,14 +270,14 @@ function AccountTab() {
         </div>
       </div>
       {pwError && <div style={{ fontSize: 12, color: '#ef4444', marginBottom: 8 }}>{pwError}</div>}
-      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>Minimo 8 caracteres, 1 maiuscula, 1 numero</div>
+      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>Mínimo 8 caracteres, 1 maiúscula, 1 número</div>
       <button onClick={handleChangePassword} disabled={pwSaving || !curPw || !newPw || !confirmPw} style={{ background: curPw && newPw && confirmPw ? '#f97316' : 'var(--border)', color: curPw && newPw && confirmPw ? '#fff' : 'var(--text-muted)', border: 'none', borderRadius: 8, padding: '9px 16px', fontSize: 13, fontWeight: 600, cursor: curPw && newPw && confirmPw ? 'pointer' : 'not-allowed' }}>
         {pwSaving ? 'Salvando...' : 'Alterar senha'}
       </button>
 
-      <SectionLabel style={{ marginTop: 20 }}>Ultimo acesso</SectionLabel>
-      <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 4 }}>Ultimo login: hoje as 08:45 — Windows · Chrome</div>
-      <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>Sessoes ativas: 1 dispositivo</div>
+      <SectionLabel style={{ marginTop: 20 }}>Último acesso</SectionLabel>
+      <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 4 }}>Último login: hoje às 08:45 — Windows · Chrome</div>
+      <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>Sessões ativas: 1 dispositivo</div>
     </div>
   )
 }
