@@ -18,6 +18,7 @@ import formsRoutes from './routes/forms.routes'
 import automationsRoutes from './routes/automations.routes'
 import adminRoutes from './routes/admin.routes'
 import oauthRoutes from './routes/oauth.routes'
+import paymentsRoutes from './routes/payments.routes'
 
 const app = express()
 
@@ -66,5 +67,6 @@ app.use('/templates', templatesRoutes)
 app.use('/forms', formsRoutes)
 app.use('/automations', automationsRoutes)
 app.use('/admin', adminRoutes)
+app.use('/payments', paymentsRoutes)
 
 export default app

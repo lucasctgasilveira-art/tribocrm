@@ -1,6 +1,8 @@
-import { CreditCard, QrCode, FileText, Download } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { CreditCard, QrCode, FileText, Download, X, Copy, Loader2, Info } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
+import api from '../../services/api'
 
 const payments = [
   { period: 'Abril/2026', value: 'R$ 349,00', due: '05/04/2026', paid: '05/04/2026', status: 'Pago' as const },
@@ -31,6 +33,10 @@ const tdS: React.CSSProperties = { padding: '14px 20px', fontSize: 13, color: 'v
 const card: React.CSSProperties = { background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12 }
 
 export default function MySubscriptionPage() {
+  const [pixModal, setPixModal] = useState(false)
+  const [boletoModal, setBoletoModal] = useState(false)
+  const [cardModal, setCardModal] = useState(false)
+
   return (
     <AppLayout menuItems={gestaoMenuItems}>
       <div style={{ marginBottom: 20 }}>
@@ -50,12 +56,12 @@ export default function MySubscriptionPage() {
           <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>ou R$ 297/mês no plano anual (15% de desconto)</div>
 
           <div style={{ borderTop: '1px solid var(--border)', marginTop: 16, paddingTop: 16, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <Info label="Próximo vencimento" value="05/05/2026" />
-            <Info label="Ciclo" value="Mensal" />
-            <Info label="Usuários" value="4 / 5 incluídos" />
-            <Info label="Leads ativos" value="847 / 10.000" />
-            <Info label="Funis" value="1 / 10" />
-            <Info label="Automações ativas" value="5 / 10" />
+            <InfoItem label="Próximo vencimento" value="05/05/2026" />
+            <InfoItem label="Ciclo" value="Mensal" />
+            <InfoItem label="Usuários" value="4 / 5 incluídos" />
+            <InfoItem label="Leads ativos" value="847 / 10.000" />
+            <InfoItem label="Funis" value="1 / 10" />
+            <InfoItem label="Automações ativas" value="5 / 10" />
           </div>
 
           <div style={{ marginTop: 12 }}>
@@ -90,9 +96,9 @@ export default function MySubscriptionPage() {
           <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
             <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 10, fontWeight: 600 }}>Também aceito</div>
             <div style={{ display: 'flex', gap: 10 }}>
-              <PayOpt icon={<QrCode size={18} strokeWidth={1.5} />} color="#22c55e" label="PIX" />
-              <PayOpt icon={<FileText size={18} strokeWidth={1.5} />} color="#3b82f6" label="Boleto" />
-              <PayOpt icon={<CreditCard size={18} strokeWidth={1.5} />} color="#f97316" label="Cartão" />
+              <PayOpt icon={<QrCode size={18} strokeWidth={1.5} />} color="#22c55e" label="PIX" onClick={() => setPixModal(true)} />
+              <PayOpt icon={<FileText size={18} strokeWidth={1.5} />} color="#3b82f6" label="Boleto" onClick={() => setBoletoModal(true)} />
+              <PayOpt icon={<CreditCard size={18} strokeWidth={1.5} />} color="#f97316" label="Cartão" onClick={() => setCardModal(true)} />
             </div>
           </div>
         </div>
@@ -173,11 +179,211 @@ export default function MySubscriptionPage() {
           <span style={{ fontSize: 13, color: '#f97316', cursor: 'pointer' }}>Precisa de mais? Fale com nosso time de consultores →</span>
         </div>
       </div>
+
+      {/* Modals */}
+      {pixModal && <PixModal onClose={() => setPixModal(false)} />}
+      {boletoModal && <BoletoModal onClose={() => setBoletoModal(false)} />}
+      {cardModal && <ComingSoonModal onClose={() => setCardModal(false)} />}
     </AppLayout>
   )
 }
 
-function Info({ label, value }: { label: string; value: string }) {
+// ── PIX Modal ──
+
+function PixModal({ onClose }: { onClose: () => void }) {
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [pixData, setPixData] = useState<{ pixCopiaECola: string; qrCode: string; expiresAt: string } | null>(null)
+  const [copied, setCopied] = useState(false)
+  const [timeLeft, setTimeLeft] = useState(1800)
+
+  useEffect(() => {
+    api.post('/payments/pix', {
+      value: 349, description: 'TriboCRM Pro — Mensal',
+      debtorName: 'Cliente TriboCRM', debtorCpf: '00000000000',
+    }).then(res => {
+      setPixData(res.data.data)
+      setLoading(false)
+    }).catch(() => {
+      setError('Erro ao gerar cobrança PIX')
+      setLoading(false)
+    })
+  }, [])
+
+  useEffect(() => {
+    if (!pixData) return
+    const interval = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 0) { clearInterval(interval); return 0 }
+        return prev - 1
+      })
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [pixData])
+
+  function handleCopy() {
+    if (pixData?.pixCopiaECola) {
+      navigator.clipboard.writeText(pixData.pixCopiaECola)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2500)
+    }
+  }
+
+  const minutes = Math.floor(timeLeft / 60)
+  const seconds = timeLeft % 60
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 420, maxWidth: '90vw', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Pagar com PIX</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+        </div>
+        <div style={{ padding: 24, textAlign: 'center' }}>
+          {loading ? (
+            <div style={{ padding: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+              <Loader2 size={22} color="#f97316" className="animate-spin" />
+              <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Gerando cobrança...</span>
+            </div>
+          ) : error ? (
+            <div style={{ padding: 20, color: '#ef4444', fontSize: 13 }}>{error}</div>
+          ) : pixData ? (
+            <>
+              <div style={{ fontSize: 24, fontWeight: 800, color: '#22c55e', marginBottom: 4 }}>R$ 349,00</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16 }}>TriboCRM Pro — Mensal</div>
+
+              {pixData.qrCode ? (
+                <div style={{ background: '#fff', borderRadius: 12, padding: 16, display: 'inline-block', marginBottom: 16 }}>
+                  <img src={pixData.qrCode} alt="QR Code PIX" style={{ width: 200, height: 200 }} />
+                </div>
+              ) : (
+                <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 12, padding: 40, marginBottom: 16 }}>
+                  <QrCode size={64} color="var(--text-muted)" strokeWidth={1} />
+                </div>
+              )}
+
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 6 }}>Código PIX copia e cola</div>
+                <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px', fontSize: 11, color: 'var(--text-secondary)', wordBreak: 'break-all', maxHeight: 60, overflow: 'auto', textAlign: 'left' }}>
+                  {pixData.pixCopiaECola || 'Código não disponível'}
+                </div>
+              </div>
+
+              <button onClick={handleCopy} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: '#22c55e', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginBottom: 12 }}>
+                <Copy size={14} strokeWidth={1.5} /> {copied ? 'Copiado!' : 'Copiar código PIX'}
+              </button>
+
+              <div style={{ fontSize: 12, color: timeLeft < 300 ? '#ef4444' : 'var(--text-muted)' }}>
+                Expira em {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+              </div>
+            </>
+          ) : null}
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ── Boleto Modal ──
+
+function BoletoModal({ onClose }: { onClose: () => void }) {
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [boletoData, setBoletoData] = useState<{ boletoUrl: string; barCode: string; dueDate: string } | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    const dueDate = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+    api.post('/payments/boleto', {
+      value: 349, description: 'TriboCRM Pro — Mensal', dueDate,
+      debtorName: 'Cliente TriboCRM', debtorCpf: '00000000000',
+      debtorEmail: 'cliente@empresa.com',
+      debtorStreet: 'Rua Exemplo', debtorCity: 'São Paulo', debtorState: 'SP', debtorZipCode: '01000000',
+    }).then(res => {
+      setBoletoData(res.data.data)
+      setLoading(false)
+    }).catch(() => {
+      setError('Erro ao gerar boleto')
+      setLoading(false)
+    })
+  }, [])
+
+  function handleCopyBarcode() {
+    if (boletoData?.barCode) {
+      navigator.clipboard.writeText(boletoData.barCode)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2500)
+    }
+  }
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 460, maxWidth: '90vw', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Pagar com Boleto</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+        </div>
+        <div style={{ padding: 24 }}>
+          {loading ? (
+            <div style={{ padding: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+              <Loader2 size={22} color="#f97316" className="animate-spin" />
+              <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Gerando boleto...</span>
+            </div>
+          ) : error ? (
+            <div style={{ padding: 20, color: '#ef4444', fontSize: 13, textAlign: 'center' }}>{error}</div>
+          ) : boletoData ? (
+            <>
+              <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                <div style={{ fontSize: 24, fontWeight: 800, color: '#3b82f6' }}>R$ 349,00</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>Vencimento: {new Date(boletoData.dueDate).toLocaleDateString('pt-BR')}</div>
+              </div>
+
+              {boletoData.barCode && (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 6 }}>Código de barras</div>
+                  <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                    {boletoData.barCode}
+                  </div>
+                  <button onClick={handleCopyBarcode} style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 12px', fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                    <Copy size={12} strokeWidth={1.5} /> {copied ? 'Copiado!' : 'Copiar código'}
+                  </button>
+                </div>
+              )}
+
+              {boletoData.boletoUrl && (
+                <a href={boletoData.boletoUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
+                  <FileText size={14} strokeWidth={1.5} /> Abrir boleto em PDF
+                </a>
+              )}
+            </>
+          ) : null}
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ── Coming Soon Modal ──
+
+function ComingSoonModal({ onClose }: { onClose: () => void }) {
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 400, maxWidth: '90vw', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, padding: 24, textAlign: 'center' }}>
+        <Info size={32} color="#3b82f6" strokeWidth={1.5} style={{ marginBottom: 12 }} />
+        <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 8px' }}>Em breve</h3>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20, lineHeight: 1.5 }}>Pagamento por cartão de crédito estará disponível em breve.</p>
+        <button onClick={onClose} style={{ background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 24px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Entendi</button>
+      </div>
+    </>
+  )
+}
+
+// ── Sub-components ──
+
+function InfoItem({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{label}</div>
@@ -186,9 +392,9 @@ function Info({ label, value }: { label: string; value: string }) {
   )
 }
 
-function PayOpt({ icon, color, label }: { icon: React.ReactNode; color: string; label: string }) {
+function PayOpt({ icon, color, label, onClick }: { icon: React.ReactNode; color: string; label: string; onClick: () => void }) {
   return (
-    <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer', transition: 'all 0.15s', flex: 1, justifyContent: 'center' }}
+    <div onClick={onClick} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer', transition: 'all 0.15s', flex: 1, justifyContent: 'center' }}
       onMouseEnter={e => { e.currentTarget.style.borderColor = color; e.currentTarget.style.color = color }}
       onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)' }}>
       <span style={{ color: 'inherit' }}>{icon}</span>{label}
