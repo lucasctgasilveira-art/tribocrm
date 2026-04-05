@@ -12,9 +12,6 @@ const router = Router()
 const GMAIL_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 'https://tribocrm-production.up.railway.app/oauth/google/callback'
 const CALENDAR_REDIRECT_URI = process.env.GOOGLE_CALENDAR_REDIRECT_URI || 'https://tribocrm-production.up.railway.app/oauth/calendar/callback'
 
-// Debug
-router.get('/ping', (_req, res) => res.json({ pong: true }))
-
 // ── Gmail ──
 
 router.get('/google/authorize', authMiddleware, (req: Request, res: Response) => {

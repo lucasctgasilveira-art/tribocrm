@@ -1,4 +1,3 @@
-// TriboCRM Backend v1.1 - build forçado
 import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
@@ -52,18 +51,8 @@ app.get('/health', (_req, res) => {
   res.json({ success: true, data: { status: 'ok', timestamp: new Date().toISOString() } })
 })
 
-// Debug: test routes without any middleware
-app.get('/oauth/test', (_req, res) => {
-  res.json({ ok: true, query: _req.query })
-})
-app.get('/oauth/ping2', (_req, res) => {
-  res.json({ ping2: true })
-})
-
-// OAuth routes — registered BEFORE all other routes
-app.use('/oauth', oauthRoutes)
-
 // Routes
+app.use('/oauth', oauthRoutes)
 app.use('/auth', authRoutes)
 app.use('/pipelines', pipelineRoutes)
 app.use('/leads', leadsRoutes)
