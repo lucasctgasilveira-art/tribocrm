@@ -79,18 +79,28 @@ export async function createPixCharge(tenantId: string, chargeData: PixChargeDat
     cobBody.devedor = { cpf: cpfClean, nome: chargeData.debtorName }
   }
 
-  console.log('[Efi PIX] Creating charge:', JSON.stringify({ txid, value: valueStr, debtor: cobBody.devedor }))
+  console.log('[Efi PIX] Creating charge:', JSON.stringify({ txid, value: valueStr, debtor: cobBody.devedor, chave: cobBody.chave }))
 
+  // Step 1: Create immediate charge
   const cob = await efi.pixCreateImmediateCharge({ txid } as any, cobBody) as any
-  console.log('[Efi PIX] Charge response:', JSON.stringify(cob, null, 2))
+  console.log('[Efi PIX] Full response:', JSON.stringify(cob, null, 2))
 
-  if (!cob || !cob.loc) {
-    throw new Error(`Resposta inesperada do Efi PIX: ${JSON.stringify(cob)}`)
+  const locId = cob?.loc?.id
+  const pixCopiaECola = cob?.pixCopiaECola ?? cob?.location ?? ''
+
+  // Step 2: Generate QR Code (may fail in sandbox)
+  let qrCode = ''
+  if (locId) {
+    try {
+      const qr = await efi.pixGenerateQRCode({ id: locId } as any) as any
+      console.log('[Efi PIX] QR response keys:', qr ? Object.keys(qr) : 'null')
+      qrCode = qr?.imagemQrcode ?? ''
+    } catch (qrErr: any) {
+      console.warn('[Efi PIX] QR code generation failed (sandbox?):', qrErr.message ?? qrErr)
+    }
+  } else {
+    console.warn('[Efi PIX] No loc.id in response — skipping QR code generation')
   }
-
-  // Generate QR Code
-  const qr = await efi.pixGenerateQRCode({ id: cob.loc.id } as any) as any
-  console.log('[Efi PIX] QR response keys:', qr ? Object.keys(qr) : 'null')
 
   const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString()
 
@@ -109,8 +119,8 @@ export async function createPixCharge(tenantId: string, chargeData: PixChargeDat
 
   return {
     txid,
-    pixCopiaECola: qr?.qrcode ?? cob.pixCopiaECola ?? '',
-    qrCode: qr?.imagemQrcode ?? '',
+    pixCopiaECola,
+    qrCode,
     expiresAt,
   }
 }
