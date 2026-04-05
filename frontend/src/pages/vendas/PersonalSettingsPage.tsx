@@ -181,57 +181,102 @@ function PreferencesTab() {
 // ── Account Tab ──
 
 function AccountTab() {
+  const stored = JSON.parse(localStorage.getItem('user') ?? '{}') as { name?: string; email?: string; phone?: string; role?: string }
+  const [name, setName] = useState(stored.name ?? '')
+  const [phone, setPhone] = useState(stored.phone ?? '')
+  const [saving, setSaving] = useState(false)
+  const [toast, setToast] = useState('')
+
+  const [curPw, setCurPw] = useState('')
+  const [newPw, setNewPw] = useState('')
+  const [confirmPw, setConfirmPw] = useState('')
+  const [pwSaving, setPwSaving] = useState(false)
+  const [pwError, setPwError] = useState('')
+
+  const ini = (stored.name ?? 'U').split(' ').filter(Boolean).slice(0, 2).map(w => w[0]?.toUpperCase()).join('')
+
+  async function handleSave() {
+    setSaving(true)
+    try {
+      await api.patch('/users/me', { name, phone })
+      const s = JSON.parse(localStorage.getItem('user') ?? '{}')
+      s.name = name; s.phone = phone
+      localStorage.setItem('user', JSON.stringify(s))
+      setToast('Dados salvos!'); setTimeout(() => setToast(''), 3000)
+    } catch { /* ignore */ }
+    setSaving(false)
+  }
+
+  async function handleChangePassword() {
+    if (newPw !== confirmPw) { setPwError('Senhas nao conferem'); return }
+    if (newPw.length < 8) { setPwError('Minimo 8 caracteres'); return }
+    setPwSaving(true); setPwError('')
+    try {
+      await api.post('/auth/change-password', { currentPassword: curPw, newPassword: newPw })
+      setCurPw(''); setNewPw(''); setConfirmPw('')
+      setToast('Senha alterada!'); setTimeout(() => setToast(''), 3000)
+    } catch { setPwError('Senha atual incorreta') }
+    setPwSaving(false)
+  }
+
   return (
     <div style={card}>
+      {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: '4px solid #22c55e', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 60 }}>{toast}</div>}
+
       <SectionLabel>Dados pessoais</SectionLabel>
       <div style={{ display: 'flex', gap: 20, marginBottom: 20 }}>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Nome completo</label>
-              <input defaultValue="Ana Souza" style={inputS} />
+              <input value={name} onChange={e => setName(e.target.value)} style={inputS} />
             </div>
             <div>
               <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>E-mail</label>
-              <input defaultValue="ana@tribodevendas.com.br" disabled style={{ ...inputS, opacity: 0.6, cursor: 'not-allowed' }} />
+              <input defaultValue={stored.email ?? ''} disabled style={{ ...inputS, opacity: 0.6, cursor: 'not-allowed' }} />
               <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>Contate o gestor para alterar</div>
             </div>
             <div>
               <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Telefone / WhatsApp</label>
-              <input defaultValue="(21) 98712-3344" style={inputS} />
+              <input value={phone} onChange={e => setPhone(e.target.value)} style={inputS} />
             </div>
             <div>
               <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Cargo</label>
-              <input defaultValue="Vendedora" style={inputS} />
+              <input defaultValue={stored.role ?? ''} disabled style={{ ...inputS, opacity: 0.6, cursor: 'not-allowed' }} />
             </div>
           </div>
         </div>
-        <AvatarUpload initials="AS" />
+        <AvatarUpload initials={ini} />
       </div>
 
-      <SectionLabel style={{ marginTop: 20 }}>Segurança</SectionLabel>
+      <button onClick={handleSave} disabled={saving} style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+        {saving ? 'Salvando...' : 'Salvar alteracoes'}
+      </button>
+
+      <SectionLabel style={{ marginTop: 20 }}>Seguranca</SectionLabel>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 8 }}>
         <div>
           <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Senha atual</label>
-          <input type="password" placeholder="••••••••" style={inputS} />
+          <input type="password" value={curPw} onChange={e => { setCurPw(e.target.value); setPwError('') }} placeholder="••••••••" style={inputS} />
         </div>
         <div>
           <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Nova senha</label>
-          <input type="password" placeholder="••••••••" style={inputS} />
+          <input type="password" value={newPw} onChange={e => { setNewPw(e.target.value); setPwError('') }} placeholder="••••••••" style={inputS} />
         </div>
         <div>
           <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Confirmar nova senha</label>
-          <input type="password" placeholder="••••••••" style={inputS} />
+          <input type="password" value={confirmPw} onChange={e => { setConfirmPw(e.target.value); setPwError('') }} placeholder="••••••••" style={inputS} />
         </div>
       </div>
-      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>Mínimo 8 caracteres, 1 maiúscula, 1 número</div>
-      <button style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Alterar senha</button>
+      {pwError && <div style={{ fontSize: 12, color: '#ef4444', marginBottom: 8 }}>{pwError}</div>}
+      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>Minimo 8 caracteres, 1 maiuscula, 1 numero</div>
+      <button onClick={handleChangePassword} disabled={pwSaving || !curPw || !newPw || !confirmPw} style={{ background: curPw && newPw && confirmPw ? '#f97316' : 'var(--border)', color: curPw && newPw && confirmPw ? '#fff' : 'var(--text-muted)', border: 'none', borderRadius: 8, padding: '9px 16px', fontSize: 13, fontWeight: 600, cursor: curPw && newPw && confirmPw ? 'pointer' : 'not-allowed' }}>
+        {pwSaving ? 'Salvando...' : 'Alterar senha'}
+      </button>
 
-      <SectionLabel style={{ marginTop: 20 }}>Último acesso</SectionLabel>
-      <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 4 }}>Último login: hoje às 08:45 — Windows · Chrome</div>
-      <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>Sessões ativas: 1 dispositivo</div>
-
-      <button style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Salvar alterações</button>
+      <SectionLabel style={{ marginTop: 20 }}>Ultimo acesso</SectionLabel>
+      <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 4 }}>Ultimo login: hoje as 08:45 — Windows · Chrome</div>
+      <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>Sessoes ativas: 1 dispositivo</div>
     </div>
   )
 }
