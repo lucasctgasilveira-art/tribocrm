@@ -23,6 +23,12 @@ router.get('/google/authorize', authMiddleware, (req: Request, res: Response) =>
 // GET /oauth/google/callback — NO authMiddleware (called by Google redirect, not by frontend)
 // userId and tenantId are extracted from the signed JWT in the "state" parameter
 router.get('/google/callback', async (req: Request, res: Response) => {
+  console.log('=== OAuth Callback ===')
+  console.log('Query params:', req.query)
+  console.log('State recebido:', req.query.state)
+  console.log('Code recebido:', req.query.code ? 'SIM' : 'NÃO')
+  console.log('Headers:', JSON.stringify(req.headers, null, 2))
+
   const { code, state, error } = req.query
 
   const frontendUrl = process.env.FRONTEND_URL || 'https://tribocrm.vercel.app'
