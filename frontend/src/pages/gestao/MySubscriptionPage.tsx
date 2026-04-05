@@ -40,6 +40,7 @@ export default function MySubscriptionPage() {
   const [upgradeModal, setUpgradeModal] = useState(false)
   const [annualModal, setAnnualModal] = useState(false)
   const [cancelModal, setCancelModal] = useState(false)
+  const [payNowModal, setPayNowModal] = useState(false)
   const [toast, setToast] = useState('')
 
   return (
@@ -132,7 +133,7 @@ export default function MySubscriptionPage() {
                   <td style={tdS}>{p.paid}</td>
                   <td style={tdS}><span style={{ background: s.bg, color: s.color, borderRadius: 999, padding: '3px 10px', fontSize: 11, fontWeight: 500 }}>{p.status}</span></td>
                   <td style={tdS}>
-                    <button style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', fontSize: 11, color: p.status === 'Vencido' ? '#ef4444' : 'var(--text-secondary)', cursor: 'pointer' }}>
+                    <button onClick={() => { if (p.status === 'Vencido') setPayNowModal(true) }} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', fontSize: 11, color: p.status === 'Vencido' ? '#ef4444' : 'var(--text-secondary)', cursor: 'pointer' }}>
                       {p.status === 'Vencido' ? 'Pagar agora' : 'Ver boleto'}
                     </button>
                   </td>
@@ -172,9 +173,9 @@ export default function MySubscriptionPage() {
                 {p.current ? (
                   <button disabled style={{ width: '100%', background: 'var(--border)', color: 'var(--text-muted)', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'not-allowed' }}>Plano atual</button>
                 ) : p.name === 'Enterprise' ? (
-                  <button style={{ width: '100%', background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Fazer upgrade</button>
+                  <button onClick={() => setUpgradeModal(true)} style={{ width: '100%', background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Fazer upgrade</button>
                 ) : (
-                  <button style={{ width: '100%', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-secondary)', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'pointer' }}>Fazer downgrade</button>
+                  <button onClick={() => setUpgradeModal(true)} style={{ width: '100%', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-secondary)', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'pointer' }}>Fazer downgrade</button>
                 )}
               </div>
             </div>
@@ -193,6 +194,7 @@ export default function MySubscriptionPage() {
       {upgradeModal && <UpgradeModal onClose={() => setUpgradeModal(false)} />}
       {annualModal && <AnnualModal onClose={() => setAnnualModal(false)} />}
       {cancelModal && <CancelModal onClose={() => setCancelModal(false)} onCancelled={() => { setCancelModal(false); setToast('Cancelamento agendado'); setTimeout(() => setToast(''), 4000) }} />}
+      {payNowModal && <PayNowModal onClose={() => setPayNowModal(false)} />}
     </AppLayout>
   )
 }
@@ -554,7 +556,73 @@ function CancelModal({ onClose, onCancelled }: { onClose: () => void; onCancelle
   )
 }
 
-// ── Sub-components ──
+// ── Pay Now Modal ──
+
+function PayNowModal({ onClose }: { onClose: () => void }) {
+  const [method, setMethod] = useState<'PIX' | 'BOLETO'>('PIX')
+  const [loading, setLoading] = useState(false)
+  const [pixResult, setPixResult] = useState<{ pixCopiaECola: string } | null>(null)
+  const [boletoResult, setBoletoResult] = useState<{ boletoUrl: string; barCode: string } | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  async function handleGenerate() {
+    setLoading(true)
+    try {
+      if (method === 'PIX') {
+        const res = await api.post('/payments/pix', { value: 349, description: 'TriboCRM Pro — Pagamento pendente' })
+        setPixResult({ pixCopiaECola: res.data.data.pixCopiaECola })
+      } else {
+        const dueDate = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+        const res = await api.post('/payments/boleto', { value: 349, description: 'TriboCRM Pro — Pagamento pendente', dueDate })
+        setBoletoResult({ boletoUrl: res.data.data.boletoUrl, barCode: res.data.data.barCode })
+      }
+    } catch { /* ignore */ }
+    setLoading(false)
+  }
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 440, maxWidth: '90vw', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Pagar agora</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+        </div>
+        <div style={{ padding: 24, textAlign: 'center' }}>
+          {pixResult ? (
+            <>
+              <div style={{ background: '#fff', borderRadius: 12, padding: 16, display: 'inline-block', marginBottom: 16 }}>
+                <QRCodeSVG value={pixResult.pixCopiaECola} size={180} level="M" includeMargin />
+              </div>
+              <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', fontSize: 11, color: 'var(--text-secondary)', wordBreak: 'break-all', marginBottom: 12, textAlign: 'left' }}>{pixResult.pixCopiaECola}</div>
+              <button onClick={() => { navigator.clipboard.writeText(pixResult.pixCopiaECola); setCopied(true); setTimeout(() => setCopied(false), 2000) }} style={{ background: '#22c55e', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>{copied ? 'Copiado!' : 'Copiar código PIX'}</button>
+            </>
+          ) : boletoResult ? (
+            <>
+              {boletoResult.barCode && <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'monospace', wordBreak: 'break-all', marginBottom: 12 }}>{boletoResult.barCode}</div>}
+              {boletoResult.boletoUrl && <a href={boletoResult.boletoUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}><FileText size={14} strokeWidth={1.5} /> Abrir boleto</a>}
+            </>
+          ) : (
+            <>
+              <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 16 }}>R$ 349,00</div>
+              <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+                {(['PIX', 'BOLETO'] as const).map(m => (
+                  <button key={m} onClick={() => setMethod(m)} style={{ flex: 1, padding: '10px 0', borderRadius: 8, border: `1px solid ${method === m ? 'var(--accent)' : 'var(--border)'}`, background: method === m ? 'rgba(249,115,22,0.06)' : 'transparent', color: method === m ? 'var(--accent)' : 'var(--text-secondary)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>{m}</button>
+                ))}
+              </div>
+              <button onClick={handleGenerate} disabled={loading} style={{ background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 24px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%' }}>
+                {loading && <Loader2 size={14} className="animate-spin" />}
+                {loading ? 'Gerando...' : `Gerar ${method}`}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ── Sub-components ─��
 
 function InfoItem({ label, value }: { label: string; value: string }) {
   return (
