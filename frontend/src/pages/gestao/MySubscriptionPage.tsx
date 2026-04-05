@@ -37,6 +37,10 @@ export default function MySubscriptionPage() {
   const [pixModal, setPixModal] = useState(false)
   const [boletoModal, setBoletoModal] = useState(false)
   const [cardModal, setCardModal] = useState(false)
+  const [upgradeModal, setUpgradeModal] = useState(false)
+  const [annualModal, setAnnualModal] = useState(false)
+  const [cancelModal, setCancelModal] = useState(false)
+  const [toast, setToast] = useState('')
 
   return (
     <AppLayout menuItems={gestaoMenuItems}>
@@ -75,9 +79,9 @@ export default function MySubscriptionPage() {
           </div>
 
           <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-            <button style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Fazer upgrade</button>
-            <button style={{ background: 'transparent', border: '1px solid rgba(249,115,22,0.3)', color: '#f97316', borderRadius: 8, padding: '9px 16px', fontSize: 13, cursor: 'pointer' }}>Mudar para anual</button>
-            <button style={{ background: 'transparent', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', borderRadius: 8, padding: '9px 16px', fontSize: 13, cursor: 'pointer', marginLeft: 'auto' }}>Cancelar assinatura</button>
+            <button onClick={() => setUpgradeModal(true)} style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Fazer upgrade</button>
+            <button onClick={() => setAnnualModal(true)} style={{ background: 'transparent', border: '1px solid rgba(249,115,22,0.3)', color: '#f97316', borderRadius: 8, padding: '9px 16px', fontSize: 13, cursor: 'pointer' }}>Mudar para anual</button>
+            <button onClick={() => setCancelModal(true)} style={{ background: 'transparent', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', borderRadius: 8, padding: '9px 16px', fontSize: 13, cursor: 'pointer', marginLeft: 'auto' }}>Cancelar assinatura</button>
           </div>
         </div>
 
@@ -182,9 +186,13 @@ export default function MySubscriptionPage() {
       </div>
 
       {/* Modals */}
+      {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: '4px solid #22c55e', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 60 }}>{toast}</div>}
       {pixModal && <PixModal onClose={() => setPixModal(false)} />}
       {boletoModal && <BoletoModal onClose={() => setBoletoModal(false)} />}
       {cardModal && <ComingSoonModal onClose={() => setCardModal(false)} />}
+      {upgradeModal && <UpgradeModal onClose={() => setUpgradeModal(false)} />}
+      {annualModal && <AnnualModal onClose={() => setAnnualModal(false)} />}
+      {cancelModal && <CancelModal onClose={() => setCancelModal(false)} onCancelled={() => { setCancelModal(false); setToast('Cancelamento agendado'); setTimeout(() => setToast(''), 4000) }} />}
     </AppLayout>
   )
 }
@@ -377,6 +385,170 @@ function ComingSoonModal({ onClose }: { onClose: () => void }) {
         <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 8px' }}>Em breve</h3>
         <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20, lineHeight: 1.5 }}>Pagamento por cartão de crédito estará disponível em breve.</p>
         <button onClick={onClose} style={{ background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 24px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Entendi</button>
+      </div>
+    </>
+  )
+}
+
+// ── Upgrade Modal ──
+
+function UpgradeModal({ onClose }: { onClose: () => void }) {
+  const upgradePlans = [
+    { id: 'essencial', name: 'Essencial', price: 197 },
+    { id: 'pro', name: 'Pro', price: 349, current: true },
+    { id: 'enterprise', name: 'Enterprise', price: 649 },
+  ]
+  const [selected, setSelected] = useState<string | null>(null)
+  const [method, setMethod] = useState<'PIX' | 'BOLETO'>('PIX')
+  const [loading, setLoading] = useState(false)
+  const [pixResult, setPixResult] = useState<{ pixCopiaECola: string; proratedValue: number } | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  const selectedPlan = upgradePlans.find(p => p.id === selected)
+  const currentPlan = upgradePlans.find(p => p.current)
+  const proratedEstimate = selectedPlan && currentPlan ? Math.round((selectedPlan.price - currentPlan.price) * 0.8 * 100) / 100 : 0
+
+  async function handleConfirm() {
+    if (!selected) return
+    setLoading(true)
+    try {
+      const res = await api.post('/payments/upgrade', { newPlanId: selected, paymentMethod: method })
+      if (method === 'PIX') setPixResult({ pixCopiaECola: res.data.data.pixCopiaECola, proratedValue: res.data.data.proratedValue })
+    } catch { /* ignore */ }
+    setLoading(false)
+  }
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 520, maxWidth: '90vw', maxHeight: '90vh', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Fazer Upgrade</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+        </div>
+        <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
+          {pixResult ? (
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 20, fontWeight: 800, color: '#22c55e', marginBottom: 8 }}>R$ {pixResult.proratedValue.toFixed(2)}</div>
+              <div style={{ background: '#fff', borderRadius: 12, padding: 16, display: 'inline-block', marginBottom: 16 }}>
+                <QRCodeSVG value={pixResult.pixCopiaECola} size={180} level="M" includeMargin />
+              </div>
+              <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', fontSize: 11, color: 'var(--text-secondary)', wordBreak: 'break-all', marginBottom: 12, textAlign: 'left' }}>{pixResult.pixCopiaECola}</div>
+              <button onClick={() => { navigator.clipboard.writeText(pixResult.pixCopiaECola); setCopied(true); setTimeout(() => setCopied(false), 2000) }} style={{ background: '#22c55e', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>{copied ? 'Copiado!' : 'Copiar código PIX'}</button>
+            </div>
+          ) : (
+            <>
+              <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
+                {upgradePlans.map(p => (
+                  <div key={p.id} onClick={() => !p.current && setSelected(p.id)} style={{ flex: 1, padding: 16, borderRadius: 10, border: `2px solid ${selected === p.id ? 'var(--accent)' : p.current ? 'var(--border)' : 'var(--border)'}`, background: selected === p.id ? 'rgba(249,115,22,0.06)' : 'transparent', cursor: p.current ? 'default' : 'pointer', opacity: p.current ? 0.5 : 1, textAlign: 'center' }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</div>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: selected === p.id ? 'var(--accent)' : 'var(--text-primary)', marginTop: 4 }}>R$ {p.price}</div>
+                    {p.current && <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>Atual</div>}
+                  </div>
+                ))}
+              </div>
+              {selected && (
+                <>
+                  <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16, fontSize: 13, color: 'var(--text-secondary)' }}>
+                    Valor proporcional estimado: <strong style={{ color: 'var(--accent)' }}>R$ {proratedEstimate.toFixed(2)}</strong>
+                  </div>
+                  <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+                    {(['PIX', 'BOLETO'] as const).map(m => (
+                      <button key={m} onClick={() => setMethod(m)} style={{ flex: 1, padding: '10px 0', borderRadius: 8, border: `1px solid ${method === m ? 'var(--accent)' : 'var(--border)'}`, background: method === m ? 'rgba(249,115,22,0.06)' : 'transparent', color: method === m ? 'var(--accent)' : 'var(--text-secondary)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>{m}</button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </>
+          )}
+        </div>
+        {!pixResult && (
+          <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+            <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
+            <button onClick={handleConfirm} disabled={!selected || loading} style={{ background: selected ? 'var(--accent)' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: selected ? '#fff' : 'var(--text-muted)', cursor: selected ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 6 }}>
+              {loading && <Loader2 size={14} className="animate-spin" />}
+              {loading ? 'Gerando...' : 'Confirmar upgrade'}
+            </button>
+          </div>
+        )}
+      </div>
+    </>
+  )
+}
+
+// ── Annual Modal ──
+
+function AnnualModal({ onClose }: { onClose: () => void }) {
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 440, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Mudar para Anual</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+        </div>
+        <div style={{ padding: 24, textAlign: 'center' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 24, marginBottom: 20 }}>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Mensal</div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-muted)', textDecoration: 'line-through', marginTop: 4 }}>R$ 349</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: '#22c55e', textTransform: 'uppercase', fontWeight: 600 }}>Anual (-15%)</div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: '#22c55e', marginTop: 4 }}>R$ 297<span style={{ fontSize: 12, fontWeight: 400 }}>/mês</span></div>
+            </div>
+          </div>
+          <div style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 8, padding: 12, fontSize: 13, color: '#22c55e', marginBottom: 20 }}>
+            Economia de R$ 624/ano
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20, lineHeight: 1.5 }}>
+            Ao mudar para anual, o valor será cobrado integralmente (R$ 3.564) via PIX ou Boleto.
+          </div>
+        </div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Voltar</button>
+          <button onClick={onClose} style={{ background: '#22c55e', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer' }}>Mudar para anual</button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ── Cancel Modal ──
+
+function CancelModal({ onClose, onCancelled }: { onClose: () => void; onCancelled: () => void }) {
+  const [loading, setLoading] = useState(false)
+
+  async function handleCancel() {
+    setLoading(true)
+    try {
+      await api.post('/payments/cancel')
+      onCancelled()
+    } catch { setLoading(false) }
+  }
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 440, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: '#ef4444', margin: 0 }}>Cancelar Assinatura</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+        </div>
+        <div style={{ padding: 24 }}>
+          <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: 14, marginBottom: 16, fontSize: 13, color: '#ef4444', lineHeight: 1.5 }}>
+            Ao cancelar, seu acesso continuará funcionando até o fim do período atual. Após essa data, os dados serão mantidos por 30 dias.
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 8 }}>Seu acesso continua até:</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)' }}>05/05/2026</div>
+        </div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Voltar</button>
+          <button onClick={handleCancel} disabled={loading} style={{ background: '#ef4444', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+            {loading && <Loader2 size={14} className="animate-spin" />}
+            {loading ? 'Cancelando...' : 'Confirmar cancelamento'}
+          </button>
+        </div>
       </div>
     </>
   )

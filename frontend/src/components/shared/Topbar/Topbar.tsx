@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
-  Bell, Search, Mail, ShieldCheck, AlertCircle, CheckCircle2, UserPlus,
+  Bell, Search, Mail, ShieldCheck, AlertCircle, CheckCircle2, UserPlus, User, Key, LogOut, X, Loader2,
   type LucideIcon,
 } from 'lucide-react'
 import {
@@ -8,6 +9,7 @@ import {
   markAsRead as markAsReadApi,
   markAllAsRead as markAllAsReadApi,
 } from '../../../services/notifications.service'
+import api from '../../../services/api'
 
 /* ── types ── */
 
@@ -331,25 +333,175 @@ export default function Topbar({ onOpenSearch }: TopbarProps) {
           )}
         </div>
 
-        {/* Avatar */}
-        <div
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: '50%',
-            background: 'var(--accent)',
-            color: '#fff',
-            fontSize: 13,
-            fontWeight: 700,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-          }}
-        >
-          {initials}
-        </div>
+        {/* Avatar + User Menu */}
+        <UserMenu initials={initials} userName={user.name ?? ''} userEmail={JSON.parse(localStorage.getItem('user') ?? '{}').email ?? ''} />
       </div>
     </header>
+  )
+}
+
+// ── User Menu ──
+
+function UserMenu({ initials, userName, userEmail }: { initials: string; userName: string; userEmail: string }) {
+  const navigate = useNavigate()
+  const [open, setOpen] = useState(false)
+  const [profileModal, setProfileModal] = useState(false)
+  const [passwordModal, setPasswordModal] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function close(e: MouseEvent) { if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpen(false) }
+    if (open) document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [open])
+
+  function handleLogout() {
+    api.post('/auth/logout').catch(() => {})
+    localStorage.removeItem('accessToken')
+    localStorage.removeItem('user')
+    navigate('/login')
+  }
+
+  return (
+    <div ref={menuRef} style={{ position: 'relative' }}>
+      <div onClick={() => setOpen(!open)} style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)', color: '#fff', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+        {initials}
+      </div>
+
+      {open && (
+        <div style={{ position: 'absolute', top: 44, right: 0, width: 260, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, boxShadow: 'var(--shadow-dropdown)', zIndex: 50, overflow: 'hidden' }}>
+          <div style={{ padding: '16px 16px 12px' }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{userName}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{userEmail}</div>
+          </div>
+          <div style={{ height: 1, background: 'var(--border)' }} />
+          <MenuItem icon={User} label="Meu perfil" onClick={() => { setOpen(false); setProfileModal(true) }} />
+          <MenuItem icon={Key} label="Alterar senha" onClick={() => { setOpen(false); setPasswordModal(true) }} />
+          <div style={{ height: 1, background: 'var(--border)' }} />
+          <MenuItem icon={LogOut} label="Sair" onClick={handleLogout} color="#ef4444" />
+        </div>
+      )}
+
+      {profileModal && <ProfileModal userName={userName} onClose={() => setProfileModal(false)} />}
+      {passwordModal && <PasswordModal onClose={() => setPasswordModal(false)} />}
+    </div>
+  )
+}
+
+function MenuItem({ icon: Icon, label, onClick, color }: { icon: LucideIcon; label: string; onClick: () => void; color?: string }) {
+  return (
+    <div onClick={onClick} style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 13, color: color ?? 'var(--text-primary)', transition: 'background 0.1s' }}
+      onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)' }}
+      onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
+      <Icon size={16} strokeWidth={1.5} />
+      <span>{label}</span>
+    </div>
+  )
+}
+
+function ProfileModal({ userName, onClose }: { userName: string; onClose: () => void }) {
+  const [name, setName] = useState(userName)
+  const [phone, setPhone] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [toast, setToast] = useState('')
+
+  async function handleSave() {
+    setSaving(true)
+    try {
+      await api.patch('/users/me', { name, phone })
+      const stored = JSON.parse(localStorage.getItem('user') ?? '{}')
+      stored.name = name
+      localStorage.setItem('user', JSON.stringify(stored))
+      setToast('Perfil atualizado!')
+      setTimeout(() => { setToast(''); onClose() }, 1500)
+    } catch { setSaving(false) }
+  }
+
+  const inputS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
+
+  return (
+    <>
+      {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: '4px solid #22c55e', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 70 }}>{toast}</div>}
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 60 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 420, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 61, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Meu Perfil</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+        </div>
+        <div style={{ padding: 24 }}>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Nome</label>
+            <input value={name} onChange={e => setName(e.target.value)} style={inputS} />
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Telefone</label>
+            <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="(00) 00000-0000" style={inputS} />
+          </div>
+        </div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
+          <button onClick={handleSave} disabled={saving} style={{ background: 'var(--accent)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+            {saving && <Loader2 size={14} className="animate-spin" />}
+            {saving ? 'Salvando...' : 'Salvar'}
+          </button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+function PasswordModal({ onClose }: { onClose: () => void }) {
+  const [current, setCurrent] = useState('')
+  const [newPw, setNewPw] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [toast, setToast] = useState('')
+
+  async function handleSave() {
+    if (newPw !== confirm) { setError('Senhas não conferem'); return }
+    if (newPw.length < 6) { setError('Mínimo 6 caracteres'); return }
+    setSaving(true)
+    try {
+      await api.post('/auth/change-password', { currentPassword: current, newPassword: newPw })
+      setToast('Senha alterada com sucesso!')
+      setTimeout(() => { setToast(''); onClose() }, 1500)
+    } catch { setError('Senha atual incorreta'); setSaving(false) }
+  }
+
+  const inputS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
+
+  return (
+    <>
+      {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: '4px solid #22c55e', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 70 }}>{toast}</div>}
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 60 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 420, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 61, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Alterar Senha</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+        </div>
+        <div style={{ padding: 24 }}>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Senha atual</label>
+            <input type="password" value={current} onChange={e => { setCurrent(e.target.value); setError('') }} style={inputS} />
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Nova senha</label>
+            <input type="password" value={newPw} onChange={e => { setNewPw(e.target.value); setError('') }} style={inputS} />
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Confirmar nova senha</label>
+            <input type="password" value={confirm} onChange={e => { setConfirm(e.target.value); setError('') }} style={inputS} />
+          </div>
+          {error && <div style={{ fontSize: 12, color: '#ef4444', marginTop: 8 }}>{error}</div>}
+        </div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
+          <button onClick={handleSave} disabled={saving || !current || !newPw || !confirm} style={{ background: current && newPw && confirm ? 'var(--accent)' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: current && newPw && confirm ? '#fff' : 'var(--text-muted)', cursor: current && newPw && confirm ? 'pointer' : 'not-allowed' }}>
+            {saving ? 'Salvando...' : 'Alterar senha'}
+          </button>
+        </div>
+      </div>
+    </>
   )
 }

@@ -4,7 +4,9 @@ import { prisma } from '../lib/prisma'
 import {
   createPixCharge,
   createBoletoCharge,
+  createCardSubscription,
   getChargeStatus,
+  getPaymentHistory,
   processWebhookPayment,
   registerPixWebhook,
 } from '../services/efi.service'
@@ -109,6 +111,113 @@ router.get('/:txid/status', authMiddleware, async (req: Request, res: Response) 
     res.json({ success: true, data: result })
   } catch (error: any) {
     res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: error.message } })
+  }
+})
+
+// ── Upgrade ──
+
+router.post('/upgrade', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { role, tenantId, userId } = req.user!
+    if (role !== 'OWNER') {
+      res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Apenas o dono pode fazer upgrade' } })
+      return
+    }
+
+    const { newPlanId, paymentMethod } = req.body
+    const [tenant, newPlan] = await Promise.all([
+      prisma.tenant.findUnique({ where: { id: tenantId }, include: { plan: true } }),
+      prisma.plan.findUnique({ where: { id: newPlanId } }),
+    ])
+
+    if (!tenant || !newPlan) { res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Tenant ou plano não encontrado' } }); return }
+
+    const currentPrice = tenant.planCycle === 'YEARLY' ? Number(tenant.plan.priceYearly) / 12 : Number(tenant.plan.priceMonthly)
+    const newPrice = tenant.planCycle === 'YEARLY' ? Number(newPlan.priceYearly) / 12 : Number(newPlan.priceMonthly)
+    const diff = newPrice - currentPrice
+    if (diff <= 0) { res.status(400).json({ success: false, error: { code: 'INVALID', message: 'Novo plano deve ser superior ao atual' } }); return }
+
+    const now = new Date()
+    const expiresAt = tenant.planExpiresAt ?? new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    const daysLeft = Math.max(1, Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
+    const proratedValue = Math.round((daysLeft / 30) * diff * 100) / 100
+
+    const debtor = await getPixDebtorData(tenantId, userId)
+
+    if (paymentMethod === 'BOLETO') {
+      const dueDate = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+      const boletoDebtor = await getBoletoDebtorData(userId)
+      const result = await createBoletoCharge(tenantId, { value: proratedValue, description: `Upgrade para ${newPlan.name}`, dueDate, debtorName: boletoDebtor.debtorName, debtorCpf: boletoDebtor.debtorCpf, debtorEmail: boletoDebtor.debtorEmail, debtorStreet: 'Não informado', debtorCity: 'São Paulo', debtorState: 'SP', debtorZipCode: '01000000' })
+      res.json({ success: true, data: { ...result, proratedValue, newPlanName: newPlan.name } })
+    } else {
+      const result = await createPixCharge(tenantId, { value: proratedValue, description: `Upgrade para ${newPlan.name}`, debtorName: debtor.debtorName, debtorCpf: debtor.debtorCpf })
+      res.json({ success: true, data: { ...result, proratedValue, newPlanName: newPlan.name } })
+    }
+  } catch (error: any) {
+    console.error('[Payments] upgrade error:', error)
+    res.status(500).json({ success: false, error: { code: 'PAYMENT_ERROR', message: error.message } })
+  }
+})
+
+// ── Card Subscription ──
+
+router.post('/card-subscription', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { role, tenantId, userId } = req.user!
+    if (role !== 'OWNER') { res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Apenas o dono' } }); return }
+
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true, cpf: true } })
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, include: { plan: true } })
+    if (!tenant) { res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Tenant não encontrado' } }); return }
+
+    const value = tenant.planCycle === 'YEARLY' ? Number(tenant.plan.priceYearly) : Number(tenant.plan.priceMonthly)
+
+    const result = await createCardSubscription(tenantId, {
+      ...req.body,
+      value,
+      description: `TriboCRM ${tenant.plan.name} — ${tenant.planCycle === 'YEARLY' ? 'Anual' : 'Mensal'}`,
+      customerName: user?.name ?? 'Cliente',
+      customerCpf: user?.cpf ?? '',
+      customerEmail: user?.email ?? '',
+    })
+    res.json({ success: true, data: result })
+  } catch (error: any) {
+    console.error('[Payments] card error:', error)
+    res.status(500).json({ success: false, error: { code: 'PAYMENT_ERROR', message: error.message } })
+  }
+})
+
+// ── Cancel ──
+
+router.post('/cancel', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { role, tenantId } = req.user!
+    if (role !== 'OWNER') { res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Apenas o dono pode cancelar' } }); return }
+
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } })
+    if (!tenant) { res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Tenant não encontrado' } }); return }
+
+    const expiresAt = tenant.planExpiresAt ?? new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0)
+
+    await prisma.tenant.update({
+      where: { id: tenantId },
+      data: { status: 'CANCELLED', planExpiresAt: expiresAt },
+    })
+
+    res.json({ success: true, data: { expiresAt: expiresAt.toISOString() } })
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } })
+  }
+})
+
+// ── History ──
+
+router.get('/history', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const result = await getPaymentHistory(req.user!.tenantId)
+    res.json({ success: true, data: result })
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } })
   }
 })
 

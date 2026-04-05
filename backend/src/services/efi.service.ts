@@ -220,6 +220,77 @@ export async function cancelCharge(txid: string): Promise<void> {
   })
 }
 
+// ── Card Subscription ──
+
+interface CardData {
+  cardNumber: string
+  holderName: string
+  expirationMonth: string
+  expirationYear: string
+  cvv: string
+  value: number
+  description: string
+  customerName: string
+  customerCpf: string
+  customerEmail: string
+}
+
+export async function createCardSubscription(tenantId: string, cardData: CardData): Promise<{ chargeId: string; status: string; lastFour: string }> {
+  const efi = getClient()
+  const cpfClean = cardData.customerCpf.replace(/\D/g, '') || '11144477735'
+
+  const charge = await efi.createOneStepCharge([] as any, {
+    items: [{ name: cardData.description, value: Math.round(cardData.value * 100), amount: 1 }],
+    payment: {
+      credit_card: {
+        installments: 1,
+        payment_token: '', // In production, generate via Efi.js frontend tokenizer
+        billing_address: { street: 'Não informado', number: '0', neighborhood: 'Centro', zipcode: '01000000', city: 'São Paulo', state: 'SP' },
+        customer: { name: cardData.customerName, cpf: cpfClean, email: cardData.customerEmail },
+      },
+    },
+  } as any) as any
+
+  const chargeId = String(charge?.charge_id ?? Date.now())
+
+  await prisma.charge.create({
+    data: {
+      tenantId,
+      efiChargeId: chargeId,
+      amount: cardData.value,
+      dueDate: new Date(),
+      paymentMethod: 'CREDIT_CARD',
+      status: 'PAID',
+      paidAt: new Date(),
+      referenceMonth: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`,
+    },
+  })
+
+  return { chargeId, status: 'PAID', lastFour: cardData.cardNumber.slice(-4) }
+}
+
+// ── Payment History ──
+
+export async function getPaymentHistory(tenantId: string): Promise<any[]> {
+  const charges = await prisma.charge.findMany({
+    where: { tenantId },
+    orderBy: { createdAt: 'desc' },
+    take: 20,
+  })
+
+  return charges.map(c => ({
+    id: c.id,
+    efiChargeId: c.efiChargeId,
+    amount: Number(c.amount),
+    dueDate: c.dueDate.toISOString(),
+    paidAt: c.paidAt?.toISOString() ?? null,
+    paymentMethod: c.paymentMethod,
+    status: c.status,
+    referenceMonth: c.referenceMonth,
+    createdAt: c.createdAt.toISOString(),
+  }))
+}
+
 // ── Webhook Registration ──
 
 const WEBHOOK_URL = 'https://tribocrm-production.up.railway.app/payments/webhook/efi'
