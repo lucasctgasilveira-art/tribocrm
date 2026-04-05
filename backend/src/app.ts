@@ -1,3 +1,4 @@
+// TriboCRM Backend v1.1 - build forçado
 import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
