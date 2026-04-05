@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, MoreHorizontal } from 'lucide-react'
+import { Plus, MoreHorizontal, X } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { adminMenuItems } from '../../config/adminMenu'
 
@@ -16,12 +16,13 @@ const menuOpts = ['Editar perfil', 'Redefinir senha', 'Desativar']
 
 export default function InternalTeamPage() {
   const [openMenu, setOpenMenu] = useState<string | null>(null)
+  const [newMemberModal, setNewMemberModal] = useState(false)
 
   return (
     <AppLayout menuItems={adminMenuItems}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Equipe Interna</h1>
-        <button style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}><Plus size={15} strokeWidth={2} /> Novo Membro</button>
+        <button onClick={() => setNewMemberModal(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}><Plus size={15} strokeWidth={2} /> Novo Membro</button>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', fontSize: 13, marginBottom: 20 }}>
@@ -58,6 +59,52 @@ export default function InternalTeamPage() {
           </div>
         ))}
       </div>
+      {newMemberModal && <NewMemberModal onClose={() => setNewMemberModal(false)} />}
     </AppLayout>
+  )
+}
+
+function NewMemberModal({ onClose }: { onClose: () => void }) {
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [role, setRole] = useState('SUPPORT')
+  const [password, setPassword] = useState('')
+  const inputS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
+  const roles = [{ value: 'SUPER_ADMIN', label: 'Super Admin' }, { value: 'FINANCIAL', label: 'Financeiro' }, { value: 'SUPPORT', label: 'Suporte' }, { value: 'COMMERCIAL', label: 'Comercial' }]
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 440, maxWidth: '90vw', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Novo Membro</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+        </div>
+        <div style={{ padding: 24 }}>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Nome completo</label>
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="Nome do membro" style={inputS} />
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>E-mail</label>
+            <input value={email} onChange={e => setEmail(e.target.value)} placeholder="email@tribocrm.com.br" style={inputS} />
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Cargo</label>
+            <select value={role} onChange={e => setRole(e.target.value)} style={{ ...inputS, appearance: 'none' as const, cursor: 'pointer' }}>
+              {roles.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Senha temporária</label>
+            <input value={password} onChange={e => setPassword(e.target.value)} placeholder="Senha inicial" style={inputS} />
+          </div>
+        </div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
+          <button onClick={onClose} disabled={!name || !email} style={{ background: name && email ? '#f97316' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: name && email ? '#fff' : 'var(--text-muted)', cursor: name && email ? 'pointer' : 'not-allowed' }}>Criar membro</button>
+        </div>
+      </div>
+    </>
   )
 }

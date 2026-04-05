@@ -3,6 +3,7 @@ import {
   TrendingUp, BarChart2, UserPlus, AlertCircle, AlertTriangle, Loader2,
   type LucideIcon,
 } from 'lucide-react'
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { adminMenuItems } from '../../config/adminMenu'
 import { getAdminDashboard } from '../../services/admin.service'
@@ -71,7 +72,7 @@ export default function AdminDashboardPage() {
   }
 
   const { kpis, mrrHistory, alerts, trialsExpiring } = data
-  const mrrMax = Math.max(...mrrHistory.map(d => d.value), 1)
+  const _mrrMax = Math.max(...mrrHistory.map(d => d.value), 1); void _mrrMax
 
   const kpiCards: { label: string; value: string; variation?: string; variationColor?: string; icon: LucideIcon; iconColor: string }[] = [
     { label: 'MRR', value: fmt(kpis.mrr), icon: TrendingUp, iconColor: '#f97316' },
@@ -109,24 +110,22 @@ export default function AdminDashboardPage() {
           <span style={{ background: 'var(--border)', color: 'var(--text-secondary)', borderRadius: 999, padding: '3px 10px', fontSize: 11 }}>Últimos 6 meses</span>
         </div>
         {mrrHistory.length > 0 ? (
-          <>
-            <div style={{ display: 'flex', gap: 12, marginTop: 16, padding: '0 8px' }}>
-              {mrrHistory.map(d => (
-                <div key={d.month} style={{ flex: 1, textAlign: 'center', fontSize: 11, color: 'var(--text-secondary)' }}>{formatK(d.value)}</div>
-              ))}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, height: 120, padding: '0 8px', marginTop: 6 }}>
-              {mrrHistory.map(d => (
-                <div key={d.month} style={{ flex: 1, height: `${(d.value / mrrMax) * 100}%`, minHeight: 8, background: 'linear-gradient(to top, #f97316, #fb923c)', borderRadius: '6px 6px 0 0' }} />
-              ))}
-            </div>
-            <div style={{ borderTop: '1px solid var(--border)', margin: '0 8px' }} />
-            <div style={{ display: 'flex', gap: 12, marginTop: 6, padding: '0 8px' }}>
-              {mrrHistory.map(d => (
-                <div key={d.month} style={{ flex: 1, textAlign: 'center', fontSize: 11, color: 'var(--text-muted)' }}>{d.month}</div>
-              ))}
-            </div>
-          </>
+          <div style={{ marginTop: 16, height: 200 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={mrrHistory}>
+                <defs>
+                  <linearGradient id="mrrGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f97316" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="month" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} tickFormatter={v => formatK(v)} width={50} />
+                <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }} labelStyle={{ color: 'var(--text-primary)' }} formatter={(v: number) => [fmt(v), 'MRR']} />
+                <Area type="monotone" dataKey="value" stroke="#f97316" strokeWidth={2} fill="url(#mrrGrad)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
         ) : (
           <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Sem dados de MRR</div>
         )}

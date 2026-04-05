@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { Search, Plus, MoreHorizontal, Loader2 } from 'lucide-react'
+import { Search, Plus, MoreHorizontal, Loader2, X } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { adminMenuItems } from '../../config/adminMenu'
-import { getTenants } from '../../services/admin.service'
+import { getTenants, updateTenant } from '../../services/admin.service'
+import api from '../../services/api'
 
 // ── Types ──
 
@@ -65,6 +66,10 @@ export default function TenantsPage() {
   const [page, setPage] = useState(1)
   const [openMenu, setOpenMenu] = useState<string | null>(null)
   const [hoveredRow, setHoveredRow] = useState<string | null>(null)
+  const [newClientModal, setNewClientModal] = useState(false)
+  const [toast, setToast] = useState('')
+  const [reloadKey, setReloadKey] = useState(0)
+  function reload() { setReloadKey(k => k + 1) }
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const handleSearch = useCallback((value: string) => {
@@ -91,7 +96,7 @@ export default function TenantsPage() {
       }
     }
     load()
-  }, [debouncedSearch, statusFilter, activeTab, page])
+  }, [debouncedSearch, statusFilter, activeTab, page, reloadKey])
 
   const tabFilters = useMemo(() => [
     { key: '', label: 'Todos', count: meta.stats.total },
@@ -108,7 +113,7 @@ export default function TenantsPage() {
           <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Clientes</h1>
           <p style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 4 }}>Gerencie os clientes da plataforma</p>
         </div>
-        <button style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+        <button onClick={() => setNewClientModal(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
           <Plus size={16} strokeWidth={2} /> Novo Cliente
         </button>
       </div>
@@ -209,7 +214,11 @@ export default function TenantsPage() {
                       {openMenu === t.id && (
                         <div style={{ position: 'absolute', right: 20, top: 48, zIndex: 20, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', minWidth: 180, padding: '4px 0' }}>
                           {dropdownOptions.map(opt => (
-                            <div key={opt} onClick={() => setOpenMenu(null)}
+                            <div key={opt} onClick={async () => {
+                              setOpenMenu(null)
+                              if (opt === 'Suspender') { await updateTenant(t.id, { status: 'SUSPENDED' }); reload() }
+                              else if (opt === 'Estender Trial') { const d = new Date(); d.setDate(d.getDate() + 7); await updateTenant(t.id, { trialEndsAt: d.toISOString() }); setToast('Trial estendido em 7 dias'); setTimeout(() => setToast(''), 3000); reload() }
+                            }}
                               style={{ padding: '8px 14px', fontSize: 13, color: 'var(--text-primary)', cursor: 'pointer' }}
                               onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
                               onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>{opt}</div>
@@ -231,7 +240,69 @@ export default function TenantsPage() {
           </div>
         </div>
       )}
+      {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: '4px solid #22c55e', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 60 }}>{toast}</div>}
+      {newClientModal && <NewClientModal onClose={() => setNewClientModal(false)} onCreated={() => { setNewClientModal(false); reload(); setToast('Cliente criado!'); setTimeout(() => setToast(''), 3000) }} />}
     </AppLayout>
+  )
+}
+
+// ── New Client Modal ──
+
+function NewClientModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const [name, setName] = useState('')
+  const [cnpj, setCnpj] = useState('')
+  const [email, setEmail] = useState('')
+  const [responsibleName, setResponsibleName] = useState('')
+  const [saving, setSaving] = useState(false)
+  const inputS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
+  const canSave = name.trim() && cnpj.trim() && email.trim()
+
+  async function handleSave() {
+    if (!canSave) return
+    setSaving(true)
+    try {
+      await api.post('/admin/tenants', { name, cnpj, email, responsibleName })
+      onCreated()
+    } catch { setSaving(false) }
+  }
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 480, maxWidth: '90vw', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Novo Cliente</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+        </div>
+        <div style={{ padding: 24 }}>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Nome da empresa <span style={{ color: '#f97316' }}>*</span></label>
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Empresa ABC Ltda" style={inputS} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>CNPJ <span style={{ color: '#f97316' }}>*</span></label>
+              <input value={cnpj} onChange={e => setCnpj(e.target.value)} placeholder="00.000.000/0001-00" style={inputS} />
+            </div>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>E-mail <span style={{ color: '#f97316' }}>*</span></label>
+              <input value={email} onChange={e => setEmail(e.target.value)} placeholder="contato@empresa.com" style={inputS} />
+            </div>
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Nome do responsável</label>
+            <input value={responsibleName} onChange={e => setResponsibleName(e.target.value)} placeholder="Nome do gestor principal" style={inputS} />
+          </div>
+        </div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
+          <button onClick={handleSave} disabled={!canSave || saving} style={{ background: canSave ? '#f97316' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: canSave ? '#fff' : 'var(--text-muted)', cursor: canSave ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 6 }}>
+            {saving && <Loader2 size={14} className="animate-spin" />}
+            {saving ? 'Criando...' : 'Criar cliente'}
+          </button>
+        </div>
+      </div>
+    </>
   )
 }
 
