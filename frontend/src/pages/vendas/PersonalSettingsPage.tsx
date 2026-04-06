@@ -71,7 +71,7 @@ function IntegrationsTab() {
           </div>
           <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12, lineHeight: 1.5 }}>Envie e-mails para leads diretamente pelo TriboCRM. Seus e-mails saem com seu nome e endereço.</p>
           {features(['Enviar e-mails pelos modelos do gestor', 'Rastreamento de abertura (Plano Pro)', 'Histórico de e-mails no card do lead'])}
-          <button onClick={() => { window.location.href = '/oauth/google/gmail' }} style={{ width: '100%', background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Conectar Gmail</button>
+          <button onClick={() => { window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:3002'}/oauth/google/gmail` }} style={{ width: '100%', background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Conectar Gmail</button>
           <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>Usamos OAuth2 — nunca compartilhamos sua senha com ninguém.</div>
         </div>
 
@@ -86,7 +86,7 @@ function IntegrationsTab() {
           </div>
           <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12, lineHeight: 1.5 }}>Crie eventos automaticamente ao agendar tarefas no TriboCRM.</p>
           {features(['Evento criado ao criar tarefa com data', 'Badge "Google Calendar" nas tarefas sincronizadas', 'Lembrete automático no seu Calendar'])}
-          <button onClick={() => { window.location.href = '/oauth/google/calendar' }} style={{ width: '100%', background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Conectar Calendar</button>
+          <button onClick={() => { window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:3002'}/oauth/google/calendar` }} style={{ width: '100%', background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Conectar Calendar</button>
         </div>
       </div>
 
