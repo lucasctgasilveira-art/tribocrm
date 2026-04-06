@@ -41,7 +41,7 @@ const planColors: Record<string, { bg: string; color: string }> = {
   enterprise: { bg: 'rgba(168,85,247,0.12)', color: '#a855f7' },
 }
 
-const dropdownOptions = ['Visualizar', 'Editar', 'Suspender', 'Estender Trial', 'Ver cobranças', 'Aplicar desconto', 'Registrar observação']
+const dropdownOptions = ['Visualizar', 'Editar', 'Suspender', 'Estender gratuidade', 'Ver cobranças', 'Aplicar desconto', 'Registrar observação']
 
 const selectStyle: React.CSSProperties = {
   background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8,
@@ -227,7 +227,7 @@ export default function TenantsPage() {
                                 if (opt === 'Visualizar') navigate(`/admin/clientes/${t.id}`)
                                 else if (opt === 'Editar') setEditTenant(t)
                                 else if (opt === 'Suspender') { await updateTenant(t.id, { status: t.status === 'SUSPENDED' ? 'ACTIVE' : 'SUSPENDED' }); showToast(t.status === 'SUSPENDED' ? 'Cliente reativado' : 'Cliente suspenso'); reload() }
-                                else if (opt === 'Estender Trial') { const d = new Date(); d.setDate(d.getDate() + 7); await updateTenant(t.id, { trialEndsAt: d.toISOString() }); showToast('Trial estendido em 7 dias'); reload() }
+                                else if (opt === 'Estender gratuidade') { const d = new Date(); d.setDate(d.getDate() + 7); await updateTenant(t.id, { trialEndsAt: d.toISOString() }); showToast('Trial estendido em 7 dias'); reload() }
                                 else if (opt === 'Ver cobranças') navigate(`/admin/financeiro?tenant=${t.id}`)
                                 else if (opt === 'Aplicar desconto') setDiscountTenant(t)
                                 else if (opt === 'Registrar observação') setNoteModal(t.id)
