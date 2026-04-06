@@ -173,7 +173,7 @@ export default function TenantsPage() {
           <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>Carregando clientes...</span>
         </div>
       ) : (
-        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12 }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: 'var(--bg)' }}>
@@ -218,21 +218,24 @@ export default function TenantsPage() {
                         <MoreHorizontal size={14} strokeWidth={1.5} />
                       </button>
                       {openMenu === t.id && (
-                        <div style={{ position: 'absolute', right: 20, top: 48, zIndex: 20, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', minWidth: 180, padding: '4px 0' }}>
-                          {dropdownOptions.map(opt => (
-                            <div key={opt} onClick={async () => {
-                              setOpenMenu(null)
-                              if (opt === 'Visualizar') navigate(`/admin/clientes/${t.id}`)
-                              else if (opt === 'Editar') setEditTenant(t)
-                              else if (opt === 'Suspender') { await updateTenant(t.id, { status: t.status === 'SUSPENDED' ? 'ACTIVE' : 'SUSPENDED' }); showToast(t.status === 'SUSPENDED' ? 'Cliente reativado' : 'Cliente suspenso'); reload() }
-                              else if (opt === 'Estender Trial') { const d = new Date(); d.setDate(d.getDate() + 7); await updateTenant(t.id, { trialEndsAt: d.toISOString() }); showToast('Trial estendido em 7 dias'); reload() }
-                              else if (opt === 'Ver cobranças') navigate(`/admin/financeiro?tenant=${t.id}`)
-                              else if (opt === 'Aplicar desconto') setDiscountTenant(t)
-                              else if (opt === 'Registrar observação') setNoteModal(t.id)
-                            }}
-                              style={{ padding: '8px 14px', fontSize: 13, color: opt === 'Suspender' && t.status !== 'SUSPENDED' ? '#ef4444' : 'var(--text-primary)', cursor: 'pointer' }}
-                              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
-                              onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>{opt === 'Suspender' && t.status === 'SUSPENDED' ? 'Reativar' : opt}</div>
+                        <div style={{ position: 'absolute', right: 20, bottom: 40, zIndex: 30, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.5)', minWidth: 200, padding: '4px 0' }}>
+                          {dropdownOptions.map((opt) => (
+                            <div key={opt}>
+                              {opt === 'Aplicar desconto' && <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />}
+                              <div onClick={async () => {
+                                setOpenMenu(null)
+                                if (opt === 'Visualizar') navigate(`/admin/clientes/${t.id}`)
+                                else if (opt === 'Editar') setEditTenant(t)
+                                else if (opt === 'Suspender') { await updateTenant(t.id, { status: t.status === 'SUSPENDED' ? 'ACTIVE' : 'SUSPENDED' }); showToast(t.status === 'SUSPENDED' ? 'Cliente reativado' : 'Cliente suspenso'); reload() }
+                                else if (opt === 'Estender Trial') { const d = new Date(); d.setDate(d.getDate() + 7); await updateTenant(t.id, { trialEndsAt: d.toISOString() }); showToast('Trial estendido em 7 dias'); reload() }
+                                else if (opt === 'Ver cobranças') navigate(`/admin/financeiro?tenant=${t.id}`)
+                                else if (opt === 'Aplicar desconto') setDiscountTenant(t)
+                                else if (opt === 'Registrar observação') setNoteModal(t.id)
+                              }}
+                                style={{ padding: '8px 14px', fontSize: 13, color: opt === 'Suspender' && t.status !== 'SUSPENDED' ? '#ef4444' : 'var(--text-primary)', cursor: 'pointer' }}
+                                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+                                onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>{opt === 'Suspender' && t.status === 'SUSPENDED' ? 'Reativar' : opt}</div>
+                            </div>
                           ))}
                         </div>
                       )}
