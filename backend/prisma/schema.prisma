@@ -238,6 +238,7 @@ model AdminUser {
   passwordHash     String    @map("password_hash") @db.VarChar(255)
   role             AdminRole
   isActive         Boolean   @default(true) @map("is_active")
+  permissions      Json?     @db.JsonB
   twoFactorSecret  String?   @map("two_factor_secret") @db.VarChar(100)
   twoFactorEnabled Boolean   @default(false) @map("two_factor_enabled")
   lastLoginAt      DateTime? @map("last_login_at")

@@ -12,7 +12,10 @@ export const adminMenuItems: SidebarEntry[] = [
   { label: 'Pop-ups', icon: Megaphone, path: '/admin/popups' },
   { label: 'Menu das Instâncias', icon: LayoutGrid, path: '/admin/menu-instancias' },
   { section: 'Sistema' },
-  { label: 'Equipe Interna', icon: Users, path: '/admin/equipe' },
+  { label: 'Equipe Interna', icon: Users, path: '/admin/equipe', children: [
+    { label: 'Membros', path: '/admin/equipe' },
+    { label: 'Permissões', path: '/admin/equipe/permissoes' },
+  ] },
   { label: 'Planos', icon: CreditCard, path: '/admin/planos' },
   { label: 'Cupons', icon: Tag, path: '/admin/cupons' },
   { label: 'Logs do Sistema', icon: ScrollText, path: '/admin/logs' },

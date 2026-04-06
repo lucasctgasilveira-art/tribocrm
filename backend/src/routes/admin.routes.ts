@@ -188,4 +188,20 @@ router.patch('/team/:id/password', async (req: Request, res: Response) => {
   } catch (error: any) { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }) }
 })
 
+router.get('/team/:id/permissions', async (req: Request, res: Response) => {
+  try {
+    const user = await prisma.adminUser.findUnique({ where: { id: req.params.id as string }, select: { id: true, permissions: true, role: true } })
+    if (!user) { res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Membro não encontrado' } }); return }
+    res.json({ success: true, data: { id: user.id, role: user.role, permissions: user.permissions } })
+  } catch (error: any) { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }) }
+})
+
+router.patch('/team/:id/permissions', async (req: Request, res: Response) => {
+  try {
+    const { permissions } = req.body
+    const user = await prisma.adminUser.update({ where: { id: req.params.id as string }, data: { permissions } })
+    res.json({ success: true, data: { id: user.id, role: user.role, permissions: user.permissions } })
+  } catch (error: any) { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }) }
+})
+
 export default router
