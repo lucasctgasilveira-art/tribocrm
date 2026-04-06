@@ -839,3 +839,23 @@ model AuditLog {
   createdAt  DateTime @default(now()) @map("created_at")
   @@map("audit_logs")
 }
+
+model AdminPopup {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String    @db.VarChar(200)
+  type        String    @db.VarChar(50)
+  instances   String[]  @default([])
+  plans       String[]  @default([])
+  message     String    @db.Text
+  buttonLabel String?   @map("button_label") @db.VarChar(100)
+  buttonUrl   String?   @map("button_url") @db.VarChar(500)
+  frequency   String    @db.VarChar(50)
+  startDate   DateTime  @map("start_date")
+  endDate     DateTime? @map("end_date")
+  imageUrl    String?   @map("image_url") @db.Text
+  status      String    @default("ACTIVE") @db.VarChar(20)
+  createdBy   String    @map("created_by") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  @@map("admin_popups")
+}

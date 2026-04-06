@@ -1,41 +1,91 @@
-import { useState, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Plus, X } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { adminMenuItems } from '../../config/adminMenu'
+import api from '../../services/api'
 
-interface Popup { id: string; name: string; type: string; typeColor: string; typeBg: string; instance: string; message: string; frequency: string; period: string; status: 'Ativo' | 'Pausado' | 'Agendado' }
+interface Popup {
+  id: string; name: string; type: string; instances: string[]; plans: string[]
+  message: string; buttonLabel: string | null; buttonUrl: string | null
+  frequency: string; startDate: string; endDate: string | null
+  imageUrl: string | null; status: string; createdAt: string
+}
 
-const popups: Popup[] = [
-  { id: '1', name: 'Aviso de inadimplência D+2', type: 'Inadimplência', typeColor: '#ef4444', typeBg: 'rgba(239,68,68,0.12)', instance: 'Gestor + Vendedor', message: 'Sua assinatura venceu. Regularize para manter acesso...', frequency: 'A cada login', period: 'Permanente', status: 'Ativo' },
-  { id: '2', name: 'Novidade — Pipeline Kanban v2', type: 'Novidade', typeColor: '#3b82f6', typeBg: 'rgba(59,130,246,0.12)', instance: 'Todos', message: 'Conheça as melhorias do nosso Pipeline...', frequency: '1x por usuário', period: '01/04 até 30/04', status: 'Ativo' },
-  { id: '3', name: 'Upgrade para Pro', type: 'Promoção', typeColor: '#f97316', typeBg: 'rgba(249,115,22,0.12)', instance: 'Plano Essencial', message: 'Aproveite 15% de desconto no upgrade para Pro...', frequency: '1x por dia', period: '01/04 até 15/04', status: 'Ativo' },
-  { id: '4', name: 'Pesquisa NPS', type: 'Pesquisa', typeColor: '#a855f7', typeBg: 'rgba(168,85,247,0.12)', instance: 'Todos', message: 'Como está sua experiência com o TriboCRM?', frequency: '1x por semana', period: 'Permanente', status: 'Pausado' },
-  { id: '5', name: 'Manutenção programada', type: 'Manutenção', typeColor: '#f59e0b', typeBg: 'rgba(245,158,11,0.12)', instance: 'Todos', message: 'O sistema ficará indisponível das 02h às 04h...', frequency: 'A cada login', period: '10/04', status: 'Pausado' },
-  { id: '6', name: 'Boas-vindas novos clientes', type: 'Boas-vindas', typeColor: '#22c55e', typeBg: 'rgba(34,197,94,0.12)', instance: 'Todos', message: 'Bem-vindo ao TriboCRM! Veja como começar...', frequency: '1x por usuário', period: 'A partir de 10/04', status: 'Agendado' },
-]
+const TYPE_STYLES: Record<string, { color: string; bg: string }> = {
+  'Inadimplência': { color: '#ef4444', bg: 'rgba(239,68,68,0.12)' },
+  'Novidade': { color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
+  'Promoção': { color: '#f97316', bg: 'rgba(249,115,22,0.12)' },
+  'Pesquisa': { color: '#a855f7', bg: 'rgba(168,85,247,0.12)' },
+  'Manutenção': { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
+  'Boas-vindas': { color: '#22c55e', bg: 'rgba(34,197,94,0.12)' },
+}
+const STATUS_STYLES: Record<string, { bg: string; color: string; label: string }> = {
+  ACTIVE: { bg: 'rgba(34,197,94,0.12)', color: '#22c55e', label: 'Ativo' },
+  PAUSED: { bg: 'rgba(107,114,128,0.12)', color: 'var(--text-muted)', label: 'Pausado' },
+  SCHEDULED: { bg: 'rgba(59,130,246,0.12)', color: '#3b82f6', label: 'Agendado' },
+}
+const POPUP_TYPES = ['Inadimplência', 'Novidade', 'Promoção', 'Pesquisa', 'Manutenção', 'Boas-vindas']
+const FREQUENCIES = ['A cada login', '1x por sessão', '1x por dia', '1x por semana', '1x por usuário']
+const INSTANCE_OPTS = ['Gestor', 'Vendedor']
+const PLAN_OPTS = ['Todos', 'Solo', 'Essencial', 'Pro', 'Enterprise']
 
-const statusS: Record<string, { bg: string; color: string }> = { Ativo: { bg: 'rgba(34,197,94,0.12)', color: '#22c55e' }, Pausado: { bg: 'rgba(107,114,128,0.12)', color: 'var(--text-muted)' }, Agendado: { bg: 'rgba(59,130,246,0.12)', color: '#3b82f6' } }
 const inputS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
+const inputErr: React.CSSProperties = { ...inputS, borderColor: '#ef4444' }
+
+function formatInstances(arr: string[]) {
+  if (!arr.length || (arr.includes('Gestor') && arr.includes('Vendedor'))) return 'Todos'
+  return arr.join(' + ')
+}
+
+function formatPeriod(p: Popup) {
+  const s = new Date(p.startDate).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+  if (!p.endDate) return `A partir de ${s}`
+  const e = new Date(p.endDate).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+  return `${s} até ${e}`
+}
 
 export default function PopupsPage() {
-  const [items, setItems] = useState(popups)
+  const [items, setItems] = useState<Popup[]>([])
+  const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
-  const [toast, setToast] = useState('')
+  const [toast, setToast] = useState<{ msg: string; type: 'ok' | 'err' } | null>(null)
 
-  function toggleStatus(id: string) {
-    setItems(p => p.map(pp => {
-      if (pp.id !== id) return pp
-      const next = pp.status === 'Ativo' ? 'Pausado' : 'Ativo'
-      setToast(`Pop-up ${next === 'Ativo' ? 'ativado' : 'pausado'}!`); setTimeout(() => setToast(''), 2500)
-      return { ...pp, status: next as Popup['status'] }
-    }))
+  const showToast = useCallback((msg: string, type: 'ok' | 'err' = 'ok') => {
+    setToast({ msg, type })
+    setTimeout(() => setToast(null), 3000)
+  }, [])
+
+  const fetchPopups = useCallback(async () => {
+    try {
+      const { data } = await api.get('/admin/popups')
+      if (data.success) setItems(data.data)
+    } catch { showToast('Erro ao carregar pop-ups', 'err') }
+    finally { setLoading(false) }
+  }, [showToast])
+
+  useEffect(() => { fetchPopups() }, [fetchPopups])
+
+  async function toggleStatus(id: string) {
+    try {
+      const { data } = await api.patch(`/admin/popups/${id}/status`)
+      if (data.success) {
+        setItems(prev => prev.map(p => p.id === id ? data.data : p))
+        showToast(`Pop-up ${data.data.status === 'ACTIVE' ? 'ativado' : 'pausado'}!`)
+      }
+    } catch (e: any) { showToast(e.response?.data?.error?.message ?? 'Erro ao alterar status', 'err') }
   }
 
-  const counts = { total: items.length, active: items.filter(p => p.status === 'Ativo').length, paused: items.filter(p => p.status === 'Pausado').length, scheduled: items.filter(p => p.status === 'Agendado').length }
+  function handleCreated(p: Popup) {
+    setItems(prev => [p, ...prev])
+    setModalOpen(false)
+    showToast('Pop-up criado e ativado com sucesso!')
+  }
+
+  const counts = { total: items.length, active: items.filter(p => p.status === 'ACTIVE').length, paused: items.filter(p => p.status === 'PAUSED').length, scheduled: items.filter(p => p.status === 'SCHEDULED').length }
 
   return (
     <AppLayout menuItems={adminMenuItems}>
-      {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: '4px solid #22c55e', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 60, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>{toast}</div>}
+      {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: `4px solid ${toast.type === 'ok' ? '#22c55e' : '#ef4444'}`, borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 60, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>{toast.msg}</div>}
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Pop-ups e Comunicados</h1>
@@ -52,37 +102,59 @@ export default function PopupsPage() {
         <span style={{ color: 'var(--text-muted)' }}>Agendados</span><span style={{ color: '#3b82f6', fontWeight: 700, marginLeft: 4 }}>{counts.scheduled}</span>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
-        {items.map(p => { const s = statusS[p.status]!; return (
-          <div key={p.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, display: 'flex', flexDirection: 'column', opacity: p.status === 'Pausado' ? 0.7 : 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-              <span style={{ background: p.typeBg, color: p.typeColor, borderRadius: 4, padding: '2px 8px', fontSize: 10, fontWeight: 500 }}>{p.type}</span>
-              <span style={{ background: s.bg, color: s.color, borderRadius: 999, padding: '2px 8px', fontSize: 10, fontWeight: 500 }}>{p.status}</span>
-            </div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>{p.name}</div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>Instância: {p.instance}</div>
-            <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 8, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{p.message}</div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Frequência: {p.frequency}</div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 14 }}>Período: {p.period}</div>
-            <div style={{ marginTop: 'auto', display: 'flex', gap: 6 }}>
-              <button style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 12px', fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}>Editar</button>
-              <button onClick={() => toggleStatus(p.id)} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 12px', fontSize: 12, color: p.status === 'Ativo' ? '#f59e0b' : '#22c55e', cursor: 'pointer' }}>
-                {p.status === 'Ativo' ? 'Pausar' : 'Ativar'}
-              </button>
-            </div>
-          </div>
-        )})}
-      </div>
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)', fontSize: 13 }}>Carregando...</div>
+      ) : items.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)', fontSize: 13 }}>Nenhum pop-up criado ainda.</div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+          {items.map(p => {
+            const ts = TYPE_STYLES[p.type] ?? { color: '#6b7280', bg: 'rgba(107,114,128,0.12)' }
+            const ss = STATUS_STYLES[p.status] || { bg: 'rgba(107,114,128,0.12)', color: 'var(--text-muted)', label: 'Pausado' }
+            return (
+              <div key={p.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, display: 'flex', flexDirection: 'column', opacity: p.status === 'PAUSED' ? 0.7 : 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                  <span style={{ background: ts.bg, color: ts.color, borderRadius: 4, padding: '2px 8px', fontSize: 10, fontWeight: 500 }}>{p.type}</span>
+                  <span style={{ background: ss.bg, color: ss.color, borderRadius: 999, padding: '2px 8px', fontSize: 10, fontWeight: 500 }}>{ss.label}</span>
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>{p.name}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>Instância: {formatInstances(p.instances)}</div>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 8, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{p.message}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Frequência: {p.frequency}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 14 }}>Período: {formatPeriod(p)}</div>
+                <div style={{ marginTop: 'auto', display: 'flex', gap: 6 }}>
+                  <button style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 12px', fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}>Editar</button>
+                  <button onClick={() => toggleStatus(p.id)} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 12px', fontSize: 12, color: p.status === 'ACTIVE' ? '#f59e0b' : '#22c55e', cursor: 'pointer' }}>
+                    {p.status === 'ACTIVE' ? 'Pausar' : 'Ativar'}
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
 
-      {modalOpen && <NewPopupModal onClose={() => setModalOpen(false)} />}
+      {modalOpen && <NewPopupModal onClose={() => setModalOpen(false)} onCreated={handleCreated} />}
     </AppLayout>
   )
 }
 
-function NewPopupModal({ onClose }: { onClose: () => void }) {
+function NewPopupModal({ onClose, onCreated }: { onClose: () => void; onCreated: (p: Popup) => void }) {
   const [name, setName] = useState('')
+  const [type, setType] = useState(POPUP_TYPES[0])
+  const [instances, setInstances] = useState<string[]>(['Gestor', 'Vendedor'])
+  const [plans, setPlans] = useState<string[]>(['Todos'])
+  const [message, setMessage] = useState('')
+  const [buttonLabel, setButtonLabel] = useState('')
+  const [buttonUrl, setButtonUrl] = useState('')
+  const [frequency, setFrequency] = useState(FREQUENCIES[0])
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
   const [popupMode, setPopupMode] = useState<'text' | 'image'>('text')
   const [imagePreview, setImagePreview] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [touched, setTouched] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   function handleImageFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -92,6 +164,31 @@ function NewPopupModal({ onClose }: { onClose: () => void }) {
     const reader = new FileReader()
     reader.onload = () => setImagePreview(reader.result as string)
     reader.readAsDataURL(file)
+  }
+
+  function toggleArr(arr: string[], val: string, set: (v: string[]) => void) {
+    set(arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val])
+  }
+
+  const missing = { name: !name.trim(), type: !type, message: !message.trim(), frequency: !frequency, startDate: !startDate }
+  const canSave = !missing.name && !missing.type && !missing.message && !missing.frequency && !missing.startDate
+
+  async function handleSave() {
+    setTouched(true)
+    if (!canSave) return
+    setSaving(true); setError('')
+    try {
+      const { data } = await api.post('/admin/popups', {
+        name, type, instances, plans, message,
+        buttonLabel: buttonLabel || null, buttonUrl: buttonUrl || null,
+        frequency, startDate, endDate: endDate || null,
+        imageUrl: imagePreview || null,
+      })
+      if (data.success) onCreated(data.data)
+    } catch (e: any) {
+      setError(e.response?.data?.error?.message ?? 'Erro ao criar pop-up')
+      setSaving(false)
+    }
   }
 
   return (
@@ -132,24 +229,51 @@ function NewPopupModal({ onClose }: { onClose: () => void }) {
               )}
             </Fld>
           )}
-          <Fld label="Nome interno *"><input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Aviso de inadimplência" style={inputS} /></Fld>
-          <Fld label="Tipo"><select style={{ ...inputS, appearance: 'none' as const, cursor: 'pointer' }}><option>Inadimplência</option><option>Novidade</option><option>Promoção</option><option>Pesquisa</option><option>Manutenção</option><option>Boas-vindas</option></select></Fld>
-          <Fld label="Instância"><div style={{ display: 'flex', gap: 8 }}>{['Gestor', 'Vendedor', 'Ambos'].map(v => <label key={v} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: 'var(--text-primary)', cursor: 'pointer' }}><input type="checkbox" defaultChecked={v === 'Ambos'} style={{ accentColor: '#f97316' }} />{v}</label>)}</div></Fld>
-          <Fld label="Planos"><div style={{ display: 'flex', gap: 8 }}>{['Todos', 'Solo', 'Essencial', 'Pro', 'Enterprise'].map(v => <label key={v} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: 'var(--text-primary)', cursor: 'pointer' }}><input type="checkbox" defaultChecked={v === 'Todos'} style={{ accentColor: '#f97316' }} />{v}</label>)}</div></Fld>
-          <Fld label="Mensagem"><textarea rows={4} placeholder="Mensagem do pop-up..." style={{ ...inputS, resize: 'none' }} /></Fld>
+          <Fld label="Nome interno *"><input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Aviso de inadimplência" style={touched && missing.name ? inputErr : inputS} /></Fld>
+          <Fld label="Tipo *">
+            <select value={type} onChange={e => setType(e.target.value)} style={{ ...(touched && missing.type ? inputErr : inputS), appearance: 'none' as const, cursor: 'pointer' }}>
+              {POPUP_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </Fld>
+          <Fld label="Instância">
+            <div style={{ display: 'flex', gap: 8 }}>
+              {INSTANCE_OPTS.map(v => (
+                <label key={v} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: 'var(--text-primary)', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={instances.includes(v)} onChange={() => toggleArr(instances, v, setInstances)} style={{ accentColor: '#f97316' }} />{v}
+                </label>
+              ))}
+            </div>
+          </Fld>
+          <Fld label="Planos">
+            <div style={{ display: 'flex', gap: 8 }}>
+              {PLAN_OPTS.map(v => (
+                <label key={v} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: 'var(--text-primary)', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={plans.includes(v)} onChange={() => toggleArr(plans, v, setPlans)} style={{ accentColor: '#f97316' }} />{v}
+                </label>
+              ))}
+            </div>
+          </Fld>
+          <Fld label="Mensagem *"><textarea value={message} onChange={e => setMessage(e.target.value)} rows={4} placeholder="Mensagem do pop-up..." style={{ ...(touched && missing.message ? inputErr : inputS), resize: 'none' } as React.CSSProperties} /></Fld>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <Fld label="Botão de ação (label)"><input placeholder="Ex: Regularizar" style={inputS} /></Fld>
-            <Fld label="URL do botão"><input placeholder="https://..." style={inputS} /></Fld>
+            <Fld label="Botão de ação (label)"><input value={buttonLabel} onChange={e => setButtonLabel(e.target.value)} placeholder="Ex: Regularizar" style={inputS} /></Fld>
+            <Fld label="URL do botão"><input value={buttonUrl} onChange={e => setButtonUrl(e.target.value)} placeholder="https://..." style={inputS} /></Fld>
           </div>
-          <Fld label="Frequência"><select style={{ ...inputS, appearance: 'none' as const, cursor: 'pointer' }}><option>A cada login</option><option>1x por sessão</option><option>1x por dia</option><option>1x por semana</option><option>1x por usuário</option></select></Fld>
+          <Fld label="Frequência *">
+            <select value={frequency} onChange={e => setFrequency(e.target.value)} style={{ ...(touched && missing.frequency ? inputErr : inputS), appearance: 'none' as const, cursor: 'pointer' }}>
+              {FREQUENCIES.map(f => <option key={f} value={f}>{f}</option>)}
+            </select>
+          </Fld>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <Fld label="Data início"><input type="date" style={inputS} /></Fld>
-            <Fld label="Data fim"><input type="date" style={inputS} /></Fld>
+            <Fld label="Data início *"><input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} style={touched && missing.startDate ? inputErr : inputS} /></Fld>
+            <Fld label="Data fim"><input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} style={inputS} /></Fld>
           </div>
+          {error && <div style={{ fontSize: 12, color: '#ef4444', marginTop: 12 }}>{error}</div>}
         </div>
         <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
           <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
-          <button disabled={!name.trim()} style={{ background: name.trim() ? '#f97316' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: name.trim() ? '#fff' : 'var(--text-muted)', cursor: name.trim() ? 'pointer' : 'not-allowed' }}>Salvar e ativar</button>
+          <button onClick={handleSave} disabled={saving} style={{ background: '#f97316', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: '#fff', cursor: saving ? 'not-allowed' : 'pointer' }}>
+            {saving ? 'Salvando...' : 'Salvar e ativar'}
+          </button>
         </div>
       </div>
     </>
