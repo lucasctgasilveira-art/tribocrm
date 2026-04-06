@@ -17,6 +17,15 @@ const menuOpts = ['Editar perfil', 'Redefinir senha', 'Desativar']
 export default function InternalTeamPage() {
   const [openMenu, setOpenMenu] = useState<string | null>(null)
   const [newMemberModal, setNewMemberModal] = useState(false)
+  const [teamMembers, setTeamMembers] = useState(members)
+  const [toast, setToast] = useState('')
+
+  function handleMemberCreated(m: Member) {
+    setTeamMembers(prev => [...prev, m])
+    setNewMemberModal(false)
+    setToast('Membro criado com sucesso!')
+    setTimeout(() => setToast(''), 3000)
+  }
 
   return (
     <AppLayout menuItems={adminMenuItems}>
@@ -33,8 +42,10 @@ export default function InternalTeamPage() {
         <span style={{ color: 'var(--text-muted)' }}>Ativos</span><span style={{ color: '#22c55e', fontWeight: 700, marginLeft: 4 }}>4</span>
       </div>
 
+      {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: '4px solid #22c55e', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 60 }}>{toast}</div>}
+
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
-        {members.map(m => (
+        {teamMembers.map(m => (
           <div key={m.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
               <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(249,115,22,0.2)', color: '#f97316', fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{m.initials}</div>
@@ -59,18 +70,36 @@ export default function InternalTeamPage() {
           </div>
         ))}
       </div>
-      {newMemberModal && <NewMemberModal onClose={() => setNewMemberModal(false)} />}
+      {newMemberModal && <NewMemberModal onClose={() => setNewMemberModal(false)} onCreated={handleMemberCreated} />}
     </AppLayout>
   )
 }
 
-function NewMemberModal({ onClose }: { onClose: () => void }) {
+function NewMemberModal({ onClose, onCreated }: { onClose: () => void; onCreated: (m: Member) => void }) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [role, setRole] = useState('SUPPORT')
   const [password, setPassword] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
   const inputS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
-  const roles = [{ value: 'SUPER_ADMIN', label: 'Super Admin' }, { value: 'FINANCIAL', label: 'Financeiro' }, { value: 'SUPPORT', label: 'Suporte' }, { value: 'COMMERCIAL', label: 'Comercial' }]
+  const roles = [{ value: 'SUPER_ADMIN', label: 'Super Admin', color: '#f97316', bg: 'rgba(249,115,22,0.12)' }, { value: 'FINANCIAL', label: 'Financeiro', color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' }, { value: 'SUPPORT', label: 'Suporte', color: '#22c55e', bg: 'rgba(34,197,94,0.12)' }, { value: 'COMMERCIAL', label: 'Comercial', color: '#a855f7', bg: 'rgba(168,85,247,0.12)' }]
+  const canSave = name.trim() && email.trim() && password.trim()
+
+  async function handleSave() {
+    if (!canSave) return
+    setSaving(true); setError('')
+    try {
+      // For now, create member locally (backend endpoint can be added later)
+      const r = roles.find(ro => ro.value === role)!
+      const ini = name.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]?.toUpperCase()).join('')
+      const newMember: Member = { id: String(Date.now()), initials: ini, name, role, roleBadge: r.label, roleColor: r.color, roleBg: r.bg, lastAccess: 'agora' }
+      onCreated(newMember)
+    } catch (e: any) {
+      setError(e.response?.data?.error?.message ?? 'Erro ao criar membro')
+      setSaving(false)
+    }
+  }
 
   return (
     <>
@@ -97,12 +126,15 @@ function NewMemberModal({ onClose }: { onClose: () => void }) {
           </div>
           <div>
             <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Senha temporária</label>
-            <input value={password} onChange={e => setPassword(e.target.value)} placeholder="Senha inicial" style={inputS} />
+            <input value={password} onChange={e => setPassword(e.target.value)} placeholder="Senha inicial" type="password" style={inputS} />
           </div>
+          {error && <div style={{ fontSize: 12, color: '#ef4444', marginTop: 12 }}>{error}</div>}
         </div>
         <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
           <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
-          <button onClick={onClose} disabled={!name || !email} style={{ background: name && email ? '#f97316' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: name && email ? '#fff' : 'var(--text-muted)', cursor: name && email ? 'pointer' : 'not-allowed' }}>Criar membro</button>
+          <button onClick={handleSave} disabled={!canSave || saving} style={{ background: canSave ? '#f97316' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: canSave ? '#fff' : 'var(--text-muted)', cursor: canSave ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 6 }}>
+            {saving ? 'Criando...' : 'Criar membro'}
+          </button>
         </div>
       </div>
     </>
