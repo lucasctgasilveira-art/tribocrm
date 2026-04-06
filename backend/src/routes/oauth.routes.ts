@@ -17,7 +17,7 @@ const CALENDAR_REDIRECT_URI = process.env.GOOGLE_CALENDAR_REDIRECT_URI || 'https
 router.get('/google/authorize', authMiddleware, (req: Request, res: Response) => {
   try {
     const url = getAuthorizationUrl(req.user!.userId, req.user!.tenantId)
-    res.json({ success: true, data: { url } })
+    res.redirect(url)
   } catch (error: any) {
     console.error('[OAuth] gmail authorize error:', error)
     res.status(500).json({ success: false, error: { code: 'OAUTH_ERROR', message: error.message } })
@@ -61,7 +61,7 @@ router.get('/google/status', authMiddleware, async (req: Request, res: Response)
 router.get('/calendar/authorize', authMiddleware, (req: Request, res: Response) => {
   try {
     const url = getCalendarAuthorizationUrl(req.user!.userId, req.user!.tenantId)
-    res.json({ success: true, data: { url } })
+    res.redirect(url)
   } catch (error: any) {
     console.error('[OAuth] calendar authorize error:', error)
     res.status(500).json({ success: false, error: { code: 'OAUTH_ERROR', message: error.message } })
