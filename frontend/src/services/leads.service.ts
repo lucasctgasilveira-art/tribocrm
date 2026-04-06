@@ -24,12 +24,15 @@ export interface LeadPayload {
 
 export async function getLeads(params?: LeadsParams) {
   const response = await api.get('/leads', { params })
-  return { data: response.data.data, meta: response.data.meta }
+  return {
+    data: response.data.data ?? [],
+    meta: response.data.meta ?? { total: 0, page: 1, perPage: 20, totalPages: 0 },
+  }
 }
 
 export async function getLead(id: string) {
   const response = await api.get(`/leads/${id}`)
-  return response.data.data
+  return response.data.data ?? null
 }
 
 export async function createLead(payload: LeadPayload) {

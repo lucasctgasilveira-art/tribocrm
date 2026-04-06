@@ -59,7 +59,10 @@ export default function LeadDetailView({ menuItems, instance }: LeadDetailViewPr
   useEffect(() => {
     if (!id) return
     setLoading(true)
-    getLead(id).then(d => setLead(d)).catch(() => setLead(null)).finally(() => setLoading(false))
+    getLead(id)
+      .then(d => { console.log('[LeadDetail] loaded:', d); setLead(d) })
+      .catch(err => { console.error('[LeadDetail] Error loading lead:', err); setLead(null) })
+      .finally(() => setLoading(false))
   }, [id])
 
   if (loading) {

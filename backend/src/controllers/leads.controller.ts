@@ -11,7 +11,7 @@ export async function getLeads(req: Request, res: Response): Promise<void> {
     const {
       pipelineId,
       stageId,
-      status = 'ACTIVE',
+      status,
       temperature,
       search,
       page = '1',
@@ -26,7 +26,7 @@ export async function getLeads(req: Request, res: Response): Promise<void> {
       deletedAt: null,
     }
 
-    if (status) where.status = status as 'ACTIVE' | 'WON' | 'LOST' | 'ARCHIVED'
+    if (status && status !== '') where.status = status as 'ACTIVE' | 'WON' | 'LOST' | 'ARCHIVED'
     if (pipelineId) where.pipelineId = pipelineId
     if (stageId) where.stageId = stageId
     if (temperature) where.temperature = temperature as 'HOT' | 'WARM' | 'COLD'

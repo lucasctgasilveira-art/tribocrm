@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { vendasMenuItems } from '../../config/vendasMenu'
 import { getLeads } from '../../services/leads.service'
-import NewLeadModal, { type NewLeadData } from '../../components/shared/NewLeadModal/NewLeadModal'
+import NewLeadModal from '../../components/shared/NewLeadModal/NewLeadModal'
 
 // ── Types ──
 
@@ -51,6 +51,7 @@ export default function VendasLeadsPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [page, setPage] = useState(1)
   const [modalOpen, setModalOpen] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const handleSearch = useCallback((value: string) => {
@@ -63,19 +64,20 @@ export default function VendasLeadsPage() {
     async function load() {
       setLoading(true)
       try {
-        const params: Record<string, string | number> = { page, perPage: 20 }
+        const params: Record<string, string | number> = { page, perPage: 20, status: '' }
         if (debouncedSearch) params.search = debouncedSearch
         const result = await getLeads(params)
-        setLeads(result.data)
-        setMeta(result.meta)
-      } catch {
+        setLeads(result.data ?? [])
+        if (result.meta) setMeta(result.meta)
+      } catch (err) {
+        console.error('[LeadsPage] Error loading leads:', err)
         setLeads([])
       } finally {
         setLoading(false)
       }
     }
     load()
-  }, [debouncedSearch, page])
+  }, [debouncedSearch, page, reloadKey])
 
   return (
     <AppLayout menuItems={vendasMenuItems}>
@@ -155,7 +157,7 @@ export default function VendasLeadsPage() {
         </div>
       )}
 
-      <NewLeadModal open={modalOpen} onClose={() => setModalOpen(false)} onSubmit={(_data: NewLeadData) => { setModalOpen(false); setPage(1); setDebouncedSearch(debouncedSearch) }} />
+      <NewLeadModal open={modalOpen} onClose={() => setModalOpen(false)} onSubmit={() => { setModalOpen(false); setReloadKey(k => k + 1) }} />
     </AppLayout>
   )
 }
