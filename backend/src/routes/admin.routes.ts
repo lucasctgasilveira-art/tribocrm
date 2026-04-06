@@ -138,23 +138,23 @@ router.post('/charges/:id/retry', async (req: Request, res: Response) => {
 
 router.get('/popups', async (_req: Request, res: Response) => {
   try {
-    const popups = await prisma.adminPopup.findMany({ orderBy: { createdAt: 'desc' } })
+    const popups = await prisma.popup.findMany({ orderBy: { createdAt: 'desc' } })
     res.json({ success: true, data: popups })
   } catch (error: any) { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }) }
 })
 
 router.post('/popups', async (req: Request, res: Response) => {
   try {
-    const { name, type, instances, plans, message, buttonLabel, buttonUrl, frequency, startDate, endDate, imageUrl } = req.body
-    if (!name || !type || !message || !frequency || !startDate) {
-      res.status(400).json({ success: false, error: { code: 'VALIDATION', message: 'Campos obrigatórios: name, type, message, frequency, startDate' } }); return
+    const { type, instances, plans, message, buttonLabel, buttonUrl, frequency, startDate, endDate, imageUrl, isActive } = req.body
+    if (!type || !message || !frequency || !startDate) {
+      res.status(400).json({ success: false, error: { code: 'VALIDATION', message: 'Campos obrigatórios: type, message, frequency, startDate' } }); return
     }
-    const popup = await prisma.adminPopup.create({
+    const popup = await prisma.popup.create({
       data: {
-        name, type, instances: instances ?? [], plans: plans ?? [], message,
+        type, instances: instances ?? [], plans: plans ?? [], message,
         buttonLabel: buttonLabel || null, buttonUrl: buttonUrl || null,
         frequency, startDate: new Date(startDate), endDate: endDate ? new Date(endDate) : null,
-        imageUrl: imageUrl || null, status: 'ACTIVE', createdBy: req.user!.userId,
+        imageUrl: imageUrl || null, isActive: isActive ?? true, createdBy: req.user!.userId,
       },
     })
     res.json({ success: true, data: popup })
@@ -163,9 +163,8 @@ router.post('/popups', async (req: Request, res: Response) => {
 
 router.patch('/popups/:id', async (req: Request, res: Response) => {
   try {
-    const { name, type, instances, plans, message, buttonLabel, buttonUrl, frequency, startDate, endDate, imageUrl, status } = req.body
+    const { type, instances, plans, message, buttonLabel, buttonUrl, frequency, startDate, endDate, imageUrl, isActive } = req.body
     const data: Record<string, unknown> = {}
-    if (name !== undefined) data.name = name
     if (type !== undefined) data.type = type
     if (instances !== undefined) data.instances = instances
     if (plans !== undefined) data.plans = plans
@@ -176,18 +175,24 @@ router.patch('/popups/:id', async (req: Request, res: Response) => {
     if (startDate !== undefined) data.startDate = new Date(startDate)
     if (endDate !== undefined) data.endDate = endDate ? new Date(endDate) : null
     if (imageUrl !== undefined) data.imageUrl = imageUrl || null
-    if (status !== undefined) data.status = status
-    const popup = await prisma.adminPopup.update({ where: { id: req.params.id as string }, data })
+    if (isActive !== undefined) data.isActive = isActive
+    const popup = await prisma.popup.update({ where: { id: req.params.id as string }, data })
     res.json({ success: true, data: popup })
   } catch (error: any) { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }) }
 })
 
-router.patch('/popups/:id/status', async (req: Request, res: Response) => {
+router.delete('/popups/:id', async (req: Request, res: Response) => {
   try {
-    const popup = await prisma.adminPopup.findUnique({ where: { id: req.params.id as string } })
+    await prisma.popup.delete({ where: { id: req.params.id as string } })
+    res.json({ success: true })
+  } catch (error: any) { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }) }
+})
+
+router.patch('/popups/:id/toggle', async (req: Request, res: Response) => {
+  try {
+    const popup = await prisma.popup.findUnique({ where: { id: req.params.id as string } })
     if (!popup) { res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Pop-up não encontrado' } }); return }
-    const newStatus = popup.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE'
-    const updated = await prisma.adminPopup.update({ where: { id: req.params.id as string }, data: { status: newStatus } })
+    const updated = await prisma.popup.update({ where: { id: req.params.id as string }, data: { isActive: !popup.isActive } })
     res.json({ success: true, data: updated })
   } catch (error: any) { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }) }
 })

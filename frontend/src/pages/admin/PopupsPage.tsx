@@ -5,10 +5,10 @@ import { adminMenuItems } from '../../config/adminMenu'
 import api from '../../services/api'
 
 interface Popup {
-  id: string; name: string; type: string; instances: string[]; plans: string[]
+  id: string; type: string; instances: string[]; plans: string[]
   message: string; buttonLabel: string | null; buttonUrl: string | null
   frequency: string; startDate: string; endDate: string | null
-  imageUrl: string | null; status: string; createdAt: string
+  imageUrl: string | null; isActive: boolean; createdAt: string
 }
 
 const TYPE_STYLES: Record<string, { color: string; bg: string }> = {
@@ -18,11 +18,6 @@ const TYPE_STYLES: Record<string, { color: string; bg: string }> = {
   'Pesquisa': { color: '#a855f7', bg: 'rgba(168,85,247,0.12)' },
   'Manutenção': { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
   'Boas-vindas': { color: '#22c55e', bg: 'rgba(34,197,94,0.12)' },
-}
-const STATUS_STYLES: Record<string, { bg: string; color: string; label: string }> = {
-  ACTIVE: { bg: 'rgba(34,197,94,0.12)', color: '#22c55e', label: 'Ativo' },
-  PAUSED: { bg: 'rgba(107,114,128,0.12)', color: 'var(--text-muted)', label: 'Pausado' },
-  SCHEDULED: { bg: 'rgba(59,130,246,0.12)', color: '#3b82f6', label: 'Agendado' },
 }
 const POPUP_TYPES = ['Inadimplência', 'Novidade', 'Promoção', 'Pesquisa', 'Manutenção', 'Boas-vindas']
 const FREQUENCIES = ['A cada login', '1x por sessão', '1x por dia', '1x por semana', '1x por usuário']
@@ -67,10 +62,10 @@ export default function PopupsPage() {
 
   async function toggleStatus(id: string) {
     try {
-      const { data } = await api.patch(`/admin/popups/${id}/status`)
+      const { data } = await api.patch(`/admin/popups/${id}/toggle`)
       if (data.success) {
         setItems(prev => prev.map(p => p.id === id ? data.data : p))
-        showToast(`Pop-up ${data.data.status === 'ACTIVE' ? 'ativado' : 'pausado'}!`)
+        showToast(`Pop-up ${data.data.isActive ? 'ativado' : 'pausado'}!`)
       }
     } catch (e: any) { showToast(e.response?.data?.error?.message ?? 'Erro ao alterar status', 'err') }
   }
@@ -81,7 +76,7 @@ export default function PopupsPage() {
     showToast('Pop-up criado e ativado com sucesso!')
   }
 
-  const counts = { total: items.length, active: items.filter(p => p.status === 'ACTIVE').length, paused: items.filter(p => p.status === 'PAUSED').length, scheduled: items.filter(p => p.status === 'SCHEDULED').length }
+  const counts = { total: items.length, active: items.filter(p => p.isActive).length, inactive: items.filter(p => !p.isActive).length }
 
   return (
     <AppLayout menuItems={adminMenuItems}>
@@ -97,9 +92,7 @@ export default function PopupsPage() {
         <span style={{ color: 'var(--border)', margin: '0 10px' }}>|</span>
         <span style={{ color: 'var(--text-muted)' }}>Ativos</span><span style={{ color: '#22c55e', fontWeight: 700, marginLeft: 4 }}>{counts.active}</span>
         <span style={{ color: 'var(--border)', margin: '0 10px' }}>|</span>
-        <span style={{ color: 'var(--text-muted)' }}>Pausados</span><span style={{ color: 'var(--text-primary)', fontWeight: 700, marginLeft: 4 }}>{counts.paused}</span>
-        <span style={{ color: 'var(--border)', margin: '0 10px' }}>|</span>
-        <span style={{ color: 'var(--text-muted)' }}>Agendados</span><span style={{ color: '#3b82f6', fontWeight: 700, marginLeft: 4 }}>{counts.scheduled}</span>
+        <span style={{ color: 'var(--text-muted)' }}>Inativos</span><span style={{ color: 'var(--text-primary)', fontWeight: 700, marginLeft: 4 }}>{counts.inactive}</span>
       </div>
 
       {loading ? (
@@ -110,22 +103,20 @@ export default function PopupsPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
           {items.map(p => {
             const ts = TYPE_STYLES[p.type] ?? { color: '#6b7280', bg: 'rgba(107,114,128,0.12)' }
-            const ss = STATUS_STYLES[p.status] || { bg: 'rgba(107,114,128,0.12)', color: 'var(--text-muted)', label: 'Pausado' }
             return (
-              <div key={p.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, display: 'flex', flexDirection: 'column', opacity: p.status === 'PAUSED' ? 0.7 : 1 }}>
+              <div key={p.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, display: 'flex', flexDirection: 'column', opacity: p.isActive ? 1 : 0.7 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
                   <span style={{ background: ts.bg, color: ts.color, borderRadius: 4, padding: '2px 8px', fontSize: 10, fontWeight: 500 }}>{p.type}</span>
-                  <span style={{ background: ss.bg, color: ss.color, borderRadius: 999, padding: '2px 8px', fontSize: 10, fontWeight: 500 }}>{ss.label}</span>
+                  <span style={{ background: p.isActive ? 'rgba(34,197,94,0.12)' : 'rgba(107,114,128,0.12)', color: p.isActive ? '#22c55e' : 'var(--text-muted)', borderRadius: 999, padding: '2px 8px', fontSize: 10, fontWeight: 500 }}>{p.isActive ? 'Ativo' : 'Inativo'}</span>
                 </div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>{p.name}</div>
                 <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>Instância: {formatInstances(p.instances)}</div>
                 <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 8, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{p.message}</div>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Frequência: {p.frequency}</div>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 14 }}>Período: {formatPeriod(p)}</div>
                 <div style={{ marginTop: 'auto', display: 'flex', gap: 6 }}>
                   <button style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 12px', fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}>Editar</button>
-                  <button onClick={() => toggleStatus(p.id)} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 12px', fontSize: 12, color: p.status === 'ACTIVE' ? '#f59e0b' : '#22c55e', cursor: 'pointer' }}>
-                    {p.status === 'ACTIVE' ? 'Pausar' : 'Ativar'}
+                  <button onClick={() => toggleStatus(p.id)} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 12px', fontSize: 12, color: p.isActive ? '#f59e0b' : '#22c55e', cursor: 'pointer' }}>
+                    {p.isActive ? 'Pausar' : 'Ativar'}
                   </button>
                 </div>
               </div>
@@ -140,7 +131,6 @@ export default function PopupsPage() {
 }
 
 function NewPopupModal({ onClose, onCreated }: { onClose: () => void; onCreated: (p: Popup) => void }) {
-  const [name, setName] = useState('')
   const [type, setType] = useState(POPUP_TYPES[0])
   const [instances, setInstances] = useState<string[]>(['Gestor', 'Vendedor'])
   const [plans, setPlans] = useState<string[]>(['Todos'])
@@ -170,8 +160,8 @@ function NewPopupModal({ onClose, onCreated }: { onClose: () => void; onCreated:
     set(arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val])
   }
 
-  const missing = { name: !name.trim(), type: !type, message: !message.trim(), frequency: !frequency, startDate: !startDate }
-  const canSave = !missing.name && !missing.type && !missing.message && !missing.frequency && !missing.startDate
+  const missing = { type: !type, message: !message.trim(), frequency: !frequency, startDate: !startDate }
+  const canSave = !missing.type && !missing.message && !missing.frequency && !missing.startDate
 
   async function handleSave() {
     setTouched(true)
@@ -179,7 +169,7 @@ function NewPopupModal({ onClose, onCreated }: { onClose: () => void; onCreated:
     setSaving(true); setError('')
     try {
       const { data } = await api.post('/admin/popups', {
-        name, type, instances, plans, message,
+        type, instances, plans, message,
         buttonLabel: buttonLabel || null, buttonUrl: buttonUrl || null,
         frequency, startDate, endDate: endDate || null,
         imageUrl: imagePreview || null,
@@ -229,7 +219,6 @@ function NewPopupModal({ onClose, onCreated }: { onClose: () => void; onCreated:
               )}
             </Fld>
           )}
-          <Fld label="Nome interno *"><input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Aviso de inadimplência" style={touched && missing.name ? inputErr : inputS} /></Fld>
           <Fld label="Tipo *">
             <select value={type} onChange={e => setType(e.target.value)} style={{ ...(touched && missing.type ? inputErr : inputS), appearance: 'none' as const, cursor: 'pointer' }}>
               {POPUP_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
