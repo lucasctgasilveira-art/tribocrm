@@ -179,11 +179,18 @@ function ChargeNowModal({ charge, onClose }: { charge: Charge; onClose: () => vo
   const [boletoResult, setBoletoResult] = useState<{ boletoUrl: string; barCode: string } | null>(null)
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
+  const [applyDiscount, setApplyDiscount] = useState(false)
+  const [discType, setDiscType] = useState('PERCENT')
+  const [discValue, setDiscValue] = useState('')
+
+  const originalValue = Number(charge.amount)
+  const discountedValue = applyDiscount && discValue ? (discType === 'PERCENT' ? originalValue * (1 - parseFloat(discValue) / 100) : originalValue - parseFloat(discValue)) : originalValue
+  const finalValue = Math.max(0, Math.round(discountedValue * 100) / 100)
 
   async function handleGenerate() {
     setLoading(true); setError('')
     try {
-      const res = await api.post(`/admin/charges/${charge.id}/retry`, { paymentMethod: method })
+      const res = await api.post(`/admin/charges/${charge.id}/retry`, { paymentMethod: method, discountValue: applyDiscount ? finalValue : undefined })
       if (method === 'PIX') setPixResult({ pixCopiaECola: res.data.data.pixCopiaECola ?? '' })
       else setBoletoResult({ boletoUrl: res.data.data.boletoUrl ?? '', barCode: res.data.data.barCode ?? '' })
     } catch (e: any) { setError(e.response?.data?.error?.message ?? 'Erro ao gerar cobrança') }
@@ -218,7 +225,26 @@ function ChargeNowModal({ charge, onClose }: { charge: Charge; onClose: () => vo
             <>
               <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 4 }}>{fmt(Number(charge.amount))}</div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>{charge.tenant.plan.name} · Vencimento {new Date(charge.dueDate).toLocaleDateString('pt-BR')}</div>
-              <div style={{ fontSize: 12, color: '#ef4444', marginBottom: 16 }}>Status: {charge.status === 'OVERDUE' ? 'Vencido' : 'Pendente'}</div>
+              <div style={{ fontSize: 12, color: '#ef4444', marginBottom: 12 }}>Status: {charge.status === 'OVERDUE' ? 'Vencido' : 'Pendente'}</div>
+              {/* Discount */}
+              <div style={{ textAlign: 'left', marginBottom: 16, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: 12 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)' }}>
+                  <input type="checkbox" checked={applyDiscount} onChange={() => setApplyDiscount(!applyDiscount)} style={{ accentColor: '#f97316' }} /> Aplicar desconto nesta cobrança
+                </label>
+                {applyDiscount && (
+                  <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {[{ k: 'PERCENT', l: '%' }, { k: 'FIXED', l: 'R$' }].map(t => (
+                        <label key={t.k} onClick={() => setDiscType(t.k)} style={{ display: 'flex', alignItems: 'center', gap: 3, cursor: 'pointer', fontSize: 12, color: 'var(--text-primary)' }}>
+                          <div style={{ width: 12, height: 12, borderRadius: '50%', border: `2px solid ${discType === t.k ? '#f97316' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{discType === t.k && <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#f97316' }} />}</div>{t.l}
+                        </label>
+                      ))}
+                    </div>
+                    <input type="number" value={discValue} onChange={e => setDiscValue(e.target.value)} placeholder="Valor" style={{ width: 80, background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 8px', fontSize: 12, color: 'var(--text-primary)', outline: 'none' }} />
+                    {discValue && <span style={{ fontSize: 12, color: '#22c55e', fontWeight: 600 }}>= {fmt(finalValue)}</span>}
+                  </div>
+                )}
+              </div>
               <div style={{ display: 'flex', gap: 10, marginBottom: 16, justifyContent: 'center' }}>
                 {([{ k: 'PIX' as const, icon: QrCode, c: '#22c55e', l: 'PIX' }, { k: 'BOLETO' as const, icon: FileText, c: '#3b82f6', l: 'Boleto' }]).map(m => {
                   const I = m.icon; const a = method === m.k
