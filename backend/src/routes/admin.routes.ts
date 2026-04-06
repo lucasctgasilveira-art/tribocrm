@@ -134,4 +134,58 @@ router.post('/charges/:id/retry', async (req: Request, res: Response) => {
   }
 })
 
+// ── Internal Team ──
+
+router.get('/team', async (_req: Request, res: Response) => {
+  try {
+    const users = await prisma.adminUser.findMany({ orderBy: { createdAt: 'desc' } })
+    res.json({ success: true, data: users.map(u => ({ id: u.id, name: u.name, email: u.email, role: u.role, isActive: u.isActive, lastLoginAt: u.lastLoginAt, createdAt: u.createdAt })) })
+  } catch (error: any) { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }) }
+})
+
+router.post('/team', async (req: Request, res: Response) => {
+  try {
+    const { name, email, role, password } = req.body
+    if (!name || !email || !role || !password) { res.status(400).json({ success: false, error: { code: 'VALIDATION', message: 'Campos obrigatórios: name, email, role, password' } }); return }
+    const exists = await prisma.adminUser.findUnique({ where: { email } })
+    if (exists) { res.status(409).json({ success: false, error: { code: 'DUPLICATE', message: 'Já existe um membro com este e-mail' } }); return }
+    const bcrypt = await import('bcryptjs')
+    const passwordHash = await bcrypt.default.hash(password, 10)
+    const user = await prisma.adminUser.create({ data: { name, email, passwordHash, role } })
+    res.json({ success: true, data: { id: user.id, name: user.name, email: user.email, role: user.role, isActive: user.isActive, lastLoginAt: user.lastLoginAt, createdAt: user.createdAt } })
+  } catch (error: any) { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }) }
+})
+
+router.patch('/team/:id', async (req: Request, res: Response) => {
+  try {
+    const { name, email, role } = req.body
+    const data: Record<string, unknown> = {}
+    if (name !== undefined) data.name = name
+    if (email !== undefined) data.email = email
+    if (role !== undefined) data.role = role
+    const user = await prisma.adminUser.update({ where: { id: req.params.id as string }, data })
+    res.json({ success: true, data: { id: user.id, name: user.name, email: user.email, role: user.role, isActive: user.isActive, lastLoginAt: user.lastLoginAt, createdAt: user.createdAt } })
+  } catch (error: any) { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }) }
+})
+
+router.patch('/team/:id/status', async (req: Request, res: Response) => {
+  try {
+    const user = await prisma.adminUser.findUnique({ where: { id: req.params.id as string } })
+    if (!user) { res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Membro não encontrado' } }); return }
+    const updated = await prisma.adminUser.update({ where: { id: req.params.id as string }, data: { isActive: !user.isActive } })
+    res.json({ success: true, data: { id: updated.id, name: updated.name, email: updated.email, role: updated.role, isActive: updated.isActive, lastLoginAt: updated.lastLoginAt, createdAt: updated.createdAt } })
+  } catch (error: any) { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }) }
+})
+
+router.patch('/team/:id/password', async (req: Request, res: Response) => {
+  try {
+    const { password } = req.body
+    if (!password) { res.status(400).json({ success: false, error: { code: 'VALIDATION', message: 'Senha é obrigatória' } }); return }
+    const bcrypt = await import('bcryptjs')
+    const passwordHash = await bcrypt.default.hash(password, 10)
+    await prisma.adminUser.update({ where: { id: req.params.id as string }, data: { passwordHash } })
+    res.json({ success: true })
+  } catch (error: any) { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }) }
+})
+
 export default router
