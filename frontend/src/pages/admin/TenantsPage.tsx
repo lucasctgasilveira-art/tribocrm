@@ -69,6 +69,7 @@ export default function TenantsPage() {
   const [openMenu, setOpenMenu] = useState<string | null>(null)
   const [hoveredRow, setHoveredRow] = useState<string | null>(null)
   const [newClientModal, setNewClientModal] = useState(false)
+  const [editTenant, setEditTenant] = useState<Tenant | null>(null)
   const [noteModal, setNoteModal] = useState<string | null>(null)
   const [toast, setToast] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
@@ -220,7 +221,8 @@ export default function TenantsPage() {
                           {dropdownOptions.map(opt => (
                             <div key={opt} onClick={async () => {
                               setOpenMenu(null)
-                              if (opt === 'Visualizar' || opt === 'Editar') navigate(`/admin/clientes/${t.id}`)
+                              if (opt === 'Visualizar') navigate(`/admin/clientes/${t.id}`)
+                              else if (opt === 'Editar') setEditTenant(t)
                               else if (opt === 'Suspender') { await updateTenant(t.id, { status: t.status === 'SUSPENDED' ? 'ACTIVE' : 'SUSPENDED' }); showToast(t.status === 'SUSPENDED' ? 'Cliente reativado' : 'Cliente suspenso'); reload() }
                               else if (opt === 'Estender Trial') { const d = new Date(); d.setDate(d.getDate() + 7); await updateTenant(t.id, { trialEndsAt: d.toISOString() }); showToast('Trial estendido em 7 dias'); reload() }
                               else if (opt === 'Ver cobranças') navigate(`/admin/financeiro?tenant=${t.id}`)
@@ -249,6 +251,7 @@ export default function TenantsPage() {
       )}
       {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: '4px solid #22c55e', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 60 }}>{toast}</div>}
       {newClientModal && <NewClientModal onClose={() => setNewClientModal(false)} onCreated={() => { setNewClientModal(false); reload(); showToast('Cliente criado com sucesso!') }} />}
+      {editTenant && <EditTenantModal tenant={editTenant} onClose={() => setEditTenant(null)} onSaved={() => { setEditTenant(null); reload(); showToast('Cliente atualizado!') }} />}
       {noteModal && <NoteModal tenantId={noteModal} onClose={() => setNoteModal(null)} onSaved={() => { setNoteModal(null); showToast('Observação registrada') }} />}
     </AppLayout>
   )
@@ -401,6 +404,53 @@ function NoteModal({ tenantId, onClose, onSaved }: { tenantId: string; onClose: 
         <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
           <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
           <button onClick={handleSave} disabled={!note.trim() || saving} style={{ background: note.trim() ? '#f97316' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: note.trim() ? '#fff' : 'var(--text-muted)', cursor: note.trim() ? 'pointer' : 'not-allowed' }}>{saving ? 'Salvando...' : 'Salvar'}</button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+function EditTenantModal({ tenant, onClose, onSaved }: { tenant: Tenant; onClose: () => void; onSaved: () => void }) {
+  const [name, setName] = useState(tenant.name)
+  const [email, setEmail] = useState(tenant.email)
+  const [status, setStatus] = useState(tenant.status)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const iS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
+
+  async function handleSave() {
+    setSaving(true); setError('')
+    try { await updateTenant(tenant.id, { name, email, status }); onSaved() }
+    catch (e: any) { setError(e.response?.data?.error?.message ?? 'Erro ao salvar'); setSaving(false) }
+  }
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 480, maxWidth: '90vw', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Editar — {tenant.name}</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+        </div>
+        <div style={{ padding: 24 }}>
+          <div style={{ marginBottom: 16 }}><label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Nome da empresa</label><input value={name} onChange={e => setName(e.target.value)} style={iS} /></div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+            <div><label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>CNPJ</label><input value={tenant.cnpj} disabled style={{ ...iS, opacity: 0.6, cursor: 'not-allowed' }} /></div>
+            <div><label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>E-mail</label><input value={email} onChange={e => setEmail(e.target.value)} style={iS} /></div>
+          </div>
+          <div style={{ marginBottom: 16 }}><label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Plano</label><input value={tenant.plan.name} disabled style={{ ...iS, opacity: 0.6, cursor: 'not-allowed' }} /></div>
+          <div><label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Status</label>
+            <select value={status} onChange={e => setStatus(e.target.value)} style={{ ...iS, appearance: 'none' as const, cursor: 'pointer' }}>
+              <option value="ACTIVE">Ativo</option><option value="TRIAL">Trial</option><option value="SUSPENDED">Suspenso</option><option value="CANCELLED">Cancelado</option>
+            </select>
+          </div>
+          {error && <div style={{ fontSize: 12, color: '#ef4444', marginTop: 12 }}>{error}</div>}
+        </div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
+          <button onClick={handleSave} disabled={saving} style={{ background: '#f97316', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+            {saving && <Loader2 size={14} className="animate-spin" />}{saving ? 'Salvando...' : 'Salvar'}
+          </button>
         </div>
       </div>
     </>

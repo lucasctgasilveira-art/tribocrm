@@ -48,4 +48,34 @@ router.patch('/plans/:id/price', async (req: Request, res: Response) => {
   }
 })
 
+// ── Retry Charge ──
+
+router.post('/charges/:id/retry', async (req: Request, res: Response) => {
+  try {
+    const charge = await prisma.charge.findUnique({
+      where: { id: req.params.id as string },
+      include: { tenant: true },
+    })
+    if (!charge) { res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Cobrança não encontrada' } }); return }
+
+    const { paymentMethod } = req.body
+    const value = Number(charge.amount)
+    const desc = `Cobrança ${charge.referenceMonth ?? ''} — ${charge.tenant.name}`
+
+    if (paymentMethod === 'PIX') {
+      const { createPixCharge } = await import('../services/efi.service')
+      const result = await createPixCharge(charge.tenantId, { value, description: desc, debtorName: charge.tenant.name, debtorCpf: charge.tenant.cnpj.replace(/\D/g, '') })
+      res.json({ success: true, data: result })
+    } else {
+      const { createBoletoCharge } = await import('../services/efi.service')
+      const dueDate = new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10)
+      const result = await createBoletoCharge(charge.tenantId, { value, description: desc, dueDate, debtorName: charge.tenant.name, debtorCpf: charge.tenant.cnpj.replace(/\D/g, ''), debtorEmail: charge.tenant.email, debtorStreet: 'N/A', debtorCity: 'São Paulo', debtorState: 'SP', debtorZipCode: '01000000' })
+      res.json({ success: true, data: result })
+    }
+  } catch (error: any) {
+    console.error('[Admin] retry charge error:', error.message)
+    res.status(500).json({ success: false, error: { code: 'PAYMENT_ERROR', message: error.message } })
+  }
+})
+
 export default router

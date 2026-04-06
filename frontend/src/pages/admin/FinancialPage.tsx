@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
-import { TrendingUp, BarChart2, AlertCircle, UserMinus, DollarSign, Download, Loader2 } from 'lucide-react'
+import { TrendingUp, BarChart2, AlertCircle, UserMinus, DollarSign, Download, Loader2, X, QrCode, FileText } from 'lucide-react'
+import { QRCodeSVG } from 'qrcode.react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { adminMenuItems } from '../../config/adminMenu'
 import { getFinancial } from '../../services/admin.service'
+import api from '../../services/api'
 
 // ── Types ──
 
@@ -49,6 +51,7 @@ export default function FinancialPage() {
   const [data, setData] = useState<FinancialData | null>(null)
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState<Period>('month')
+  const [chargeModal, setChargeModal] = useState<Charge | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -150,7 +153,7 @@ export default function FinancialPage() {
                   <td style={tdS}><span style={{ background: s.bg, color: s.color, borderRadius: 999, padding: '3px 10px', fontSize: 11, fontWeight: 500 }}>{s.label}</span></td>
                   <td style={tdS}>
                     {c.status === 'OVERDUE' || c.status === 'PENDING' ? (
-                      <button style={{ background: 'rgba(249,115,22,0.12)', color: '#f97316', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>Cobrar agora</button>
+                      <button onClick={() => setChargeModal(c)} style={{ background: 'rgba(249,115,22,0.12)', color: '#f97316', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>Cobrar agora</button>
                     ) : c.status === 'PAID' ? (
                       <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>—</span>
                     ) : null}
@@ -164,6 +167,72 @@ export default function FinancialPage() {
           Mostrando {charges.length} cobrança{charges.length !== 1 ? 's' : ''}
         </div>
       </div>
+      {chargeModal && <ChargeNowModal charge={chargeModal} onClose={() => setChargeModal(null)} />}
     </AppLayout>
+  )
+}
+
+function ChargeNowModal({ charge, onClose }: { charge: Charge; onClose: () => void }) {
+  const [method, setMethod] = useState<'PIX' | 'BOLETO'>('PIX')
+  const [loading, setLoading] = useState(false)
+  const [pixResult, setPixResult] = useState<{ pixCopiaECola: string } | null>(null)
+  const [boletoResult, setBoletoResult] = useState<{ boletoUrl: string; barCode: string } | null>(null)
+  const [error, setError] = useState('')
+  const [copied, setCopied] = useState(false)
+
+  async function handleGenerate() {
+    setLoading(true); setError('')
+    try {
+      const res = await api.post(`/admin/charges/${charge.id}/retry`, { paymentMethod: method })
+      if (method === 'PIX') setPixResult({ pixCopiaECola: res.data.data.pixCopiaECola ?? '' })
+      else setBoletoResult({ boletoUrl: res.data.data.boletoUrl ?? '', barCode: res.data.data.barCode ?? '' })
+    } catch (e: any) { setError(e.response?.data?.error?.message ?? 'Erro ao gerar cobrança') }
+    setLoading(false)
+  }
+
+  void (pixResult || boletoResult) // track done state for future use
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 440, maxWidth: '90vw', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Cobrar agora — {charge.tenant.name}</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+        </div>
+        <div style={{ padding: 24, textAlign: 'center' }}>
+          {pixResult ? (
+            <>
+              <div style={{ fontSize: 20, fontWeight: 800, color: '#22c55e', marginBottom: 8 }}>{fmt(Number(charge.amount))}</div>
+              <div style={{ background: '#fff', borderRadius: 12, padding: 16, display: 'inline-block', marginBottom: 16 }}><QRCodeSVG value={pixResult.pixCopiaECola} size={180} level="M" includeMargin /></div>
+              <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', fontSize: 11, color: 'var(--text-secondary)', wordBreak: 'break-all', marginBottom: 12, textAlign: 'left' }}>{pixResult.pixCopiaECola}</div>
+              <button onClick={() => { navigator.clipboard.writeText(pixResult.pixCopiaECola); setCopied(true); setTimeout(() => setCopied(false), 2000) }} style={{ background: '#22c55e', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', width: '100%' }}>{copied ? 'Copiado!' : 'Copiar código PIX'}</button>
+            </>
+          ) : boletoResult ? (
+            <>
+              <div style={{ fontSize: 20, fontWeight: 800, color: '#3b82f6', marginBottom: 16 }}>{fmt(Number(charge.amount))}</div>
+              {boletoResult.barCode && <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'monospace', wordBreak: 'break-all', marginBottom: 12 }}>{boletoResult.barCode}</div>}
+              {boletoResult.boletoUrl && <a href={boletoResult.boletoUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: '#3b82f6', color: '#fff', borderRadius: 8, padding: '9px 0', fontSize: 13, fontWeight: 600, textDecoration: 'none', width: '100%' }}><FileText size={14} /> Abrir boleto</a>}
+            </>
+          ) : (
+            <>
+              <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 4 }}>{fmt(Number(charge.amount))}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>{charge.tenant.plan.name} · Vencimento {new Date(charge.dueDate).toLocaleDateString('pt-BR')}</div>
+              <div style={{ fontSize: 12, color: '#ef4444', marginBottom: 16 }}>Status: {charge.status === 'OVERDUE' ? 'Vencido' : 'Pendente'}</div>
+              <div style={{ display: 'flex', gap: 10, marginBottom: 16, justifyContent: 'center' }}>
+                {([{ k: 'PIX' as const, icon: QrCode, c: '#22c55e', l: 'PIX' }, { k: 'BOLETO' as const, icon: FileText, c: '#3b82f6', l: 'Boleto' }]).map(m => {
+                  const I = m.icon; const a = method === m.k
+                  return <div key={m.k} onClick={() => setMethod(m.k)} style={{ flex: 1, padding: 14, borderRadius: 10, border: `1px solid ${a ? m.c : 'var(--border)'}`, background: a ? `${m.c}0D` : 'transparent', cursor: 'pointer', textAlign: 'center' }}><I size={22} color={a ? m.c : 'var(--text-muted)'} strokeWidth={1.5} /><div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginTop: 4 }}>{m.l}</div></div>
+                })}
+              </div>
+              {error && <div style={{ fontSize: 12, color: '#ef4444', marginBottom: 12 }}>{error}</div>}
+              <button onClick={handleGenerate} disabled={loading} style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                {loading && <Loader2 size={14} className="animate-spin" />}{loading ? 'Gerando...' : 'Gerar cobrança'}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </>
   )
 }
