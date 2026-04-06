@@ -41,7 +41,7 @@ const planColors: Record<string, { bg: string; color: string }> = {
   enterprise: { bg: 'rgba(168,85,247,0.12)', color: '#a855f7' },
 }
 
-const dropdownOptions = ['Visualizar', 'Editar', 'Suspender', 'Estender Trial', 'Ver cobranças']
+const dropdownOptions = ['Visualizar', 'Editar', 'Suspender', 'Estender Trial', 'Ver cobranças', 'Aplicar desconto', 'Registrar observação']
 
 const selectStyle: React.CSSProperties = {
   background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8,
@@ -70,6 +70,7 @@ export default function TenantsPage() {
   const [hoveredRow, setHoveredRow] = useState<string | null>(null)
   const [newClientModal, setNewClientModal] = useState(false)
   const [editTenant, setEditTenant] = useState<Tenant | null>(null)
+  const [discountTenant, setDiscountTenant] = useState<Tenant | null>(null)
   const [noteModal, setNoteModal] = useState<string | null>(null)
   const [toast, setToast] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
@@ -226,6 +227,7 @@ export default function TenantsPage() {
                               else if (opt === 'Suspender') { await updateTenant(t.id, { status: t.status === 'SUSPENDED' ? 'ACTIVE' : 'SUSPENDED' }); showToast(t.status === 'SUSPENDED' ? 'Cliente reativado' : 'Cliente suspenso'); reload() }
                               else if (opt === 'Estender Trial') { const d = new Date(); d.setDate(d.getDate() + 7); await updateTenant(t.id, { trialEndsAt: d.toISOString() }); showToast('Trial estendido em 7 dias'); reload() }
                               else if (opt === 'Ver cobranças') navigate(`/admin/financeiro?tenant=${t.id}`)
+                              else if (opt === 'Aplicar desconto') setDiscountTenant(t)
                               else if (opt === 'Registrar observação') setNoteModal(t.id)
                             }}
                               style={{ padding: '8px 14px', fontSize: 13, color: opt === 'Suspender' && t.status !== 'SUSPENDED' ? '#ef4444' : 'var(--text-primary)', cursor: 'pointer' }}
@@ -252,6 +254,7 @@ export default function TenantsPage() {
       {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: '4px solid #22c55e', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 60 }}>{toast}</div>}
       {newClientModal && <NewClientModal onClose={() => setNewClientModal(false)} onCreated={() => { setNewClientModal(false); reload(); showToast('Cliente criado com sucesso!') }} />}
       {editTenant && <EditTenantModal tenant={editTenant} onClose={() => setEditTenant(null)} onSaved={() => { setEditTenant(null); reload(); showToast('Cliente atualizado!') }} />}
+      {discountTenant && <DiscountModal tenant={discountTenant} onClose={() => setDiscountTenant(null)} onSaved={() => { setDiscountTenant(null); showToast('Desconto aplicado!') }} />}
       {noteModal && <NoteModal tenantId={noteModal} onClose={() => setNoteModal(null)} onSaved={() => { setNoteModal(null); showToast('Observação registrada') }} />}
     </AppLayout>
   )
@@ -376,6 +379,65 @@ function NewClientModal({ onClose, onCreated }: { onClose: () => void; onCreated
           <button onClick={handleSave} disabled={!canSave || saving} style={{ background: canSave ? '#f97316' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: canSave ? '#fff' : 'var(--text-muted)', cursor: canSave ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 6 }}>
             {saving && <Loader2 size={14} className="animate-spin" />}{saving ? 'Criando...' : 'Criar cliente'}
           </button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+function DiscountModal({ tenant, onClose, onSaved }: { tenant: Tenant; onClose: () => void; onSaved: () => void }) {
+  const [discountType, setDiscountType] = useState('PERCENT')
+  const [discountValue, setDiscountValue] = useState('')
+  const [applyImmediately, setApplyImmediately] = useState(true)
+  const [cycles, setCycles] = useState('1')
+  const [reason, setReason] = useState('')
+  const [saving, setSaving] = useState(false)
+  const iS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
+
+  async function handleSave() {
+    if (!discountValue) return; setSaving(true)
+    try {
+      await api.post(`/admin/tenants/${tenant.id}/discount`, { discountType, discountValue: parseFloat(discountValue), discountCycles: parseInt(cycles) || 0, discountReason: reason, applyImmediately })
+      onSaved()
+    } catch { setSaving(false) }
+  }
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 460, maxWidth: '90vw', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Desconto Manual — {tenant.name}</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+        </div>
+        <div style={{ padding: 24 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+            <div><label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Tipo</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[{ k: 'PERCENT', l: '%' }, { k: 'FIXED', l: 'R$' }].map(t => (
+                  <label key={t.k} onClick={() => setDiscountType(t.k)} style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)' }}>
+                    <div style={{ width: 14, height: 14, borderRadius: '50%', border: `2px solid ${discountType === t.k ? '#f97316' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{discountType === t.k && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#f97316' }} />}</div>{t.l}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div><label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Valor *</label><input type="number" value={discountValue} onChange={e => setDiscountValue(e.target.value)} placeholder={discountType === 'PERCENT' ? 'Ex: 20' : 'Ex: 50'} style={iS} /></div>
+          </div>
+          <div style={{ marginBottom: 16 }}><label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Aplicar</label>
+            <div style={{ display: 'flex', gap: 10 }}>
+              {[{ k: true, l: 'Imediatamente' }, { k: false, l: 'Na próxima renovação' }].map(a => (
+                <label key={String(a.k)} onClick={() => setApplyImmediately(a.k)} style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)' }}>
+                  <div style={{ width: 14, height: 14, borderRadius: '50%', border: `2px solid ${applyImmediately === a.k ? '#f97316' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{applyImmediately === a.k && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#f97316' }} />}</div>{a.l}
+                </label>
+              ))}
+            </div>
+          </div>
+          <div style={{ marginBottom: 16 }}><label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Por quantos ciclos (0 = recorrente)</label><input type="number" value={cycles} onChange={e => setCycles(e.target.value)} style={{ ...iS, width: 100 }} /></div>
+          <div><label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Motivo (uso interno)</label><textarea rows={2} value={reason} onChange={e => setReason(e.target.value)} placeholder="Ex: Negociação comercial" style={{ ...iS, resize: 'none' }} /></div>
+        </div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
+          <button onClick={handleSave} disabled={!discountValue || saving} style={{ background: discountValue ? '#f97316' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: discountValue ? '#fff' : 'var(--text-muted)', cursor: discountValue ? 'pointer' : 'not-allowed' }}>Aplicar desconto</button>
         </div>
       </div>
     </>

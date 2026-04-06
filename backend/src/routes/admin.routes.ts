@@ -48,6 +48,62 @@ router.patch('/plans/:id/price', async (req: Request, res: Response) => {
   }
 })
 
+// ── Coupons ──
+
+router.get('/coupons', async (_req: Request, res: Response) => {
+  try {
+    const coupons = await prisma.coupon.findMany({ orderBy: { createdAt: 'desc' } })
+    res.json({ success: true, data: coupons.map(c => ({ ...c, discountValue: Number(c.discountValue) })) })
+  } catch (error: any) { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }) }
+})
+
+router.post('/coupons', async (req: Request, res: Response) => {
+  try {
+    const { code, description, discountType, discountValue, applicablePlans, maxUses, maxUsesPerUser, validFrom, validUntil, durationType, durationMonths } = req.body
+    const coupon = await prisma.coupon.create({
+      data: { code: code.toUpperCase(), description, discountType, discountValue, applicablePlans: applicablePlans ?? [], maxUses, maxUsesPerUser: maxUsesPerUser ?? 1, validFrom: validFrom ? new Date(validFrom) : new Date(), validUntil: validUntil ? new Date(validUntil) : null, durationType: durationType ?? 'FIRST', durationMonths, createdBy: req.user!.userId },
+    })
+    res.json({ success: true, data: { ...coupon, discountValue: Number(coupon.discountValue) } })
+  } catch (error: any) { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }) }
+})
+
+router.patch('/coupons/:id', async (req: Request, res: Response) => {
+  try {
+    const data: Record<string, unknown> = {}
+    const { description, discountType, discountValue, applicablePlans, maxUses, maxUsesPerUser, validUntil, durationType, durationMonths, isActive } = req.body
+    if (description !== undefined) data.description = description
+    if (discountType) data.discountType = discountType
+    if (discountValue !== undefined) data.discountValue = discountValue
+    if (applicablePlans) data.applicablePlans = applicablePlans
+    if (maxUses !== undefined) data.maxUses = maxUses
+    if (maxUsesPerUser !== undefined) data.maxUsesPerUser = maxUsesPerUser
+    if (validUntil !== undefined) data.validUntil = validUntil ? new Date(validUntil) : null
+    if (durationType) data.durationType = durationType
+    if (durationMonths !== undefined) data.durationMonths = durationMonths
+    if (isActive !== undefined) data.isActive = isActive
+    const coupon = await prisma.coupon.update({ where: { id: req.params.id as string }, data })
+    res.json({ success: true, data: { ...coupon, discountValue: Number(coupon.discountValue) } })
+  } catch (error: any) { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }) }
+})
+
+router.delete('/coupons/:id', async (req: Request, res: Response) => {
+  try {
+    await prisma.coupon.update({ where: { id: req.params.id as string }, data: { isActive: false } })
+    res.json({ success: true })
+  } catch (error: any) { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }) }
+})
+
+// ── Tenant Discount ──
+
+router.post('/tenants/:id/discount', async (req: Request, res: Response) => {
+  try {
+    const { discountType, discountValue, discountCycles, discountReason, applyImmediately } = req.body
+    const data: Record<string, unknown> = { discountType, discountValue, discountCycles, discountReason, discountFrom: applyImmediately ? new Date() : null }
+    const tenant = await prisma.tenant.update({ where: { id: req.params.id as string }, data })
+    res.json({ success: true, data: tenant })
+  } catch (error: any) { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }) }
+})
+
 // ── Retry Charge ──
 
 router.post('/charges/:id/retry', async (req: Request, res: Response) => {

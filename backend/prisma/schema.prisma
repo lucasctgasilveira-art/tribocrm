@@ -308,20 +308,46 @@ model Tenant {
   trialEndsAt   DateTime?    @map("trial_ends_at")
   planStartedAt DateTime?    @map("plan_started_at")
   planExpiresAt DateTime?    @map("plan_expires_at")
-  internalNotes String?      @map("internal_notes") @db.Text
-  createdAt     DateTime     @default(now()) @map("created_at")
-  updatedAt     DateTime     @updatedAt @map("updated_at")
-  plan          Plan         @relation(fields: [planId], references: [id])
-  users         User[]
-  teams         Team[]
-  pipelines     Pipeline[]
-  leads         Lead[]
-  charges       Charge[]
-  automations   Automation[]
-  captureForms  CaptureForm[]
-  products      Product[]
-  goals         Goal[]
+  internalNotes  String?      @map("internal_notes") @db.Text
+  discountType   String?      @map("discount_type") @db.VarChar(20)
+  discountValue  Decimal?     @map("discount_value") @db.Decimal(10, 2)
+  discountFrom   DateTime?    @map("discount_from")
+  discountUntil  DateTime?    @map("discount_until")
+  discountCycles Int?         @map("discount_cycles")
+  discountReason String?      @map("discount_reason") @db.Text
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  plan           Plan         @relation(fields: [planId], references: [id])
+  users          User[]
+  teams          Team[]
+  pipelines      Pipeline[]
+  leads          Lead[]
+  charges        Charge[]
+  automations    Automation[]
+  captureForms   CaptureForm[]
+  products       Product[]
+  goals          Goal[]
   @@map("tenants")
+}
+
+model Coupon {
+  id              String    @id @default(cuid())
+  code            String    @unique @db.VarChar(20)
+  description     String?   @db.Text
+  discountType    String    @map("discount_type") @db.VarChar(10)
+  discountValue   Decimal   @map("discount_value") @db.Decimal(10, 2)
+  applicablePlans String[]  @map("applicable_plans")
+  maxUses         Int?      @map("max_uses")
+  maxUsesPerUser  Int       @default(1) @map("max_uses_per_user")
+  usedCount       Int       @default(0) @map("used_count")
+  validFrom       DateTime  @default(now()) @map("valid_from")
+  validUntil      DateTime? @map("valid_until")
+  durationType    String    @default("FIRST") @map("duration_type") @db.VarChar(10)
+  durationMonths  Int?      @map("duration_months")
+  isActive        Boolean   @default(true) @map("is_active")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  createdBy       String    @map("created_by") @db.Uuid
+  @@map("coupons")
 }
 
 model Charge {
