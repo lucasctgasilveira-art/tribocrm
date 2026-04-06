@@ -128,6 +128,9 @@ export default function GlobalSettingsPage() {
   const [limits, setLimits] = useState<PlanLimits[]>(defaultLimits)
   const [toast, setToast] = useState('')
   const [emailModal, setEmailModal] = useState(false)
+  const [newTemplateModal, setNewTemplateModal] = useState(false)
+  const [templateActive, setTemplateActive] = useState(() => emailTemplates.map(() => true))
+  function toggleTemplate(i: number) { setTemplateActive(p => p.map((v, idx) => idx === i ? !v : v)) }
   const [smtpAccounts, setSmtpAccounts] = useState([
     { label: 'Remetente padrão', email: 'noreply@tribocrm.com.br', type: 'Padrão', active: true },
     { label: 'Cobrança', email: 'cobranca@tribocrm.com.br', type: 'Cobrança', active: true },
@@ -237,7 +240,10 @@ export default function GlobalSettingsPage() {
             {smtpAccounts.length === 0 && <div style={{ textAlign: 'center', padding: 16, color: 'var(--text-muted)', fontSize: 13 }}>Nenhuma conta configurada</div>}
           </div>
 
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600 }}>Templates de e-mail automáticos</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600 }}>Templates de e-mail automáticos</div>
+            <button onClick={() => setNewTemplateModal(true)} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: '1px solid rgba(249,115,22,0.3)', borderRadius: 6, padding: '4px 10px', fontSize: 11, color: '#f97316', cursor: 'pointer' }}><Plus size={12} strokeWidth={2} /> Novo Modelo</button>
+          </div>
           {emailTemplates.map((tpl, i) => (
             <div
               key={tpl.label}
@@ -249,21 +255,13 @@ export default function GlobalSettingsPage() {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{tpl.label}</span>
-                <span
-                  style={{
-                    fontSize: 10,
-                    fontWeight: 600,
-                    color: tpl.badgeColor,
-                    background: tpl.badgeBg,
-                    borderRadius: 6,
-                    padding: '2px 8px',
-                  }}
-                >
-                  {tpl.badge}
-                </span>
-                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{tpl.note}</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', flex: 1 }}>{tpl.label}</span>
+                <span style={{ fontSize: 10, fontWeight: 600, color: tpl.badgeColor, background: tpl.badgeBg, borderRadius: 6, padding: '2px 8px' }}>{tpl.badge}</span>
+                <div onClick={() => toggleTemplate(i)} style={{ width: 36, height: 20, borderRadius: 999, background: templateActive[i] ? '#f97316' : 'var(--border)', display: 'flex', alignItems: 'center', padding: '0 2px', justifyContent: templateActive[i] ? 'flex-end' : 'flex-start', cursor: 'pointer', transition: 'all 0.2s' }}>
+                  <div style={{ width: 16, height: 16, borderRadius: '50%', background: templateActive[i] ? '#fff' : 'var(--text-muted)', transition: 'all 0.2s' }} />
+                </div>
               </div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>{tpl.note}</div>
 
               <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 4 }}>Assunto</label>
               <input
@@ -471,6 +469,7 @@ export default function GlobalSettingsPage() {
         </div>
       )}
       {emailModal && <NewEmailModal onClose={() => setEmailModal(false)} onSave={addSmtp} />}
+      {newTemplateModal && <NewTemplateModal onClose={() => setNewTemplateModal(false)} onSave={() => { setNewTemplateModal(false); showToast('Template criado') }} />}
     </AppLayout>
   )
 }
@@ -513,6 +512,39 @@ function NewEmailModal({ onClose, onSave }: { onClose: () => void; onSave: (a: {
         <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
           <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
           <button onClick={() => { if (canSave) onSave({ label, email, type }) }} disabled={!canSave} style={{ background: canSave ? '#f97316' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: canSave ? '#fff' : 'var(--text-muted)', cursor: canSave ? 'pointer' : 'not-allowed' }}>Salvar conta</button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+function NewTemplateModal({ onClose, onSave }: { onClose: () => void; onSave: () => void }) {
+  const [name, setName] = useState('')
+  const [subject, setSubject] = useState('')
+  const [body, setBody] = useState('')
+  const inputS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
+  const vars = ['{nome}', '{empresa}', '{email}', '{link}', '{dias}', '{valor}', '{mes_ano}', '{plano}']
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 520, maxWidth: '90vw', maxHeight: '90vh', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Novo Template de E-mail</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+        </div>
+        <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
+          <div style={{ marginBottom: 16 }}><label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Nome do template *</label><input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Boas-vindas ao cliente" style={inputS} /></div>
+          <div style={{ marginBottom: 16 }}><label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Assunto</label><input value={subject} onChange={e => setSubject(e.target.value)} placeholder="Assunto do e-mail" style={inputS} /></div>
+          <div style={{ marginBottom: 12 }}><label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Corpo do e-mail</label><textarea rows={6} value={body} onChange={e => setBody(e.target.value)} placeholder="Olá {nome}, bem-vindo ao TriboCRM!" style={{ ...inputS, resize: 'none' }} /></div>
+          <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 6, fontWeight: 600 }}>Variáveis disponíveis</div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {vars.map(v => <span key={v} style={{ background: 'var(--border)', color: '#f97316', borderRadius: 4, padding: '2px 8px', fontSize: 11, cursor: 'pointer' }} onClick={() => setBody(b => b + v)}>{v}</span>)}
+          </div>
+        </div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
+          <button onClick={onSave} disabled={!name.trim()} style={{ background: name.trim() ? '#f97316' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: name.trim() ? '#fff' : 'var(--text-muted)', cursor: name.trim() ? 'pointer' : 'not-allowed' }}>Salvar template</button>
         </div>
       </div>
     </>

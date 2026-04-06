@@ -264,75 +264,114 @@ function maskCNPJ(v: string): string {
   if (d.length <= 12) return `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5,8)}/${d.slice(8)}`
   return `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5,8)}/${d.slice(8,12)}-${d.slice(12)}`
 }
+function maskCEP(v: string): string { const d = v.replace(/\D/g, '').slice(0, 8); return d.length > 5 ? `${d.slice(0,5)}-${d.slice(5)}` : d }
+const UFS = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO']
 
 function NewClientModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
-  const [name, setName] = useState('')
-  const [cnpj, setCnpj] = useState('')
-  const [email, setEmail] = useState('')
-  const [responsibleName, setResponsibleName] = useState('')
-  const [planId, setPlanId] = useState('')
+  const [name, setName] = useState(''); const [cnpj, setCnpj] = useState(''); const [email, setEmail] = useState(''); const [site, setSite] = useState('')
+  const [cep, setCep] = useState(''); const [rua, setRua] = useState(''); const [numero, setNumero] = useState(''); const [complemento, setComplemento] = useState('')
+  const [bairro, setBairro] = useState(''); const [cidade, setCidade] = useState(''); const [estado, setEstado] = useState('')
+  const [responsibleName, setResponsibleName] = useState(''); const [fundacao, setFundacao] = useState('')
+  const [planId, setPlanId] = useState(''); const [cycle, setCycle] = useState('MONTHLY'); const [payMethod, setPayMethod] = useState('PIX')
   const [plans, setPlans] = useState<{ id: string; name: string }[]>([])
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
-  const inputS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
-  const canSave = name.trim() && cnpj.replace(/\D/g, '').length === 14 && email.trim() && responsibleName.trim()
+  const [saving, setSaving] = useState(false); const [error, setError] = useState(''); const [cepLoading, setCepLoading] = useState(false)
+  const iS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
+  const canSave = name.trim() && cnpj.replace(/\D/g, '').length === 14 && email.trim() && responsibleName.trim() && planId
 
-  useState(() => {
-    api.get('/payments/plans').then(r => { const p = r.data.data; setPlans(p); if (p.length) setPlanId(p[0].id) }).catch(() => {})
-  })
+  useState(() => { api.get('/payments/plans').then(r => { const p = r.data.data; setPlans(p); if (p.length) setPlanId(p[0].id) }).catch(() => {}) })
+
+  async function buscarCep() {
+    const c = cep.replace(/\D/g, ''); if (c.length !== 8) return
+    setCepLoading(true)
+    try {
+      const r = await fetch(`https://viacep.com.br/ws/${c}/json/`)
+      const d = await r.json()
+      if (!d.erro) { setRua(d.logradouro ?? ''); setBairro(d.bairro ?? ''); setCidade(d.localidade ?? ''); setEstado(d.uf ?? '') }
+    } catch {/**/}
+    setCepLoading(false)
+  }
 
   async function handleSave() {
-    if (!canSave) return
-    setSaving(true); setError('')
+    if (!canSave) return; setSaving(true); setError('')
     try {
-      await api.post('/admin/tenants', { name, cnpj: cnpj.replace(/\D/g, ''), email, responsibleName, planId })
+      await api.post('/admin/tenants', { name, cnpj: cnpj.replace(/\D/g, ''), email, site, responsibleName, fundacao, planId, planCycle: cycle, paymentMethod: payMethod, address: { cep: cep.replace(/\D/g, ''), street: rua, number: numero, complement: complemento, neighborhood: bairro, city: cidade, state: estado } })
       onCreated()
-    } catch (e: any) {
-      setError(e.response?.data?.error?.message ?? 'Erro ao criar cliente')
-      setSaving(false)
-    }
+    } catch (e: any) { setError(e.response?.data?.error?.message ?? 'Erro ao criar cliente'); setSaving(false) }
   }
+
+  function Lbl({ children, req }: { children: string; req?: boolean }) { return <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>{children}{req && <span style={{ color: '#f97316' }}> *</span>}</label> }
+  function Sec({ children }: { children: string }) { return <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, marginBottom: 10, marginTop: 16 }}>{children}</div> }
 
   return (
     <>
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
-      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 520, maxWidth: '90vw', maxHeight: '90vh', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 640, maxWidth: '90vw', maxHeight: '90vh', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
           <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Novo Cliente</h2>
           <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
         </div>
         <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Nome da empresa <span style={{ color: '#f97316' }}>*</span></label>
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Empresa ABC Ltda" style={inputS} />
+          <Sec>Dados da empresa</Sec>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div><Lbl req>Nome da empresa</Lbl><input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Empresa ABC Ltda" style={iS} /></div>
+            <div><Lbl req>CNPJ</Lbl><input value={cnpj} onChange={e => setCnpj(maskCNPJ(e.target.value))} placeholder="00.000.000/0001-00" style={iS} /></div>
+            <div><Lbl req>E-mail</Lbl><input value={email} onChange={e => setEmail(e.target.value)} placeholder="contato@empresa.com" type="email" style={iS} /></div>
+            <div><Lbl>Site</Lbl><input value={site} onChange={e => setSite(e.target.value)} placeholder="https://" style={iS} /></div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+
+          <Sec>Endereço</Sec>
+          <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+            <div style={{ width: 160 }}><Lbl>CEP</Lbl><input value={cep} onChange={e => setCep(maskCEP(e.target.value))} placeholder="00000-000" style={iS} /></div>
+            <div style={{ display: 'flex', alignItems: 'flex-end' }}><button onClick={buscarCep} disabled={cepLoading} style={{ background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>{cepLoading ? '...' : 'Buscar'}</button></div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
+            <div><Lbl>Rua</Lbl><input value={rua} onChange={e => setRua(e.target.value)} style={iS} /></div>
+            <div><Lbl>Número</Lbl><input value={numero} onChange={e => setNumero(e.target.value)} style={iS} /></div>
+            <div><Lbl>Complemento</Lbl><input value={complemento} onChange={e => setComplemento(e.target.value)} style={iS} /></div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 100px', gap: 12 }}>
+            <div><Lbl>Bairro</Lbl><input value={bairro} onChange={e => setBairro(e.target.value)} style={iS} /></div>
+            <div><Lbl>Cidade</Lbl><input value={cidade} onChange={e => setCidade(e.target.value)} style={iS} /></div>
+            <div><Lbl>UF</Lbl><select value={estado} onChange={e => setEstado(e.target.value)} style={{ ...iS, appearance: 'none' as const, cursor: 'pointer' }}><option value="">--</option>{UFS.map(u => <option key={u}>{u}</option>)}</select></div>
+          </div>
+
+          <Sec>Responsável</Sec>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div><Lbl req>Nome do responsável</Lbl><input value={responsibleName} onChange={e => setResponsibleName(e.target.value)} placeholder="Nome do gestor" style={iS} /></div>
+            <div><Lbl>Data de fundação</Lbl><input type="date" value={fundacao} onChange={e => setFundacao(e.target.value)} style={iS} /></div>
+          </div>
+
+          <Sec>Plano e pagamento</Sec>
+          <div style={{ marginBottom: 12 }}><Lbl req>Plano</Lbl><select value={planId} onChange={e => setPlanId(e.target.value)} style={{ ...iS, appearance: 'none' as const, cursor: 'pointer' }}>{plans.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>CNPJ <span style={{ color: '#f97316' }}>*</span></label>
-              <input value={cnpj} onChange={e => setCnpj(maskCNPJ(e.target.value))} placeholder="00.000.000/0001-00" style={inputS} />
+              <Lbl>Ciclo</Lbl>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[{ k: 'MONTHLY', l: 'Mensal' }, { k: 'YEARLY', l: 'Anual (-15%)' }].map(c => (
+                  <label key={c.k} onClick={() => setCycle(c.k)} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)' }}>
+                    <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${cycle === c.k ? '#f97316' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{cycle === c.k && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f97316' }} />}</div>{c.l}
+                  </label>
+                ))}
+              </div>
             </div>
             <div>
-              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>E-mail <span style={{ color: '#f97316' }}>*</span></label>
-              <input value={email} onChange={e => setEmail(e.target.value)} placeholder="contato@empresa.com" type="email" style={inputS} />
+              <Lbl>Pagamento</Lbl>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {['PIX', 'Boleto', 'Cartão'].map(m => (
+                  <label key={m} onClick={() => setPayMethod(m)} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)' }}>
+                    <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${payMethod === m ? '#f97316' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{payMethod === m && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f97316' }} />}</div>{m}
+                  </label>
+                ))}
+              </div>
             </div>
           </div>
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Nome do responsável <span style={{ color: '#f97316' }}>*</span></label>
-            <input value={responsibleName} onChange={e => setResponsibleName(e.target.value)} placeholder="Nome do gestor principal" style={inputS} />
-          </div>
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Plano inicial</label>
-            <select value={planId} onChange={e => setPlanId(e.target.value)} style={{ ...inputS, appearance: 'none' as const, cursor: 'pointer' }}>
-              {plans.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-          </div>
+
           {error && <div style={{ fontSize: 12, color: '#ef4444', marginTop: 12 }}>{error}</div>}
         </div>
         <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
           <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
           <button onClick={handleSave} disabled={!canSave || saving} style={{ background: canSave ? '#f97316' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: canSave ? '#fff' : 'var(--text-muted)', cursor: canSave ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 6 }}>
-            {saving && <Loader2 size={14} className="animate-spin" />}
-            {saving ? 'Criando...' : 'Criar cliente'}
+            {saving && <Loader2 size={14} className="animate-spin" />}{saving ? 'Criando...' : 'Criar cliente'}
           </button>
         </div>
       </div>
