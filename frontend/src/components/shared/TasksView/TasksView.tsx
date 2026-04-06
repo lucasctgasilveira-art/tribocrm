@@ -533,7 +533,7 @@ export default function TasksView({ menuItems }: TasksViewProps) {
                 width: '100%', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8,
                 padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box',
               }} />
-              <button style={{
+              <button onClick={() => setNewTaskModal(true)} style={{
                 width: '100%', marginTop: 8, background: '#f97316', color: '#fff', border: 'none',
                 borderRadius: 8, padding: '9px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
@@ -680,14 +680,23 @@ function NewManagerialTaskModal({ users, onClose, onSave }: {
   onSave: (p: { title: string; typeId: string; description?: string; dueDate?: string; participantIds?: string[] }) => void
 }) {
   const [title, setTitle] = useState('')
-  const [typeId] = useState('default')
+  const [typeId, setTypeId] = useState('')
   const [description, setDescription] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [recurrence, setRecurrence] = useState('NONE')
   const [participantIds, setParticipantIds] = useState<string[]>([])
 
+  const taskTypeOpts = [
+    { value: 'EMAIL', label: 'E-mail' },
+    { value: 'WHATSAPP', label: 'WhatsApp' },
+    { value: 'CALL', label: 'Ligação' },
+    { value: 'MEETING', label: 'Reunião' },
+    { value: 'VISIT', label: 'Visita' },
+    { value: 'APPROVE', label: 'Liberar Pedido' },
+  ]
+
   const inputS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
-  const canSave = title.trim().length > 0
+  const canSave = title.trim().length > 0 && typeId.length > 0
 
   function toggleParticipant(id: string) {
     setParticipantIds(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id])
@@ -705,6 +714,13 @@ function NewManagerialTaskModal({ users, onClose, onSave }: {
           <div style={{ marginBottom: 16 }}>
             <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Título <span style={{ color: 'var(--accent)' }}>*</span></label>
             <input autoFocus value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: Reunião de alinhamento semanal" style={inputS} />
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Tipo <span style={{ color: 'var(--accent)' }}>*</span></label>
+            <select value={typeId} onChange={e => setTypeId(e.target.value)} style={{ ...inputS, appearance: 'none' as const, cursor: 'pointer' }}>
+              <option value="">Selecionar tipo...</option>
+              {taskTypeOpts.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </select>
           </div>
           <div style={{ marginBottom: 16 }}>
             <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Descrição</label>

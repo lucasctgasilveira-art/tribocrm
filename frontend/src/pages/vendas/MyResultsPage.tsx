@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import {
   TrendingUp, CheckCircle2, Target, Trophy, Loader2,
+  MessageCircle, Mail, Phone, Video,
 } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { vendasMenuItems } from '../../config/vendasMenu'
@@ -21,6 +22,8 @@ interface GoalInfo {
   userGoals: GoalUser[]
 }
 
+type Period = 'month' | 'quarter' | 'year'
+
 // ── Helpers ──
 
 function fmt(v: number) { return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 }) }
@@ -35,6 +38,8 @@ function getUserId(): string {
 
 const card: React.CSSProperties = { background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }
 
+const PERIOD_LABELS: Record<Period, string> = { month: 'Este mês', quarter: 'Trimestre', year: 'Ano' }
+
 // ── Component ──
 
 export default function MyResultsPage() {
@@ -42,13 +47,14 @@ export default function MyResultsPage() {
   const [conversionRate, setConversionRate] = useState(0)
   const [goalInfo, setGoalInfo] = useState<GoalInfo | null>(null)
   const [loading, setLoading] = useState(true)
+  const [period, setPeriod] = useState<Period>('month')
 
   useEffect(() => {
     async function load() {
       setLoading(true)
       try {
         const [dash, goals] = await Promise.all([
-          getDashboard('month'),
+          getDashboard(period),
           getGoalDashboard(),
         ])
         setRevenue(dash.kpis.revenueThisMonth)
@@ -58,7 +64,7 @@ export default function MyResultsPage() {
       finally { setLoading(false) }
     }
     load()
-  }, [])
+  }, [period])
 
   if (loading) {
     return (
@@ -73,6 +79,11 @@ export default function MyResultsPage() {
 
   const userId = getUserId()
   const myGoal = goalInfo?.userGoals.find(ug => ug.userId === userId)
+  const teamSize = goalInfo?.userGoals.length ?? 0
+  const myPosition = goalInfo?.userGoals
+    .sort((a, b) => b.current - a.current)
+    .findIndex(ug => ug.userId === userId) ?? -1
+  const position = myPosition >= 0 ? myPosition + 1 : null
 
   const kpiCards = [
     { label: 'Receita Fechada', value: fmt(revenue), icon: TrendingUp, iconColor: '#22c55e' },
@@ -85,7 +96,16 @@ export default function MyResultsPage() {
     <AppLayout menuItems={vendasMenuItems}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Meus Resultados</h1>
-        <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' }).replace(/^\w/, c => c.toUpperCase())}</span>
+        <div style={{ display: 'flex', gap: 4 }}>
+          {(['month', 'quarter', 'year'] as Period[]).map(p => (
+            <button key={p} onClick={() => setPeriod(p)} style={{
+              background: period === p ? 'rgba(249,115,22,0.12)' : 'transparent',
+              color: period === p ? '#f97316' : 'var(--text-muted)',
+              border: `1px solid ${period === p ? 'rgba(249,115,22,0.3)' : 'var(--border)'}`,
+              borderRadius: 6, padding: '5px 12px', fontSize: 12, cursor: 'pointer', fontWeight: period === p ? 600 : 400,
+            }}>{PERIOD_LABELS[p]}</button>
+          ))}
+        </div>
       </div>
 
       {/* KPIs */}
@@ -127,11 +147,60 @@ export default function MyResultsPage() {
         )}
       </div>
 
-      {/* Ranking placeholder */}
-      <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginTop: 20, textAlign: 'center' }}>
-        <Trophy size={24} color="#f59e0b" strokeWidth={1.5} />
-        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginTop: 8 }}>Ranking disponível em breve</div>
-        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>O ranking completo é visível apenas para o gestor.</div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 20 }}>
+        {/* Ranking */}
+        <div style={{ ...card, padding: 20 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 16 }}>Ranking Pessoal</div>
+          {position && teamSize > 0 ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(245,158,11,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Trophy size={28} color="#f59e0b" strokeWidth={1.5} />
+              </div>
+              <div>
+                <div style={{ fontSize: 36, fontWeight: 800, color: 'var(--text-primary)' }}>{position}º</div>
+                <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>lugar · equipe de {teamSize} pessoa{teamSize > 1 ? 's' : ''}</div>
+              </div>
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)', fontSize: 13 }}>
+              <Trophy size={24} color="#f59e0b" strokeWidth={1.5} />
+              <div style={{ marginTop: 8 }}>Ranking será exibido quando houver dados</div>
+            </div>
+          )}
+        </div>
+
+        {/* Activity History */}
+        <div style={{ ...card, padding: 20 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 16 }}>Histórico de Atividades</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {[
+              { icon: MessageCircle, color: '#25d166', label: 'WhatsApp', count: 0 },
+              { icon: Mail, color: '#3b82f6', label: 'E-mail', count: 0 },
+              { icon: Phone, color: '#f97316', label: 'Ligação', count: 0 },
+              { icon: Video, color: '#a855f7', label: 'Reunião', count: 0 },
+            ].map(a => {
+              const Icon = a.icon
+              return (
+                <div key={a.label} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: `${a.color}1F`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Icon size={16} color={a.color} strokeWidth={1.5} />
+                  </div>
+                  <span style={{ flex: 1, fontSize: 13, color: 'var(--text-primary)' }}>{a.label}</span>
+                  <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>{a.count}</span>
+                </div>
+              )
+            })}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 10 }}>Contadores serão atualizados conforme você registrar interações.</div>
+        </div>
+      </div>
+
+      {/* Loss reasons */}
+      <div style={{ ...card, padding: 20, marginTop: 16 }}>
+        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 16 }}>Meus Motivos de Perda</div>
+        <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)', fontSize: 13 }}>
+          Nenhum lead perdido neste período.
+        </div>
       </div>
     </AppLayout>
   )

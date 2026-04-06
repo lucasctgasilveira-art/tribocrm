@@ -86,7 +86,7 @@ interface TopbarProps {
 }
 
 export default function Topbar({ onOpenSearch }: TopbarProps) {
-  const [userState, setUserState] = useState(() => JSON.parse(localStorage.getItem('user') ?? '{}') as { name?: string; avatarUrl?: string; email?: string })
+  const [userState, setUserState] = useState(() => JSON.parse(localStorage.getItem('user') ?? '{}') as { name?: string; avatarUrl?: string; email?: string; tenantName?: string })
   const initials = getInitials(userState.name ?? 'U')
 
   useEffect(() => {
@@ -162,6 +162,13 @@ export default function Topbar({ onOpenSearch }: TopbarProps) {
         zIndex: 40,
       }}
     >
+      {/* Left — Company name */}
+      {userState.tenantName && (
+        <div style={{ position: 'absolute', left: 24, display: 'flex', alignItems: 'center', gap: 0 }}>
+          <span style={{ fontSize: 13, color: 'var(--text-muted)', fontFamily: "'DM Sans', sans-serif" }}>CRM — {userState.tenantName}</span>
+        </div>
+      )}
+
       {/* Center — search bar */}
       <div
         onClick={onOpenSearch}

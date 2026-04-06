@@ -71,7 +71,7 @@ function IntegrationsTab() {
           </div>
           <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12, lineHeight: 1.5 }}>Envie e-mails para leads diretamente pelo TriboCRM. Seus e-mails saem com seu nome e endereço.</p>
           {features(['Enviar e-mails pelos modelos do gestor', 'Rastreamento de abertura (Plano Pro)', 'Histórico de e-mails no card do lead'])}
-          <button style={{ width: '100%', background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Conectar Gmail</button>
+          <button onClick={() => { window.location.href = '/oauth/google/gmail' }} style={{ width: '100%', background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Conectar Gmail</button>
           <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>Usamos OAuth2 — nunca compartilhamos sua senha com ninguém.</div>
         </div>
 
@@ -86,7 +86,7 @@ function IntegrationsTab() {
           </div>
           <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12, lineHeight: 1.5 }}>Crie eventos automaticamente ao agendar tarefas no TriboCRM.</p>
           {features(['Evento criado ao criar tarefa com data', 'Badge "Google Calendar" nas tarefas sincronizadas', 'Lembrete automático no seu Calendar'])}
-          <button style={{ width: '100%', background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Conectar Calendar</button>
+          <button onClick={() => { window.location.href = '/oauth/google/calendar' }} style={{ width: '100%', background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Conectar Calendar</button>
         </div>
       </div>
 
@@ -105,8 +105,8 @@ function IntegrationsTab() {
           <FeatureCard icon={<MessageCircle size={18} color="#25d166" strokeWidth={1.5} />} text="Painel lateral no WhatsApp Web com histórico do lead" />
           <FeatureCard icon={<Clock size={18} color="#f97316" strokeWidth={1.5} />} text="Agende mensagens WhatsApp para envio automático" />
         </div>
-        <button style={{ width: '100%', background: 'rgba(34,197,94,0.12)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 8, padding: '10px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Instalar extensão gratuita</button>
-        <div style={{ textAlign: 'center', marginTop: 6, fontSize: 12, color: 'var(--text-muted)', cursor: 'pointer' }}>Ver na Chrome Web Store →</div>
+        <button onClick={() => window.open('https://chrome.google.com/webstore', '_blank')} style={{ width: '100%', background: 'rgba(34,197,94,0.12)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 8, padding: '10px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Instalar extensão gratuita</button>
+        <div onClick={() => window.open('https://chrome.google.com/webstore', '_blank')} style={{ textAlign: 'center', marginTop: 6, fontSize: 12, color: 'var(--text-muted)', cursor: 'pointer' }}>Ver na Chrome Web Store →</div>
       </div>
     </>
   )

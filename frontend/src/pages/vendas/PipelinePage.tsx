@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, type DragEvent } from 'react'
 import { Search, MessageCircle, Mail, Phone, Plus, Loader2 } from 'lucide-react'
+import api from '../../services/api'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { vendasMenuItems } from '../../config/vendasMenu'
 import LeadDrawer from '../../components/shared/LeadDrawer/LeadDrawer'
@@ -18,7 +19,7 @@ interface Lead {
 interface StageConfig { id: string; name: string; color: string }
 
 interface ApiLead {
-  id: string; name: string; company: string | null; phone: string | null; whatsapp: string | null
+  id: string; name: string; company: string | null; phone: string | null; whatsapp: string | null; email: string | null
   expectedValue: string | number | null; temperature: Temperature; stageId: string; lastActivityAt: string | null
   responsible: { id: string; name: string }
 }
@@ -52,7 +53,7 @@ function mapApiLead(l: ApiLead, stageName: string): Lead {
   return {
     id: l.id, name: l.name, company: l.company ?? '', value: Number(l.expectedValue) || 0,
     stage: stageName, temperature: l.temperature, lastContact: formatTimeAgo(l.lastActivityAt),
-    phone: l.phone ?? l.whatsapp ?? '—', email: '—',
+    phone: l.phone ?? l.whatsapp ?? '—', email: l.email ?? '—',
   }
 }
 
@@ -209,9 +210,9 @@ export default function VendasPipelinePage() {
                         <div style={{ marginTop: 10, borderTop: '1px solid var(--border)', paddingTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                           {lead.lastContact && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{lead.lastContact}</span>}
                           <div style={{ display: 'flex', gap: 2, marginLeft: 'auto' }}>
-                            <ActBtn color="#25d166"><MessageCircle size={14} strokeWidth={1.5} /></ActBtn>
-                            <ActBtn color="#3b82f6"><Mail size={14} strokeWidth={1.5} /></ActBtn>
-                            <ActBtn color="#f97316"><Phone size={14} strokeWidth={1.5} /></ActBtn>
+                            <ActBtn color="#25d166" onClick={() => { const p = lead.phone.replace(/\D/g, ''); if (p && p !== '') { window.open(`https://wa.me/${p}`, '_blank'); api.post(`/leads/${lead.id}/interactions`, { type: 'WHATSAPP', notes: 'Contato via WhatsApp' }).catch(() => {}) } }}><MessageCircle size={14} strokeWidth={1.5} /></ActBtn>
+                            <ActBtn color="#3b82f6" onClick={() => { if (lead.email && lead.email !== '—') window.open(`mailto:${lead.email}`) }}><Mail size={14} strokeWidth={1.5} /></ActBtn>
+                            <ActBtn color="#f97316" onClick={() => { const p = lead.phone.replace(/\D/g, ''); if (p && p !== '') { window.open(`tel:${p}`); api.post(`/leads/${lead.id}/interactions`, { type: 'CALL', notes: 'Ligação realizada' }).catch(() => {}) } }}><Phone size={14} strokeWidth={1.5} /></ActBtn>
                           </div>
                         </div>
                       </div>
@@ -236,7 +237,7 @@ function AddBtn({ onClick }: { onClick?: () => void }) {
   const [h, setH] = useState(false)
   return <button onClick={onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)} style={{ width: 24, height: 24, borderRadius: 6, border: '1px solid var(--border)', background: h ? 'var(--border)' : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', transition: 'background 0.15s' }}><Plus size={14} strokeWidth={1.5} /></button>
 }
-function ActBtn({ children, color }: { children: React.ReactNode; color: string }) {
+function ActBtn({ children, color, onClick }: { children: React.ReactNode; color: string; onClick?: () => void }) {
   const [h, setH] = useState(false)
-  return <button type="button" onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)} onClick={(e) => e.stopPropagation()} style={{ background: h ? 'var(--border)' : 'transparent', border: 'none', borderRadius: 6, padding: 4, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color, transition: 'background 0.15s' }}>{children}</button>
+  return <button type="button" onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)} onClick={(e) => { e.stopPropagation(); onClick?.() }} style={{ background: h ? 'var(--border)' : 'transparent', border: 'none', borderRadius: 6, padding: 4, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color, transition: 'background 0.15s' }}>{children}</button>
 }

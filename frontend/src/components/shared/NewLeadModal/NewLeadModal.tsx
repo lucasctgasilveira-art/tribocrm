@@ -263,7 +263,7 @@ export default function NewLeadModal({ open, onClose, onSubmit, defaultStage }: 
   function removePhone(idx: number) { setPhones(p => p.filter((_, i) => i !== idx)) }
 
   const hasErr = (email.length > 0 && emailStatus === 'error') || (cpf.replace(/\D/g, '').length > 0 && cpfStatus === 'error') || (cnpj.replace(/\D/g, '').length > 0 && cnpjStatus === 'error')
-  const canSubmit = name.trim() && company.trim() && email.trim() && emailRe.test(email) && responsible && !hasErr && !saving
+  const canSubmit = name.trim() && email.trim() && emailRe.test(email) && responsible && !hasErr && !saving
 
   if (!open) return null
 
@@ -297,7 +297,7 @@ export default function NewLeadModal({ open, onClose, onSubmit, defaultStage }: 
             </Field>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
-            <Field label="Empresa" required><input value={company} onChange={e => setCompany(e.target.value)} placeholder="Nome da empresa" style={baseInput} onFocus={focusEv} onBlur={blurEv} /></Field>
+            <Field label="Empresa"><input value={company} onChange={e => setCompany(e.target.value)} placeholder="Nome da empresa" style={baseInput} onFocus={focusEv} onBlur={blurEv} /></Field>
             <Field label="Cargo"><input value={position} onChange={e => setPosition(e.target.value)} placeholder="Cargo / função" style={baseInput} onFocus={focusEv} onBlur={blurEv} /></Field>
 
             <Field label="E-mail" required error={emailErr}>

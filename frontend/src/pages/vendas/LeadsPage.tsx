@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Search, Loader2 } from 'lucide-react'
+import { Search, Loader2, Plus } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { vendasMenuItems } from '../../config/vendasMenu'
 import { getLeads } from '../../services/leads.service'
+import NewLeadModal, { type NewLeadData } from '../../components/shared/NewLeadModal/NewLeadModal'
 
 // ── Types ──
 
@@ -41,12 +43,14 @@ function formatTimeAgo(dateStr: string | null): string {
 // ── Component ──
 
 export default function VendasLeadsPage() {
+  const navigate = useNavigate()
   const [leads, setLeads] = useState<Lead[]>([])
   const [meta, setMeta] = useState<Meta>({ total: 0, page: 1, perPage: 20, totalPages: 0 })
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [page, setPage] = useState(1)
+  const [modalOpen, setModalOpen] = useState(false)
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const handleSearch = useCallback((value: string) => {
@@ -77,8 +81,11 @@ export default function VendasLeadsPage() {
     <AppLayout menuItems={vendasMenuItems}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Meus Leads</h1>
-        <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{meta.total} lead{meta.total !== 1 ? 's' : ''}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Meus Leads</h1>
+          <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{meta.total} lead{meta.total !== 1 ? 's' : ''}</span>
+        </div>
+        <button onClick={() => setModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}><Plus size={15} strokeWidth={2} /> Novo Lead</button>
       </div>
 
       {/* Search */}
@@ -109,7 +116,8 @@ export default function VendasLeadsPage() {
               ) : leads.map(l => {
                 const td = tempDisplay[l.temperature]
                 return (
-                  <tr key={l.id} style={{ borderBottom: '1px solid var(--border)' }}
+                  <tr key={l.id} style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
+                    onClick={() => navigate(`/vendas/leads/${l.id}`)}
                     onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-elevated)' }}
                     onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
                     <td style={{ padding: '14px 20px' }}>
@@ -146,6 +154,8 @@ export default function VendasLeadsPage() {
           </div>
         </div>
       )}
+
+      <NewLeadModal open={modalOpen} onClose={() => setModalOpen(false)} onSubmit={(_data: NewLeadData) => { setModalOpen(false); setPage(1); setDebouncedSearch(debouncedSearch) }} />
     </AppLayout>
   )
 }

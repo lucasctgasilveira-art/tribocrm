@@ -11,6 +11,7 @@ import api from '../../services/api'
 interface Tenant {
   id: string
   name: string
+  tradeName: string | null
   email: string
   cnpj: string
   status: string
@@ -277,7 +278,7 @@ function maskCEP(v: string): string { const d = v.replace(/\D/g, '').slice(0, 8)
 const UFS = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO']
 
 function NewClientModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
-  const [name, setName] = useState(''); const [cnpj, setCnpj] = useState(''); const [email, setEmail] = useState(''); const [site, setSite] = useState('')
+  const [name, setName] = useState(''); const [tradeName, setTradeName] = useState(''); const [cnpj, setCnpj] = useState(''); const [email, setEmail] = useState(''); const [site, setSite] = useState('')
   const [cep, setCep] = useState(''); const [rua, setRua] = useState(''); const [numero, setNumero] = useState(''); const [complemento, setComplemento] = useState('')
   const [bairro, setBairro] = useState(''); const [cidade, setCidade] = useState(''); const [estado, setEstado] = useState('')
   const [responsibleName, setResponsibleName] = useState(''); const [fundacao, setFundacao] = useState('')
@@ -285,7 +286,7 @@ function NewClientModal({ onClose, onCreated }: { onClose: () => void; onCreated
   const [plans, setPlans] = useState<{ id: string; name: string }[]>([])
   const [saving, setSaving] = useState(false); const [error, setError] = useState(''); const [cepLoading, setCepLoading] = useState(false)
   const iS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
-  const canSave = name.trim() && cnpj.replace(/\D/g, '').length === 14 && email.trim() && responsibleName.trim() && planId
+  const canSave = name.trim() && tradeName.trim() && cnpj.replace(/\D/g, '').length === 14 && email.trim() && responsibleName.trim() && planId
 
   useState(() => { api.get('/payments/plans').then(r => { const p = r.data.data; setPlans(p); if (p.length) setPlanId(p[0].id) }).catch(() => {}) })
 
@@ -303,7 +304,7 @@ function NewClientModal({ onClose, onCreated }: { onClose: () => void; onCreated
   async function handleSave() {
     if (!canSave) return; setSaving(true); setError('')
     try {
-      await api.post('/admin/tenants', { name, cnpj: cnpj.replace(/\D/g, ''), email, site, responsibleName, fundacao, planId, planCycle: cycle, paymentMethod: payMethod, address: { cep: cep.replace(/\D/g, ''), street: rua, number: numero, complement: complemento, neighborhood: bairro, city: cidade, state: estado } })
+      await api.post('/admin/tenants', { name, tradeName, cnpj: cnpj.replace(/\D/g, ''), email, site, responsibleName, fundacao, planId, planCycle: cycle, paymentMethod: payMethod, address: { cep: cep.replace(/\D/g, ''), street: rua, number: numero, complement: complemento, neighborhood: bairro, city: cidade, state: estado } })
       onCreated()
     } catch (e: any) { setError(e.response?.data?.error?.message ?? 'Erro ao criar cliente'); setSaving(false) }
   }
@@ -322,7 +323,8 @@ function NewClientModal({ onClose, onCreated }: { onClose: () => void; onCreated
         <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
           <Sec>Dados da empresa</Sec>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div><Lbl req>Nome da empresa</Lbl><input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Empresa ABC Ltda" style={iS} /></div>
+            <div><Lbl req>Razão Social</Lbl><input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Empresa ABC Ltda" style={iS} /></div>
+            <div><Lbl req>Nome Fantasia</Lbl><input value={tradeName} onChange={e => setTradeName(e.target.value)} placeholder="Ex: ABC Soluções" style={iS} /></div>
             <div><Lbl req>CNPJ</Lbl><input value={cnpj} onChange={e => setCnpj(maskCNPJ(e.target.value))} placeholder="00.000.000/0001-00" style={iS} /></div>
             <div><Lbl req>E-mail</Lbl><input value={email} onChange={e => setEmail(e.target.value)} placeholder="contato@empresa.com" type="email" style={iS} /></div>
             <div><Lbl>Site</Lbl><input value={site} onChange={e => setSite(e.target.value)} placeholder="https://" style={iS} /></div>
@@ -505,7 +507,8 @@ function EditTenantModal({ tenant, onClose, onSaved }: { tenant: Tenant; onClose
           <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
         </div>
         <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
-          <div style={{ marginBottom: 16 }}><Lbl>Nome da empresa</Lbl><input value={name} onChange={e => setName(e.target.value)} style={iS} /></div>
+          <div style={{ marginBottom: 16 }}><Lbl>Razão Social</Lbl><input value={name} onChange={e => setName(e.target.value)} style={iS} /></div>
+          <div style={{ marginBottom: 16 }}><Lbl>Nome Fantasia</Lbl><input value={tenant.tradeName ?? ''} disabled style={{ ...iS, opacity: 0.6 }} /></div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
             <div><Lbl>CNPJ</Lbl><input value={tenant.cnpj} disabled style={{ ...iS, opacity: 0.6, cursor: 'not-allowed' }} /></div>
             <div><Lbl>E-mail</Lbl><input value={email} onChange={e => setEmail(e.target.value)} style={iS} /></div>

@@ -300,6 +300,7 @@ model MenuButton {
 model Tenant {
   id            String       @id @default(uuid()) @db.Uuid
   name          String       @db.VarChar(150)
+  tradeName     String?      @map("trade_name") @db.VarChar(150)
   cnpj          String       @unique @db.VarChar(18)
   email         String       @db.VarChar(255)
   phone         String?      @db.VarChar(20)

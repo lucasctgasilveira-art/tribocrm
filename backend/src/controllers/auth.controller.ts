@@ -221,6 +221,7 @@ export async function login(req: Request, res: Response): Promise<void> {
           tenantId: user.tenantId,
           avatarUrl: user.avatarUrl,
           themePreference: user.themePreference,
+          tenantName: user.tenant.tradeName ?? user.tenant.name,
         },
       },
     })

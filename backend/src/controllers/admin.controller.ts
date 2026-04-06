@@ -229,9 +229,13 @@ export async function updateTenant(req: Request, res: Response): Promise<void> {
       return
     }
 
-    const { status, planId, trialEndsAt, internalNotes } = req.body
+    const { status, planId, trialEndsAt, internalNotes, name, tradeName, email, phone } = req.body
 
     const data: Prisma.TenantUpdateInput = {}
+    if (name !== undefined) data.name = name
+    if (tradeName !== undefined) data.tradeName = tradeName
+    if (email !== undefined) data.email = email
+    if (phone !== undefined) data.phone = phone
     if (status !== undefined) data.status = status
     if (planId !== undefined) data.plan = { connect: { id: planId } }
     if (trialEndsAt !== undefined) data.trialEndsAt = trialEndsAt ? new Date(trialEndsAt) : null
