@@ -16,6 +16,7 @@ import MenuInstanciasPage from './pages/admin/MenuInstanciasPage'
 import PlansPage from './pages/admin/PlansPage'
 import LogsPage from './pages/admin/LogsPage'
 import GlobalSettingsPage from './pages/admin/GlobalSettingsPage'
+import TenantDetailPage from './pages/admin/TenantDetailPage'
 
 // Gestão
 import GestaoDashboardPage from './pages/gestao/DashboardPage'
@@ -80,6 +81,7 @@ export default function App() {
       {/* Admin */}
       <Route path="/admin/dashboard" element={<PrivateRoute allowed={['admin']}><AdminDashboardPage /></PrivateRoute>} />
       <Route path="/admin/clientes" element={<PrivateRoute allowed={['admin']}><TenantsPage /></PrivateRoute>} />
+      <Route path="/admin/clientes/:id" element={<PrivateRoute allowed={['admin']}><TenantDetailPage /></PrivateRoute>} />
       <Route path="/admin/financeiro" element={<PrivateRoute allowed={['admin']}><FinancialPage /></PrivateRoute>} />
       <Route path="/admin/popups" element={<PrivateRoute allowed={['admin']}><PopupsPage /></PrivateRoute>} />
       <Route path="/admin/menu-instancias" element={<PrivateRoute allowed={['admin']}><MenuInstanciasPage /></PrivateRoute>} />
