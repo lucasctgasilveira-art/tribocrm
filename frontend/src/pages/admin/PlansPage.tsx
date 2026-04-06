@@ -82,6 +82,7 @@ const stats = [
 export default function PlansPage() {
   const [menuOpen, setMenuOpen] = useState<string | null>(null)
   const [editPlan, setEditPlan] = useState<Plan | null>(null)
+  const [limitsPlan, setLimitsPlan] = useState<Plan | null>(null)
   const [toast, setToast] = useState('')
 
   return (
@@ -219,7 +220,7 @@ export default function PlansPage() {
               <button onClick={() => setEditPlan(p)} style={{ fontSize: 12, fontWeight: 500, color: '#f97316', background: 'rgba(249,115,22,0.12)', border: 'none', borderRadius: 6, padding: '6px 14px', cursor: 'pointer' }}>
                 Editar preço
               </button>
-              <button style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', background: 'var(--border)', border: 'none', borderRadius: 6, padding: '6px 14px', cursor: 'pointer' }}>
+              <button onClick={() => setLimitsPlan(p)} style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', background: 'var(--border)', border: 'none', borderRadius: 6, padding: '6px 14px', cursor: 'pointer' }}>
                 Editar limites
               </button>
               <div style={{ position: 'relative' }}>
@@ -284,7 +285,8 @@ export default function PlansPage() {
       </div>
 
       {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: '4px solid #22c55e', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 60 }}>{toast}</div>}
-      {editPlan && <EditPriceModal plan={editPlan} onClose={() => setEditPlan(null)} onSaved={() => { setEditPlan(null); setToast('Preco atualizado com sucesso!'); setTimeout(() => setToast(''), 4000) }} />}
+      {editPlan && <EditPriceModal plan={editPlan} onClose={() => setEditPlan(null)} onSaved={() => { setEditPlan(null); setToast('Preço atualizado com sucesso!'); setTimeout(() => setToast(''), 4000) }} />}
+      {limitsPlan && <EditLimitsModal plan={limitsPlan} onClose={() => setLimitsPlan(null)} onSaved={() => { setLimitsPlan(null); setToast('Limites atualizados!'); setTimeout(() => setToast(''), 4000) }} />}
     </AppLayout>
   )
 }
@@ -325,7 +327,7 @@ function EditPriceModal({ plan, onClose, onSaved }: { plan: Plan; onClose: () =>
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
       <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 480, maxWidth: '90vw', maxHeight: '90vh', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
-          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Editar preco — {plan.name}</h2>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Editar preço — {plan.name}</h2>
           <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
         </div>
         <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
@@ -342,11 +344,11 @@ function EditPriceModal({ plan, onClose, onSaved }: { plan: Plan; onClose: () =>
 
           {savings > 0 && (
             <div style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 8, padding: 10, marginBottom: 16, fontSize: 12, color: '#22c55e', textAlign: 'center' }}>
-              Anual: R$ {yearlyPerMonth}/mes — Economia de R$ {savings}/ano
+              Anual: R$ {yearlyPerMonth}/mês — Economia de R$ {savings}/ano
             </div>
           )}
 
-          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Quando aplicar este preco?</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Quando aplicar este preço?</div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <label onClick={() => setApplyMode('NEW_ONLY')} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px', borderRadius: 8, border: `1px solid ${applyMode === 'NEW_ONLY' ? 'var(--accent)' : 'var(--border)'}`, background: applyMode === 'NEW_ONLY' ? 'rgba(249,115,22,0.06)' : 'transparent', cursor: 'pointer' }}>
@@ -354,8 +356,8 @@ function EditPriceModal({ plan, onClose, onSaved }: { plan: Plan; onClose: () =>
                 {applyMode === 'NEW_ONLY' && <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)' }} />}
               </div>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>Apenas novas contratacoes</div>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Contratos existentes nao serao afetados</div>
+                <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>Apenas novas contratações</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Contratos existentes não serão afetados</div>
               </div>
             </label>
 
@@ -364,8 +366,8 @@ function EditPriceModal({ plan, onClose, onSaved }: { plan: Plan; onClose: () =>
                 {applyMode === 'NEW_AND_RENEWALS' && <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)' }} />}
               </div>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>Novas contratacoes e renovacoes</div>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Clientes existentes terao o novo valor na renovacao</div>
+                <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>Novas contratacoes e renovações</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Clientes existentes terão o novo valor na renovação</div>
               </div>
             </label>
           </div>
@@ -374,7 +376,7 @@ function EditPriceModal({ plan, onClose, onSaved }: { plan: Plan; onClose: () =>
             <div style={{ marginTop: 12 }}>
               <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Valido a partir de:</label>
               <input type="date" value={validFrom} onChange={e => setValidFrom(e.target.value)} style={inputS} />
-              {validFrom && <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 8, padding: 10, marginTop: 8, fontSize: 12, color: '#f59e0b' }}>Clientes que renovarem apos {new Date(validFrom).toLocaleDateString('pt-BR')} pagarao R$ {monthlyNum}/mes</div>}
+              {validFrom && <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 8, padding: 10, marginTop: 8, fontSize: 12, color: '#f59e0b' }}>Clientes que renovarem após {new Date(validFrom).toLocaleDateString('pt-BR')} pagarão R$ {monthlyNum}/mês</div>}
             </div>
           )}
         </div>
@@ -382,7 +384,72 @@ function EditPriceModal({ plan, onClose, onSaved }: { plan: Plan; onClose: () =>
           <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
           <button onClick={handleSave} disabled={saving || !monthlyNum} style={{ background: monthlyNum ? 'var(--accent)' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: monthlyNum ? '#fff' : 'var(--text-muted)', cursor: monthlyNum ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 6 }}>
             {saving && <Loader2 size={14} className="animate-spin" />}
-            {saving ? 'Salvando...' : 'Salvar alteracao'}
+            {saving ? 'Salvando...' : 'Salvar alteração'}
+          </button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ── Edit Limits Modal ──
+
+function EditLimitsModal({ plan, onClose, onSaved }: { plan: Plan; onClose: () => void; onSaved: () => void }) {
+  // Parse current limits from plan.limits array
+  const parseLimitNum = (text: string) => { const m = text.match(/[\d.]+/); return m ? parseInt(m[0].replace('.', '')) : 0 }
+  const limitsArr = plan.limits ?? []
+  const [maxUsers, setMaxUsers] = useState(String(parseLimitNum(limitsArr[0] ?? '1')))
+  const [maxLeads, setMaxLeads] = useState(String(parseLimitNum(limitsArr[1] ?? '1000')))
+  const [maxPipelines, setMaxPipelines] = useState(String(parseLimitNum(limitsArr[2] ?? '1')))
+  const [maxAutomations, setMaxAutomations] = useState('10')
+  const [maxForms, setMaxForms] = useState('10')
+  const [maxWhatsapp, setMaxWhatsapp] = useState('10')
+  const [maxEmail, setMaxEmail] = useState('10')
+  const [saving, setSaving] = useState(false)
+  const inputS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box', textAlign: 'right' }
+
+  async function handleSave() {
+    setSaving(true)
+    try {
+      await api.patch(`/admin/plans/${plan.name.toLowerCase()}/price`, {
+        maxUsers: parseInt(maxUsers), maxLeads: parseInt(maxLeads), maxPipelines: parseInt(maxPipelines),
+        maxAutomations: parseInt(maxAutomations), maxForms: parseInt(maxForms),
+        maxWhatsappTemplates: parseInt(maxWhatsapp), maxEmailTemplates: parseInt(maxEmail),
+      })
+      onSaved()
+    } catch { setSaving(false) }
+  }
+
+  function Row({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+        <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{label}</span>
+        <input type="number" value={value} onChange={e => onChange(e.target.value)} style={{ ...inputS, width: 80 }} />
+      </div>
+    )
+  }
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 440, maxWidth: '90vw', maxHeight: '90vh', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Limites — {plan.name}</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+        </div>
+        <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
+          <Row label="Usuários máximos" value={maxUsers} onChange={setMaxUsers} />
+          <Row label="Leads ativos máximos" value={maxLeads} onChange={setMaxLeads} />
+          <Row label="Pipelines máximos" value={maxPipelines} onChange={setMaxPipelines} />
+          <Row label="Automações máximas" value={maxAutomations} onChange={setMaxAutomations} />
+          <Row label="Formulários máximos" value={maxForms} onChange={setMaxForms} />
+          <Row label="Modelos de WhatsApp" value={maxWhatsapp} onChange={setMaxWhatsapp} />
+          <Row label="Modelos de e-mail" value={maxEmail} onChange={setMaxEmail} />
+        </div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
+          <button onClick={handleSave} disabled={saving} style={{ background: '#f97316', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+            {saving && <Loader2 size={14} className="animate-spin" />}{saving ? 'Salvando...' : 'Salvar limites'}
           </button>
         </div>
       </div>
