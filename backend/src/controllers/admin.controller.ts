@@ -185,12 +185,15 @@ export async function getTenant(req: Request, res: Response): Promise<void> {
       include: {
         plan: true,
         users: {
-          select: { id: true, name: true, email: true, role: true, isActive: true },
+          select: { id: true, name: true, email: true, role: true, isActive: true, lastLoginAt: true },
           where: { deletedAt: null },
         },
         charges: {
           orderBy: { createdAt: 'desc' },
-          take: 10,
+          take: 20,
+        },
+        notes: {
+          orderBy: { createdAt: 'desc' },
         },
       },
     })

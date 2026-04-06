@@ -93,6 +93,27 @@ router.delete('/coupons/:id', async (req: Request, res: Response) => {
   } catch (error: any) { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }) }
 })
 
+// ── Tenant Notes ──
+
+router.post('/tenants/:id/notes', async (req: Request, res: Response) => {
+  try {
+    const { content } = req.body
+    if (!content?.trim()) { res.status(400).json({ success: false, error: { code: 'VALIDATION', message: 'Conteúdo é obrigatório' } }); return }
+    const admin = await prisma.adminUser.findUnique({ where: { id: req.user!.userId } })
+    const note = await prisma.tenantNote.create({
+      data: { tenantId: req.params.id as string, content: content.trim(), author: admin?.name ?? 'Admin' },
+    })
+    res.json({ success: true, data: note })
+  } catch (error: any) { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }) }
+})
+
+router.delete('/tenants/:id/notes/:noteId', async (req: Request, res: Response) => {
+  try {
+    await prisma.tenantNote.delete({ where: { id: req.params.noteId as string } })
+    res.json({ success: true })
+  } catch (error: any) { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }) }
+})
+
 // ── Tenant Discount ──
 
 router.post('/tenants/:id/discount', async (req: Request, res: Response) => {
