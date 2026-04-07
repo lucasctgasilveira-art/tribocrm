@@ -113,7 +113,27 @@ export default function VendasPipelinePage() {
   const onDragStart = useCallback((e: DragEvent, id: string) => { setDraggedId(id); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', id) }, [])
   const onDragOver = useCallback((e: DragEvent, s: string) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDropTarget(s) }, [])
   const onDragLeave = useCallback(() => setDropTarget(null), [])
-  const onDrop = useCallback((e: DragEvent, s: string) => { e.preventDefault(); const id = e.dataTransfer.getData('text/plain'); setLeads(p => p.map(l => l.id === id ? { ...l, stage: s } : l)); setDraggedId(null); setDropTarget(null) }, [])
+  const onDrop = useCallback((e: DragEvent, targetStageName: string) => {
+    e.preventDefault()
+    const leadId = e.dataTransfer.getData('text/plain')
+    const stageObj = stages.find(s => s.name === targetStageName)
+    if (!stageObj) return
+
+    // Find the lead's current stage for rollback
+    const prevLead = leads.find(l => l.id === leadId)
+    const prevStage = prevLead?.stage
+
+    // Optimistic update
+    setLeads(p => p.map(l => l.id === leadId ? { ...l, stage: targetStageName } : l))
+    setDraggedId(null)
+    setDropTarget(null)
+
+    // Persist to backend
+    api.patch(`/leads/${leadId}`, { stageId: stageObj.id }).catch(() => {
+      // Rollback on failure
+      if (prevStage) setLeads(p => p.map(l => l.id === leadId ? { ...l, stage: prevStage } : l))
+    })
+  }, [stages, leads])
   const onDragEnd = useCallback(() => { setDraggedId(null); setDropTarget(null) }, [])
 
   async function handleNewLead(data: NewLeadData) {
