@@ -146,6 +146,8 @@ export async function createBoletoCharge(tenantId: string, chargeData: BoletoCha
 
   console.log('[Efi Boleto] Creating charge:', JSON.stringify({ value: chargeData.value, dueDate: chargeData.dueDate, customer }))
 
+  const notificationUrl = process.env.EFI_WEBHOOK_URL ?? 'https://tribocrm-production.up.railway.app/webhooks/efi'
+
   const charge = await efi.createOneStepCharge([] as any, {
     items: [{
       name: chargeData.description,
@@ -157,6 +159,9 @@ export async function createBoletoCharge(tenantId: string, chargeData: BoletoCha
         expire_at: chargeData.dueDate,
         customer,
       },
+    },
+    metadata: {
+      notification_url: notificationUrl,
     },
   } as any) as any
 
@@ -293,7 +298,7 @@ export async function getPaymentHistory(tenantId: string): Promise<any[]> {
 
 // ── Webhook Registration ──
 
-const WEBHOOK_URL = 'https://tribocrm-production.up.railway.app/payments/webhook/efi'
+const WEBHOOK_URL = process.env.EFI_WEBHOOK_URL ?? 'https://tribocrm-production.up.railway.app/webhooks/efi'
 
 export async function registerPixWebhook(): Promise<{ url: string; warning?: string }> {
   const pixKey = process.env.EFI_PIX_KEY ?? ''

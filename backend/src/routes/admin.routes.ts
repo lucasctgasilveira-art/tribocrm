@@ -5,6 +5,7 @@ import { prisma } from '../lib/prisma'
 import {
   getAdminDashboard, getTenants, getTenant, updateTenant, getFinancial,
 } from '../controllers/admin.controller'
+import { registerPixWebhook } from '../services/efi.service'
 
 const router = Router()
 
@@ -216,6 +217,18 @@ router.patch('/popups/:id/toggle', async (req: Request, res: Response) => {
     const updated = await prisma.popup.update({ where: { id: req.params.id as string }, data: { isActive: !popup.isActive } })
     res.json({ success: true, data: updated })
   } catch (error: any) { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }) }
+})
+
+// ── Setup: PIX Webhook Registration ──
+
+router.post('/setup/pix-webhook', async (_req: Request, res: Response) => {
+  try {
+    const result = await registerPixWebhook()
+    res.json({ success: true, data: result })
+  } catch (error: any) {
+    console.error('[Admin] setup/pix-webhook error:', error.message ?? error)
+    res.status(500).json({ success: false, error: { code: 'WEBHOOK_ERROR', message: error.message ?? 'Erro ao registrar webhook PIX' } })
+  }
 })
 
 // ── Internal Team ──
