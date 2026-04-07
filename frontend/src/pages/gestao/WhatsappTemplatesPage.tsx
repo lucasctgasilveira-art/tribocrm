@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Plus, MoreHorizontal, MessageCircle, X, Bold, Italic, Strikethrough, Smile, Loader2 } from 'lucide-react'
+import EmojiPicker, { Theme } from 'emoji-picker-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
 import { getWhatsappTemplates, createWhatsappTemplate, updateWhatsappTemplate, deleteWhatsappTemplate } from '../../services/templates.service'
@@ -21,14 +22,23 @@ function extractVars(text: string): string[] {
   return [...new Set(matches)]
 }
 
-const allVars = ['nome_lead', 'empresa_lead', 'nome_vendedor', 'nome_produto', 'valor_produto', 'data_hoje']
-const menuOpts = ['Ativar/Desativar', 'Excluir']
+const allVars = [
+  { key: 'primeiro_nome', desc: 'Primeiro nome do lead' },
+  { key: 'nome_lead', desc: 'Nome completo do lead' },
+  { key: 'empresa_lead', desc: 'Empresa do lead' },
+  { key: 'nome_vendedor', desc: 'Nome do vendedor' },
+  { key: 'nome_produto', desc: 'Nome do produto' },
+  { key: 'valor_produto', desc: 'Valor do produto' },
+  { key: 'data_hoje', desc: 'Data de hoje' },
+]
+const menuOpts = ['Excluir']
 
 function renderWA(text: string): string {
   return text
     .replace(/\*([^*]+)\*/g, '<strong>$1</strong>')
     .replace(/_([^_]+)_/g, '<em>$1</em>')
     .replace(/~([^~]+)~/g, '<del>$1</del>')
+    .replace(/\{\{primeiro_nome\}\}/g, 'Camila')
     .replace(/\{\{nome_lead\}\}/g, 'Camila Torres')
     .replace(/\{\{empresa_lead\}\}/g, 'Torres & Filhos')
     .replace(/\{\{nome_vendedor\}\}/g, 'Ana Souza')
@@ -45,17 +55,15 @@ export default function WhatsappTemplatesPage() {
   const [loading, setLoading] = useState(true)
   const [openMenu, setOpenMenu] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
+  const [editingTemplate, setEditingTemplate] = useState<Template | null>(null)
 
   const loadTemplates = useCallback(async () => {
     setLoading(true)
     try {
       const data = await getWhatsappTemplates()
       setTemplates(data)
-    } catch {
-      setTemplates([])
-    } finally {
-      setLoading(false)
-    }
+    } catch { setTemplates([]) }
+    finally { setLoading(false) }
   }, [])
 
   useEffect(() => { loadTemplates() }, [loadTemplates])
@@ -63,25 +71,31 @@ export default function WhatsappTemplatesPage() {
   async function handleToggleActive(t: Template) {
     try {
       await updateWhatsappTemplate(t.id, { isActive: !t.isActive })
-      setOpenMenu(null)
-      loadTemplates()
+      setTemplates(prev => prev.map(x => x.id === t.id ? { ...x, isActive: !x.isActive } : x))
     } catch { /* ignore */ }
   }
 
   async function handleDelete(id: string) {
+    try { await deleteWhatsappTemplate(id); setOpenMenu(null); loadTemplates() } catch { /* ignore */ }
+  }
+
+  async function handleSave(name: string, body: string, templateId?: string) {
     try {
-      await deleteWhatsappTemplate(id)
-      setOpenMenu(null)
+      if (templateId) {
+        await updateWhatsappTemplate(templateId, { name, body })
+      } else {
+        await createWhatsappTemplate({ name, body })
+      }
+      setModalOpen(false)
+      setEditingTemplate(null)
       loadTemplates()
     } catch { /* ignore */ }
   }
 
-  async function handleCreate(name: string, body: string) {
-    try {
-      await createWhatsappTemplate({ name, body })
-      setModalOpen(false)
-      loadTemplates()
-    } catch { /* ignore */ }
+  function openEdit(t: Template) {
+    setEditingTemplate(t)
+    setModalOpen(true)
+    setOpenMenu(null)
   }
 
   const stats = {
@@ -93,7 +107,7 @@ export default function WhatsappTemplatesPage() {
     <AppLayout menuItems={gestaoMenuItems}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Modelos de WhatsApp</h1>
-        <button onClick={() => setModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+        <button onClick={() => { setEditingTemplate(null); setModalOpen(true) }} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
           <Plus size={15} strokeWidth={2} /> Novo Modelo
         </button>
       </div>
@@ -104,7 +118,6 @@ export default function WhatsappTemplatesPage() {
         <span style={{ color: 'var(--text-muted)' }}>Ativos</span><span style={{ color: '#22c55e', fontWeight: 700, marginLeft: 4 }}>{stats.active}</span>
       </div>
 
-      {/* Info */}
       <div style={{ background: 'rgba(37,209,102,0.08)', border: '1px solid rgba(37,209,102,0.2)', borderRadius: 8, padding: '12px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
         <MessageCircle size={16} color="#25d166" strokeWidth={1.5} style={{ flexShrink: 0 }} />
         <span style={{ color: 'var(--text-secondary)' }}>Estes modelos ficam disponíveis no painel lateral da extensão do Chrome para envio rápido pelo WhatsApp Web.</span>
@@ -127,7 +140,9 @@ export default function WhatsappTemplatesPage() {
                 onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', flex: 1 }}>{t.name}</span>
-                  <span style={{ background: t.isActive ? 'rgba(34,197,94,0.12)' : 'rgba(107,114,128,0.12)', color: t.isActive ? '#22c55e' : 'var(--text-muted)', borderRadius: 999, padding: '2px 8px', fontSize: 10, fontWeight: 500 }}>{t.isActive ? 'Ativo' : 'Inativo'}</span>
+                  <div onClick={() => handleToggleActive(t)} style={{ width: 36, height: 20, borderRadius: 999, cursor: 'pointer', background: t.isActive ? '#f97316' : 'var(--border)', display: 'flex', alignItems: 'center', padding: '0 2px', justifyContent: t.isActive ? 'flex-end' : 'flex-start', transition: 'all 0.2s' }}>
+                    <div style={{ width: 16, height: 16, borderRadius: '50%', background: t.isActive ? '#fff' : 'var(--text-muted)', transition: 'all 0.2s' }} />
+                  </div>
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 8, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{t.body}</div>
@@ -139,19 +154,14 @@ export default function WhatsappTemplatesPage() {
                 </div>
                 <div style={{ marginTop: 'auto', paddingTop: 14, borderTop: '1px solid var(--border)' }}>
                   <div style={{ display: 'flex', gap: 6, position: 'relative' }}>
-                    <button style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 12px', fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}>Editar</button>
+                    <button onClick={() => openEdit(t)} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 12px', fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}>Editar</button>
                     <button onClick={() => setOpenMenu(openMenu === t.id ? null : t.id)} style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--border)', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
                       <MoreHorizontal size={14} strokeWidth={1.5} />
                     </button>
                     {openMenu === t.id && (
                       <div style={{ position: 'absolute', right: 0, top: 32, zIndex: 20, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', minWidth: 150, padding: '4px 0' }}>
                         {menuOpts.map(opt => (
-                          <div key={opt}
-                            onClick={() => {
-                              if (opt === 'Ativar/Desativar') handleToggleActive(t)
-                              else if (opt === 'Excluir') handleDelete(t.id)
-                              else setOpenMenu(null)
-                            }}
+                          <div key={opt} onClick={() => { if (opt === 'Excluir') handleDelete(t.id); else setOpenMenu(null) }}
                             style={{ padding: '8px 14px', fontSize: 13, color: opt === 'Excluir' ? '#ef4444' : 'var(--text-primary)', cursor: 'pointer' }}
                             onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
                             onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>{opt}</div>
@@ -166,17 +176,27 @@ export default function WhatsappTemplatesPage() {
         </div>
       )}
 
-      {modalOpen && <WhatsAppModal onClose={() => setModalOpen(false)} onSave={handleCreate} />}
+      {modalOpen && <WhatsAppModal template={editingTemplate} onClose={() => { setModalOpen(false); setEditingTemplate(null) }} onSave={handleSave} />}
     </AppLayout>
   )
 }
 
 // ── WhatsApp Modal ──
 
-function WhatsAppModal({ onClose, onSave }: { onClose: () => void; onSave: (name: string, body: string) => void }) {
-  const [name, setName] = useState('')
-  const [body, setBody] = useState('')
+function WhatsAppModal({ template, onClose, onSave }: { template: Template | null; onClose: () => void; onSave: (name: string, body: string, id?: string) => void }) {
+  const [name, setName] = useState(template?.name ?? '')
+  const [body, setBody] = useState(template?.body ?? '')
+  const [emojiOpen, setEmojiOpen] = useState(false)
   const bodyRef = useRef<HTMLTextAreaElement>(null)
+  const emojiRef = useRef<HTMLDivElement>(null)
+  const isEdit = !!template
+
+  // Close emoji picker on outside click
+  useEffect(() => {
+    function close(e: MouseEvent) { if (emojiRef.current && !emojiRef.current.contains(e.target as Node)) setEmojiOpen(false) }
+    if (emojiOpen) document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [emojiOpen])
 
   function insertAt(before: string, after: string) {
     const ta = bodyRef.current; if (!ta) return
@@ -184,6 +204,14 @@ function WhatsAppModal({ onClose, onSave }: { onClose: () => void; onSave: (name
     const text = before + (sel || 'texto') + after
     setBody(body.slice(0, s) + text + body.slice(e))
     setTimeout(() => { ta.focus(); ta.selectionStart = s + before.length; ta.selectionEnd = s + before.length + (sel || 'texto').length }, 0)
+  }
+
+  function insertEmoji(emoji: string) {
+    const ta = bodyRef.current; if (!ta) return
+    const s = ta.selectionStart
+    setBody(body.slice(0, s) + emoji + body.slice(ta.selectionEnd))
+    setEmojiOpen(false)
+    setTimeout(() => { ta.focus(); ta.selectionStart = ta.selectionEnd = s + emoji.length }, 0)
   }
 
   function insertVar(v: string) {
@@ -200,7 +228,7 @@ function WhatsAppModal({ onClose, onSave }: { onClose: () => void; onSave: (name
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
       <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 560, maxWidth: '90vw', maxHeight: '90vh', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
-          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Novo Modelo de WhatsApp</h2>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{isEdit ? 'Editar Modelo' : 'Novo Modelo de WhatsApp'}</h2>
           <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
         </div>
         <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
@@ -210,19 +238,39 @@ function WhatsAppModal({ onClose, onSave }: { onClose: () => void; onSave: (name
           </div>
           <div style={{ marginBottom: 12 }}>
             <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Mensagem</label>
-            <div style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)', padding: '8px 12px', display: 'flex', gap: 6, borderRadius: '8px 8px 0 0' }}>
+            <div style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)', padding: '8px 12px', display: 'flex', gap: 6, borderRadius: '8px 8px 0 0', position: 'relative' }}>
               <FmtBtn icon={<Bold size={14} />} onClick={() => insertAt('*', '*')} title="Negrito" />
-              <FmtBtn icon={<Italic size={14} />} onClick={() => insertAt('_', '_')} title="Itálico" />
+              <FmtBtn icon={<Italic size={14} />} onClick={() => insertAt('_', '_')} title="Italico" />
               <FmtBtn icon={<Strikethrough size={14} />} onClick={() => insertAt('~', '~')} title="Tachado" />
-              <FmtBtn icon={<Smile size={14} />} onClick={() => insertAt('😊', '')} title="Emoji" />
+              <div ref={emojiRef} style={{ position: 'relative' }}>
+                <FmtBtn icon={<Smile size={14} />} onClick={() => setEmojiOpen(!emojiOpen)} title="Emoji" />
+                {emojiOpen && (
+                  <div style={{ position: 'absolute', top: 36, left: 0, zIndex: 100 }}>
+                    <EmojiPicker
+                      theme={Theme.DARK}
+                      width={320}
+                      height={350}
+                      searchPlaceholder="Buscar emoji..."
+                      onEmojiClick={(emojiData) => insertEmoji(emojiData.emoji)}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
-            <textarea ref={bodyRef} rows={8} value={body} onChange={e => setBody(e.target.value)} placeholder={'Oi {{nome_lead}}! 👋'} style={{ ...inputS, resize: 'none', borderRadius: '0 0 8px 8px', borderTop: 'none', lineHeight: 1.6 }} />
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>Use *negrito*, _itálico_, ~tachado~ — formatação compatível com WhatsApp</div>
+            <textarea ref={bodyRef} rows={8} value={body} onChange={e => setBody(e.target.value)} placeholder={'Oi {{primeiro_nome}}!'} style={{ ...inputS, resize: 'none', borderRadius: '0 0 8px 8px', borderTop: 'none', lineHeight: 1.6 }} />
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>Use *negrito*, _italico_, ~tachado~ — formatação compatível com WhatsApp</div>
           </div>
           <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8, fontWeight: 600 }}>Variáveis disponíveis — clique para inserir:</div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              {allVars.map(v => <button key={v} onClick={() => insertVar(v)} style={{ background: 'var(--border)', color: '#f97316', borderRadius: 4, padding: '3px 10px', fontSize: 12, border: 'none', cursor: 'pointer' }}>{`{{${v}}}`}</button>)}
+            <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8, fontWeight: 600 }}>Variaveis disponiveis — clique para inserir:</div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+              {allVars.map(v => <button key={v.key} onClick={() => insertVar(v.key)} style={{ background: 'var(--border)', color: '#f97316', borderRadius: 4, padding: '3px 10px', fontSize: 12, border: 'none', cursor: 'pointer' }}>{`{{${v.key}}}`}</button>)}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {allVars.map(v => (
+                <div key={v.key} style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>{`{{${v.key}}}`}</span> — {v.desc}
+                </div>
+              ))}
             </div>
           </div>
           {body && (
@@ -231,7 +279,7 @@ function WhatsAppModal({ onClose, onSave }: { onClose: () => void; onSave: (name
               <div style={{ background: 'var(--bg)', borderRadius: 12, padding: 16 }}>
                 <div style={{ background: 'var(--bg-elevated)', borderRadius: '12px 12px 12px 4px', padding: '10px 14px', maxWidth: '85%', position: 'relative' }}>
                   <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: renderWA(body) }} />
-                  <div style={{ fontSize: 10, color: 'var(--text-muted)', textAlign: 'right', marginTop: 4 }}>14:30 ✓✓</div>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)', textAlign: 'right', marginTop: 4 }}>14:30</div>
                 </div>
               </div>
             </div>
@@ -239,7 +287,7 @@ function WhatsAppModal({ onClose, onSave }: { onClose: () => void; onSave: (name
         </div>
         <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
           <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
-          <button onClick={() => onSave(name, body)} disabled={!name.trim()} style={{ background: name.trim() ? '#f97316' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: name.trim() ? '#fff' : 'var(--text-muted)', cursor: name.trim() ? 'pointer' : 'not-allowed' }}>Salvar modelo</button>
+          <button onClick={() => onSave(name, body, template?.id)} disabled={!name.trim()} style={{ background: name.trim() ? '#f97316' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: name.trim() ? '#fff' : 'var(--text-muted)', cursor: name.trim() ? 'pointer' : 'not-allowed' }}>{isEdit ? 'Salvar alteracoes' : 'Salvar modelo'}</button>
         </div>
       </div>
     </>
