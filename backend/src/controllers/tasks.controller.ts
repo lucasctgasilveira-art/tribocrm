@@ -310,10 +310,27 @@ export async function createManagerialTask(req: Request, res: Response): Promise
       return
     }
 
+    // typeId can be a UUID (existing type) or a name string (e.g. "EMAIL", "CALL")
+    // If it's not a valid UUID, find or create the type by name
+    let resolvedTypeId = typeId
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(typeId)
+    if (!isUUID) {
+      let taskType = await prisma.managerialTaskType.findFirst({
+        where: { tenantId, name: typeId },
+      })
+      if (!taskType) {
+        const maxOrder = await prisma.managerialTaskType.aggregate({ where: { tenantId }, _max: { sortOrder: true } })
+        taskType = await prisma.managerialTaskType.create({
+          data: { tenantId, name: typeId, sortOrder: (maxOrder._max.sortOrder ?? 0) + 1 },
+        })
+      }
+      resolvedTypeId = taskType.id
+    }
+
     const task = await prisma.managerialTask.create({
       data: {
         tenantId,
-        typeId,
+        typeId: resolvedTypeId,
         createdBy: userId,
         title,
         description: description || null,

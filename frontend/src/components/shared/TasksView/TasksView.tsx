@@ -314,16 +314,11 @@ export default function TasksView({ menuItems }: TasksViewProps) {
   }
 
   async function handleCreateManagerialTask(payload: { title: string; typeId: string; description?: string; dueDate?: string; participantIds?: string[]; responsibleId?: string; dueTime?: string; reminderMinutes?: number }) {
-    try {
-      await createManagerialTask({ title: payload.title, typeId: payload.typeId, description: payload.description, dueDate: payload.dueDate, participantIds: payload.participantIds })
-      setNewTaskModal(false)
-      setCategory('gerenciais')
-      setToast('Tarefa criada!')
-      setTimeout(() => setToast(''), 3000)
-    } catch {
-      setToast('Erro ao criar tarefa')
-      setTimeout(() => setToast(''), 3000)
-    }
+    await createManagerialTask({ title: payload.title, typeId: payload.typeId, description: payload.description, dueDate: payload.dueDate, participantIds: payload.participantIds })
+    setNewTaskModal(false)
+    setCategory('gerenciais')
+    setToast('Tarefa criada!')
+    setTimeout(() => setToast(''), 3000)
   }
 
   async function handleManagerialComplete(id: string) {
@@ -681,7 +676,7 @@ function SummaryCard({ label, value, color }: { label: string; value: string; co
 function NewManagerialTaskModal({ users, onClose, onSave }: {
   users: { id: string; name: string }[]
   onClose: () => void
-  onSave: (p: { title: string; typeId: string; description?: string; dueDate?: string; participantIds?: string[]; responsibleId?: string; dueTime?: string; reminderMinutes?: number }) => void
+  onSave: (p: { title: string; typeId: string; description?: string; dueDate?: string; participantIds?: string[]; responsibleId?: string; dueTime?: string; reminderMinutes?: number }) => Promise<void> | void
 }) {
   const stored = JSON.parse(localStorage.getItem('user') ?? '{}') as { id?: string; role?: string; teamId?: string }
   const userRole = stored.role ?? 'SELLER'
@@ -738,11 +733,12 @@ function NewManagerialTaskModal({ users, onClose, onSave }: {
     }
   }, [typeId])
 
-  // Determine visible users based on role
-  const showResponsible = userRole !== 'SELLER'
+  const isSeller = userRole === 'SELLER'
+  const showResponsible = !isSeller
   const visibleUsers = userRole === 'TEAM_LEADER'
     ? users.filter(u => u.id === userId || true) // backend already filters by team
     : users
+  const [error, setError] = useState('')
 
   const inputS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
   const canSave = title.trim().length > 0 && typeId.length > 0 && !saving
@@ -751,19 +747,25 @@ function NewManagerialTaskModal({ users, onClose, onSave }: {
     setParticipantIds(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id])
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (!canSave) return
     setSaving(true)
+    setError('')
     const fullDueDate = dueDate && dueTime ? `${dueDate}T${dueTime}:00` : dueDate || undefined
-    onSave({
-      title, typeId,
-      description: (selectedTemplate === '__custom' ? customMessage : description) || undefined,
-      dueDate: fullDueDate,
-      participantIds: participantIds.length > 0 ? participantIds : undefined,
-      responsibleId: showResponsible ? responsibleId : userId,
-      dueTime: dueTime || undefined,
-      reminderMinutes,
-    })
+    try {
+      await onSave({
+        title, typeId,
+        description: (selectedTemplate === '__custom' ? customMessage : description) || undefined,
+        dueDate: fullDueDate,
+        participantIds: isSeller ? undefined : (participantIds.length > 0 ? participantIds : undefined),
+        responsibleId: isSeller ? userId : responsibleId,
+        dueTime: dueTime || undefined,
+        reminderMinutes,
+      })
+    } catch (e: any) {
+      setError(e.response?.data?.error?.message ?? 'Erro ao criar tarefa. Tente novamente.')
+      setSaving(false)
+    }
   }
 
   return (
@@ -865,23 +867,27 @@ function NewManagerialTaskModal({ users, onClose, onSave }: {
             </div>
           )}
 
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 8 }}>Participantes</label>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {users.map(u => {
-                const selected = participantIds.includes(u.id)
-                return (
-                  <button key={u.id} onClick={() => toggleParticipant(u.id)} style={{
-                    padding: '5px 12px', borderRadius: 999, fontSize: 12, cursor: 'pointer',
-                    background: selected ? 'rgba(249,115,22,0.12)' : 'transparent',
-                    border: `1px solid ${selected ? 'var(--accent)' : 'var(--border)'}`,
-                    color: selected ? 'var(--accent)' : 'var(--text-secondary)',
-                    transition: 'all 0.15s',
-                  }}>{u.name.split(' ')[0]}{selected ? ' ✓' : ''}</button>
-                )
-              })}
+          {!isSeller && (
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 8 }}>Participantes</label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {users.map(u => {
+                  const selected = participantIds.includes(u.id)
+                  return (
+                    <button key={u.id} onClick={() => toggleParticipant(u.id)} style={{
+                      padding: '5px 12px', borderRadius: 999, fontSize: 12, cursor: 'pointer',
+                      background: selected ? 'rgba(249,115,22,0.12)' : 'transparent',
+                      border: `1px solid ${selected ? 'var(--accent)' : 'var(--border)'}`,
+                      color: selected ? 'var(--accent)' : 'var(--text-secondary)',
+                      transition: 'all 0.15s',
+                    }}>{u.name.split(' ')[0]}{selected ? ' ✓' : ''}</button>
+                  )
+                })}
+              </div>
             </div>
-          </div>
+          )}
+
+          {error && <div style={{ fontSize: 12, color: '#ef4444', marginTop: 12, padding: '8px 12px', background: 'rgba(239,68,68,0.08)', borderRadius: 6 }}>{error}</div>}
         </div>
         <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
           <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
