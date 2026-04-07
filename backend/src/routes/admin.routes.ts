@@ -226,8 +226,22 @@ router.post('/setup/pix-webhook', async (_req: Request, res: Response) => {
     const result = await registerPixWebhook()
     res.json({ success: true, data: result })
   } catch (error: any) {
-    console.error('[Admin] setup/pix-webhook error:', error.message ?? error)
-    res.status(500).json({ success: false, error: { code: 'WEBHOOK_ERROR', message: error.message ?? 'Erro ao registrar webhook PIX' } })
+    const original = error?.original ?? error
+    console.error('[Admin] setup/pix-webhook error:', {
+      message: error?.message,
+      origMessage: original?.message,
+      response: original?.response?.data ?? original?.data ?? null,
+      status: original?.response?.status ?? original?.status ?? null,
+    })
+    res.status(500).json({
+      success: false,
+      error: {
+        code: 'WEBHOOK_ERROR',
+        message: error?.message ?? 'Erro ao registrar webhook PIX',
+        detail: original?.response?.data ?? original?.data ?? original?.body ?? null,
+        status: original?.response?.status ?? original?.status ?? null,
+      },
+    })
   }
 })
 

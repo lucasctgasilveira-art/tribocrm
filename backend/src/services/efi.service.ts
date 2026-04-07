@@ -300,22 +300,37 @@ export async function getPaymentHistory(tenantId: string): Promise<any[]> {
 
 const WEBHOOK_URL = process.env.EFI_WEBHOOK_URL ?? 'https://tribocrm-production.up.railway.app/webhooks/efi'
 
-export async function registerPixWebhook(): Promise<{ url: string; warning?: string }> {
+export async function registerPixWebhook(): Promise<{ url: string; warning?: string; pixKey: string }> {
   const pixKey = process.env.EFI_PIX_KEY ?? ''
   if (!pixKey) throw new Error('EFI_PIX_KEY not configured')
 
+  console.log('[Efi] registerPixWebhook starting:', { pixKey: pixKey.slice(0, 6) + '***', webhookUrl: WEBHOOK_URL, sandbox: isSandbox })
+
   try {
     const efi = getClient()
-    await efi.pixConfigWebhook({ chave: pixKey } as any, { webhookUrl: WEBHOOK_URL } as any)
-    console.log('[Efi] Webhook PIX registrado com sucesso:', WEBHOOK_URL)
-    return { url: WEBHOOK_URL }
+    const result = await efi.pixConfigWebhook({ chave: pixKey } as any, { webhookUrl: WEBHOOK_URL } as any)
+    console.log('[Efi] Webhook PIX registrado com sucesso:', WEBHOOK_URL, 'result:', JSON.stringify(result))
+    return { url: WEBHOOK_URL, pixKey: pixKey.slice(0, 6) + '***' }
   } catch (err: any) {
+    console.error('EFI_WEBHOOK_REGISTER_ERROR:', {
+      message: err?.message,
+      response: err?.response?.data ?? err?.data ?? null,
+      status: err?.response?.status ?? err?.status ?? null,
+      body: err?.body ?? null,
+      name: err?.name ?? null,
+      raw: (() => { try { return JSON.stringify(err, Object.getOwnPropertyNames(err)).slice(0, 2000) } catch { return String(err) } })(),
+    })
     if (isSandbox) {
       const msg = 'Webhook PIX não disponível em sandbox — cobranças funcionam normalmente, confirmações devem ser verificadas manualmente'
       console.warn('[Efi]', msg)
-      return { url: WEBHOOK_URL, warning: msg }
+      return { url: WEBHOOK_URL, warning: msg, pixKey: pixKey.slice(0, 6) + '***' }
     }
-    throw err
+    // Re-throw with enriched message so the admin route returns useful info
+    const detail = err?.response?.data ?? err?.data ?? err?.body
+    const detailStr = detail ? ` — detail: ${JSON.stringify(detail).slice(0, 500)}` : ''
+    const error = new Error(`${err?.message ?? 'Unknown Efi error'}${detailStr}`)
+    ;(error as any).original = err
+    throw error
   }
 }
 

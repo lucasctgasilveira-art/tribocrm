@@ -27,6 +27,15 @@ const router = Router()
  * accept any POST and validate the payload shape. EFI_WEBHOOK_SECRET env
  * var is reserved for a future header-based check.
  */
+// Efi calls GET/HEAD on the webhook URL to verify it is reachable before
+// accepting pixConfigWebhook registration. Both must return 200.
+router.get('/efi', (_req: Request, res: Response) => {
+  res.status(200).send('ok')
+})
+router.head('/efi', (_req: Request, res: Response) => {
+  res.status(200).end()
+})
+
 router.post('/efi', async (req: Request, res: Response) => {
   // Always respond 200 immediately so Efi doesn't retry
   // Process asynchronously after responding
