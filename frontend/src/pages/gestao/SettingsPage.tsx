@@ -26,13 +26,14 @@ const initialStages: Stage[] = [
 
 const initialReasons = ['Preço alto', 'Sem orçamento no momento', 'Escolheu concorrente', 'Sem interesse', 'Sem retorno', 'Timing errado']
 
-interface MgrTask { id: string; name: string; active: boolean; recurrence: string }
-const mgrTasks: MgrTask[] = [
-  { id: 'm1', name: 'Feedback individual com vendedor', active: true, recurrence: 'Quinzenal' },
-  { id: 'm2', name: 'Reunião de alinhamento do time', active: true, recurrence: 'Semanal' },
-  { id: 'm3', name: 'Análise de relatório mensal', active: true, recurrence: 'Mensal' },
-  { id: 'm4', name: 'Treinamento interno', active: true, recurrence: 'Mensal' },
-  { id: 'm5', name: '1:1 com liderança', active: false, recurrence: 'Mensal' },
+interface MgrTask { id: string; name: string; isActive: boolean; visibleFor: string[] }
+
+const ROLE_LABELS: Record<string, string> = { SELLER: 'Vendedor', TEAM_LEADER: 'Líder', MANAGER: 'Gestor', OWNER: 'Proprietário' }
+const VISIBILITY_OPTS = [
+  { value: 'SELLER', label: 'Vendedor' },
+  { value: 'TEAM_LEADER', label: 'Líder' },
+  { value: 'MANAGER', label: 'Gestor' },
+  { value: 'ALL', label: 'Todos' },
 ]
 
 // ── Component ──
@@ -257,17 +258,35 @@ function LossReasonModal({ defaultValue, onClose, onSave, isEdit }: { defaultVal
 // ── Managerial Tasks Tab ──
 
 function ManagerialTasksTab() {
-  const [tasks, setTasks] = useState(mgrTasks)
+  const [tasks, setTasks] = useState<MgrTask[]>([])
+  const [loading, setLoading] = useState(true)
   const [openMenu, setOpenMenu] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
+  const [editingType, setEditingType] = useState<MgrTask | null>(null)
 
-  function toggle(id: string) { setTasks(p => p.map(t => t.id === id ? { ...t, active: !t.active } : t)) }
+  function loadTypes() {
+    setLoading(true)
+    api.get('/tasks/managerial-types').then(r => setTasks(r.data.data ?? [])).catch(() => setTasks([])).finally(() => setLoading(false))
+  }
+  useState(() => { loadTypes() })
 
-  function handleCreate(name: string, recurrence: string) {
-    const newTask: MgrTask = { id: `m${Date.now()}`, name, active: true, recurrence }
-    setTasks(p => [...p, newTask])
+  async function handleToggle(t: MgrTask) {
+    try { await api.patch(`/tasks/managerial-types/${t.id}`, { isActive: !t.isActive }); setTasks(p => p.map(x => x.id === t.id ? { ...x, isActive: !x.isActive } : x)) } catch { /* ignore */ }
+  }
+
+  async function handleDelete(id: string) {
+    try { await api.patch(`/tasks/managerial-types/${id}`, { isActive: false }); setOpenMenu(null); loadTypes() } catch { /* ignore */ }
+  }
+
+  async function handleSave(name: string, visibleFor: string[], typeId?: string) {
+    if (typeId) {
+      await api.patch(`/tasks/managerial-types/${typeId}`, { name, visibleFor })
+    } else {
+      await api.post('/tasks/managerial-types', { name, visibleFor })
+    }
     setModalOpen(false)
-    // API: api.post('/managerial-task-types', { name, recurrence })
+    setEditingType(null)
+    loadTypes()
   }
 
   return (
@@ -278,17 +297,25 @@ function ManagerialTasksTab() {
             <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Tipos de Tarefa Gerencial</span>
             <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Tarefas criadas pelo gestor para a equipe — não vinculadas a leads</div>
           </div>
-          <button onClick={() => setModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+          <button onClick={() => { setEditingType(null); setModalOpen(true) }} style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
             <Plus size={14} strokeWidth={2} /> Novo tipo
           </button>
         </div>
-        {tasks.map(t => (
-          <div key={t.id} style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12, opacity: t.active ? 1 : 0.6 }}>
+        {loading ? (
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Carregando...</div>
+        ) : tasks.length === 0 ? (
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Nenhum tipo cadastrado</div>
+        ) : tasks.map(t => (
+          <div key={t.id} style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12, opacity: t.isActive ? 1 : 0.6 }}>
             <CheckSquare size={16} color="#f97316" strokeWidth={1.5} style={{ flexShrink: 0 }} />
-            <span style={{ flex: 1, fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{t.name}</span>
-            <span style={{ background: 'var(--border)', color: 'var(--text-secondary)', borderRadius: 4, padding: '2px 8px', fontSize: 10 }}>{t.recurrence}</span>
-            <div onClick={() => toggle(t.id)} style={{ width: 36, height: 20, borderRadius: 999, background: t.active ? '#f97316' : 'var(--border)', display: 'flex', alignItems: 'center', padding: '0 2px', justifyContent: t.active ? 'flex-end' : 'flex-start', cursor: 'pointer', transition: 'all 0.2s' }}>
-              <div style={{ width: 16, height: 16, borderRadius: '50%', background: t.active ? '#fff' : 'var(--text-muted)', transition: 'all 0.2s' }} />
+            <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{t.name}</span>
+            <div style={{ display: 'flex', gap: 4, flex: 1, justifyContent: 'flex-end', marginRight: 8 }}>
+              {(t.visibleFor.length === 4 || t.visibleFor.includes('ALL') ? ['Todos'] : t.visibleFor).map(r => (
+                <span key={r} style={{ background: 'rgba(249,115,22,0.08)', color: '#f97316', borderRadius: 4, padding: '2px 6px', fontSize: 10, fontWeight: 500 }}>{ROLE_LABELS[r] ?? r}</span>
+              ))}
+            </div>
+            <div onClick={() => handleToggle(t)} style={{ width: 36, height: 20, borderRadius: 999, background: t.isActive ? '#f97316' : 'var(--border)', display: 'flex', alignItems: 'center', padding: '0 2px', justifyContent: t.isActive ? 'flex-end' : 'flex-start', cursor: 'pointer', transition: 'all 0.2s' }}>
+              <div style={{ width: 16, height: 16, borderRadius: '50%', background: t.isActive ? '#fff' : 'var(--text-muted)', transition: 'all 0.2s' }} />
             </div>
             <div style={{ position: 'relative' }}>
               <button onClick={() => setOpenMenu(openMenu === t.id ? null : t.id)} style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--border)', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
@@ -296,27 +323,55 @@ function ManagerialTasksTab() {
               </button>
               {openMenu === t.id && (
                 <div style={{ position: 'absolute', right: 0, top: 32, zIndex: 20, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', minWidth: 130, padding: '4px 0' }}>
-                  {['Editar', 'Excluir'].map(opt => <div key={opt} onClick={() => setOpenMenu(null)} style={{ padding: '8px 14px', fontSize: 13, color: opt === 'Excluir' ? '#ef4444' : 'var(--text-primary)', cursor: 'pointer' }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>{opt}</div>)}
+                  <div onClick={() => { setEditingType(t); setModalOpen(true); setOpenMenu(null) }} style={{ padding: '8px 14px', fontSize: 13, color: 'var(--text-primary)', cursor: 'pointer' }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>Editar</div>
+                  <div onClick={() => handleDelete(t.id)} style={{ padding: '8px 14px', fontSize: 13, color: '#ef4444', cursor: 'pointer' }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>Excluir</div>
                 </div>
               )}
             </div>
           </div>
         ))}
       </div>
-      {modalOpen && <NewTaskTypeModal onClose={() => setModalOpen(false)} onSave={handleCreate} />}
+      {modalOpen && <NewTaskTypeModal editType={editingType} onClose={() => { setModalOpen(false); setEditingType(null) }} onSave={handleSave} />}
     </>
   )
 }
 
-function NewTaskTypeModal({ onClose, onSave }: { onClose: () => void; onSave: (name: string, recurrence: string) => void }) {
-  const [name, setName] = useState('')
-  const [recurrence, setRecurrence] = useState('Mensal')
+function NewTaskTypeModal({ editType, onClose, onSave }: { editType: MgrTask | null; onClose: () => void; onSave: (name: string, visibleFor: string[], typeId?: string) => void }) {
+  const isEdit = !!editType
+  const [name, setName] = useState(editType?.name ?? '')
+  const [visibleFor, setVisibleFor] = useState<string[]>(() => {
+    if (!editType) return ['ALL']
+    const vf = editType.visibleFor
+    if (vf.length === 4) return ['ALL']
+    return vf
+  })
+
+  function toggleVisibility(value: string) {
+    if (value === 'ALL') {
+      setVisibleFor(['ALL'])
+    } else {
+      setVisibleFor(prev => {
+        const without = prev.filter(v => v !== 'ALL')
+        const has = without.includes(value)
+        const next = has ? without.filter(v => v !== value) : [...without, value]
+        return next.length === 0 ? ['ALL'] : next
+      })
+    }
+  }
+
+  function resolveVisibleFor(): string[] {
+    if (visibleFor.includes('ALL')) return ['SELLER', 'TEAM_LEADER', 'MANAGER', 'OWNER']
+    return visibleFor
+  }
+
+  const canSave = name.trim().length > 0 && visibleFor.length > 0
+
   return (
     <>
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
       <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 440, maxWidth: '90vw', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
-          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Novo tipo de tarefa</h2>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{isEdit ? 'Editar tipo de tarefa' : 'Novo tipo de tarefa'}</h2>
           <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
         </div>
         <div style={{ padding: 24 }}>
@@ -325,17 +380,27 @@ function NewTaskTypeModal({ onClose, onSave }: { onClose: () => void; onSave: (n
             <input autoFocus value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Feedback individual" style={inputS} />
           </div>
           <div>
-            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Recorrência padrão</label>
-            <select value={recurrence} onChange={e => setRecurrence(e.target.value)} style={{ ...inputS, appearance: 'none' as const, cursor: 'pointer' }}>
-              <option value="Nenhuma">Nenhuma</option>
-              <option value="Diária">Diária</option>
-              <option value="Semanal">Semanal</option>
-              <option value="Quinzenal">Quinzenal</option>
-              <option value="Mensal">Mensal</option>
-            </select>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 8 }}>Visível para <span style={{ color: '#f97316' }}>*</span></label>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {VISIBILITY_OPTS.map(opt => {
+                const active = visibleFor.includes(opt.value)
+                return (
+                  <button key={opt.value} onClick={() => toggleVisibility(opt.value)} style={{
+                    padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: 'pointer',
+                    background: active ? 'rgba(249,115,22,0.12)' : 'transparent',
+                    border: `1px solid ${active ? '#f97316' : 'var(--border)'}`,
+                    color: active ? '#f97316' : 'var(--text-muted)',
+                    transition: 'all 0.15s',
+                  }}>{opt.label}</button>
+                )
+              })}
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
+              {visibleFor.includes('ALL') ? 'Visível para todos os perfis' : `Visível para: ${visibleFor.map(v => ROLE_LABELS[v] ?? v).join(', ')}`}
+            </div>
           </div>
         </div>
-        <ModalFooter onClose={onClose} onSave={() => { if (name.trim()) onSave(name.trim(), recurrence) }} canSave={!!name.trim()} label="Criar tipo" />
+        <ModalFooter onClose={onClose} onSave={() => { if (canSave) onSave(name.trim(), resolveVisibleFor(), editType?.id) }} canSave={canSave} label={isEdit ? 'Salvar' : 'Criar tipo'} />
       </div>
     </>
   )
