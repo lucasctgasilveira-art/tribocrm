@@ -52,6 +52,7 @@ export default function VendasLeadsPage() {
   const [page, setPage] = useState(1)
   const [modalOpen, setModalOpen] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
+  const [error, setError] = useState<string | null>(null)
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const handleSearch = useCallback((value: string) => {
@@ -63,14 +64,16 @@ export default function VendasLeadsPage() {
   useEffect(() => {
     async function load() {
       setLoading(true)
+      setError(null)
       try {
-        const params: Record<string, string | number> = { page, perPage: 20, status: '' }
+        const params: Record<string, string | number> = { page, perPage: 20 }
         if (debouncedSearch) params.search = debouncedSearch
         const result = await getLeads(params)
         setLeads(result.data ?? [])
         if (result.meta) setMeta(result.meta)
-      } catch (err) {
+      } catch (err: any) {
         console.error('[LeadsPage] Error loading leads:', err)
+        setError(err.response?.data?.error?.message ?? 'Erro ao carregar leads. Tente novamente.')
         setLeads([])
       } finally {
         setLoading(false)
@@ -96,6 +99,13 @@ export default function VendasLeadsPage() {
         <input type="text" value={search} onChange={e => handleSearch(e.target.value)} placeholder="Buscar por nome ou empresa..."
           style={{ width: '100%', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '0 12px 0 34px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', height: 36, boxSizing: 'border-box' }} />
       </div>
+
+      {error && (
+        <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13 }}>
+          <span style={{ color: '#ef4444' }}>{error}</span>
+          <button onClick={() => setReloadKey(k => k + 1)} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 6, padding: '5px 12px', fontSize: 12, cursor: 'pointer' }}>Tentar novamente</button>
+        </div>
+      )}
 
       {loading ? (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 60, gap: 10 }}>

@@ -53,6 +53,7 @@ export default function AppLayout({ menuItems, children }: AppLayoutProps) {
 
   const openSearch = useCallback(() => setSearchOpen(true), [])
   const closeSearch = useCallback(() => setSearchOpen(false), [])
+  const isSuperAdmin = (() => { try { return (JSON.parse(localStorage.getItem('user') ?? '{}') as { role?: string }).role === 'SUPER_ADMIN' } catch { return false } })()
 
   /* Ctrl+K / Cmd+K */
   useEffect(() => {
@@ -106,7 +107,7 @@ export default function AppLayout({ menuItems, children }: AppLayoutProps) {
           {children}
         </div>
       </main>
-      <PopupManager popups={mockPopups} />
+      {!isSuperAdmin && <PopupManager popups={mockPopups} />}
       <GlobalSearch open={searchOpen} onClose={closeSearch} />
     </div>
   )

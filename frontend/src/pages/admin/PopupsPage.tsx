@@ -43,6 +43,7 @@ export default function PopupsPage() {
   const [items, setItems] = useState<Popup[]>([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
+  const [editingPopup, setEditingPopup] = useState<Popup | null>(null)
   const [toast, setToast] = useState<{ msg: string; type: 'ok' | 'err' } | null>(null)
 
   const showToast = useCallback((msg: string, type: 'ok' | 'err' = 'ok') => {
@@ -73,7 +74,20 @@ export default function PopupsPage() {
   function handleCreated(p: Popup) {
     setItems(prev => [p, ...prev])
     setModalOpen(false)
+    setEditingPopup(null)
     showToast('Pop-up criado e ativado com sucesso!')
+  }
+
+  function handleUpdated(p: Popup) {
+    setItems(prev => prev.map(x => x.id === p.id ? p : x))
+    setModalOpen(false)
+    setEditingPopup(null)
+    showToast('Pop-up atualizado!')
+  }
+
+  function openEdit(p: Popup) {
+    setEditingPopup(p)
+    setModalOpen(true)
   }
 
   const counts = { total: items.length, active: items.filter(p => p.isActive).length, inactive: items.filter(p => !p.isActive).length }
@@ -84,7 +98,7 @@ export default function PopupsPage() {
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Pop-ups e Comunicados</h1>
-        <button onClick={() => setModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}><Plus size={15} strokeWidth={2} /> Novo Pop-up</button>
+        <button onClick={() => { setEditingPopup(null); setModalOpen(true) }} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}><Plus size={15} strokeWidth={2} /> Novo Pop-up</button>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', fontSize: 13, marginBottom: 20 }}>
@@ -114,7 +128,7 @@ export default function PopupsPage() {
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Frequência: {p.frequency}</div>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 14 }}>Período: {formatPeriod(p)}</div>
                 <div style={{ marginTop: 'auto', display: 'flex', gap: 6 }}>
-                  <button style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 12px', fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}>Editar</button>
+                  <button onClick={() => openEdit(p)} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 12px', fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}>Editar</button>
                   <button onClick={() => toggleStatus(p.id)} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 12px', fontSize: 12, color: p.isActive ? '#f59e0b' : '#22c55e', cursor: 'pointer' }}>
                     {p.isActive ? 'Pausar' : 'Ativar'}
                   </button>
@@ -125,23 +139,24 @@ export default function PopupsPage() {
         </div>
       )}
 
-      {modalOpen && <NewPopupModal onClose={() => setModalOpen(false)} onCreated={handleCreated} />}
+      {modalOpen && <PopupModal editPopup={editingPopup} onClose={() => { setModalOpen(false); setEditingPopup(null) }} onCreated={handleCreated} onUpdated={handleUpdated} />}
     </AppLayout>
   )
 }
 
-function NewPopupModal({ onClose, onCreated }: { onClose: () => void; onCreated: (p: Popup) => void }) {
-  const [type, setType] = useState(POPUP_TYPES[0])
-  const [instances, setInstances] = useState<string[]>(['Gestor', 'Vendedor'])
-  const [plans, setPlans] = useState<string[]>(['Todos'])
-  const [message, setMessage] = useState('')
-  const [buttonLabel, setButtonLabel] = useState('')
-  const [buttonUrl, setButtonUrl] = useState('')
-  const [frequency, setFrequency] = useState(FREQUENCIES[0])
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
-  const [popupMode, setPopupMode] = useState<'text' | 'image'>('text')
-  const [imagePreview, setImagePreview] = useState('')
+function PopupModal({ editPopup, onClose, onCreated, onUpdated }: { editPopup: Popup | null; onClose: () => void; onCreated: (p: Popup) => void; onUpdated: (p: Popup) => void }) {
+  const isEdit = !!editPopup
+  const [type, setType] = useState(editPopup?.type ?? POPUP_TYPES[0])
+  const [instances, setInstances] = useState<string[]>(editPopup?.instances ?? ['Gestor', 'Vendedor'])
+  const [plans, setPlans] = useState<string[]>(editPopup?.plans ?? ['Todos'])
+  const [message, setMessage] = useState(editPopup?.message ?? '')
+  const [buttonLabel, setButtonLabel] = useState(editPopup?.buttonLabel ?? '')
+  const [buttonUrl, setButtonUrl] = useState(editPopup?.buttonUrl ?? '')
+  const [frequency, setFrequency] = useState(editPopup?.frequency ?? FREQUENCIES[0])
+  const [startDate, setStartDate] = useState(editPopup?.startDate ? new Date(editPopup.startDate).toISOString().slice(0, 10) : '')
+  const [endDate, setEndDate] = useState(editPopup?.endDate ? new Date(editPopup.endDate).toISOString().slice(0, 10) : '')
+  const [popupMode, setPopupMode] = useState<'text' | 'image'>(editPopup?.imageUrl ? 'image' : 'text')
+  const [imagePreview, setImagePreview] = useState(editPopup?.imageUrl ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [touched, setTouched] = useState(false)
@@ -167,16 +182,22 @@ function NewPopupModal({ onClose, onCreated }: { onClose: () => void; onCreated:
     setTouched(true)
     if (!canSave) return
     setSaving(true); setError('')
+    const payload = {
+      type, instances, plans, message,
+      buttonLabel: buttonLabel || null, buttonUrl: buttonUrl || null,
+      frequency, startDate, endDate: endDate || null,
+      imageUrl: imagePreview || null,
+    }
     try {
-      const { data } = await api.post('/admin/popups', {
-        type, instances, plans, message,
-        buttonLabel: buttonLabel || null, buttonUrl: buttonUrl || null,
-        frequency, startDate, endDate: endDate || null,
-        imageUrl: imagePreview || null,
-      })
-      if (data.success) onCreated(data.data)
+      if (isEdit) {
+        const { data } = await api.patch(`/admin/popups/${editPopup!.id}`, payload)
+        if (data.success) onUpdated(data.data)
+      } else {
+        const { data } = await api.post('/admin/popups', payload)
+        if (data.success) onCreated(data.data)
+      }
     } catch (e: any) {
-      setError(e.response?.data?.error?.message ?? 'Erro ao criar pop-up')
+      setError(e.response?.data?.error?.message ?? (isEdit ? 'Erro ao atualizar pop-up' : 'Erro ao criar pop-up'))
       setSaving(false)
     }
   }
@@ -186,7 +207,7 @@ function NewPopupModal({ onClose, onCreated }: { onClose: () => void; onCreated:
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
       <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 560, maxWidth: '90vw', maxHeight: '90vh', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
-          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Novo Pop-up</h2>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{isEdit ? 'Editar Pop-up' : 'Novo Pop-up'}</h2>
           <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
         </div>
         <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
@@ -261,7 +282,7 @@ function NewPopupModal({ onClose, onCreated }: { onClose: () => void; onCreated:
         <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
           <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
           <button onClick={handleSave} disabled={saving} style={{ background: '#f97316', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: '#fff', cursor: saving ? 'not-allowed' : 'pointer' }}>
-            {saving ? 'Salvando...' : 'Salvar e ativar'}
+            {saving ? 'Salvando...' : isEdit ? 'Salvar alterações' : 'Salvar e ativar'}
           </button>
         </div>
       </div>
