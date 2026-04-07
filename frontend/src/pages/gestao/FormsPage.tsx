@@ -69,6 +69,7 @@ export default function FormsPage() {
   const [openMenu, setOpenMenu] = useState<string | null>(null)
   const [embedModal, setEmbedModal] = useState<FormItem | null>(null)
   const [newModal, setNewModal] = useState(false)
+  const [editingForm, setEditingForm] = useState<FormItem | null>(null)
   const [toast, setToast] = useState('')
 
   const loadData = useCallback(async () => {
@@ -107,12 +108,23 @@ export default function FormsPage() {
     } catch { /* ignore */ }
   }
 
-  async function handleCreate(payload: { name: string; pipelineId: string; stageId: string; distributionType: string; fieldsConfig: FieldConfig[] }) {
+  async function handleSave(payload: { name: string; pipelineId: string; stageId: string; distributionType: string; fieldsConfig: FieldConfig[] }, formId?: string) {
     try {
-      await createForm(payload)
+      if (formId) {
+        await updateForm(formId, payload)
+      } else {
+        await createForm(payload)
+      }
       setNewModal(false)
+      setEditingForm(null)
       loadData()
     } catch { /* ignore */ }
+  }
+
+  function openEdit(f: FormItem) {
+    setEditingForm(f)
+    setNewModal(true)
+    setOpenMenu(null)
   }
 
   return (
@@ -161,7 +173,7 @@ export default function FormsPage() {
                 onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                   <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', flex: 1 }}>{f.name}</span>
-                  <span style={{ background: f.isActive ? 'rgba(34,197,94,0.12)' : 'rgba(107,114,128,0.12)', color: f.isActive ? '#22c55e' : 'var(--text-muted)', borderRadius: 999, padding: '2px 8px', fontSize: 10, fontWeight: 500 }}>{f.isActive ? 'Ativo' : 'Inativo'}</span>
+                  <Toggle on={f.isActive} onToggle={() => handleToggleActive(f)} />
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>Pipeline: <span style={{ color: 'var(--text-primary)' }}>{f.pipeline.name} → {f.stage.name}</span></div>
                 <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>Responsável: <span style={{ color: 'var(--text-primary)' }}>{distLabels[f.distributionType] ?? f.distributionType}</span></div>
@@ -177,7 +189,7 @@ export default function FormsPage() {
                   <button onClick={() => setEmbedModal(f)} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 12px', fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}>
                     <Code size={12} strokeWidth={1.5} /> Ver código embed
                   </button>
-                  <button style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 12px', fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}>Editar</button>
+                  <button onClick={() => openEdit(f)} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 12px', fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}>Editar</button>
                   <button onClick={() => setOpenMenu(openMenu === f.id ? null : f.id)} style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--border)', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', marginLeft: 'auto' }}>
                     <MoreHorizontal size={14} strokeWidth={1.5} />
                   </button>
@@ -204,7 +216,7 @@ export default function FormsPage() {
       )}
 
       {embedModal && <EmbedModal form={embedModal} onClose={() => setEmbedModal(null)} onCopy={() => { setToast('Código copiado!'); setTimeout(() => setToast(''), 2500) }} />}
-      {newModal && <NewFormModal pipelines={pipelines} onClose={() => setNewModal(false)} onSave={handleCreate} />}
+      {newModal && <NewFormModal pipelines={pipelines} editForm={editingForm} onClose={() => { setNewModal(false); setEditingForm(null) }} onSave={handleSave} />}
     </AppLayout>
   )
 }
@@ -257,12 +269,9 @@ function EmbedModal({ form, onClose, onCopy }: { form: FormItem; onClose: () => 
 
 // ── New Form Modal ──
 
-function NewFormModal({ pipelines, onClose, onSave }: { pipelines: PipelineOption[]; onClose: () => void; onSave: (payload: { name: string; pipelineId: string; stageId: string; distributionType: string; fieldsConfig: FieldConfig[] }) => void }) {
-  const [name, setName] = useState('')
-  const [pipelineId, setPipelineId] = useState(pipelines[0]?.id ?? '')
-  const [stageId, setStageId] = useState('')
-  const [assign, setAssign] = useState('ROUND_ROBIN_ALL')
-  const [fields, setFields] = useState<(FieldConfig & { enabled: boolean })[]>([
+function NewFormModal({ pipelines, editForm, onClose, onSave }: { pipelines: PipelineOption[]; editForm: FormItem | null; onClose: () => void; onSave: (payload: { name: string; pipelineId: string; stageId: string; distributionType: string; fieldsConfig: FieldConfig[] }, formId?: string) => void }) {
+  const isEdit = !!editForm
+  const defaultFields: (FieldConfig & { enabled: boolean })[] = [
     { label: 'Nome completo', type: 'text', required: true, enabled: true },
     { label: 'E-mail', type: 'text', required: true, enabled: true },
     { label: 'Telefone', type: 'text', required: true, enabled: true },
@@ -270,7 +279,21 @@ function NewFormModal({ pipelines, onClose, onSave }: { pipelines: PipelineOptio
     { label: 'Cargo', type: 'text', required: false, enabled: false },
     { label: 'CNPJ', type: 'text', required: false, enabled: false },
     { label: 'Mensagem', type: 'text', required: false, enabled: true },
-  ])
+  ]
+
+  function buildFields(fc: FieldConfig[]): (FieldConfig & { enabled: boolean })[] {
+    const enabledLabels = new Set(fc.map(f => f.label))
+    return defaultFields.map(df => {
+      const match = fc.find(f => f.label === df.label)
+      return match ? { ...match, enabled: true } : { ...df, enabled: enabledLabels.size > 0 ? false : df.enabled }
+    })
+  }
+
+  const [name, setName] = useState(editForm?.name ?? '')
+  const [pipelineId, setPipelineId] = useState(editForm?.pipeline.id ?? pipelines[0]?.id ?? '')
+  const [stageId, setStageId] = useState(editForm?.stage.id ?? '')
+  const [assign, setAssign] = useState(editForm?.distributionType ?? 'ROUND_ROBIN_ALL')
+  const [fields, setFields] = useState<(FieldConfig & { enabled: boolean })[]>(editForm ? buildFields(editForm.fieldsConfig) : defaultFields)
 
   const selectedPipeline = pipelines.find(p => p.id === pipelineId)
   const stages = selectedPipeline?.stages ?? []
@@ -285,7 +308,7 @@ function NewFormModal({ pipelines, onClose, onSave }: { pipelines: PipelineOptio
 
   function handleSave() {
     const activeFields = fields.filter(f => f.enabled).map(f => ({ label: f.label, type: f.type, required: f.required }))
-    onSave({ name, pipelineId, stageId, distributionType: assign, fieldsConfig: activeFields })
+    onSave({ name, pipelineId, stageId, distributionType: assign, fieldsConfig: activeFields }, editForm?.id)
   }
 
   return (
@@ -293,7 +316,7 @@ function NewFormModal({ pipelines, onClose, onSave }: { pipelines: PipelineOptio
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
       <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 600, maxWidth: '90vw', maxHeight: '90vh', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
-          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Novo Formulário</h2>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{isEdit ? 'Editar Formulário' : 'Novo Formulário'}</h2>
           <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
         </div>
         <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
@@ -349,7 +372,7 @@ function NewFormModal({ pipelines, onClose, onSave }: { pipelines: PipelineOptio
         </div>
         <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
           <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
-          <button onClick={handleSave} disabled={!name.trim() || !pipelineId || !stageId} style={{ background: name.trim() && pipelineId && stageId ? '#f97316' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: name.trim() && pipelineId && stageId ? '#fff' : 'var(--text-muted)', cursor: name.trim() && pipelineId && stageId ? 'pointer' : 'not-allowed' }}>Criar formulário</button>
+          <button onClick={handleSave} disabled={!name.trim() || !pipelineId || !stageId} style={{ background: name.trim() && pipelineId && stageId ? '#f97316' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: name.trim() && pipelineId && stageId ? '#fff' : 'var(--text-muted)', cursor: name.trim() && pipelineId && stageId ? 'pointer' : 'not-allowed' }}>{isEdit ? 'Salvar alterações' : 'Criar formulário'}</button>
         </div>
       </div>
     </>

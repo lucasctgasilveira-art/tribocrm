@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { TrendingUp, Users, Target, DollarSign, Download, Loader2 } from 'lucide-react'
+import * as XLSX from 'xlsx'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
 import { getGestaoReports } from '../../services/reports.service'
@@ -12,6 +13,48 @@ function metaColor(p: number) { return p >= 80 ? '#22c55e' : p >= 50 ? '#f97316'
 const thStyle: React.CSSProperties = { padding: '10px 16px', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, textAlign: 'left' }
 const tdStyle: React.CSSProperties = { padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', borderBottom: '1px solid var(--border)' }
 const card: React.CSSProperties = { background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }
+
+function getFilename(_period: Period) {
+  const now = new Date()
+  const m = String(now.getMonth() + 1).padStart(2, '0')
+  return `relatorio-${m}-${now.getFullYear()}`
+}
+
+function exportCSV(team: any[], activities: any, period: Period) {
+  const lines: string[] = []
+  lines.push('Vendedor,Leads,Conversao (%),Receita (R$),Meta (%)')
+  team.forEach((m: any) => lines.push(`${m.name},${m.leadsCount},${m.conversionRate},${m.revenue},${m.goalPercentage}`))
+  lines.push('')
+  lines.push('Atividade,Quantidade')
+  lines.push(`Ligacoes,${activities.calls}`)
+  lines.push(`WhatsApp,${activities.whatsapp}`)
+  lines.push(`E-mails,${activities.emails}`)
+  lines.push(`Reunioes,${activities.meetings}`)
+  lines.push(`Visitas,${activities.visits}`)
+  const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url; a.download = `${getFilename(period)}.csv`; a.click()
+  URL.revokeObjectURL(url)
+}
+
+function exportExcel(team: any[], activities: any, period: Period) {
+  const perfData = team.map((m: any) => ({
+    Vendedor: m.name, Leads: m.leadsCount, 'Conversao (%)': m.conversionRate,
+    'Receita (R$)': m.revenue, 'Meta (%)': m.goalPercentage,
+  }))
+  const actData = [
+    { Atividade: 'Ligacoes', Quantidade: activities.calls },
+    { Atividade: 'WhatsApp', Quantidade: activities.whatsapp },
+    { Atividade: 'E-mails', Quantidade: activities.emails },
+    { Atividade: 'Reunioes', Quantidade: activities.meetings },
+    { Atividade: 'Visitas', Quantidade: activities.visits },
+  ]
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(perfData), 'Performance')
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(actData), 'Atividades')
+  XLSX.writeFile(wb, `${getFilename(period)}.xlsx`)
+}
 
 export default function ReportsPage() {
   const [period, setPeriod] = useState<Period>('month')
@@ -236,10 +279,10 @@ export default function ReportsPage() {
           <div style={{ ...card, padding: '16px 20px', marginTop: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)' }}>Exportar dados</span>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: '1px solid rgba(249,115,22,0.3)', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 500, color: '#f97316', cursor: 'pointer' }}>
+              <button onClick={() => exportExcel(team, activities, period)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: '1px solid rgba(249,115,22,0.3)', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 500, color: '#f97316', cursor: 'pointer' }}>
                 <Download size={14} strokeWidth={1.5} /> Exportar Excel
               </button>
-              <button style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', cursor: 'pointer' }}>
+              <button onClick={() => exportCSV(team, activities, period)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', cursor: 'pointer' }}>
                 <Download size={14} strokeWidth={1.5} /> Exportar CSV
               </button>
             </div>

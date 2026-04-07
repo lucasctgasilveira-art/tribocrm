@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { Mail, Calendar, Download, Check, MessageCircle, Clock, Linkedin } from 'lucide-react'
+import { Mail, Calendar, Download, Check, MessageCircle, Clock, Linkedin, X } from 'lucide-react'
 import PhoneInput from 'react-phone-input-2'
 import 'react-phone-input-2/lib/style.css'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
@@ -91,12 +91,25 @@ function IntegrationsTab() {
       </div>
 
       {/* Chrome Extension — full width */}
+      <ChromeExtensionCard />
+    </>
+  )
+}
+
+function ChromeExtensionCard() {
+  const stored = JSON.parse(localStorage.getItem('user') ?? '{}') as { email?: string }
+  const [modalOpen, setModalOpen] = useState(false)
+  const [waitlistEmail, setWaitlistEmail] = useState(stored.email ?? '')
+  const [submitted, setSubmitted] = useState(false)
+
+  return (
+    <>
       <div style={card}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
           <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(34,197,94,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Download size={20} color="#22c55e" strokeWidth={1.5} /></div>
           <div>
             <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Extensão do Chrome TriboCRM</div>
-            <span style={{ background: 'rgba(107,114,128,0.12)', color: 'var(--text-muted)', borderRadius: 999, padding: '2px 8px', fontSize: 10 }}>Não instalada</span>
+            <span style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b', borderRadius: 999, padding: '2px 8px', fontSize: 10 }}>Em breve</span>
           </div>
         </div>
         <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16, lineHeight: 1.5 }}>A extensão transforma seu navegador em uma central de vendas.</p>
@@ -105,9 +118,41 @@ function IntegrationsTab() {
           <FeatureCard icon={<MessageCircle size={18} color="#25d166" strokeWidth={1.5} />} text="Painel lateral no WhatsApp Web com histórico do lead" />
           <FeatureCard icon={<Clock size={18} color="#f97316" strokeWidth={1.5} />} text="Agende mensagens WhatsApp para envio automático" />
         </div>
-        <button onClick={() => window.open('https://chrome.google.com/webstore', '_blank')} style={{ width: '100%', background: 'rgba(34,197,94,0.12)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 8, padding: '10px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Instalar extensão gratuita</button>
-        <div onClick={() => window.open('https://chrome.google.com/webstore', '_blank')} style={{ textAlign: 'center', marginTop: 6, fontSize: 12, color: 'var(--text-muted)', cursor: 'pointer' }}>Ver na Chrome Web Store →</div>
+        <button onClick={() => setModalOpen(true)} style={{ width: '100%', background: 'rgba(34,197,94,0.12)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 8, padding: '10px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Me avise quando lançar</button>
       </div>
+
+      {modalOpen && (
+        <>
+          <div onClick={() => setModalOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
+          <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 440, maxWidth: '90vw', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+              <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Extensão do Chrome — Em breve!</h2>
+              <button onClick={() => setModalOpen(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+            </div>
+            <div style={{ padding: 24 }}>
+              {submitted ? (
+                <div style={{ textAlign: 'center', padding: 20 }}>
+                  <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(34,197,94,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}><Check size={24} color="#22c55e" strokeWidth={2} /></div>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>Pronto!</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Você será notificado em <strong>{waitlistEmail}</strong> quando a extensão for lançada.</div>
+                </div>
+              ) : (
+                <>
+                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>Nossa extensão está em desenvolvimento e será lançada em breve. Com ela você poderá capturar leads do LinkedIn, usar modelos no WhatsApp Web e agendar mensagens automaticamente.</p>
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Seu e-mail</label>
+                    <input value={waitlistEmail} onChange={e => setWaitlistEmail(e.target.value)} placeholder="email@empresa.com" style={{ width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }} />
+                  </div>
+                  <button onClick={() => { setSubmitted(true) }} disabled={!waitlistEmail.trim()} style={{ width: '100%', background: waitlistEmail.trim() ? '#f97316' : 'var(--border)', color: waitlistEmail.trim() ? '#fff' : 'var(--text-muted)', border: 'none', borderRadius: 8, padding: '10px 0', fontSize: 13, fontWeight: 600, cursor: waitlistEmail.trim() ? 'pointer' : 'not-allowed' }}>Me avise quando lançar</button>
+                </>
+              )}
+            </div>
+            <div style={{ padding: '12px 24px', borderTop: '1px solid var(--border)' }}>
+              <button onClick={() => setModalOpen(false)} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 16px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Fechar</button>
+            </div>
+          </div>
+        </>
+      )}
     </>
   )
 }
