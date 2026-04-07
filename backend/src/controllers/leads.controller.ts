@@ -32,20 +32,14 @@ export async function getLeads(req: Request, res: Response): Promise<void> {
     if (temperature) where.temperature = temperature as 'HOT' | 'WARM' | 'COLD'
 
     if (role === 'SELLER') {
-      where.AND = [
-        ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
-        { OR: [{ responsibleId: userId }, { responsibleId: null }] },
-      ]
+      where.responsibleId = userId
     }
 
     if (search) {
-      where.AND = [
-        ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
-        { OR: [
-          { name: { contains: search, mode: 'insensitive' } },
-          { company: { contains: search, mode: 'insensitive' } },
-          { email: { contains: search, mode: 'insensitive' } },
-        ] },
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { company: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
       ]
     }
 
