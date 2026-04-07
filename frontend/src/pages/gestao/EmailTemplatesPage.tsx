@@ -22,8 +22,16 @@ function extractVars(text: string): string[] {
   return [...new Set(matches)]
 }
 
-const allVars = ['nome_lead', 'empresa_lead', 'nome_vendedor', 'nome_produto', 'valor_produto', 'data_hoje']
-const menuOpts = ['Ativar/Desativar', 'Excluir']
+const allVars = [
+  { key: 'primeiro_nome', desc: 'Primeiro nome do lead' },
+  { key: 'nome_lead', desc: 'Nome completo do lead' },
+  { key: 'empresa_lead', desc: 'Empresa do lead' },
+  { key: 'nome_vendedor', desc: 'Nome do vendedor' },
+  { key: 'nome_produto', desc: 'Nome do produto' },
+  { key: 'valor_produto', desc: 'Valor do produto' },
+  { key: 'data_hoje', desc: 'Data de hoje' },
+]
+const menuOpts = ['Excluir']
 
 // ── Component ──
 
@@ -32,17 +40,15 @@ export default function EmailTemplatesPage() {
   const [loading, setLoading] = useState(true)
   const [openMenu, setOpenMenu] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
+  const [editingTemplate, setEditingTemplate] = useState<Template | null>(null)
 
   const loadTemplates = useCallback(async () => {
     setLoading(true)
     try {
       const data = await getEmailTemplates()
       setTemplates(data)
-    } catch {
-      setTemplates([])
-    } finally {
-      setLoading(false)
-    }
+    } catch { setTemplates([]) }
+    finally { setLoading(false) }
   }, [])
 
   useEffect(() => { loadTemplates() }, [loadTemplates])
@@ -50,25 +56,31 @@ export default function EmailTemplatesPage() {
   async function handleToggleActive(t: Template) {
     try {
       await updateEmailTemplate(t.id, { isActive: !t.isActive })
-      setOpenMenu(null)
-      loadTemplates()
+      setTemplates(prev => prev.map(x => x.id === t.id ? { ...x, isActive: !x.isActive } : x))
     } catch { /* ignore */ }
   }
 
   async function handleDelete(id: string) {
+    try { await deleteEmailTemplate(id); setOpenMenu(null); loadTemplates() } catch { /* ignore */ }
+  }
+
+  async function handleSave(name: string, subject: string, body: string, templateId?: string) {
     try {
-      await deleteEmailTemplate(id)
-      setOpenMenu(null)
+      if (templateId) {
+        await updateEmailTemplate(templateId, { name, subject, body })
+      } else {
+        await createEmailTemplate({ name, subject, body })
+      }
+      setModalOpen(false)
+      setEditingTemplate(null)
       loadTemplates()
     } catch { /* ignore */ }
   }
 
-  async function handleCreate(name: string, subject: string, body: string) {
-    try {
-      await createEmailTemplate({ name, subject, body })
-      setModalOpen(false)
-      loadTemplates()
-    } catch { /* ignore */ }
+  function openEdit(t: Template) {
+    setEditingTemplate(t)
+    setModalOpen(true)
+    setOpenMenu(null)
   }
 
   const stats = {
@@ -81,7 +93,7 @@ export default function EmailTemplatesPage() {
     <AppLayout menuItems={gestaoMenuItems}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Modelos de E-mail</h1>
-        <button onClick={() => setModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+        <button onClick={() => { setEditingTemplate(null); setModalOpen(true) }} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
           <Plus size={15} strokeWidth={2} /> Novo Modelo
         </button>
       </div>
@@ -94,10 +106,9 @@ export default function EmailTemplatesPage() {
         <span style={{ color: 'var(--text-muted)' }}>Inativos</span><span style={{ color: 'var(--text-primary)', fontWeight: 700, marginLeft: 4 }}>{stats.inactive}</span>
       </div>
 
-      {/* Gmail warning */}
       <div style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 8, padding: '12px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
         <Info size={16} color="#3b82f6" strokeWidth={1.5} style={{ flexShrink: 0 }} />
-        <span style={{ color: 'var(--text-secondary)' }}>Conecte seu Gmail para enviar e-mails pelos modelos. <span style={{ color: '#f97316', cursor: 'pointer' }}>Conectar agora →</span></span>
+        <span style={{ color: 'var(--text-secondary)' }}>Conecte seu Gmail para enviar e-mails pelos modelos. <span style={{ color: '#f97316', cursor: 'pointer' }}>Conectar agora</span></span>
       </div>
 
       {loading ? (
@@ -117,7 +128,10 @@ export default function EmailTemplatesPage() {
                 onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', flex: 1 }}>{t.name}</span>
-                  <span style={{ background: t.isActive ? 'rgba(34,197,94,0.12)' : 'rgba(107,114,128,0.12)', color: t.isActive ? '#22c55e' : 'var(--text-muted)', borderRadius: 999, padding: '2px 8px', fontSize: 10, fontWeight: 500 }}>{t.isActive ? 'Ativo' : 'Inativo'}</span>
+                  {/* Orange toggle switch */}
+                  <div onClick={() => handleToggleActive(t)} style={{ width: 36, height: 20, borderRadius: 999, cursor: 'pointer', background: t.isActive ? '#f97316' : 'var(--border)', display: 'flex', alignItems: 'center', padding: '0 2px', justifyContent: t.isActive ? 'flex-end' : 'flex-start', transition: 'all 0.2s' }}>
+                    <div style={{ width: 16, height: 16, borderRadius: '50%', background: t.isActive ? '#fff' : 'var(--text-muted)', transition: 'all 0.2s' }} />
+                  </div>
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 6 }}>Assunto: <span style={{ color: 'var(--text-primary)' }}>{t.subject}</span></div>
@@ -130,19 +144,14 @@ export default function EmailTemplatesPage() {
                 </div>
                 <div style={{ marginTop: 'auto', paddingTop: 14, borderTop: '1px solid var(--border)' }}>
                   <div style={{ display: 'flex', gap: 6, position: 'relative' }}>
-                    <button style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 12px', fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}>Editar</button>
+                    <button onClick={() => openEdit(t)} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 12px', fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}>Editar</button>
                     <button onClick={() => setOpenMenu(openMenu === t.id ? null : t.id)} style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--border)', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
                       <MoreHorizontal size={14} strokeWidth={1.5} />
                     </button>
                     {openMenu === t.id && (
                       <div style={{ position: 'absolute', right: 0, top: 32, zIndex: 20, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', minWidth: 150, padding: '4px 0' }}>
                         {menuOpts.map(opt => (
-                          <div key={opt}
-                            onClick={() => {
-                              if (opt === 'Ativar/Desativar') handleToggleActive(t)
-                              else if (opt === 'Excluir') handleDelete(t.id)
-                              else setOpenMenu(null)
-                            }}
+                          <div key={opt} onClick={() => { if (opt === 'Excluir') handleDelete(t.id); else setOpenMenu(null) }}
                             style={{ padding: '8px 14px', fontSize: 13, color: opt === 'Excluir' ? '#ef4444' : 'var(--text-primary)', cursor: 'pointer' }}
                             onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
                             onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>{opt}</div>
@@ -157,19 +166,20 @@ export default function EmailTemplatesPage() {
         </div>
       )}
 
-      {modalOpen && <EmailModal onClose={() => setModalOpen(false)} onSave={handleCreate} />}
+      {modalOpen && <EmailModal template={editingTemplate} onClose={() => { setModalOpen(false); setEditingTemplate(null) }} onSave={handleSave} />}
     </AppLayout>
   )
 }
 
 // ── Modal ──
 
-function EmailModal({ onClose, onSave }: { onClose: () => void; onSave: (name: string, subject: string, body: string) => void }) {
-  const [name, setName] = useState('')
-  const [subject, setSubject] = useState('')
-  const [body, setBody] = useState('')
+function EmailModal({ template, onClose, onSave }: { template: Template | null; onClose: () => void; onSave: (name: string, subject: string, body: string, id?: string) => void }) {
+  const [name, setName] = useState(template?.name ?? '')
+  const [subject, setSubject] = useState(template?.subject ?? '')
+  const [body, setBody] = useState(template?.body ?? '')
   const [showPreview, setShowPreview] = useState(false)
   const bodyRef = useRef<HTMLTextAreaElement>(null)
+  const isEdit = !!template
 
   function insertVar(v: string) {
     const ta = bodyRef.current; if (!ta) return
@@ -179,8 +189,22 @@ function EmailModal({ onClose, onSave }: { onClose: () => void; onSave: (name: s
     setTimeout(() => { ta.focus(); ta.selectionStart = ta.selectionEnd = start + tag.length }, 0)
   }
 
-  const previewBody = body.replace(/\{\{nome_lead\}\}/g, 'Camila Torres').replace(/\{\{empresa_lead\}\}/g, 'Torres & Filhos').replace(/\{\{nome_vendedor\}\}/g, 'Ana Souza').replace(/\{\{nome_produto\}\}/g, 'Plano Pro').replace(/\{\{valor_produto\}\}/g, 'R$ 12.000').replace(/\{\{data_hoje\}\}/g, new Date().toLocaleDateString('pt-BR'))
-  const previewSubject = subject.replace(/\{\{nome_lead\}\}/g, 'Camila Torres').replace(/\{\{empresa_lead\}\}/g, 'Torres & Filhos').replace(/\{\{nome_vendedor\}\}/g, 'Ana Souza')
+  const sampleData: Record<string, string> = {
+    primeiro_nome: 'Camila',
+    nome_lead: 'Camila Torres',
+    empresa_lead: 'Torres & Filhos',
+    nome_vendedor: 'Ana Souza',
+    nome_produto: 'Plano Pro',
+    valor_produto: 'R$ 12.000',
+    data_hoje: new Date().toLocaleDateString('pt-BR'),
+  }
+
+  function applyPreview(text: string) {
+    return allVars.reduce((t, v) => t.replace(new RegExp(`\\{\\{${v.key}\\}\\}`, 'g'), sampleData[v.key] ?? v.key), text)
+  }
+
+  const previewBody = applyPreview(body)
+  const previewSubject = applyPreview(subject)
 
   const inputS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
 
@@ -189,7 +213,7 @@ function EmailModal({ onClose, onSave }: { onClose: () => void; onSave: (name: s
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
       <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 640, maxWidth: '90vw', maxHeight: '90vh', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
-          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Novo Modelo de E-mail</h2>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{isEdit ? 'Editar Modelo' : 'Novo Modelo de E-mail'}</h2>
           <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
         </div>
         <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
@@ -203,15 +227,22 @@ function EmailModal({ onClose, onSave }: { onClose: () => void; onSave: (name: s
           </div>
           <div style={{ marginBottom: 12 }}>
             <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Corpo do e-mail</label>
-            <textarea ref={bodyRef} rows={12} value={body} onChange={e => setBody(e.target.value)} placeholder={'Olá {{nome_lead}},\n\nEscreva aqui o corpo do e-mail...'} style={{ ...inputS, resize: 'none', fontFamily: 'monospace', lineHeight: 1.6 }} />
+            <textarea ref={bodyRef} rows={12} value={body} onChange={e => setBody(e.target.value)} placeholder={'Olá {{primeiro_nome}},\n\nEscreva aqui o corpo do e-mail...'} style={{ ...inputS, resize: 'none', fontFamily: 'monospace', lineHeight: 1.6 }} />
           </div>
           <div style={{ marginBottom: 16 }}>
             <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8, fontWeight: 600 }}>Variáveis disponíveis — clique para inserir:</div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              {allVars.map(v => <button key={v} onClick={() => insertVar(v)} style={{ background: 'var(--border)', color: '#f97316', borderRadius: 4, padding: '3px 10px', fontSize: 12, border: 'none', cursor: 'pointer' }}>{`{{${v}}}`}</button>)}
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+              {allVars.map(v => <button key={v.key} onClick={() => insertVar(v.key)} style={{ background: 'var(--border)', color: '#f97316', borderRadius: 4, padding: '3px 10px', fontSize: 12, border: 'none', cursor: 'pointer' }}>{`{{${v.key}}}`}</button>)}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {allVars.map(v => (
+                <div key={v.key} style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>{`{{${v.key}}}`}</span> — {v.desc}
+                </div>
+              ))}
             </div>
           </div>
-          <button onClick={() => setShowPreview(!showPreview)} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 14px', fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer', marginBottom: 12 }}>👁 {showPreview ? 'Ocultar' : 'Ver'} preview</button>
+          <button onClick={() => setShowPreview(!showPreview)} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 14px', fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer', marginBottom: 12 }}>{showPreview ? 'Ocultar' : 'Ver'} preview</button>
           {showPreview && (body || subject) && (
             <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: 16 }}>
               <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8 }}>Assunto: {previewSubject || '(vazio)'}</div>
@@ -221,7 +252,7 @@ function EmailModal({ onClose, onSave }: { onClose: () => void; onSave: (name: s
         </div>
         <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
           <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
-          <button onClick={() => onSave(name, subject, body)} disabled={!name.trim() || !subject.trim()} style={{ background: name.trim() && subject.trim() ? '#f97316' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: name.trim() && subject.trim() ? '#fff' : 'var(--text-muted)', cursor: name.trim() && subject.trim() ? 'pointer' : 'not-allowed' }}>Salvar modelo</button>
+          <button onClick={() => onSave(name, subject, body, template?.id)} disabled={!name.trim() || !subject.trim()} style={{ background: name.trim() && subject.trim() ? '#f97316' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: name.trim() && subject.trim() ? '#fff' : 'var(--text-muted)', cursor: name.trim() && subject.trim() ? 'pointer' : 'not-allowed' }}>{isEdit ? 'Salvar alterações' : 'Salvar modelo'}</button>
         </div>
       </div>
     </>

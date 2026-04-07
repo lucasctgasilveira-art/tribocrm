@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
   Plus, MoreHorizontal, CheckSquare, MessageCircle, Clock, Mail, Copy, Bell,
-  FileText, Check, X, ArrowLeft, Loader2, type LucideIcon,
+  FileText, Check, X, ArrowLeft, Loader2, Users, Tag, ShieldCheck, Repeat, ArrowRight,
+  type LucideIcon,
 } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
@@ -19,33 +20,19 @@ interface Template {
   badgeLabel: string; badgeColor: string; badgeBg: string
   builderSubtitle: string
   triggerType: string; actionType: string
-  configType: 'whatsapp' | 'email' | 'task' | 'duplicate' | 'notify' | 'meta'
+  configType: 'whatsapp' | 'email' | 'task' | 'duplicate' | 'notify' | 'meta' | 'move' | 'roundrobin' | 'tag'
 }
 
 interface ApiAutomation {
-  id: string
-  name: string
-  triggerType: string
-  triggerConfig: Record<string, unknown>
-  actionType: string
-  actionConfig: Record<string, unknown>
-  isActive: boolean
-  pipelineId: string | null
-  pipeline: { id: string; name: string } | null
+  id: string; name: string; triggerType: string
+  triggerConfig: Record<string, unknown>; actionType: string
+  actionConfig: Record<string, unknown>; isActive: boolean
+  pipelineId: string | null; pipeline: { id: string; name: string } | null
   createdAt: string
 }
 
-interface Meta {
-  activeCount: number
-  pausedCount: number
-  executionsThisMonth: number
-}
-
-interface PipelineOption {
-  id: string
-  name: string
-  stages: { id: string; name: string }[]
-}
+interface Meta { activeCount: number; pausedCount: number; executionsThisMonth: number }
+interface PipelineOption { id: string; name: string; stages: { id: string; name: string }[] }
 
 // ── Config ──
 
@@ -56,38 +43,84 @@ const triggerIcons: Record<string, { icon: LucideIcon; color: string }> = {
   LEAD_CREATED: { icon: Plus, color: '#22c55e' },
   GOAL_REACHED: { icon: Check, color: '#22c55e' },
   FORM_SUBMITTED: { icon: FileText, color: '#a855f7' },
+  EMAIL_OPENED: { icon: Mail, color: '#3b82f6' },
+  PRODUCT_ADDED: { icon: Tag, color: '#f97316' },
+  DISCOUNT_REQUESTED: { icon: ShieldCheck, color: '#a855f7' },
+  REPEAT_PURCHASE: { icon: Repeat, color: '#22c55e' },
 }
 
 const triggerLabels: Record<string, string> = {
   STAGE_CHANGED: 'Lead muda de etapa', INACTIVE_DAYS: 'Lead parado há X dias',
   TASK_OVERDUE: 'Tarefa atrasada', LEAD_CREATED: 'Lead criado',
   GOAL_REACHED: 'Meta atingida', FORM_SUBMITTED: 'Formulário enviado',
+  EMAIL_OPENED: 'Lead abriu e-mail', PRODUCT_ADDED: 'Produto adicionado',
+  DISCOUNT_REQUESTED: 'Desconto solicitado', REPEAT_PURCHASE: 'Compra recorrente',
 }
 
 const actionLabels: Record<string, string> = {
   SEND_WHATSAPP: 'Enviar WhatsApp', SEND_EMAIL: 'Enviar e-mail',
   CREATE_TASK: 'Criar tarefa', MOVE_STAGE: 'Mover etapa',
   NOTIFY_USER: 'Notificar usuário', DUPLICATE_LEAD: 'Duplicar lead',
-  MOVE_TO_PIPELINE: 'Mover para pipeline',
+  MOVE_TO_PIPELINE: 'Mover para pipeline', ROUND_ROBIN: 'Distribuir round-robin',
+  ADD_TAG: 'Adicionar tag', REQUIRE_LOSS_REASON: 'Solicitar motivo de perda',
+  REGISTER_HISTORY: 'Registrar no histórico',
 }
 
 const defaultIcon = { icon: Clock, color: 'var(--text-muted)' }
+
+function t(id: string, tIcon: LucideIcon, tColor: string, tTitle: string, tSub: string, aIcon: LucideIcon, aColor: string, aTitle: string, badge: string, bColor: string, bBg: string, sub: string, tType: string, aType: string, cType: Template['configType']): Template {
+  return { id, triggerIcon: tIcon, triggerColor: tColor, triggerTitle: tTitle, triggerSub: tSub, actionIcon: aIcon, actionColor: aColor, actionTitle: aTitle, badgeLabel: badge, badgeColor: bColor, badgeBg: bBg, builderSubtitle: sub, triggerType: tType, actionType: aType, configType: cType }
+}
 
 const templates: { section: string; items: Template[] }[] = [
   {
     section: 'Seguimento de leads',
     items: [
-      { id: 't1', triggerIcon: Clock, triggerColor: '#f59e0b', triggerTitle: 'Lead parado há X dias', triggerSub: 'Em Proposta Enviada', actionIcon: MessageCircle, actionColor: '#25d166', actionTitle: 'Enviar WhatsApp para o lead', badgeLabel: 'Envio automático', badgeColor: '#22c55e', badgeBg: 'rgba(34,197,94,0.12)', builderSubtitle: 'Configure o envio automático de WhatsApp', triggerType: 'INACTIVE_DAYS', actionType: 'SEND_WHATSAPP', configType: 'whatsapp' },
-      { id: 't2', triggerIcon: FileText, triggerColor: '#3b82f6', triggerTitle: 'Lead muda de etapa', triggerSub: 'Pipeline Principal', actionIcon: Mail, actionColor: '#3b82f6', actionTitle: 'Enviar e-mail para o lead', badgeLabel: 'Envio automático via Gmail', badgeColor: '#22c55e', badgeBg: 'rgba(34,197,94,0.12)', builderSubtitle: 'Configure o envio automático de e-mail', triggerType: 'STAGE_CHANGED', actionType: 'SEND_EMAIL', configType: 'email' },
-      { id: 't3', triggerIcon: FileText, triggerColor: '#f97316', triggerTitle: 'Lead muda de etapa', triggerSub: 'Qualquer etapa configurável', actionIcon: CheckSquare, actionColor: '#f97316', actionTitle: 'Criar tarefa para o vendedor', badgeLabel: 'Aparece nas tarefas', badgeColor: '#f59e0b', badgeBg: 'rgba(245,158,11,0.12)', builderSubtitle: 'Configure a criação automática de tarefa', triggerType: 'STAGE_CHANGED', actionType: 'CREATE_TASK', configType: 'task' },
+      t('t1', Clock, '#f59e0b', 'Lead parado há X dias', 'Na etapa configurável', CheckSquare, '#f97316', 'Criar tarefa de follow-up', 'Tarefa automática', '#f59e0b', 'rgba(245,158,11,0.12)', 'Crie tarefas de follow-up automaticamente', 'INACTIVE_DAYS', 'CREATE_TASK', 'task'),
+      t('t2', FileText, '#3b82f6', 'Lead movido para etapa X', 'Pipeline configurável', CheckSquare, '#f97316', 'Agendar tarefa de follow-up em X dias', 'Tarefa agendada', '#f59e0b', 'rgba(245,158,11,0.12)', 'Agende follow-up ao mover lead', 'STAGE_CHANGED', 'CREATE_TASK', 'task'),
+      t('t3', Check, '#22c55e', 'Lead movido para "Venda Realizada"', 'Qualquer pipeline', MessageCircle, '#25d166', 'Enviar WhatsApp de parabéns ao vendedor', 'Envio automático', '#22c55e', 'rgba(34,197,94,0.12)', 'Parabenize o vendedor automaticamente', 'STAGE_CHANGED', 'SEND_WHATSAPP', 'whatsapp'),
+      t('t4', X, '#ef4444', 'Lead movido para "Perdido"', 'Qualquer pipeline', ShieldCheck, '#a855f7', 'Solicitar motivo de perda obrigatório', 'Obrigatório', '#ef4444', 'rgba(239,68,68,0.12)', 'Exija motivo de perda ao mover lead', 'STAGE_CHANGED', 'REQUIRE_LOSS_REASON', 'notify'),
+      t('t5', Clock, '#f59e0b', 'Lead X dias em etapa X', 'Pipeline configurável', Bell, '#f97316', 'Notificar gestor', 'Notificação interna', '#f59e0b', 'rgba(245,158,11,0.12)', 'Alerte o gestor sobre leads parados', 'INACTIVE_DAYS', 'NOTIFY_USER', 'notify'),
+      t('t6', FileText, '#3b82f6', 'Lead chegar à etapa X', 'Pipeline configurável', MessageCircle, '#25d166', 'Enviar WhatsApp para o lead', 'Envio automático', '#22c55e', 'rgba(34,197,94,0.12)', 'Envie WhatsApp ao lead ao mudar de etapa', 'STAGE_CHANGED', 'SEND_WHATSAPP', 'whatsapp'),
+      t('t7', Clock, '#f59e0b', 'Lead X dias sem movimentação', 'Qualquer etapa', MessageCircle, '#25d166', 'Enviar WhatsApp para o lead', 'Envio automático', '#22c55e', 'rgba(34,197,94,0.12)', 'Re-engaje leads parados via WhatsApp', 'INACTIVE_DAYS', 'SEND_WHATSAPP', 'whatsapp'),
+      t('t8', Clock, '#f59e0b', 'Lead X dias sem movimentação', 'Qualquer etapa', Mail, '#3b82f6', 'Enviar e-mail para o lead', 'Envio via Gmail', '#22c55e', 'rgba(34,197,94,0.12)', 'Re-engaje leads parados via e-mail', 'INACTIVE_DAYS', 'SEND_EMAIL', 'email'),
+      t('t9', FileText, '#3b82f6', 'Lead chegar à etapa X', 'Pipeline de origem', Copy, '#a855f7', 'Duplicar card para outro funil', 'Automático com histórico', '#22c55e', 'rgba(34,197,94,0.12)', 'Duplique o lead em outro pipeline', 'STAGE_CHANGED', 'DUPLICATE_LEAD', 'duplicate'),
+      t('t10', FileText, '#3b82f6', 'Lead chegar à etapa X', 'Pipeline de origem', ArrowRight, '#a855f7', 'Mover card para outro funil', 'Mover automático', '#3b82f6', 'rgba(59,130,246,0.12)', 'Mova o lead para outro pipeline', 'STAGE_CHANGED', 'MOVE_TO_PIPELINE', 'move'),
     ],
   },
   {
-    section: 'Pós-venda e equipe',
+    section: 'Comunicação',
     items: [
-      { id: 't4', triggerIcon: Check, triggerColor: '#22c55e', triggerTitle: 'Venda Realizada', triggerSub: 'Em qualquer funil', actionIcon: Copy, actionColor: '#a855f7', actionTitle: 'Duplicar para funil Pós-Venda', badgeLabel: 'Automático com histórico', badgeColor: '#22c55e', badgeBg: 'rgba(34,197,94,0.12)', builderSubtitle: 'Configure a duplicação automática de lead', triggerType: 'STAGE_CHANGED', actionType: 'DUPLICATE_LEAD', configType: 'duplicate' },
-      { id: 't5', triggerIcon: Clock, triggerColor: '#f97316', triggerTitle: 'Vendedor atinge 80% da meta', triggerSub: 'Qualquer período', actionIcon: MessageCircle, actionColor: '#25d166', actionTitle: 'Enviar WhatsApp motivacional', badgeLabel: 'Envio automático', badgeColor: '#22c55e', badgeBg: 'rgba(34,197,94,0.12)', builderSubtitle: 'Configure a mensagem motivacional', triggerType: 'GOAL_REACHED', actionType: 'SEND_WHATSAPP', configType: 'meta' },
-      { id: 't6', triggerIcon: X, triggerColor: '#ef4444', triggerTitle: 'Lead movido para Perdido', triggerSub: 'Qualquer pipeline', actionIcon: Bell, actionColor: '#f97316', actionTitle: 'Notificar gestor no painel', badgeLabel: 'Notificação interna', badgeColor: '#f59e0b', badgeBg: 'rgba(245,158,11,0.12)', builderSubtitle: 'Configure a notificação ao gestor', triggerType: 'STAGE_CHANGED', actionType: 'NOTIFY_USER', configType: 'notify' },
+      t('t11', Plus, '#22c55e', 'Novo lead no pipeline', 'Qualquer pipeline', MessageCircle, '#25d166', 'Enviar boas-vindas WhatsApp', 'Envio automático', '#22c55e', 'rgba(34,197,94,0.12)', 'Envie boas-vindas ao novo lead', 'LEAD_CREATED', 'SEND_WHATSAPP', 'whatsapp'),
+      t('t12', Clock, '#f59e0b', 'Proposta sem resposta X dias', 'Em Proposta Enviada', Mail, '#3b82f6', 'Disparar e-mail de acompanhamento', 'Envio via Gmail', '#22c55e', 'rgba(34,197,94,0.12)', 'Acompanhe propostas sem resposta', 'INACTIVE_DAYS', 'SEND_EMAIL', 'email'),
+      t('t13', Clock, '#ef4444', 'Tarefa vencer sem concluir', 'Qualquer tipo', Bell, '#f97316', 'Notificar vendedor e líder', 'Notificação interna', '#f59e0b', 'rgba(245,158,11,0.12)', 'Alerte sobre tarefas atrasadas', 'TASK_OVERDUE', 'NOTIFY_USER', 'notify'),
+      t('t14', Mail, '#3b82f6', 'Lead abrir e-mail', 'Qualquer modelo', Bell, '#f97316', 'Notificar vendedor em tempo real', 'Notificação push', '#3b82f6', 'rgba(59,130,246,0.12)', 'Avise o vendedor quando o lead abrir o e-mail', 'EMAIL_OPENED', 'NOTIFY_USER', 'notify'),
+      t('t15', X, '#ef4444', 'Negócio perdido', 'Qualquer pipeline', Mail, '#3b82f6', 'Enviar e-mail para o lead', 'Envio via Gmail', '#22c55e', 'rgba(34,197,94,0.12)', 'Envie um e-mail de encerramento', 'STAGE_CHANGED', 'SEND_EMAIL', 'email'),
+    ],
+  },
+  {
+    section: 'Leads',
+    items: [
+      t('t16', Plus, '#22c55e', 'Novo lead criado', 'Qualquer pipeline', Users, '#3b82f6', 'Distribuir via round-robin', 'Distribuição automática', '#3b82f6', 'rgba(59,130,246,0.12)', 'Distribua leads automaticamente entre vendedores', 'LEAD_CREATED', 'ROUND_ROBIN', 'roundrobin'),
+      t('t17', Plus, '#22c55e', 'Card adicionado ao pipeline', 'Pipeline configurável', CheckSquare, '#f97316', 'Criar tarefa automática', 'Tarefa automática', '#f59e0b', 'rgba(245,158,11,0.12)', 'Crie tarefa automaticamente para novos leads', 'LEAD_CREATED', 'CREATE_TASK', 'task'),
+      t('t18', Tag, '#f97316', 'Produto adicionado ao lead', 'Qualquer produto', CheckSquare, '#f97316', 'Criar tarefa relacionada ao produto', 'Tarefa automática', '#f59e0b', 'rgba(245,158,11,0.12)', 'Crie tarefa ao vincular produto', 'PRODUCT_ADDED', 'CREATE_TASK', 'task'),
+    ],
+  },
+  {
+    section: 'Equipe',
+    items: [
+      t('t19', Check, '#22c55e', 'Vendedor atingir 100% da meta', 'Qualquer período', Bell, '#22c55e', 'Notificar equipe com parabéns', 'Notificação interna', '#22c55e', 'rgba(34,197,94,0.12)', 'Parabenize quando a meta for batida', 'GOAL_REACHED', 'NOTIFY_USER', 'meta'),
+      t('t20', Check, '#f97316', 'Vendedor atingir 80% da meta', 'Qualquer período', MessageCircle, '#25d166', 'Enviar WhatsApp motivacional', 'Envio automático', '#22c55e', 'rgba(34,197,94,0.12)', 'Motive vendedores próximos da meta', 'GOAL_REACHED', 'SEND_WHATSAPP', 'meta'),
+      t('t21', Clock, '#ef4444', 'Vendedor sem atividade X dias', 'Qualquer vendedor', Bell, '#f97316', 'Alertar líder', 'Notificação interna', '#f59e0b', 'rgba(245,158,11,0.12)', 'Alerte o líder sobre inatividade', 'INACTIVE_DAYS', 'NOTIFY_USER', 'notify'),
+    ],
+  },
+  {
+    section: 'Negócio',
+    items: [
+      t('t22', Check, '#22c55e', 'Venda realizada', 'Qualquer pipeline', FileText, '#3b82f6', 'Registrar no histórico de compras', 'Registro automático', '#3b82f6', 'rgba(59,130,246,0.12)', 'Registre vendas no histórico do cliente', 'STAGE_CHANGED', 'REGISTER_HISTORY', 'notify'),
+      t('t23', Repeat, '#22c55e', 'Cliente comprar 2ª vez', 'Qualquer pipeline', Tag, '#a855f7', 'Tag "Cliente recorrente" + notificar', 'Tag automática', '#a855f7', 'rgba(168,85,247,0.12)', 'Identifique clientes recorrentes', 'REPEAT_PURCHASE', 'ADD_TAG', 'tag'),
+      t('t24', ShieldCheck, '#a855f7', 'Solicitação de desconto', 'Qualquer lead', Bell, '#f97316', 'Notificar gestor para aprovação', 'Notificação interna', '#f59e0b', 'rgba(245,158,11,0.12)', 'Peça aprovação do gestor para descontos', 'DISCOUNT_REQUESTED', 'NOTIFY_USER', 'notify'),
+      t('t25', ShieldCheck, '#22c55e', 'Desconto aprovado/recusado', 'Qualquer lead', Bell, '#f97316', 'Notificar vendedor', 'Notificação interna', '#f59e0b', 'rgba(245,158,11,0.12)', 'Avise o vendedor sobre a decisão', 'DISCOUNT_REQUESTED', 'NOTIFY_USER', 'notify'),
     ],
   },
 ]
@@ -110,47 +143,31 @@ export default function AutomationsPage() {
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      const [result, pipelinesData] = await Promise.all([
-        getAutomations(),
-        getPipelines(),
-      ])
+      const [result, pipelinesData] = await Promise.all([getAutomations(), getPipelines()])
       setAutomations(result.data)
       setMeta(result.meta)
       setPipelines(pipelinesData)
-    } catch {
-      setAutomations([])
-    } finally {
-      setLoading(false)
-    }
+    } catch { setAutomations([]) }
+    finally { setLoading(false) }
   }, [])
 
   useEffect(() => { loadData() }, [loadData])
 
   async function handleToggleActive(a: ApiAutomation) {
-    try {
-      await updateAutomation(a.id, { isActive: !a.isActive })
-      loadData()
-    } catch { /* ignore */ }
+    try { await updateAutomation(a.id, { isActive: !a.isActive }); loadData() } catch { /* ignore */ }
   }
 
   async function handleDelete(id: string) {
-    try {
-      await deleteAutomation(id)
-      setOpenMenu(null)
-      loadData()
-    } catch { /* ignore */ }
+    try { await deleteAutomation(id); setOpenMenu(null); loadData() } catch { /* ignore */ }
   }
 
   async function handleBuilderSave(payload: { name: string; pipelineId?: string; triggerType: string; triggerConfig: Record<string, unknown>; actionType: string; actionConfig: Record<string, unknown> }) {
-    try {
-      await createAutomation(payload)
-      setBuilder(null)
-      setTab('mine')
-      loadData()
-    } catch { /* ignore */ }
+    await createAutomation(payload)
+    setBuilder(null)
+    setTab('mine')
+    loadData()
   }
 
-  // Builder mode
   if (builder) return (
     <AppLayout menuItems={gestaoMenuItems}>
       <BuilderView template={builder} pipelines={pipelines} onBack={() => setBuilder(null)} onSave={handleBuilderSave} />
@@ -174,33 +191,32 @@ export default function AutomationsPage() {
         ))}
       </div>
 
-      {/* Templates tab */}
       {tab === 'templates' && templates.map(section => (
         <div key={section.section} style={{ marginBottom: 24 }}>
           <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1.5px', fontWeight: 600, marginBottom: 12 }}>{section.section}</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-            {section.items.map(t => {
-              const TIcon = t.triggerIcon; const AIcon = t.actionIcon
-              const isHov = hoveredCard === t.id
+            {section.items.map(tmpl => {
+              const TIcon = tmpl.triggerIcon; const AIcon = tmpl.actionIcon
+              const isHov = hoveredCard === tmpl.id
               return (
-                <div key={t.id} onMouseEnter={() => setHoveredCard(t.id)} onMouseLeave={() => setHoveredCard(null)}
+                <div key={tmpl.id} onMouseEnter={() => setHoveredCard(tmpl.id)} onMouseLeave={() => setHoveredCard(null)}
                   style={{ background: 'var(--bg-card)', border: `1px solid ${isHov ? 'rgba(249,115,22,0.5)' : 'var(--border)'}`, borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', gap: 8, transition: 'border-color 0.2s', position: 'relative', overflow: 'hidden' }}>
                   <div style={{ background: 'var(--bg)', borderRadius: 8, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <TIcon size={16} color={t.triggerColor} strokeWidth={1.5} />
+                    <TIcon size={16} color={tmpl.triggerColor} strokeWidth={1.5} />
                     <div>
-                      <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)' }}>{t.triggerTitle}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{t.triggerSub}</div>
+                      <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)' }}>{tmpl.triggerTitle}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{tmpl.triggerSub}</div>
                     </div>
                   </div>
                   <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>↓</div>
                   <div style={{ background: 'var(--bg)', borderRadius: 8, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <AIcon size={16} color={t.actionColor} strokeWidth={1.5} />
+                    <AIcon size={16} color={tmpl.actionColor} strokeWidth={1.5} />
                     <div>
-                      <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)' }}>{t.actionTitle}</div>
-                      <span style={{ background: t.badgeBg, color: t.badgeColor, borderRadius: 4, padding: '2px 6px', fontSize: 10 }}>{t.badgeLabel}</span>
+                      <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)' }}>{tmpl.actionTitle}</div>
+                      <span style={{ background: tmpl.badgeBg, color: tmpl.badgeColor, borderRadius: 4, padding: '2px 6px', fontSize: 10 }}>{tmpl.badgeLabel}</span>
                     </div>
                   </div>
-                  <button onClick={() => setBuilder(t)} style={{
+                  <button onClick={() => setBuilder(tmpl)} style={{
                     position: 'absolute', bottom: 0, left: 0, right: 0,
                     background: '#f97316', color: '#fff', border: 'none', padding: 10,
                     fontSize: 12, fontWeight: 600, cursor: 'pointer',
@@ -214,7 +230,6 @@ export default function AutomationsPage() {
         </div>
       ))}
 
-      {/* My automations tab */}
       {tab === 'mine' && (
         loading ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 60, gap: 10 }}>
@@ -281,7 +296,7 @@ export default function AutomationsPage() {
 
 // ── Builder View ──
 
-function BuilderView({ template: t, pipelines, onBack, onSave }: {
+function BuilderView({ template: tmpl, pipelines, onBack, onSave }: {
   template: Template; pipelines: PipelineOption[]
   onBack: () => void
   onSave: (p: { name: string; pipelineId?: string; triggerType: string; triggerConfig: Record<string, unknown>; actionType: string; actionConfig: Record<string, unknown> }) => void
@@ -290,20 +305,27 @@ function BuilderView({ template: t, pipelines, onBack, onSave }: {
   const [pipelineId, setPipelineId] = useState(pipelines[0]?.id ?? '')
   const [stageId, setStageId] = useState('')
   const [days, setDays] = useState('3')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
 
   const selectedPipeline = pipelines.find(p => p.id === pipelineId)
   const stages = selectedPipeline?.stages ?? []
+  const TIcon = tmpl.triggerIcon; const AIcon = tmpl.actionIcon
+  const canSave = name.trim() && !saving
 
-  const TIcon = t.triggerIcon; const AIcon = t.actionIcon
-
-  function handleSave() {
-    const triggerConfig: Record<string, unknown> = {}
-    if (stageId) triggerConfig.stageId = stageId
-    if (t.configType === 'whatsapp') triggerConfig.days = parseInt(days)
-
-    const actionConfig: Record<string, unknown> = { type: t.configType }
-
-    onSave({ name, pipelineId, triggerType: t.triggerType, triggerConfig, actionType: t.actionType, actionConfig })
+  async function handleSave() {
+    if (!canSave) return
+    setSaving(true); setError('')
+    try {
+      const triggerConfig: Record<string, unknown> = {}
+      if (stageId) triggerConfig.stageId = stageId
+      if (tmpl.triggerType === 'INACTIVE_DAYS') triggerConfig.days = parseInt(days)
+      const actionConfig: Record<string, unknown> = { type: tmpl.configType }
+      await onSave({ name, pipelineId, triggerType: tmpl.triggerType, triggerConfig, actionType: tmpl.actionType, actionConfig })
+    } catch (e: any) {
+      setError(e.response?.data?.error?.message ?? 'Erro ao salvar automação')
+      setSaving(false)
+    }
   }
 
   return (
@@ -316,29 +338,28 @@ function BuilderView({ template: t, pipelines, onBack, onSave }: {
 
       <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, padding: 24, maxWidth: 540, margin: '0 auto' }}>
         <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Configurar automação</h2>
-        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4, marginBottom: 20 }}>{t.builderSubtitle}</p>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4, marginBottom: 20 }}>{tmpl.builderSubtitle}</p>
 
-        {/* Trigger block */}
         <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 10, padding: 16, marginBottom: 8 }}>
           <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 10, fontWeight: 600 }}>Quando isso acontecer — Gatilho</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-            <TIcon size={16} color={t.triggerColor} strokeWidth={1.5} />
+            <TIcon size={16} color={tmpl.triggerColor} strokeWidth={1.5} />
             <div>
-              <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{t.triggerTitle}</div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{t.triggerSub}</div>
+              <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{tmpl.triggerTitle}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{tmpl.triggerSub}</div>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <select value={pipelineId} onChange={e => { setPipelineId(e.target.value); setStageId('') }} style={{ ...inputS, flex: 1, appearance: 'none' as const, cursor: 'pointer' }}>
               {pipelines.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
-            {(t.configType === 'whatsapp' || t.configType === 'email' || t.configType === 'task') && stages.length > 0 && (
+            {stages.length > 0 && (
               <select value={stageId} onChange={e => setStageId(e.target.value)} style={{ ...inputS, flex: 1, appearance: 'none' as const, cursor: 'pointer' }}>
                 <option value="">Qualquer etapa</option>
                 {stages.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             )}
-            {t.configType === 'whatsapp' && (
+            {tmpl.triggerType === 'INACTIVE_DAYS' && (
               <input type="number" value={days} onChange={e => setDays(e.target.value)} placeholder="Dias" style={{ ...inputS, width: 70 }} />
             )}
           </div>
@@ -346,28 +367,32 @@ function BuilderView({ template: t, pipelines, onBack, onSave }: {
 
         <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 16, padding: '4px 0' }}>↓</div>
 
-        {/* Action block */}
         <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 10, padding: 16, marginBottom: 16 }}>
           <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 10, fontWeight: 600 }}>Então fazer isso — Ação</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <AIcon size={16} color={t.actionColor} strokeWidth={1.5} />
-            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{t.actionTitle}</span>
+            <AIcon size={16} color={tmpl.actionColor} strokeWidth={1.5} />
+            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{tmpl.actionTitle}</span>
           </div>
         </div>
 
-        {/* Name */}
         <div style={{ marginBottom: 20 }}>
           <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Nome desta automação <span style={{ color: '#f97316' }}>*</span></label>
           <input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Follow-up automático 3 dias" style={inputS} />
         </div>
 
+        {error && <div style={{ fontSize: 12, color: '#ef4444', marginBottom: 12 }}>{error}</div>}
+
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
           <button onClick={onBack} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
-          <button onClick={handleSave} disabled={!name.trim()} style={{
-            background: name.trim() ? '#f97316' : 'var(--border)', border: 'none', borderRadius: 8,
+          <button onClick={handleSave} disabled={!canSave} style={{
+            background: canSave ? '#f97316' : 'var(--border)', border: 'none', borderRadius: 8,
             padding: '9px 20px', fontSize: 13, fontWeight: 600,
-            color: name.trim() ? '#fff' : 'var(--text-muted)', cursor: name.trim() ? 'pointer' : 'not-allowed',
-          }}>Salvar e ativar</button>
+            color: canSave ? '#fff' : 'var(--text-muted)', cursor: canSave ? 'pointer' : 'not-allowed',
+            display: 'flex', alignItems: 'center', gap: 6,
+          }}>
+            {saving && <Loader2 size={14} className="animate-spin" />}
+            {saving ? 'Salvando...' : 'Salvar e ativar'}
+          </button>
         </div>
       </div>
     </div>

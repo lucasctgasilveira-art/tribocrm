@@ -4,7 +4,7 @@ import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
 import { getGoalDashboard, getGoals, createGoal, updateGoal } from '../../services/goals.service'
 import { getPipelines } from '../../services/pipeline.service'
-import { getUsers } from '../../services/users.service'
+import { getUsers, getTeams } from '../../services/users.service'
 
 // ── Types ──
 
@@ -96,6 +96,7 @@ export default function GoalsPage() {
   const [history, setHistory] = useState<HistoryGoal[]>([])
   const [pipelines, setPipelines] = useState<PipelineOption[]>([])
   const [users, setUsers] = useState<UserOption[]>([])
+  const [teams, setTeams] = useState<{ id: string; name: string }[]>([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [editModalOpen, setEditModalOpen] = useState(false)
@@ -104,16 +105,18 @@ export default function GoalsPage() {
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      const [dashData, goalsData, pipelinesData, usersData] = await Promise.all([
+      const [dashData, goalsData, pipelinesData, usersData, teamsData] = await Promise.all([
         getGoalDashboard(),
         getGoals({ year: String(new Date().getFullYear()) }),
         getPipelines(),
         getUsers(),
+        getTeams().catch(() => []),
       ])
       setDashboard(dashData)
       setHistory(goalsData)
       setPipelines(pipelinesData)
       setUsers(usersData)
+      setTeams(teamsData)
     } catch {
       setDashboard({ goal: null, userGoals: [] })
       setHistory([])
@@ -315,7 +318,7 @@ export default function GoalsPage() {
         </div>
       )}
 
-      {modalOpen && <NewGoalModal pipelines={pipelines} users={users} onClose={() => setModalOpen(false)} onSave={handleCreateGoal} />}
+      {modalOpen && <NewGoalModal pipelines={pipelines} users={users} teams={teams} onClose={() => setModalOpen(false)} onSave={handleCreateGoal} />}
       {editModalOpen && goal && <EditGoalModal goal={goal} onClose={() => setEditModalOpen(false)} onSave={handleEditGoal} />}
       {rampModalOpen && goal && <RampModal goalId={goal.id} onClose={() => setRampModalOpen(false)} onSaved={loadData} />}
     </AppLayout>
@@ -324,9 +327,10 @@ export default function GoalsPage() {
 
 // ── New Goal Modal ──
 
-function NewGoalModal({ pipelines, users, onClose, onSave }: {
+function NewGoalModal({ pipelines, users, teams, onClose, onSave }: {
   pipelines: PipelineOption[]
   users: UserOption[]
+  teams: { id: string; name: string }[]
   onClose: () => void
   onSave: (p: { periodType: string; goalType: string; totalRevenueGoal: number; distributionType: string; pipelineId: string }) => void
 }) {
@@ -337,9 +341,14 @@ function NewGoalModal({ pipelines, users, onClose, onSave }: {
   const [pipelineId, setPipelineId] = useState(pipelines[0]?.id ?? '')
   const [saving, setSaving] = useState(false)
   const [userGoalValues, setUserGoalValues] = useState<Record<string, string>>({})
+  const [teamMode, setTeamMode] = useState<'all' | 'per_team'>('all')
+  const [_selectedTeamId] = useState(teams[0]?.id ?? '') // reserved for future team selection
+  const [teamGoalValues, setTeamGoalValues] = useState<Record<string, string>>({})
+  const hasMultipleTeams = teams.length > 1
 
   const sellers = users.filter(u => u.role === 'SELLER' || u.role === 'TEAM_LEADER')
   const individualTotal = Object.values(userGoalValues).reduce((s, v) => s + (parseFloat(v) || 0), 0)
+  const teamTotal = Object.values(teamGoalValues).reduce((s, v) => s + (parseFloat(v) || 0), 0)
   const effectiveTotal = distributionType === 'INDIVIDUAL' ? individualTotal : parseFloat(totalRevenueGoal) || 0
   const canSave = effectiveTotal > 0 && pipelineId
 
@@ -418,6 +427,43 @@ function NewGoalModal({ pipelines, users, onClose, onSave }: {
               ))}
             </div>
           </div>
+
+          {/* Multi-team configuration */}
+          {hasMultipleTeams && distributionType === 'GENERAL' && (
+            <div style={{ marginTop: 16 }}>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 8 }}>Equipes</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+                {([
+                  { value: 'all' as const, label: 'Todas as equipes (igual)', desc: 'Mesma meta para todas as equipes' },
+                  { value: 'per_team' as const, label: 'Por equipe', desc: 'Meta diferente para cada equipe' },
+                ]).map(opt => (
+                  <label key={opt.value} onClick={() => setTeamMode(opt.value)} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', padding: '8px 12px', borderRadius: 8, border: `1px solid ${teamMode === opt.value ? 'var(--accent)' : 'var(--border)'}`, background: teamMode === opt.value ? 'rgba(249,115,22,0.06)' : 'transparent', transition: 'all 0.15s' }}>
+                    <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${teamMode === opt.value ? 'var(--accent)' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+                      {teamMode === opt.value && <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)' }} />}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{opt.label}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>{opt.desc}</div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+              {teamMode === 'per_team' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {teams.map(team => (
+                    <div key={team.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontSize: 13, color: 'var(--text-primary)', flex: 1 }}>{team.name}</span>
+                      <input type="number" value={teamGoalValues[team.id] ?? ''} onChange={e => setTeamGoalValues(prev => ({ ...prev, [team.id]: e.target.value }))} placeholder="0" style={{ ...inputS, width: 120, textAlign: 'right' }} />
+                    </div>
+                  ))}
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6, fontSize: 13, fontWeight: 600 }}>
+                    <span style={{ color: 'var(--text-muted)', marginRight: 8 }}>Total:</span>
+                    <span style={{ color: 'var(--accent)' }}>{fmt(teamTotal)}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Individual user goals */}
           {distributionType === 'INDIVIDUAL' && sellers.length > 0 && (
