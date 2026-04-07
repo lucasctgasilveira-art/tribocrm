@@ -587,13 +587,14 @@ model Task {
 }
 
 model ManagerialTaskType {
-  id        String           @id @default(uuid()) @db.Uuid
-  tenantId  String           @map("tenant_id") @db.Uuid
-  name      String           @db.VarChar(100)
-  isActive  Boolean          @default(true) @map("is_active")
-  sortOrder Int              @map("sort_order")
-  createdAt DateTime         @default(now()) @map("created_at")
-  tasks     ManagerialTask[]
+  id         String           @id @default(uuid()) @db.Uuid
+  tenantId   String           @map("tenant_id") @db.Uuid
+  name       String           @db.VarChar(100)
+  isActive   Boolean          @default(true) @map("is_active")
+  visibleFor String[]         @default(["SELLER", "TEAM_LEADER", "MANAGER", "OWNER"]) @map("visible_for")
+  sortOrder  Int              @map("sort_order")
+  createdAt  DateTime         @default(now()) @map("created_at")
+  tasks      ManagerialTask[]
   @@map("managerial_task_types")
 }
 

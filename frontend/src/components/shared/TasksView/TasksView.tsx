@@ -313,10 +313,10 @@ export default function TasksView({ menuItems }: TasksViewProps) {
     setSelectedTask(null)
   }
 
-  async function handleCreateManagerialTask(payload: { title: string; typeId: string; description?: string; dueDate?: string; participantIds?: string[]; responsibleId?: string; dueTime?: string; reminderMinutes?: number }) {
+  async function handleCreateManagerialTask(payload: { title: string; typeId: string; description?: string; dueDate?: string; participantIds?: string[]; responsibleId?: string; dueTime?: string; reminderMinutes?: number; taskMode?: string }) {
     await createManagerialTask({ title: payload.title, typeId: payload.typeId, description: payload.description, dueDate: payload.dueDate, participantIds: payload.participantIds })
     setNewTaskModal(false)
-    setCategory('gerenciais')
+    setCategory(payload.taskMode === 'lead' ? 'leads' : 'gerenciais')
     setToast('Tarefa criada!')
     setTimeout(() => setToast(''), 3000)
   }
@@ -676,14 +676,18 @@ function SummaryCard({ label, value, color }: { label: string; value: string; co
 function NewManagerialTaskModal({ users, onClose, onSave }: {
   users: { id: string; name: string }[]
   onClose: () => void
-  onSave: (p: { title: string; typeId: string; description?: string; dueDate?: string; participantIds?: string[]; responsibleId?: string; dueTime?: string; reminderMinutes?: number }) => Promise<void> | void
+  onSave: (p: { title: string; typeId: string; description?: string; dueDate?: string; participantIds?: string[]; responsibleId?: string; dueTime?: string; reminderMinutes?: number; taskMode?: string }) => Promise<void> | void
 }) {
-  const stored = JSON.parse(localStorage.getItem('user') ?? '{}') as { id?: string; role?: string; teamId?: string }
+  const stored = JSON.parse(localStorage.getItem('user') ?? '{}') as { id?: string; role?: string }
   const userRole = stored.role ?? 'SELLER'
   const userId = stored.id ?? ''
+  const isSeller = userRole === 'SELLER'
+  const showResponsible = !isSeller
 
+  const [taskMode, setTaskMode] = useState<'lead' | 'gerencial'>('gerencial')
   const [title, setTitle] = useState('')
   const [typeId, setTypeId] = useState('')
+  const [managerialTypeId, setManagerialTypeId] = useState('')
   const [description, setDescription] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [dueTime, setDueTime] = useState('')
@@ -696,6 +700,8 @@ function NewManagerialTaskModal({ users, onClose, onSave }: {
   const [customMessage, setCustomMessage] = useState('')
   const [calendarConnected, setCalendarConnected] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [managerialTypes, setManagerialTypes] = useState<{ id: string; name: string }[]>([])
 
   const taskTypeOpts = [
     { value: 'EMAIL', label: 'E-mail' },
@@ -715,33 +721,37 @@ function NewManagerialTaskModal({ users, onClose, onSave }: {
     { value: 1440, label: '1 dia antes' },
   ]
 
+  // Load managerial types filtered by role
+  useEffect(() => {
+    if (taskMode === 'gerencial') {
+      api.get('/tasks/managerial-types', { params: { role: userRole } })
+        .then(r => setManagerialTypes(r.data.data ?? []))
+        .catch(() => setManagerialTypes([]))
+    }
+  }, [taskMode, userRole])
+
   // Load templates when type is EMAIL or WHATSAPP
   useEffect(() => {
-    if (typeId === 'EMAIL') {
+    if (taskMode === 'lead' && typeId === 'EMAIL') {
       api.get('/templates/email').then(r => setTemplates(r.data.data ?? [])).catch(() => setTemplates([]))
-    } else if (typeId === 'WHATSAPP') {
+    } else if (taskMode === 'lead' && typeId === 'WHATSAPP') {
       api.get('/templates/whatsapp').then(r => setTemplates(r.data.data ?? [])).catch(() => setTemplates([]))
     } else {
       setTemplates([]); setSelectedTemplate(''); setCustomMessage('')
     }
-  }, [typeId])
+  }, [typeId, taskMode])
 
   // Check calendar connection for MEETING/VISIT
   useEffect(() => {
-    if (typeId === 'MEETING' || typeId === 'VISIT') {
+    if (taskMode === 'lead' && (typeId === 'MEETING' || typeId === 'VISIT')) {
       api.get('/oauth/calendar/status').then(r => setCalendarConnected(r.data.data?.connected ?? false)).catch(() => setCalendarConnected(false))
     }
-  }, [typeId])
-
-  const isSeller = userRole === 'SELLER'
-  const showResponsible = !isSeller
-  const visibleUsers = userRole === 'TEAM_LEADER'
-    ? users.filter(u => u.id === userId || true) // backend already filters by team
-    : users
-  const [error, setError] = useState('')
+  }, [typeId, taskMode])
 
   const inputS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
-  const canSave = title.trim().length > 0 && typeId.length > 0 && !saving
+
+  const effectiveTypeId = taskMode === 'gerencial' ? managerialTypeId : typeId
+  const canSave = title.trim().length > 0 && effectiveTypeId.length > 0 && !saving
 
   function toggleParticipant(id: string) {
     setParticipantIds(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id])
@@ -754,19 +764,31 @@ function NewManagerialTaskModal({ users, onClose, onSave }: {
     const fullDueDate = dueDate && dueTime ? `${dueDate}T${dueTime}:00` : dueDate || undefined
     try {
       await onSave({
-        title, typeId,
+        title,
+        typeId: effectiveTypeId,
         description: (selectedTemplate === '__custom' ? customMessage : description) || undefined,
         dueDate: fullDueDate,
         participantIds: isSeller ? undefined : (participantIds.length > 0 ? participantIds : undefined),
         responsibleId: isSeller ? userId : responsibleId,
         dueTime: dueTime || undefined,
         reminderMinutes,
+        taskMode,
       })
     } catch (e: any) {
       setError(e.response?.data?.error?.message ?? 'Erro ao criar tarefa. Tente novamente.')
       setSaving(false)
     }
   }
+
+  const modeBtn = (mode: 'lead' | 'gerencial', label: string) => (
+    <button onClick={() => { setTaskMode(mode); setTypeId(''); setManagerialTypeId('') }} style={{
+      flex: 1, padding: '8px 0', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+      background: taskMode === mode ? 'rgba(249,115,22,0.12)' : 'transparent',
+      border: `1px solid ${taskMode === mode ? '#f97316' : 'var(--border)'}`,
+      color: taskMode === mode ? '#f97316' : 'var(--text-muted)',
+      borderRadius: 8, transition: 'all 0.15s',
+    }}>{label}</button>
+  )
 
   return (
     <>
@@ -777,17 +799,31 @@ function NewManagerialTaskModal({ users, onClose, onSave }: {
           <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
         </div>
         <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
+          {/* Task mode toggle */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+            {modeBtn('lead', 'Tarefa de Lead')}
+            {modeBtn('gerencial', 'Tarefa Gerencial')}
+          </div>
+
           <div style={{ marginBottom: 16 }}>
             <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Título <span style={{ color: 'var(--accent)' }}>*</span></label>
-            <input autoFocus value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: Ligar para lead sobre proposta" style={inputS} />
+            <input autoFocus value={title} onChange={e => setTitle(e.target.value)} placeholder={taskMode === 'lead' ? 'Ex: Ligar para lead sobre proposta' : 'Ex: Reunião de alinhamento semanal'} style={inputS} />
           </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
             <div>
-              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Tipo <span style={{ color: 'var(--accent)' }}>*</span></label>
-              <select value={typeId} onChange={e => setTypeId(e.target.value)} style={{ ...inputS, appearance: 'none' as const, cursor: 'pointer' }}>
-                <option value="">Selecionar tipo...</option>
-                {taskTypeOpts.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-              </select>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>{taskMode === 'gerencial' ? 'Categoria' : 'Tipo'} <span style={{ color: 'var(--accent)' }}>*</span></label>
+              {taskMode === 'lead' ? (
+                <select value={typeId} onChange={e => setTypeId(e.target.value)} style={{ ...inputS, appearance: 'none' as const, cursor: 'pointer' }}>
+                  <option value="">Selecionar tipo...</option>
+                  {taskTypeOpts.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </select>
+              ) : (
+                <select value={managerialTypeId} onChange={e => setManagerialTypeId(e.target.value)} style={{ ...inputS, appearance: 'none' as const, cursor: 'pointer' }}>
+                  <option value="">Selecionar categoria...</option>
+                  {managerialTypes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+              )}
             </div>
             <div>
               <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Notificar com antecedência</label>
@@ -797,8 +833,8 @@ function NewManagerialTaskModal({ users, onClose, onSave }: {
             </div>
           </div>
 
-          {/* Conditional: Email/WhatsApp template selector */}
-          {(typeId === 'EMAIL' || typeId === 'WHATSAPP') && (
+          {/* Conditional: Email/WhatsApp template selector (lead mode only) */}
+          {taskMode === 'lead' && (typeId === 'EMAIL' || typeId === 'WHATSAPP') && (
             <div style={{ marginBottom: 16 }}>
               <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
                 {typeId === 'EMAIL' ? 'Modelo de e-mail' : 'Modelo de WhatsApp'}
@@ -821,8 +857,8 @@ function NewManagerialTaskModal({ users, onClose, onSave }: {
             </div>
           )}
 
-          {/* Conditional: Meeting/Visit calendar info */}
-          {(typeId === 'MEETING' || typeId === 'VISIT') && (
+          {/* Conditional: Meeting/Visit calendar info (lead mode only) */}
+          {taskMode === 'lead' && (typeId === 'MEETING' || typeId === 'VISIT') && (
             <div style={{ marginBottom: 16, fontSize: 12, borderRadius: 8, padding: '10px 14px', background: calendarConnected ? 'rgba(34,197,94,0.08)' : 'rgba(245,158,11,0.08)', border: `1px solid ${calendarConnected ? 'rgba(34,197,94,0.2)' : 'rgba(245,158,11,0.2)'}`, color: calendarConnected ? '#22c55e' : '#f59e0b' }}>
               {calendarConnected
                 ? 'Um evento será criado automaticamente no seu Google Calendar.'
@@ -862,11 +898,12 @@ function NewManagerialTaskModal({ users, onClose, onSave }: {
             <div style={{ marginBottom: 16 }}>
               <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Responsável</label>
               <select value={responsibleId} onChange={e => setResponsibleId(e.target.value)} style={{ ...inputS, appearance: 'none' as const, cursor: 'pointer' }}>
-                {visibleUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
               </select>
             </div>
           )}
 
+          {/* Participantes — hidden for SELLER */}
           {!isSeller && (
             <div>
               <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 8 }}>Participantes</label>
