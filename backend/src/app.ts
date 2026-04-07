@@ -19,6 +19,7 @@ import automationsRoutes from './routes/automations.routes'
 import adminRoutes from './routes/admin.routes'
 import oauthRoutes from './routes/oauth.routes'
 import paymentsRoutes from './routes/payments.routes'
+import webhooksRoutes from './routes/webhooks.routes'
 
 const app = express()
 
@@ -42,12 +43,13 @@ app.use(cors({
   credentials: true,
 }))
 
-// Rate limiting
+// Rate limiting (skip webhooks — Efi sends bursts of notifications)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.path.startsWith('/webhooks'),
   message: {
     success: false,
     error: { code: 'RATE_LIMIT', message: 'Muitas requisições. Tente novamente em alguns minutos.' },
@@ -81,5 +83,6 @@ app.use('/forms', formsRoutes)
 app.use('/automations', automationsRoutes)
 app.use('/admin', adminRoutes)
 app.use('/payments', paymentsRoutes)
+app.use('/webhooks', webhooksRoutes)
 
 export default app

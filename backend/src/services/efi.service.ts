@@ -316,21 +316,38 @@ export async function registerPixWebhook(): Promise<{ url: string; warning?: str
 
 // ── Webhook Processing ──
 
-export async function processWebhookPayment(txid: string): Promise<void> {
+export async function processWebhookPayment(efiId: string): Promise<{ ok: boolean; reason?: string; chargeId?: string; tenantId?: string }> {
   const charge = await prisma.charge.findFirst({
-    where: { efiChargeId: txid },
+    where: { efiChargeId: efiId },
   })
 
-  if (!charge || charge.status === 'PAID') return
+  if (!charge) return { ok: false, reason: 'charge_not_found' }
+  if (charge.status === 'PAID') return { ok: true, reason: 'already_paid', chargeId: charge.id, tenantId: charge.tenantId }
 
   await prisma.charge.update({
     where: { id: charge.id },
     data: { status: 'PAID', paidAt: new Date() },
   })
 
-  // Activate tenant subscription if needed
-  await prisma.tenant.update({
-    where: { id: charge.tenantId },
-    data: { status: 'ACTIVE' },
-  })
+  // Activate tenant and extend billing period
+  const tenant = await prisma.tenant.findUnique({ where: { id: charge.tenantId } })
+  if (tenant) {
+    const now = new Date()
+    const cycleDays = tenant.planCycle === 'YEARLY' ? 365 : 30
+    // Extend from current planExpiresAt if still valid, otherwise from now
+    const baseDate = tenant.planExpiresAt && tenant.planExpiresAt > now ? tenant.planExpiresAt : now
+    const nextExpiresAt = new Date(baseDate.getTime() + cycleDays * 24 * 60 * 60 * 1000)
+
+    await prisma.tenant.update({
+      where: { id: charge.tenantId },
+      data: {
+        status: 'ACTIVE',
+        trialEndsAt: null,
+        planStartedAt: tenant.planStartedAt ?? now,
+        planExpiresAt: nextExpiresAt,
+      },
+    })
+  }
+
+  return { ok: true, chargeId: charge.id, tenantId: charge.tenantId }
 }
