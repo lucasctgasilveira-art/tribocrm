@@ -4,7 +4,9 @@ import { useNavigate } from 'react-router-dom'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { vendasMenuItems } from '../../config/vendasMenu'
 import { getLeads } from '../../services/leads.service'
-import NewLeadModal from '../../components/shared/NewLeadModal/NewLeadModal'
+import { getPipelines } from '../../services/pipeline.service'
+import NewLeadModal, { type NewLeadData } from '../../components/shared/NewLeadModal/NewLeadModal'
+import api from '../../services/api'
 
 // ── Types ──
 
@@ -53,6 +55,12 @@ export default function VendasLeadsPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
   const [error, setError] = useState<string | null>(null)
+  const [toast, setToast] = useState('')
+  const [pipelineData, setPipelineData] = useState<{ id: string; stages: { id: string; name: string }[] } | null>(null)
+
+  useEffect(() => {
+    getPipelines().then(p => { if (p.length > 0) setPipelineData({ id: p[0].id, stages: p[0].stages ?? [] }) }).catch(() => {})
+  }, [])
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const handleSearch = useCallback((value: string) => {
@@ -167,7 +175,34 @@ export default function VendasLeadsPage() {
         </div>
       )}
 
-      <NewLeadModal open={modalOpen} onClose={() => setModalOpen(false)} onSubmit={() => { setModalOpen(false); setReloadKey(k => k + 1) }} />
+      {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: '4px solid #22c55e', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 60 }}>{toast}</div>}
+
+      <NewLeadModal open={modalOpen} onClose={() => setModalOpen(false)} onSubmit={async (data: NewLeadData) => {
+        const tempMap: Record<string, string> = { Quente: 'HOT', Morno: 'WARM', Frio: 'COLD' }
+        const stageObj = pipelineData?.stages.find(s => s.name === data.stage)
+        const stageId = stageObj?.id ?? pipelineData?.stages[0]?.id
+        if (!pipelineData?.id || !stageId) { setModalOpen(false); return }
+        try {
+          await api.post('/leads', {
+            name: data.name,
+            company: data.company || null,
+            email: data.email || null,
+            phone: data.phone || null,
+            expectedValue: parseInt(data.value) || null,
+            stageId,
+            pipelineId: pipelineData.id,
+            temperature: tempMap[data.temperature] ?? 'WARM',
+          })
+          setModalOpen(false)
+          setReloadKey(k => k + 1)
+          setToast('Lead criado com sucesso!')
+          setTimeout(() => setToast(''), 3000)
+        } catch (err: any) {
+          console.error('[LeadsPage] Error creating lead:', err)
+          setError(err.response?.data?.error?.message ?? 'Erro ao criar lead')
+          setModalOpen(false)
+        }
+      }} />
     </AppLayout>
   )
 }
