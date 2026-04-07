@@ -67,6 +67,7 @@ const CSS = `
 export default function VendasPipelinePage() {
   const [stages, setStages] = useState<StageConfig[]>([])
   const [leads, setLeads] = useState<Lead[]>([])
+  const [pipelineId, setPipelineId] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [hoveredCard, setHoveredCard] = useState<string | null>(null)
@@ -82,6 +83,7 @@ export default function VendasPipelinePage() {
       try {
         const pipelinesData = await getPipelines()
         if (pipelinesData.length > 0) {
+          setPipelineId(pipelinesData[0].id)
           const kanban = await getKanban(pipelinesData[0].id)
           setStages(kanban.stages.map((s: KanbanStage) => ({ id: s.id, name: s.name, color: s.color })))
           const allLeads: Lead[] = []
@@ -114,15 +116,37 @@ export default function VendasPipelinePage() {
   const onDrop = useCallback((e: DragEvent, s: string) => { e.preventDefault(); const id = e.dataTransfer.getData('text/plain'); setLeads(p => p.map(l => l.id === id ? { ...l, stage: s } : l)); setDraggedId(null); setDropTarget(null) }, [])
   const onDragEnd = useCallback(() => { setDraggedId(null); setDropTarget(null) }, [])
 
-  function handleNewLead(data: NewLeadData) {
+  async function handleNewLead(data: NewLeadData) {
     const tempMap: Record<string, Lead['temperature']> = { Quente: 'HOT', Morno: 'WARM', Frio: 'COLD' }
-    const newLead: Lead = {
-      id: String(Date.now()), name: data.name, company: data.company,
-      value: parseInt(data.value) || 0, stage: data.stage,
-      temperature: tempMap[data.temperature] ?? 'WARM',
-      lastContact: 'agora', phone: data.phone || '—', email: data.email || '—',
+    const stageObj = stages.find(s => s.name === data.stage)
+    if (!stageObj || !pipelineId) return
+
+    try {
+      const { data: res } = await api.post('/leads', {
+        name: data.name,
+        company: data.company || null,
+        email: data.email || null,
+        phone: data.phone || null,
+        expectedValue: parseInt(data.value) || null,
+        stageId: stageObj.id,
+        pipelineId,
+        temperature: tempMap[data.temperature] ?? 'WARM',
+      })
+      if (res.success) {
+        const created = res.data
+        setLeads(prev => [mapApiLead(created, data.stage), ...prev])
+      }
+    } catch (err) {
+      console.error('[Pipeline] Error creating lead:', err)
+      // Fallback: add locally so user sees something
+      const newLead: Lead = {
+        id: String(Date.now()), name: data.name, company: data.company,
+        value: parseInt(data.value) || 0, stage: data.stage,
+        temperature: tempMap[data.temperature] ?? 'WARM',
+        lastContact: 'agora', phone: data.phone || '—', email: data.email || '—',
+      }
+      setLeads(prev => [newLead, ...prev])
     }
-    setLeads(prev => [newLead, ...prev])
   }
 
   if (loading) {

@@ -32,16 +32,24 @@ export async function getLeads(req: Request, res: Response): Promise<void> {
     if (temperature) where.temperature = temperature as 'HOT' | 'WARM' | 'COLD'
 
     if (role === 'SELLER') {
-      where.responsibleId = userId
+      where.AND = [
+        ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
+        { OR: [{ responsibleId: userId }, { responsibleId: null }] },
+      ]
     }
 
     if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { company: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
+      where.AND = [
+        ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
+        { OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { company: { contains: search, mode: 'insensitive' } },
+          { email: { contains: search, mode: 'insensitive' } },
+        ] },
       ]
     }
+
+    console.log('[Leads] getLeads query:', JSON.stringify({ tenantId, role, userId, where: JSON.stringify(where).slice(0, 500) }))
 
     const [leads, total] = await Promise.all([
       prisma.lead.findMany({
