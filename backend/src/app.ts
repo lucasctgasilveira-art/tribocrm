@@ -68,6 +68,16 @@ app.get('/health', (_req, res) => {
 })
 
 // Routes
+//
+// IMPORTANT: public routes (no JWT auth) must be mounted BEFORE usersRoutes.
+// usersRoutes is mounted at "/" (no prefix) because its handlers already
+// include "/users/..." in their paths. Combined with router.use(authMiddleware)
+// inside that router, this means EVERY incoming request hits the auth check
+// of usersRoutes first. Authenticated routes work because the token passes
+// both middlewares; public routes (like /webhooks/efi, called by Efi to
+// validate our endpoint before registering the PIX webhook) get a 401 and
+// never reach their actual handler. Order matters here.
+app.use('/webhooks', webhooksRoutes)
 app.use('/oauth', oauthRoutes)
 app.use('/auth', authRoutes)
 app.use('/pipelines', pipelineRoutes)
@@ -83,6 +93,5 @@ app.use('/forms', formsRoutes)
 app.use('/automations', automationsRoutes)
 app.use('/admin', adminRoutes)
 app.use('/payments', paymentsRoutes)
-app.use('/webhooks', webhooksRoutes)
 
 export default app
