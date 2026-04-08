@@ -619,6 +619,118 @@ export async function importLeads(req: Request, res: Response): Promise<void> {
   }
 }
 
+// ── Export Leads (xlsx or csv, all rows for the tenant respecting filters) ──
+
+export async function exportLeads(req: Request, res: Response): Promise<void> {
+  try {
+    const tenantId = req.user!.tenantId
+    const role = req.user!.role
+    const userId = req.user!.userId
+
+    const { format = 'xlsx', search, pipelineId, stageId, status, temperature } =
+      req.query as Record<string, string | undefined>
+
+    if (format !== 'xlsx' && format !== 'csv') {
+      res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'format deve ser xlsx ou csv' } })
+      return
+    }
+
+    const where: Prisma.LeadWhereInput = { tenantId, deletedAt: null }
+    if (status) where.status = status as 'ACTIVE' | 'WON' | 'LOST' | 'ARCHIVED'
+    if (pipelineId) where.pipelineId = pipelineId
+    if (stageId) where.stageId = stageId
+    if (temperature) where.temperature = temperature as 'HOT' | 'WARM' | 'COLD'
+    if (role === 'SELLER') where.responsibleId = userId
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { company: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+      ]
+    }
+
+    const leads = await prisma.lead.findMany({
+      where,
+      include: {
+        pipeline: { select: { id: true, name: true } },
+        stage: { select: { id: true, name: true } },
+        responsible: { select: { id: true, name: true } },
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: 10000,
+    })
+
+    const wb = new ExcelJS.Workbook()
+    wb.creator = 'TriboCRM'
+    wb.created = new Date()
+
+    const sheet = wb.addWorksheet('Leads')
+
+    const headers = [
+      'Nome', 'Empresa', 'E-mail', 'Telefone', 'WhatsApp',
+      'CPF', 'CNPJ', 'Cargo', 'Origem', 'Temperatura', 'Valor Esperado',
+      'Etapa', 'Pipeline', 'Responsável', 'Última Atividade', 'Data de Criação',
+    ]
+    sheet.addRow(headers)
+
+    const headerRow = sheet.getRow(1)
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } }
+    headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF97316' } }
+    headerRow.alignment = { vertical: 'middle', horizontal: 'left' }
+    headerRow.height = 22
+
+    const tempLabel: Record<string, string> = { HOT: 'Quente', WARM: 'Morno', COLD: 'Frio' }
+    function fmtDate(d: Date | null | undefined): string {
+      if (!d) return ''
+      return new Date(d).toLocaleDateString('pt-BR') + ' ' + new Date(d).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    }
+
+    for (const l of leads) {
+      sheet.addRow([
+        l.name,
+        l.company ?? '',
+        l.email ?? '',
+        l.phone ?? '',
+        l.whatsapp ?? '',
+        l.cpf ?? '',
+        l.cnpj ?? '',
+        l.position ?? '',
+        l.source ?? '',
+        tempLabel[l.temperature] ?? l.temperature,
+        l.expectedValue ? Number(l.expectedValue) : '',
+        l.stage?.name ?? '',
+        l.pipeline?.name ?? '',
+        l.responsible?.name ?? '',
+        fmtDate(l.lastActivityAt),
+        fmtDate(l.createdAt),
+      ])
+    }
+
+    const widths = [22, 24, 28, 18, 18, 18, 22, 22, 16, 14, 16, 18, 18, 22, 22, 22]
+    widths.forEach((w, i) => { sheet.getColumn(i + 1).width = w })
+
+    const today = new Date().toISOString().slice(0, 10)
+    if (format === 'csv') {
+      const buffer = await wb.csv.writeBuffer({ formatterOptions: { delimiter: ',', quote: '"' } } as any)
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8')
+      res.setHeader('Content-Disposition', `attachment; filename="leads_export_${today}.csv"`)
+      // Prepend UTF-8 BOM so Excel opens with correct encoding
+      res.send(Buffer.concat([Buffer.from('\uFEFF', 'utf8'), Buffer.from(buffer as ArrayBuffer)]))
+    } else {
+      const buffer = await wb.xlsx.writeBuffer()
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+      res.setHeader('Content-Disposition', `attachment; filename="leads_export_${today}.xlsx"`)
+      res.send(Buffer.from(buffer as ArrayBuffer))
+    }
+  } catch (error: any) {
+    console.error('[Leads] exportLeads error:', error)
+    res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Erro ao exportar leads' },
+    })
+  }
+}
+
 // ── GET import template (xlsx, generated on-the-fly) ──
 
 export async function getImportTemplate(_req: Request, res: Response): Promise<void> {

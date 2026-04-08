@@ -6,7 +6,7 @@ import { gestaoMenuItems } from '../../config/gestaoMenu'
 import NewLeadModal, { type NewLeadData } from '../../components/shared/NewLeadModal/NewLeadModal'
 import ImportLeadsModal from '../../components/shared/ImportLeadsModal/ImportLeadsModal'
 import LeadDrawer from '../../components/shared/LeadDrawer/LeadDrawer'
-import { getLeads, createLead } from '../../services/leads.service'
+import { getLeads, createLead, exportLeads } from '../../services/leads.service'
 import { getPipelines } from '../../services/pipeline.service'
 import { getUsers, getTeams } from '../../services/users.service'
 
@@ -186,16 +186,18 @@ export default function GestaoLeadsPage() {
   const totalHot = leads.filter(l => l.temperature === 'HOT').length
   const totalValue = leads.reduce((s, l) => s + (Number(l.expectedValue) || 0), 0)
 
-  function exportData(type: 'xlsx' | 'csv') {
-    const header = 'Nome,Empresa,Etapa,Temperatura,Valor,Responsável,Última Atividade'
-    const rows = leads.map(l => `${l.name},${l.company ?? ''},${l.stage.name},${l.temperature},${Number(l.expectedValue) || 0},${l.responsible.name},${formatTimeAgo(l.lastActivityAt)}`)
-    const csv = [header, ...rows].join('\n')
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    const date = new Date().toISOString().slice(0, 10)
-    a.href = url; a.download = `leads_export_${date}.${type}`; a.click()
-    URL.revokeObjectURL(url)
+  async function exportData(type: 'xlsx' | 'csv') {
+    try {
+      const filters: Record<string, string | number> = {}
+      if (debouncedSearch) filters.search = debouncedSearch
+      if (pipelineId) filters.pipelineId = pipelineId
+      if (stageId) filters.stageId = stageId
+      if (temperature) filters.temperature = temperature
+      if (statusFilter) filters.status = statusFilter
+      await exportLeads(type, filters)
+    } catch {
+      // Errors are silent today; the existing UI doesn't have a toast slot here
+    }
   }
 
   async function handleNewLead(data: NewLeadData) {

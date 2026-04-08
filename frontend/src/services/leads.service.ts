@@ -76,4 +76,20 @@ export async function downloadImportTemplate(): Promise<void> {
   window.URL.revokeObjectURL(url)
 }
 
-export default { getLeads, getLead, createLead, updateLead, deleteLead, importLeads, downloadImportTemplate }
+export async function exportLeads(format: 'xlsx' | 'csv', filters: LeadsParams = {}): Promise<void> {
+  const response = await api.get('/leads/export', {
+    params: { format, ...filters },
+    responseType: 'blob',
+  })
+  const url = window.URL.createObjectURL(new Blob([response.data]))
+  const a = document.createElement('a')
+  const today = new Date().toISOString().slice(0, 10)
+  a.href = url
+  a.download = `leads_export_${today}.${format}`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  window.URL.revokeObjectURL(url)
+}
+
+export default { getLeads, getLead, createLead, updateLead, deleteLead, importLeads, downloadImportTemplate, exportLeads }

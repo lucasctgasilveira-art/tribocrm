@@ -3,7 +3,7 @@ import multer from 'multer'
 import { authMiddleware } from '../middleware/auth.middleware'
 import {
   getLeads, getLead, createLead, updateLead, deleteLead,
-  importLeads, getImportTemplate,
+  importLeads, getImportTemplate, exportLeads,
 } from '../controllers/leads.controller'
 
 const router = Router()
@@ -24,9 +24,11 @@ const upload = multer({
   },
 })
 
-// Import endpoints — must be declared BEFORE /:id so "import" is not parsed as an id
+// Import/Export endpoints — must be declared BEFORE /:id so the literal
+// path segments are not parsed as a lead id.
 router.get('/import/template', getImportTemplate)
 router.post('/import', upload.single('file'), importLeads)
+router.get('/export', exportLeads)
 
 router.get('/', getLeads)
 router.get('/:id', getLead)
