@@ -16,6 +16,48 @@ router.get('/dashboard', getAdminDashboard)
 router.get('/tenants', getTenants)
 router.get('/tenants/:id', getTenant)
 router.patch('/tenants/:id', updateTenant)
+
+router.post('/tenants', async (req: Request, res: Response) => {
+  try {
+    const { name, tradeName, cnpj, email, phone, planId, planCycle } = req.body ?? {}
+
+    if (!name || !cnpj || !email || !planId || !planCycle) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Campos obrigatórios: name, cnpj, email, planId, planCycle' },
+      })
+    }
+
+    const cnpjClean = String(cnpj).replace(/\D/g, '')
+    const trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+
+    const tenant = await prisma.tenant.create({
+      data: {
+        name,
+        tradeName: tradeName ?? null,
+        cnpj: cnpjClean,
+        email,
+        phone: phone ?? null,
+        planId,
+        planCycle,
+        status: 'TRIAL',
+        trialEndsAt,
+      },
+    })
+
+    return res.status(201).json({ success: true, data: tenant })
+  } catch (error: any) {
+    console.error('CREATE_TENANT_ERROR:', error)
+    return res.status(500).json({
+      success: false,
+      error: {
+        code: error?.code ?? 'INTERNAL_ERROR',
+        message: error?.message ?? 'Erro ao criar tenant',
+        detail: error?.meta ?? null,
+      },
+    })
+  }
+})
 router.get('/financial', getFinancial)
 
 // ── Plans ──
