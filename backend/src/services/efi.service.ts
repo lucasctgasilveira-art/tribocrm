@@ -301,7 +301,7 @@ export async function getPaymentHistory(tenantId: string): Promise<any[]> {
 const WEBHOOK_URL = process.env.EFI_WEBHOOK_URL ?? 'https://tribocrm-production.up.railway.app/webhooks/efi'
 
 export async function registerPixWebhook(): Promise<{ url: string; warning?: string; pixKey: string }> {
-  const pixKey = process.env.EFI_PIX_KEY ?? ''
+  const pixKey = (process.env.EFI_PIX_KEY || '').replace(/[\.\-\/]/g, '')
   if (!pixKey) throw new Error('EFI_PIX_KEY not configured')
 
   console.log('[Efi] registerPixWebhook starting:', { pixKey: pixKey.slice(0, 6) + '***', webhookUrl: WEBHOOK_URL, sandbox: isSandbox })
