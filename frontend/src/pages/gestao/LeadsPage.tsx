@@ -8,6 +8,7 @@ import ImportLeadsModal from '../../components/shared/ImportLeadsModal/ImportLea
 import LeadDrawer from '../../components/shared/LeadDrawer/LeadDrawer'
 import { getLeads, createLead } from '../../services/leads.service'
 import { getPipelines } from '../../services/pipeline.service'
+import { getUsers } from '../../services/users.service'
 
 // ── Types ──
 
@@ -79,6 +80,9 @@ export default function GestaoLeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([])
   const [meta, setMeta] = useState<Meta>({ total: 0, page: 1, perPage: 20, totalPages: 0 })
   const [pipelines, setPipelines] = useState<PipelineOption[]>([])
+  const [usersList, setUsersList] = useState<{ id: string; name: string }[]>([])
+  const [reloadKey, setReloadKey] = useState(0)
+  const reload = useCallback(() => setReloadKey(k => k + 1), [])
   const [loading, setLoading] = useState(true)
 
   // Filter state
@@ -115,6 +119,11 @@ export default function GestaoLeadsPage() {
     getPipelines().then((data: PipelineOption[]) => setPipelines(data)).catch(() => {})
   }, [])
 
+  // Load users (for import "Responsável" dropdown)
+  useEffect(() => {
+    getUsers().then((data: Array<{ id: string; name: string }>) => setUsersList(data ?? [])).catch(() => setUsersList([]))
+  }, [])
+
   // Compute status filter from tab
   const statusFilter = useMemo(() => {
     if (tab === 'active') return 'ACTIVE'
@@ -144,7 +153,7 @@ export default function GestaoLeadsPage() {
       }
     }
     load()
-  }, [debouncedSearch, pipelineId, stageId, temperature, statusFilter, page])
+  }, [debouncedSearch, pipelineId, stageId, temperature, statusFilter, page, reloadKey])
 
   // Available stages based on selected pipeline
   const stageOptions = useMemo(() => {
@@ -418,7 +427,13 @@ export default function GestaoLeadsPage() {
       )}
 
       <NewLeadModal open={modalOpen} onClose={() => setModalOpen(false)} onSubmit={handleNewLead} />
-      <ImportLeadsModal open={importOpen} onClose={() => setImportOpen(false)} />
+      <ImportLeadsModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        pipelines={pipelines}
+        users={usersList}
+        onImported={(result) => { if (result.imported > 0) { reload() } }}
+      />
       {drawerLead && (
         <LeadDrawer
           lead={{

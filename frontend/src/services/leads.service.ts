@@ -50,4 +50,30 @@ export async function deleteLead(id: string) {
   return response.data.data
 }
 
-export default { getLeads, getLead, createLead, updateLead, deleteLead }
+export interface ImportLeadsResult {
+  imported: number
+  duplicates: number
+  errors: number
+  errorDetails: Array<{ row: number; reason: string }>
+}
+
+export async function importLeads(formData: FormData): Promise<ImportLeadsResult> {
+  const response = await api.post('/leads/import', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return response.data.data
+}
+
+export async function downloadImportTemplate(): Promise<void> {
+  const response = await api.get('/leads/import/template', { responseType: 'blob' })
+  const url = window.URL.createObjectURL(new Blob([response.data]))
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'modelo-importacao-leads.xlsx'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  window.URL.revokeObjectURL(url)
+}
+
+export default { getLeads, getLead, createLead, updateLead, deleteLead, importLeads, downloadImportTemplate }

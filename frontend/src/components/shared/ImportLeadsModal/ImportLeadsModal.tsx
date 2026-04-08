@@ -1,22 +1,40 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import { X, Download, Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, XCircle, Loader2 } from 'lucide-react'
+import { importLeads, downloadImportTemplate, type ImportLeadsResult } from '../../../services/leads.service'
+
+interface PipelineOption {
+  id: string
+  name: string
+  stages: { id: string; name: string; color: string }[]
+}
+
+interface UserOption {
+  id: string
+  name: string
+}
 
 interface Props {
   open: boolean
   onClose: () => void
-  onImported?: (count: number) => void
+  pipelines: PipelineOption[]
+  users: UserOption[]
+  onImported?: (result: ImportLeadsResult) => void
 }
 
-type Step = 1 | 3
-type UploadState = 'idle' | 'uploaded' | 'importing' | 'done'
+type Step = 1 | 2
 
 const columns = [
-  { name: 'Nome', required: true }, { name: 'Empresa', required: true },
-  { name: 'E-mail', required: false }, { name: 'Telefone', required: false },
-  { name: 'CPF', required: false }, { name: 'CNPJ', required: false },
-  { name: 'Cargo', required: false }, { name: 'Fonte', required: false },
-  { name: 'Valor', required: false }, { name: 'Etapa', required: false },
-  { name: 'Temperatura', required: false }, { name: 'Responsável', required: false },
+  { name: 'Nome', required: true },
+  { name: 'Empresa', required: false },
+  { name: 'E-mail', required: false },
+  { name: 'Telefone', required: false },
+  { name: 'WhatsApp', required: false },
+  { name: 'CPF', required: false },
+  { name: 'CNPJ', required: false },
+  { name: 'Cargo', required: false },
+  { name: 'Origem', required: false },
+  { name: 'Temperatura', required: false },
+  { name: 'Valor Esperado', required: false },
   { name: 'Observações', required: false },
 ]
 
@@ -27,71 +45,98 @@ const CSS = `
   .im-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}.im-body{scrollbar-width:thin;scrollbar-color:var(--border) transparent}
 `
 
-export default function ImportLeadsModal({ open, onClose, onImported }: Props) {
+export default function ImportLeadsModal({ open, onClose, pipelines, users, onImported }: Props) {
   const [step, setStep] = useState<Step>(1)
-  const [uploadState, setUploadState] = useState<UploadState>('idle')
-  const [fileName, setFileName] = useState('')
-  const [fileSize, setFileSize] = useState('')
+  const [file, setFile] = useState<File | null>(null)
   const [dragOver, setDragOver] = useState(false)
-  const [roundRobin, setRoundRobin] = useState(true)
-  const [initialStage, setInitialStage] = useState('Sem Contato')
+  const [pipelineId, setPipelineId] = useState('')
+  const [stageId, setStageId] = useState('')
+  const [responsibleId, setResponsibleId] = useState('')
+  const [importing, setImporting] = useState(false)
+  const [result, setResult] = useState<ImportLeadsResult | null>(null)
+  const [error, setError] = useState('')
+  const [downloadingTemplate, setDownloadingTemplate] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  const stages = useMemo(() => {
+    const p = pipelines.find(p => p.id === pipelineId)
+    return p?.stages ?? []
+  }, [pipelines, pipelineId])
 
   if (!open) return null
 
   function reset() {
-    setStep(1); setUploadState('idle'); setFileName(''); setFileSize(''); setDragOver(false)
-    setRoundRobin(true); setInitialStage('Sem Contato')
+    setStep(1); setFile(null); setDragOver(false)
+    setPipelineId(''); setStageId(''); setResponsibleId('')
+    setImporting(false); setResult(null); setError('')
   }
 
   function handleClose() { reset(); onClose() }
 
-  function downloadTemplate() {
-    const header = 'Nome,Empresa,E-mail,Telefone,CPF,CNPJ,Cargo,Fonte,Valor Esperado,Etapa,Temperatura,Responsável,Observações'
-    const sample = 'João Silva,Empresa ABC,joao@empresa.com,(11) 99999-0000,,,Gerente Comercial,Instagram,15000,Sem Contato,Morno,Ana Souza,Lead captado via campanha'
-    const blob = new Blob([header + '\n' + sample], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url; a.download = 'modelo_importacao_tribocrm.csv'; a.click()
-    URL.revokeObjectURL(url)
+  async function handleDownloadTemplate() {
+    setDownloadingTemplate(true)
+    try {
+      await downloadImportTemplate()
+    } catch {
+      setError('Não foi possível baixar o modelo.')
+    }
+    setDownloadingTemplate(false)
   }
 
-  function handleFile(file: File) {
-    setFileName(file.name)
-    setFileSize(file.size < 1024 ? `${file.size} B` : file.size < 1048576 ? `${(file.size / 1024).toFixed(1)} KB` : `${(file.size / 1048576).toFixed(1)} MB`)
-    setUploadState('uploaded')
+  function handleFile(f: File) {
+    const ok = f.name.toLowerCase().endsWith('.xlsx') || f.name.toLowerCase().endsWith('.xls')
+    if (!ok) {
+      setError('Use um arquivo .xlsx ou .xls')
+      return
+    }
+    setError('')
+    setFile(f)
   }
 
   function handleDrop(e: React.DragEvent) {
     e.preventDefault(); setDragOver(false)
-    const file = e.dataTransfer.files[0]
-    if (file) handleFile(file)
+    const f = e.dataTransfer.files[0]
+    if (f) handleFile(f)
   }
 
   function handleFileInput(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (file) handleFile(file)
+    const f = e.target.files?.[0]
+    if (f) handleFile(f)
   }
 
-  function handleImport() {
-    setUploadState('importing')
-    setTimeout(() => {
-      setUploadState('done')
-      onImported?.(47)
-      setTimeout(handleClose, 1200)
-    }, 1500)
+  async function handleImport() {
+    if (!file || !pipelineId || !stageId) {
+      setError('Selecione o arquivo, o pipeline e a etapa inicial.')
+      return
+    }
+    setImporting(true); setError('')
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('pipelineId', pipelineId)
+      fd.append('stageId', stageId)
+      if (responsibleId) fd.append('responsibleId', responsibleId)
+      const data = await importLeads(fd)
+      setResult(data)
+      onImported?.(data)
+    } catch (e: any) {
+      setError(e.response?.data?.error?.message ?? 'Erro ao importar leads')
+    }
+    setImporting(false)
   }
 
-  // Step indicator
-  const steps = [{ n: 1, label: 'Baixar modelo' }, { n: 2, label: 'Preencher' }, { n: 3, label: 'Enviar arquivo' }]
-  const activeStep = step === 1 ? 1 : 3
+  const fileSizeStr = file
+    ? (file.size < 1024 ? `${file.size} B` : file.size < 1048576 ? `${(file.size / 1024).toFixed(1)} KB` : `${(file.size / 1048576).toFixed(1)} MB`)
+    : ''
+
+  const canImport = !!file && !!pipelineId && !!stageId && !importing && !result
 
   return (
     <>
       <style>{CSS}</style>
       <div onClick={handleClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50, animation: 'imFadeIn 0.2s ease-out' }} />
 
-      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 520, maxWidth: '90vw', maxHeight: '90vh', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column', animation: 'imScaleIn 0.2s ease-out' }}>
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 560, maxWidth: '90vw', maxHeight: '90vh', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column', animation: 'imScaleIn 0.2s ease-out' }}>
         {/* Header */}
         <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexShrink: 0 }}>
           <div>
@@ -101,46 +146,43 @@ export default function ImportLeadsModal({ open, onClose, onImported }: Props) {
           <button onClick={handleClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
         </div>
 
-        {/* Step indicator */}
-        <div style={{ padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0, borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-          {steps.map((s, i) => {
-            const done = activeStep > s.n
-            const active = activeStep === s.n || (step === 3 && s.n === 3)
-            const isCurrent = (step === 1 && s.n === 1) || (step === 3 && s.n === 3)
-            return (
-              <div key={s.n} style={{ display: 'flex', alignItems: 'center' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                  <div style={{
-                    width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 12, fontWeight: 700,
-                    background: done || isCurrent ? '#f97316' : 'var(--border)',
-                    color: done || isCurrent ? '#fff' : 'var(--text-muted)',
-                  }}>{done ? '✓' : s.n}</div>
-                  <span style={{ fontSize: 10, color: active || isCurrent ? '#f97316' : 'var(--text-muted)', whiteSpace: 'nowrap' }}>{s.label}</span>
-                </div>
-                {i < steps.length - 1 && (
-                  <div style={{ width: 48, height: 2, background: done || (step === 3 && i === 1) ? '#f97316' : 'var(--border)', margin: '0 8px', marginBottom: 16 }} />
-                )}
-              </div>
-            )
-          })}
-        </div>
-
         {/* Body */}
         <div className="im-body" style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
-          {step === 1 && (
+          {/* Result screen */}
+          {result ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ textAlign: 'center', marginBottom: 12 }}>
+                <CheckCircle2 size={40} color="#22c55e" strokeWidth={1.5} />
+                <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', marginTop: 8 }}>Importação concluída</div>
+              </div>
+              <ResultCard icon={<CheckCircle2 size={16} strokeWidth={1.5} />} color="#22c55e" bg="rgba(34,197,94,0.08)" border="rgba(34,197,94,0.2)" text={`${result.imported} lead${result.imported !== 1 ? 's' : ''} importado${result.imported !== 1 ? 's' : ''}`} />
+              <ResultCard icon={<AlertTriangle size={16} strokeWidth={1.5} />} color="#f59e0b" bg="rgba(245,158,11,0.08)" border="rgba(245,158,11,0.2)" text={`${result.duplicates} duplicata${result.duplicates !== 1 ? 's' : ''} ignorada${result.duplicates !== 1 ? 's' : ''}`} />
+              <ResultCard icon={<XCircle size={16} strokeWidth={1.5} />} color="#ef4444" bg="rgba(239,68,68,0.08)" border="rgba(239,68,68,0.2)" text={`${result.errors} erro${result.errors !== 1 ? 's' : ''}`} />
+              {result.errorDetails.length > 0 && (
+                <details style={{ marginTop: 8 }}>
+                  <summary style={{ fontSize: 12, color: 'var(--text-muted)', cursor: 'pointer' }}>Ver detalhes dos erros</summary>
+                  <div style={{ marginTop: 8, maxHeight: 200, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8, padding: 12 }}>
+                    {result.errorDetails.map((d, i) => (
+                      <div key={i} style={{ fontSize: 12, color: 'var(--text-secondary)', padding: '4px 0', borderBottom: i < result.errorDetails.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                        Linha {d.row}: {d.reason}
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
+            </div>
+          ) : step === 1 ? (
             <>
-              {/* Download template */}
+              {/* Step 1: download template */}
               <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 12, padding: 24, textAlign: 'center', marginBottom: 20 }}>
                 <Download size={32} color="#f97316" strokeWidth={1.5} />
                 <h3 style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', margin: '12px 0 6px' }}>Baixe o modelo Excel</h3>
                 <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16, lineHeight: 1.5 }}>
                   Use nosso modelo para garantir que os dados sejam importados corretamente.<br />Não altere os nomes das colunas.
                 </p>
-                <button onClick={downloadTemplate} style={{ width: '100%', background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
-                  onMouseEnter={e => { e.currentTarget.style.background = '#fb923c' }}
-                  onMouseLeave={e => { e.currentTarget.style.background = '#f97316' }}>
-                  <Download size={15} strokeWidth={1.5} /> Baixar modelo Excel
+                <button onClick={handleDownloadTemplate} disabled={downloadingTemplate} style={{ width: '100%', background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 0', fontSize: 13, fontWeight: 600, cursor: downloadingTemplate ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: downloadingTemplate ? 0.7 : 1 }}>
+                  {downloadingTemplate ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} strokeWidth={1.5} />}
+                  {downloadingTemplate ? 'Baixando...' : 'Baixar modelo .xlsx'}
                 </button>
               </div>
 
@@ -154,108 +196,100 @@ export default function ImportLeadsModal({ open, onClose, onImported }: Props) {
                     </span>
                   ))}
                 </div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>* Apenas a coluna "Nome" é obrigatória por linha.</div>
               </div>
 
-              <button onClick={() => setStep(3)} style={{ width: '100%', background: 'transparent', border: '1px solid rgba(249,115,22,0.3)', color: '#f97316', borderRadius: 8, padding: '10px 0', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+              <button onClick={() => setStep(2)} style={{ width: '100%', background: 'transparent', border: '1px solid rgba(249,115,22,0.3)', color: '#f97316', borderRadius: 8, padding: '10px 0', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
                 Já tenho o modelo preenchido →
               </button>
             </>
-          )}
-
-          {step === 3 && uploadState === 'idle' && (
-            <div
-              onDragOver={e => { e.preventDefault(); setDragOver(true) }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={handleDrop}
-              onClick={() => fileRef.current?.click()}
-              style={{
-                border: `2px dashed ${dragOver ? '#f97316' : 'var(--border)'}`,
-                borderRadius: 12, padding: 40, textAlign: 'center', cursor: 'pointer',
-                background: dragOver ? 'rgba(249,115,22,0.04)' : 'transparent',
-                transition: 'all 0.2s',
-              }}
-            >
-              <Upload size={32} color="var(--text-muted)" strokeWidth={1.5} />
-              <div style={{ fontSize: 14, color: 'var(--text-primary)', marginTop: 12 }}>Arraste o arquivo aqui</div>
-              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>ou clique para selecionar</div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>.xlsx, .xls, .csv</div>
-              <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleFileInput} style={{ display: 'none' }} />
-            </div>
-          )}
-
-          {step === 3 && (uploadState === 'uploaded' || uploadState === 'importing') && (
+          ) : (
             <>
-              {/* File info */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16 }}>
-                <FileSpreadsheet size={24} color="#22c55e" strokeWidth={1.5} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{fileName}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{fileSize}</div>
+              {/* Step 2: upload + config */}
+              {!file ? (
+                <div
+                  onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={handleDrop}
+                  onClick={() => fileRef.current?.click()}
+                  style={{
+                    border: `2px dashed ${dragOver ? '#f97316' : 'var(--border)'}`,
+                    borderRadius: 12, padding: 40, textAlign: 'center', cursor: 'pointer',
+                    background: dragOver ? 'rgba(249,115,22,0.04)' : 'transparent',
+                    transition: 'all 0.2s', marginBottom: 16,
+                  }}
+                >
+                  <Upload size={32} color="var(--text-muted)" strokeWidth={1.5} />
+                  <div style={{ fontSize: 14, color: 'var(--text-primary)', marginTop: 12 }}>Arraste o arquivo aqui</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>ou clique para selecionar</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>.xlsx ou .xls (máx 5 MB)</div>
+                  <input ref={fileRef} type="file" accept=".xlsx,.xls" onChange={handleFileInput} style={{ display: 'none' }} />
                 </div>
-                <button onClick={() => { setUploadState('idle'); setFileName(''); setFileSize('') }} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}>
-                  <X size={14} strokeWidth={1.5} />
-                </button>
-              </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16 }}>
+                  <FileSpreadsheet size={24} color="#22c55e" strokeWidth={1.5} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{file.name}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{fileSizeStr}</div>
+                  </div>
+                  <button onClick={() => setFile(null)} disabled={importing} style={{ background: 'transparent', border: 'none', cursor: importing ? 'not-allowed' : 'pointer', color: 'var(--text-muted)', padding: 4 }}>
+                    <X size={14} strokeWidth={1.5} />
+                  </button>
+                </div>
+              )}
 
-              {/* Results */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-                <ResultCard icon={<CheckCircle2 size={16} strokeWidth={1.5} />} color="#22c55e" bg="rgba(34,197,94,0.08)" border="rgba(34,197,94,0.2)" text="47 leads prontos para importar" />
-                <ResultCard icon={<AlertTriangle size={16} strokeWidth={1.5} />} color="#f59e0b" bg="rgba(245,158,11,0.08)" border="rgba(245,158,11,0.2)" text="3 duplicatas encontradas (serão ignoradas)" />
-                <ResultCard icon={<XCircle size={16} strokeWidth={1.5} />} color="#ef4444" bg="rgba(239,68,68,0.08)" border="rgba(239,68,68,0.2)" text="1 erro — Linha 5: E-mail inválido" />
-              </div>
+              {/* Pipeline / Stage / Responsible */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Pipeline de destino <span style={{ color: '#f97316' }}>*</span></label>
+                  <select value={pipelineId} onChange={e => { setPipelineId(e.target.value); setStageId('') }}
+                    style={{ width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', cursor: 'pointer', appearance: 'none' }}>
+                    <option value="">Selecione um pipeline...</option>
+                    {pipelines.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                </div>
 
-              {/* Options */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)' }}>
-                  <input type="checkbox" checked={roundRobin} onChange={e => setRoundRobin(e.target.checked)}
-                    style={{ width: 16, height: 16, accentColor: '#f97316' }} />
-                  Atribuir automaticamente via round-robin
-                </label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Etapa inicial:</span>
-                  <select value={initialStage} onChange={e => setInitialStage(e.target.value)} style={{
-                    background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px',
-                    fontSize: 12, color: 'var(--text-primary)', outline: 'none', cursor: 'pointer',
-                  }}>
-                    <option>Sem Contato</option><option>Em Contato</option>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Etapa inicial <span style={{ color: '#f97316' }}>*</span></label>
+                  <select value={stageId} onChange={e => setStageId(e.target.value)} disabled={!pipelineId}
+                    style={{ width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', cursor: pipelineId ? 'pointer' : 'not-allowed', appearance: 'none', opacity: pipelineId ? 1 : 0.6 }}>
+                    <option value="">{pipelineId ? 'Selecione uma etapa...' : 'Selecione um pipeline primeiro'}</option>
+                    {stages.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Responsável <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>(opcional — se vazio, será você)</span></label>
+                  <select value={responsibleId} onChange={e => setResponsibleId(e.target.value)}
+                    style={{ width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', cursor: 'pointer', appearance: 'none' }}>
+                    <option value="">Eu mesmo</option>
+                    {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                   </select>
                 </div>
               </div>
-            </>
-          )}
 
-          {uploadState === 'done' && (
-            <div style={{ textAlign: 'center', padding: 20 }}>
-              <CheckCircle2 size={48} color="#22c55e" strokeWidth={1.5} />
-              <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', marginTop: 12 }}>47 leads importados com sucesso!</div>
-            </div>
+              {error && <div style={{ fontSize: 12, color: '#ef4444', marginTop: 12 }}>{error}</div>}
+            </>
           )}
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: step === 3 && uploadState === 'uploaded' ? 'space-between' : 'flex-end', flexShrink: 0 }}>
-          {step === 3 && (uploadState === 'uploaded' || uploadState === 'importing') && (
-            <button onClick={() => { setStep(1); setUploadState('idle') }} disabled={uploadState === 'importing'} style={{
-              background: 'transparent', border: '1px solid var(--border)', borderRadius: 8,
-              padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer',
-              opacity: uploadState === 'importing' ? 0.5 : 1,
-            }}>Voltar</button>
-          )}
-          {step === 1 && (
-            <button onClick={handleClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Fechar</button>
-          )}
-          {step === 3 && uploadState === 'idle' && (
-            <button onClick={handleClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Fechar</button>
-          )}
-          {step === 3 && (uploadState === 'uploaded' || uploadState === 'importing') && (
-            <button onClick={handleImport} disabled={uploadState === 'importing'} style={{
-              background: '#f97316', border: 'none', borderRadius: 8, padding: '9px 20px',
-              fontSize: 13, fontWeight: 600, color: '#fff', cursor: uploadState === 'importing' ? 'not-allowed' : 'pointer',
-              display: 'flex', alignItems: 'center', gap: 6, opacity: uploadState === 'importing' ? 0.7 : 1,
-            }}>
-              {uploadState === 'importing' && <Loader2 size={14} className="animate-spin" />}
-              {uploadState === 'importing' ? 'Importando...' : 'Importar 47 leads →'}
-            </button>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
+          {result ? (
+            <button onClick={handleClose} style={{ marginLeft: 'auto', background: '#f97316', border: 'none', borderRadius: 8, padding: '9px 24px', fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer' }}>Concluir</button>
+          ) : step === 1 ? (
+            <>
+              <button onClick={handleClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Fechar</button>
+              <button onClick={() => setStep(2)} style={{ background: 'transparent', border: '1px solid rgba(249,115,22,0.3)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: '#f97316', cursor: 'pointer' }}>Próximo →</button>
+            </>
+          ) : (
+            <>
+              <button onClick={() => setStep(1)} disabled={importing} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: importing ? 'not-allowed' : 'pointer', opacity: importing ? 0.5 : 1 }}>← Voltar</button>
+              <button onClick={handleImport} disabled={!canImport} style={{ background: canImport ? '#f97316' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 24px', fontSize: 13, fontWeight: 600, color: canImport ? '#fff' : 'var(--text-muted)', cursor: canImport ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 6 }}>
+                {importing && <Loader2 size={14} className="animate-spin" />}
+                {importing ? 'Importando...' : 'Importar'}
+              </button>
+            </>
           )}
         </div>
       </div>
