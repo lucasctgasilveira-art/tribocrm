@@ -8,12 +8,22 @@ export interface PhoneEntry { ddi: string; number: string }
 export interface NewLeadData {
   name: string; company: string; position: string; email: string
   phones: PhoneEntry[]; cpf: string; cnpj: string; pipeline: string; stage: string
-  value: string; responsible: string; source: string; temperature: string; notes: string
+  value: string; responsible: string; responsibleId: string; source: string; temperature: string; notes: string
   // compat
   phone: string; phoneDdi: string
 }
 
-interface Props { open: boolean; onClose: () => void; onSubmit: (data: NewLeadData) => void; defaultStage?: string }
+export interface UserOption { id: string; name: string }
+export type DistributionType = 'MANUAL' | 'ROUND_ROBIN_ALL' | 'ROUND_ROBIN_TEAM' | 'SPECIFIC_USER'
+
+interface Props {
+  open: boolean
+  onClose: () => void
+  onSubmit: (data: NewLeadData) => void
+  defaultStage?: string
+  users?: UserOption[]
+  pipelineDistribution?: DistributionType
+}
 type FieldStatus = 'idle' | 'valid' | 'error'
 
 // ── Countries ──
@@ -204,7 +214,7 @@ function PhoneInput({ entry, onChange, onRemove, showRemove }: { entry: PhoneEnt
 
 // ── Main Component ──
 
-export default function NewLeadModal({ open, onClose, onSubmit, defaultStage }: Props) {
+export default function NewLeadModal({ open, onClose, onSubmit, defaultStage, users, pipelineDistribution = 'MANUAL' }: Props) {
   const [saving, setSaving] = useState(false)
   const [name, setName] = useState('')
   const [company, setCompany] = useState('')
@@ -216,6 +226,11 @@ export default function NewLeadModal({ open, onClose, onSubmit, defaultStage }: 
   const [pipeline] = useState('Pipeline Principal')
   const [stage, setStage] = useState(defaultStage ?? 'Sem Contato')
   const [value, setValue] = useState('')
+  // When a real users list is provided, the dropdown stores a UUID; otherwise
+  // (legacy callers without props) it falls back to the hardcoded mock list.
+  const useRealUsers = Array.isArray(users) && users.length > 0
+  const isAutoDistribution = pipelineDistribution !== 'MANUAL'
+  const [responsibleId, setResponsibleId] = useState<string>('')
   const [responsible, setResponsible] = useState(respOpts[0] ?? '')
   const [source, setSource] = useState('')
   const [temperature, setTemperature] = useState('Morno')
@@ -233,7 +248,7 @@ export default function NewLeadModal({ open, onClose, onSubmit, defaultStage }: 
     if (open) {
       setName(''); setCompany(''); setPosition(''); setEmail(''); setPhones([{ ddi: '+55', number: '' }])
       setCpf(''); setCnpj(''); setStage(defaultStage ?? 'Sem Contato'); setValue(''); setSource(''); setNotes('')
-      setResponsible(respOpts[0] ?? ''); setTemperature('Morno')
+      setResponsible(respOpts[0] ?? ''); setResponsibleId(''); setTemperature('Morno')
       setSaving(false); setEmailStatus('idle'); setEmailErr(''); setCpfStatus('idle'); setCpfErr(''); setCnpjStatus('idle'); setCnpjErr('')
       setTimeout(() => nameRef.current?.focus(), 100)
     }
@@ -263,7 +278,8 @@ export default function NewLeadModal({ open, onClose, onSubmit, defaultStage }: 
   function removePhone(idx: number) { setPhones(p => p.filter((_, i) => i !== idx)) }
 
   const hasErr = (email.length > 0 && emailStatus === 'error') || (cpf.replace(/\D/g, '').length > 0 && cpfStatus === 'error') || (cnpj.replace(/\D/g, '').length > 0 && cnpjStatus === 'error')
-  const canSubmit = name.trim() && email.trim() && emailRe.test(email) && responsible && !hasErr && !saving
+  const responsibleOk = isAutoDistribution || (useRealUsers ? true : !!responsible)
+  const canSubmit = name.trim() && email.trim() && emailRe.test(email) && responsibleOk && !hasErr && !saving
 
   if (!open) return null
 
@@ -271,7 +287,7 @@ export default function NewLeadModal({ open, onClose, onSubmit, defaultStage }: 
     if (!canSubmit) return
     setSaving(true)
     setTimeout(() => {
-      onSubmit({ name, company, position, email, phones, phone: phones[0]?.number ?? '', phoneDdi: phones[0]?.ddi ?? '+55', cpf, cnpj, pipeline, stage, value, responsible, source, temperature, notes })
+      onSubmit({ name, company, position, email, phones, phone: phones[0]?.number ?? '', phoneDdi: phones[0]?.ddi ?? '+55', cpf, cnpj, pipeline, stage, value, responsible, responsibleId, source, temperature, notes })
       setSaving(false); onClose()
     }, 400)
   }
@@ -339,7 +355,22 @@ export default function NewLeadModal({ open, onClose, onSubmit, defaultStage }: 
             <Field label="Pipeline" required><select value={pipeline} disabled style={{ ...baseInput, appearance: 'none' as const, cursor: 'default', opacity: 0.7 }}><option>Pipeline Principal</option></select></Field>
             <Field label="Etapa" required><select value={stage} onChange={e => setStage(e.target.value)} style={{ ...baseInput, appearance: 'none' as const, cursor: 'pointer' }} onFocus={focusEv} onBlur={blurEv}>{stageOpts.map(s => <option key={s}>{s}</option>)}</select></Field>
             <Field label="Valor esperado (R$)"><input type="number" value={value} onChange={e => setValue(e.target.value)} placeholder="0" style={baseInput} onFocus={focusEv} onBlur={blurEv} /></Field>
-            <Field label="Responsável" required><select value={responsible} onChange={e => setResponsible(e.target.value)} style={{ ...baseInput, appearance: 'none' as const, cursor: 'pointer' }} onFocus={focusEv} onBlur={blurEv}>{respOpts.map(r => <option key={r}>{r}</option>)}</select></Field>
+            <Field label="Responsável" required={!isAutoDistribution}>
+              {isAutoDistribution ? (
+                <div style={{ ...baseInput, display: 'flex', alignItems: 'center', color: 'var(--text-muted)', fontStyle: 'italic', cursor: 'not-allowed', background: 'var(--bg)' }}>
+                  Será atribuído automaticamente conforme regra do pipeline
+                </div>
+              ) : useRealUsers ? (
+                <select value={responsibleId} onChange={e => setResponsibleId(e.target.value)} style={{ ...baseInput, appearance: 'none' as const, cursor: 'pointer' }} onFocus={focusEv} onBlur={blurEv}>
+                  <option value="">Eu mesmo</option>
+                  {users!.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                </select>
+              ) : (
+                <select value={responsible} onChange={e => setResponsible(e.target.value)} style={{ ...baseInput, appearance: 'none' as const, cursor: 'pointer' }} onFocus={focusEv} onBlur={blurEv}>
+                  {respOpts.map(r => <option key={r}>{r}</option>)}
+                </select>
+              )}
+            </Field>
             <Field label="Fonte do lead"><select value={source} onChange={e => setSource(e.target.value)} style={{ ...baseInput, appearance: 'none' as const, cursor: 'pointer' }} onFocus={focusEv} onBlur={blurEv}><option value="">Selecionar...</option>{sourceOpts.map(s => <option key={s}>{s}</option>)}</select></Field>
             <Field label="Temperatura"><select value={temperature} onChange={e => setTemperature(e.target.value)} style={{ ...baseInput, appearance: 'none' as const, cursor: 'pointer' }} onFocus={focusEv} onBlur={blurEv}>{tempOpts.map(t => <option key={t}>{t}</option>)}</select></Field>
           </div>

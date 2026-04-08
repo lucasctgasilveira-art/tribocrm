@@ -471,6 +471,8 @@ model Pipeline {
   isDefault          Boolean          @default(false) @map("is_default")
   distributionType   DistributionType @default(MANUAL) @map("distribution_type")
   lastAssignedUserId String?          @map("last_assigned_user_id") @db.Uuid
+  teamId             String?          @map("team_id") @db.Uuid
+  specificUserId     String?          @map("specific_user_id") @db.Uuid
   isActive           Boolean          @default(true) @map("is_active")
   createdAt          DateTime         @default(now()) @map("created_at")
   tenant             Tenant           @relation(fields: [tenantId], references: [id])

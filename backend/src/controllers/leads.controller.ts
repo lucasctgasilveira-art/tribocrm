@@ -176,12 +176,93 @@ export async function getLead(req: Request, res: Response): Promise<void> {
   }
 }
 
+/**
+ * Resolve the responsible user for a new lead based on the pipeline's
+ * configured distribution rule.
+ *
+ * - MANUAL          → bodyResponsibleId (or fall back to current user)
+ * - SPECIFIC_USER   → pipeline.specificUserId (fall back to MANUAL if missing)
+ * - ROUND_ROBIN_ALL → next active SELLER/TEAM_LEADER/MANAGER after lastAssignedUserId
+ * - ROUND_ROBIN_TEAM→ next active member of pipeline.teamId after lastAssignedUserId
+ *
+ * Returns { responsibleId, teamId, nextLastAssigned } so the caller can both
+ * insert the lead and update pipeline.lastAssignedUserId atomically.
+ */
+async function resolveResponsibleForPipeline(
+  tx: Prisma.TransactionClient,
+  pipeline: { id: string; distributionType: string; lastAssignedUserId: string | null; teamId: string | null; specificUserId: string | null },
+  tenantId: string,
+  currentUserId: string,
+  bodyResponsibleId: string | undefined,
+): Promise<{ responsibleId: string; teamId: string | null }> {
+  const dt = pipeline.distributionType
+
+  // Helper: rotate to the next id in a sorted pool, given the last assigned
+  function nextInPool(pool: string[], last: string | null): string {
+    if (pool.length === 0) throw new Error('Pool de vendedores vazio')
+    if (!last) return pool[0]!
+    const idx = pool.indexOf(last)
+    if (idx === -1) return pool[0]!
+    return pool[(idx + 1) % pool.length]!
+  }
+
+  if (dt === 'SPECIFIC_USER' && pipeline.specificUserId) {
+    return { responsibleId: pipeline.specificUserId, teamId: null }
+  }
+
+  if (dt === 'ROUND_ROBIN_ALL') {
+    const sellers = await tx.user.findMany({
+      where: {
+        tenantId,
+        deletedAt: null,
+        isActive: true,
+        role: { in: ['SELLER', 'TEAM_LEADER', 'MANAGER'] },
+      },
+      select: { id: true },
+      orderBy: { name: 'asc' },
+    })
+    if (sellers.length > 0) {
+      const pool = sellers.map(s => s.id)
+      return { responsibleId: nextInPool(pool, pipeline.lastAssignedUserId), teamId: null }
+    }
+    // Fall through to MANUAL on empty pool
+  }
+
+  if (dt === 'ROUND_ROBIN_TEAM' && pipeline.teamId) {
+    const members = await tx.teamMember.findMany({
+      where: {
+        teamId: pipeline.teamId,
+        tenantId,
+        user: { isActive: true, deletedAt: null },
+      },
+      select: { userId: true },
+      orderBy: { joinedAt: 'asc' },
+    })
+    if (members.length > 0) {
+      const pool = members.map(m => m.userId)
+      return { responsibleId: nextInPool(pool, pipeline.lastAssignedUserId), teamId: pipeline.teamId }
+    }
+    // Fall through to MANUAL on empty team
+  }
+
+  // MANUAL (or any unconfigured branch above): use what the body provided,
+  // validating it belongs to the tenant; otherwise the current user.
+  if (bodyResponsibleId && bodyResponsibleId !== '') {
+    const respUser = await tx.user.findFirst({
+      where: { id: bodyResponsibleId, tenantId, deletedAt: null },
+      select: { id: true },
+    })
+    if (respUser) return { responsibleId: respUser.id, teamId: null }
+  }
+  return { responsibleId: currentUserId, teamId: null }
+}
+
 export async function createLead(req: Request, res: Response): Promise<void> {
   try {
     const tenantId = req.user!.tenantId
     const userId = req.user!.userId
 
-    const { name, company, email, phone, whatsapp, expectedValue, stageId, pipelineId, temperature = 'WARM' } = req.body
+    const { name, company, email, phone, whatsapp, expectedValue, stageId, pipelineId, responsibleId, temperature = 'WARM' } = req.body
 
     if (!name || !stageId || !pipelineId) {
       res.status(400).json({
@@ -191,42 +272,67 @@ export async function createLead(req: Request, res: Response): Promise<void> {
       return
     }
 
-    const stage = await prisma.pipelineStage.findFirst({
-      where: { id: stageId, tenantId, pipelineId },
+    const result = await prisma.$transaction(async (tx) => {
+      const pipeline = await tx.pipeline.findFirst({
+        where: { id: pipelineId, tenantId },
+        select: { id: true, distributionType: true, lastAssignedUserId: true, teamId: true, specificUserId: true },
+      })
+      if (!pipeline) throw new Error('PIPELINE_NOT_FOUND')
+
+      const stage = await tx.pipelineStage.findFirst({
+        where: { id: stageId, tenantId, pipelineId },
+        select: { id: true },
+      })
+      if (!stage) throw new Error('STAGE_NOT_FOUND')
+
+      const { responsibleId: assignedId, teamId: assignedTeamId } =
+        await resolveResponsibleForPipeline(tx, pipeline, tenantId, userId, responsibleId)
+
+      const lead = await tx.lead.create({
+        data: {
+          tenantId,
+          pipelineId,
+          stageId,
+          responsibleId: assignedId,
+          teamId: assignedTeamId,
+          createdBy: userId,
+          name,
+          company: company || null,
+          email: email || null,
+          phone: phone || null,
+          whatsapp: whatsapp || null,
+          expectedValue: expectedValue ? new Prisma.Decimal(expectedValue) : null,
+          temperature,
+          status: 'ACTIVE',
+        },
+        include: {
+          stage: { select: { id: true, name: true, color: true } },
+          responsible: { select: { id: true, name: true } },
+        },
+      })
+
+      // Persist the rotation cursor for round-robin so the next manual
+      // create picks the next user in the sequence.
+      if (pipeline.distributionType === 'ROUND_ROBIN_ALL' || pipeline.distributionType === 'ROUND_ROBIN_TEAM') {
+        await tx.pipeline.update({
+          where: { id: pipelineId },
+          data: { lastAssignedUserId: assignedId },
+        })
+      }
+
+      return lead
     })
 
-    if (!stage) {
-      res.status(400).json({
-        success: false,
-        error: { code: 'VALIDATION_ERROR', message: 'Etapa não encontrada neste pipeline' },
-      })
+    res.status(201).json({ success: true, data: result })
+  } catch (error: any) {
+    if (error?.message === 'PIPELINE_NOT_FOUND') {
+      res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Pipeline não encontrado' } })
       return
     }
-
-    const lead = await prisma.lead.create({
-      data: {
-        tenantId,
-        pipelineId,
-        stageId,
-        responsibleId: userId,
-        createdBy: userId,
-        name,
-        company: company || null,
-        email: email || null,
-        phone: phone || null,
-        whatsapp: whatsapp || null,
-        expectedValue: expectedValue ? new Prisma.Decimal(expectedValue) : null,
-        temperature,
-        status: 'ACTIVE',
-      },
-      include: {
-        stage: { select: { id: true, name: true, color: true } },
-        responsible: { select: { id: true, name: true } },
-      },
-    })
-
-    res.status(201).json({ success: true, data: lead })
-  } catch (error) {
+    if (error?.message === 'STAGE_NOT_FOUND') {
+      res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Etapa não encontrada neste pipeline' } })
+      return
+    }
     console.error('[Leads] createLead error:', error)
     res.status(500).json({
       success: false,

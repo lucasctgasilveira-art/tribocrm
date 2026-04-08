@@ -38,6 +38,7 @@ interface Meta {
 interface PipelineOption {
   id: string
   name: string
+  distributionType?: 'MANUAL' | 'ROUND_ROBIN_ALL' | 'ROUND_ROBIN_TEAM' | 'SPECIFIC_USER'
   stages: { id: string; name: string; color: string }[]
 }
 
@@ -219,6 +220,7 @@ export default function GestaoLeadsPage() {
         pipelineId: selectedPipeline.id,
         stageId: stage.id,
         temperature: tempMap[data.temperature] ?? 'WARM',
+        responsibleId: data.responsibleId || undefined,
       })
 
       setModalOpen(false)
@@ -434,7 +436,13 @@ export default function GestaoLeadsPage() {
         </div>
       )}
 
-      <NewLeadModal open={modalOpen} onClose={() => setModalOpen(false)} onSubmit={handleNewLead} />
+      <NewLeadModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSubmit={handleNewLead}
+        users={usersList}
+        pipelineDistribution={pipelines[0]?.distributionType ?? 'MANUAL'}
+      />
       <ImportLeadsModal
         open={importOpen}
         onClose={() => setImportOpen(false)}

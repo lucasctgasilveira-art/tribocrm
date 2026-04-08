@@ -20,6 +20,7 @@ export interface LeadPayload {
   stageId: string
   pipelineId: string
   temperature?: string
+  responsibleId?: string
 }
 
 export async function getLeads(params?: LeadsParams) {
