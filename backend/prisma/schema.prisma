@@ -378,6 +378,7 @@ model Charge {
   tenantId      String        @map("tenant_id") @db.Uuid
   efiChargeId   String?       @map("efi_charge_id") @db.VarChar(100)
   amount        Decimal       @db.Decimal(10, 2)
+  discountValue Decimal?      @map("discount_value") @db.Decimal(10, 2)
   dueDate       DateTime      @map("due_date") @db.Date
   paidAt        DateTime?     @map("paid_at")
   paymentMethod PaymentMethod @map("payment_method")

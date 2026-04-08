@@ -121,9 +121,12 @@ router.post('/tenants/:id/charge', async (req: Request, res: Response) => {
 
     const baseValue = planCycle === 'YEARLY' ? Number(plan.priceYearly) : Number(plan.priceMonthly)
     let finalValue = baseValue
+    let discountAbs = 0
     if (discountValue && Number(discountValue) > 0) {
       const dv = Number(discountValue)
-      finalValue = discountType === 'FIXED' ? Math.max(0, baseValue - dv) : Math.max(0, baseValue * (1 - dv / 100))
+      discountAbs = discountType === 'FIXED' ? dv : (baseValue * dv) / 100
+      discountAbs = Math.min(baseValue, Math.round(discountAbs * 100) / 100)
+      finalValue = Math.max(0, baseValue - discountAbs)
     }
     finalValue = Math.round(finalValue * 100) / 100
 
@@ -136,8 +139,9 @@ router.post('/tenants/:id/charge', async (req: Request, res: Response) => {
         description: desc,
         debtorName: tenant.name,
         debtorCpf: cnpjClean,
+        discountValue: discountAbs > 0 ? discountAbs : undefined,
       })
-      return res.json({ success: true, data: { ...result, amount: finalValue, paymentMethod: 'PIX' } })
+      return res.json({ success: true, data: { ...result, amount: finalValue, discountValue: discountAbs, paymentMethod: 'PIX' } })
     } else if (paymentMethod === 'BOLETO') {
       const dueDate = new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10)
       const result = await createBoletoCharge(tenantId, {
@@ -151,8 +155,9 @@ router.post('/tenants/:id/charge', async (req: Request, res: Response) => {
         debtorCity: tenant.addressCity ?? 'São Paulo',
         debtorState: tenant.addressState ?? 'SP',
         debtorZipCode: tenant.addressZip ?? '01000000',
+        discountValue: discountAbs > 0 ? discountAbs : undefined,
       })
-      return res.json({ success: true, data: { ...result, amount: finalValue, paymentMethod: 'BOLETO' } })
+      return res.json({ success: true, data: { ...result, amount: finalValue, discountValue: discountAbs, paymentMethod: 'BOLETO' } })
     } else {
       return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'paymentMethod deve ser PIX ou BOLETO' } })
     }

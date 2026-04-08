@@ -261,22 +261,26 @@ export async function updateTenant(req: Request, res: Response): Promise<void> {
 
 export async function getFinancial(req: Request, res: Response): Promise<void> {
   try {
-    const { period = 'month', status, planId } = req.query as Record<string, string | undefined>
+    const { period = 'month', status, planId, tenantId } = req.query as Record<string, string | undefined>
 
     const now = new Date()
-    let dateFrom: Date
 
-    if (period === 'year') {
-      dateFrom = new Date(now.getFullYear(), 0, 1)
-    } else if (period === 'quarter') {
-      const q = Math.floor(now.getMonth() / 3) * 3
-      dateFrom = new Date(now.getFullYear(), q, 1)
+    const where: Prisma.ChargeWhereInput = {}
+
+    if (tenantId) {
+      // When filtering by tenant, ignore the period filter — show all charges for that tenant
+      where.tenantId = tenantId
     } else {
-      dateFrom = new Date(now.getFullYear(), now.getMonth(), 1)
-    }
-
-    const where: Prisma.ChargeWhereInput = {
-      dueDate: { gte: dateFrom },
+      let dateFrom: Date
+      if (period === 'year') {
+        dateFrom = new Date(now.getFullYear(), 0, 1)
+      } else if (period === 'quarter') {
+        const q = Math.floor(now.getMonth() / 3) * 3
+        dateFrom = new Date(now.getFullYear(), q, 1)
+      } else {
+        dateFrom = new Date(now.getFullYear(), now.getMonth(), 1)
+      }
+      where.dueDate = { gte: dateFrom }
     }
 
     if (status) where.status = status as 'PENDING' | 'PAID' | 'OVERDUE' | 'CANCELLED'
@@ -292,8 +296,8 @@ export async function getFinancial(req: Request, res: Response): Promise<void> {
           select: { id: true, name: true, plan: { select: { id: true, name: true, slug: true } } },
         },
       },
-      orderBy: { dueDate: 'desc' },
-      take: 50,
+      orderBy: { createdAt: 'desc' },
+      take: tenantId ? 200 : 50,
     })
 
     // KPIs

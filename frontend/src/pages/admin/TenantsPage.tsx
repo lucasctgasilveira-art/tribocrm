@@ -229,7 +229,7 @@ export default function TenantsPage() {
                                 else if (opt === 'Editar') setEditTenant(t)
                                 else if (opt === 'Suspender') { await updateTenant(t.id, { status: t.status === 'SUSPENDED' ? 'ACTIVE' : 'SUSPENDED' }); showToast(t.status === 'SUSPENDED' ? 'Cliente reativado' : 'Cliente suspenso'); reload() }
                                 else if (opt === 'Estender gratuidade') { const d = new Date(); d.setDate(d.getDate() + 7); await updateTenant(t.id, { trialEndsAt: d.toISOString() }); showToast('Trial estendido em 7 dias'); reload() }
-                                else if (opt === 'Ver cobranças') navigate(`/admin/financeiro?tenant=${t.id}`)
+                                else if (opt === 'Ver cobranças') navigate(`/admin/financeiro?tenantId=${t.id}`)
                                 else if (opt === 'Aplicar desconto') setDiscountTenant(t)
                                 else if (opt === 'Registrar observação') setNoteModal(t.id)
                               }}

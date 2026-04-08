@@ -42,11 +42,12 @@ function getClient(): EfiPay {
 // ── PIX ──
 
 interface PixChargeData {
-  value: number // em reais (ex: 349.00)
+  value: number // em reais (ex: 349.00) — valor final cobrado, já com desconto aplicado
   description: string
   expiresIn?: number // segundos, padrão 1800 (30min)
   debtorName: string
   debtorCpf: string
+  discountValue?: number // valor absoluto do desconto em R$, para registro
 }
 
 interface PixChargeResult {
@@ -96,6 +97,7 @@ export async function createPixCharge(tenantId: string, chargeData: PixChargeDat
       tenantId,
       efiChargeId: txid,
       amount: chargeData.value,
+      discountValue: chargeData.discountValue ?? null,
       dueDate: new Date(expiresAt),
       paymentMethod: 'PIX',
       status: 'PENDING',
@@ -124,6 +126,7 @@ interface BoletoChargeData {
   debtorCity: string
   debtorState: string
   debtorZipCode: string
+  discountValue?: number // valor absoluto do desconto em R$, para registro
 }
 
 interface BoletoChargeResult {
@@ -179,6 +182,7 @@ export async function createBoletoCharge(tenantId: string, chargeData: BoletoCha
       tenantId,
       efiChargeId: chargeId,
       amount: chargeData.value,
+      discountValue: chargeData.discountValue ?? null,
       dueDate: new Date(chargeData.dueDate),
       paymentMethod: 'BOLETO',
       status: 'PENDING',

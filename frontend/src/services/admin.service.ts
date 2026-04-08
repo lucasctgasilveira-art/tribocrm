@@ -28,7 +28,7 @@ export async function updateTenant(id: string, payload: Record<string, unknown>)
   return response.data.data
 }
 
-export async function getFinancial(params?: { period?: string; status?: string; planId?: string }) {
+export async function getFinancial(params?: { period?: string; status?: string; planId?: string; tenantId?: string }) {
   const response = await api.get('/admin/financial', { params })
   return response.data.data
 }
