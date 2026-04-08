@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Loader2, Users, BarChart2, Target, CreditCard, Pencil, X } from 'lucide-react'
+import { ArrowLeft, Loader2, Users, BarChart2, Target, CreditCard, Pencil, X, DollarSign } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
+import ChargeNowModal from '../../components/admin/ChargeNowModal'
 import { adminMenuItems } from '../../config/adminMenu'
 import { getTenant, updateTenant } from '../../services/admin.service'
 import api from '../../services/api'
@@ -62,6 +63,7 @@ export default function TenantDetailPage() {
   const [savingNote, setSavingNote] = useState(false)
   const [toast, setToast] = useState<{ msg: string; type: 'ok' | 'err' } | null>(null)
   const [editModal, setEditModal] = useState(false)
+  const [chargeModal, setChargeModal] = useState(false)
 
   function showToast(msg: string, type: 'ok' | 'err' = 'ok') {
     setToast({ msg, type })
@@ -148,6 +150,9 @@ export default function TenantDetailPage() {
           <span style={{ background: st.bg, color: st.color, borderRadius: 999, padding: '3px 10px', fontSize: 11, fontWeight: 500 }}>{st.label}</span>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={() => setChargeModal(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            <DollarSign size={14} strokeWidth={2} /> Cobrar agora
+          </button>
           <button onClick={() => setEditModal(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(249,115,22,0.08)', color: '#f97316', border: '1px solid rgba(249,115,22,0.3)', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
             <Pencil size={14} strokeWidth={1.5} /> Editar
           </button>
@@ -267,6 +272,16 @@ export default function TenantDetailPage() {
       </div>
 
       {editModal && <EditTenantModal data={data} onClose={() => setEditModal(false)} onSave={handleEditSave} />}
+      {chargeModal && id && (
+        <ChargeNowModal
+          mode="create"
+          tenantId={id}
+          tenantName={data.name}
+          defaultPlanId={data.plan.id}
+          onClose={() => setChargeModal(false)}
+          onCreated={() => { showToast('Cobrança gerada com sucesso'); getTenant(id).then(d => setData(d)).catch(() => {}) }}
+        />
+      )}
     </AppLayout>
   )
 }

@@ -282,13 +282,15 @@ function NewClientModal({ onClose, onCreated }: { onClose: () => void; onCreated
   const [cep, setCep] = useState(''); const [rua, setRua] = useState(''); const [numero, setNumero] = useState(''); const [complemento, setComplemento] = useState('')
   const [bairro, setBairro] = useState(''); const [cidade, setCidade] = useState(''); const [estado, setEstado] = useState('')
   const [responsibleName, setResponsibleName] = useState(''); const [fundacao, setFundacao] = useState('')
-  const [planId, setPlanId] = useState(''); const [cycle, setCycle] = useState('MONTHLY'); const [payMethod, setPayMethod] = useState('PIX')
+  const [planId, setPlanId] = useState('')
   const [plans, setPlans] = useState<{ id: string; name: string }[]>([])
   const [saving, setSaving] = useState(false); const [error, setError] = useState(''); const [cepLoading, setCepLoading] = useState(false)
+  const [tempPassword, setTempPassword] = useState<string | null>(null)
+  const [pwdCopied, setPwdCopied] = useState(false)
   const iS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
   const canSave = name.trim() && tradeName.trim() && cnpj.replace(/\D/g, '').length === 14 && email.trim() && responsibleName.trim() && planId
 
-  useState(() => { api.get('/payments/plans').then(r => { const p = r.data.data; setPlans(p); if (p.length) setPlanId(p[0].id) }).catch(() => {}) })
+  useEffect(() => { api.get('/payments/plans').then(r => { const p = r.data.data; setPlans(p); if (p.length) setPlanId(p[0].id) }).catch(() => {}) }, [])
 
   async function buscarCep() {
     const c = cep.replace(/\D/g, ''); if (c.length !== 8) return
@@ -304,9 +306,21 @@ function NewClientModal({ onClose, onCreated }: { onClose: () => void; onCreated
   async function handleSave() {
     if (!canSave) return; setSaving(true); setError('')
     try {
-      await api.post('/admin/tenants', { name, tradeName, cnpj: cnpj.replace(/\D/g, ''), email, site, responsibleName, fundacao, planId, planCycle: cycle, paymentMethod: payMethod, address: { cep: cep.replace(/\D/g, ''), street: rua, number: numero, complement: complemento, neighborhood: bairro, city: cidade, state: estado } })
-      onCreated()
+      const res = await api.post('/admin/tenants', {
+        name, tradeName, cnpj: cnpj.replace(/\D/g, ''), email, site,
+        responsibleName, foundedAt: fundacao || undefined,
+        planId, planCycle: 'MONTHLY',
+        address: { cep: cep.replace(/\D/g, ''), street: rua, number: numero, complement: complemento, neighborhood: bairro, city: cidade, state: estado },
+      })
+      const pwd = res.data?.data?.tempPassword ?? null
+      setTempPassword(pwd)
+      setSaving(false)
     } catch (e: any) { setError(e.response?.data?.error?.message ?? 'Erro ao criar cliente'); setSaving(false) }
+  }
+
+  function handleClose() {
+    if (tempPassword) onCreated()
+    else onClose()
   }
 
   function Lbl({ children, req }: { children: string; req?: boolean }) { return <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>{children}{req && <span style={{ color: '#f97316' }}> *</span>}</label> }
@@ -314,12 +328,34 @@ function NewClientModal({ onClose, onCreated }: { onClose: () => void; onCreated
 
   return (
     <>
-      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
+      <div onClick={handleClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
       <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 640, maxWidth: '90vw', maxHeight: '90vh', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
-          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Novo Cliente</h2>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{tempPassword ? 'Cliente criado!' : 'Novo Cliente'}</h2>
+          <button onClick={handleClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
         </div>
+        {tempPassword ? (
+          <div style={{ padding: 24 }}>
+            <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: 1.5 }}>
+              O cliente <strong style={{ color: 'var(--text-primary)' }}>{name}</strong> foi criado em período de teste por 7 dias.
+              Um usuário <strong>OWNER</strong> foi criado com o e-mail <strong style={{ color: 'var(--text-primary)' }}>{email}</strong>.
+              <br /><br />
+              <span style={{ color: '#f97316' }}>Senha temporária — copie antes de fechar, ela não poderá ser recuperada depois:</span>
+            </div>
+            <div style={{ background: 'var(--bg)', border: '2px solid #f97316', borderRadius: 10, padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <code style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: 2, fontFamily: 'monospace' }}>{tempPassword}</code>
+              <button onClick={() => { navigator.clipboard.writeText(tempPassword); setPwdCopied(true); setTimeout(() => setPwdCopied(false), 2000) }}
+                style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                {pwdCopied ? 'Copiado!' : 'Copiar senha'}
+              </button>
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 12 }}>Envie esta senha ao gestor por um canal seguro. Recomende que ele troque após o primeiro login.</div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
+              <button onClick={handleClose} style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Concluir</button>
+            </div>
+          </div>
+        ) : (
+        <>
         <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
           <Sec>Dados da empresa</Sec>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -352,30 +388,9 @@ function NewClientModal({ onClose, onCreated }: { onClose: () => void; onCreated
             <div><Lbl>Data de fundação</Lbl><input type="date" value={fundacao} onChange={e => setFundacao(e.target.value)} style={iS} /></div>
           </div>
 
-          <Sec>Plano e pagamento</Sec>
-          <div style={{ marginBottom: 12 }}><Lbl req>Plano</Lbl><select value={planId} onChange={e => setPlanId(e.target.value)} style={{ ...iS, appearance: 'none' as const, cursor: 'pointer' }}>{plans.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div>
-              <Lbl>Ciclo</Lbl>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {[{ k: 'MONTHLY', l: 'Mensal' }, { k: 'YEARLY', l: 'Anual (-15%)' }].map(c => (
-                  <label key={c.k} onClick={() => setCycle(c.k)} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)' }}>
-                    <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${cycle === c.k ? '#f97316' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{cycle === c.k && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f97316' }} />}</div>{c.l}
-                  </label>
-                ))}
-              </div>
-            </div>
-            <div>
-              <Lbl>Pagamento</Lbl>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {['PIX', 'Boleto', 'Cartão'].map(m => (
-                  <label key={m} onClick={() => setPayMethod(m)} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)' }}>
-                    <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${payMethod === m ? '#f97316' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{payMethod === m && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f97316' }} />}</div>{m}
-                  </label>
-                ))}
-              </div>
-            </div>
-          </div>
+          <Sec>Plano</Sec>
+          <div><Lbl req>Plano</Lbl><select value={planId} onChange={e => setPlanId(e.target.value)} style={{ ...iS, appearance: 'none' as const, cursor: 'pointer' }}>{plans.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>O cliente será criado em período de teste (TRIAL) por 7 dias. A primeira cobrança é gerada manualmente depois, no detalhe do cliente.</div>
 
           {error && <div style={{ fontSize: 12, color: '#ef4444', marginTop: 12 }}>{error}</div>}
         </div>
@@ -385,6 +400,8 @@ function NewClientModal({ onClose, onCreated }: { onClose: () => void; onCreated
             {saving && <Loader2 size={14} className="animate-spin" />}{saving ? 'Criando...' : 'Criar cliente'}
           </button>
         </div>
+        </>
+        )}
       </div>
     </>
   )

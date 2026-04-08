@@ -1,11 +1,19 @@
 import { Router, Request, Response } from 'express'
+import bcrypt from 'bcryptjs'
 import { authMiddleware } from '../middleware/auth.middleware'
 import { adminOnly } from '../middleware/admin.middleware'
 import { prisma } from '../lib/prisma'
 import {
   getAdminDashboard, getTenants, getTenant, updateTenant, getFinancial,
 } from '../controllers/admin.controller'
-import { registerPixWebhook } from '../services/efi.service'
+import { registerPixWebhook, createPixCharge, createBoletoCharge } from '../services/efi.service'
+
+function generateTempPassword(): string {
+  const pool = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  let pwd = ''
+  for (let i = 0; i < 8; i++) pwd += pool[Math.floor(Math.random() * pool.length)]
+  return pwd
+}
 
 const router = Router()
 
@@ -19,33 +27,63 @@ router.patch('/tenants/:id', updateTenant)
 
 router.post('/tenants', async (req: Request, res: Response) => {
   try {
-    const { name, tradeName, cnpj, email, phone, planId, planCycle } = req.body ?? {}
+    const {
+      name, tradeName, cnpj, email, phone, planId, planCycle,
+      site, responsibleName, foundedAt, address,
+    } = req.body ?? {}
 
-    if (!name || !cnpj || !email || !planId || !planCycle) {
+    if (!name || !cnpj || !email || !planId) {
       return res.status(400).json({
         success: false,
-        error: { code: 'VALIDATION_ERROR', message: 'Campos obrigatórios: name, cnpj, email, planId, planCycle' },
+        error: { code: 'VALIDATION_ERROR', message: 'Campos obrigatórios: name, cnpj, email, planId' },
       })
     }
 
     const cnpjClean = String(cnpj).replace(/\D/g, '')
     const trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    const tempPassword = generateTempPassword()
+    const passwordHash = await bcrypt.hash(tempPassword, 12)
+    const ownerName = (responsibleName && String(responsibleName).trim()) || name
 
-    const tenant = await prisma.tenant.create({
-      data: {
-        name,
-        tradeName: tradeName ?? null,
-        cnpj: cnpjClean,
-        email,
-        phone: phone ?? null,
-        planId,
-        planCycle,
-        status: 'TRIAL',
-        trialEndsAt,
-      },
+    const tenant = await prisma.$transaction(async (tx) => {
+      const created = await tx.tenant.create({
+        data: {
+          name,
+          tradeName: tradeName ?? null,
+          cnpj: cnpjClean,
+          email,
+          phone: phone ?? null,
+          planId,
+          planCycle: planCycle ?? 'MONTHLY',
+          status: 'TRIAL',
+          trialEndsAt,
+          site: site ?? null,
+          responsibleName: responsibleName ?? null,
+          foundedAt: foundedAt ? new Date(foundedAt) : null,
+          addressStreet: address?.street ?? null,
+          addressNumber: address?.number ?? null,
+          addressComplement: address?.complement ?? null,
+          addressNeighborhood: address?.neighborhood ?? null,
+          addressCity: address?.city ?? null,
+          addressState: address?.state ?? null,
+          addressZip: address?.cep ?? null,
+        },
+      })
+
+      await tx.user.create({
+        data: {
+          tenantId: created.id,
+          name: ownerName,
+          email,
+          passwordHash,
+          role: 'OWNER',
+        },
+      })
+
+      return created
     })
 
-    return res.status(201).json({ success: true, data: tenant })
+    return res.status(201).json({ success: true, data: { tenant, tempPassword } })
   } catch (error: any) {
     console.error('CREATE_TENANT_ERROR:', error)
     return res.status(500).json({
@@ -53,6 +91,78 @@ router.post('/tenants', async (req: Request, res: Response) => {
       error: {
         code: error?.code ?? 'INTERNAL_ERROR',
         message: error?.message ?? 'Erro ao criar tenant',
+        detail: error?.meta ?? null,
+      },
+    })
+  }
+})
+
+// ── Create Charge for Tenant ──
+
+router.post('/tenants/:id/charge', async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.params.id as string
+    const { planId, planCycle, paymentMethod, discountValue, discountType } = req.body ?? {}
+
+    if (!planId || !planCycle || !paymentMethod) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Campos obrigatórios: planId, planCycle, paymentMethod' },
+      })
+    }
+
+    const [tenant, plan] = await Promise.all([
+      prisma.tenant.findUnique({ where: { id: tenantId } }),
+      prisma.plan.findUnique({ where: { id: planId } }),
+    ])
+
+    if (!tenant) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Tenant não encontrado' } })
+    if (!plan) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Plano não encontrado' } })
+
+    const baseValue = planCycle === 'YEARLY' ? Number(plan.priceYearly) : Number(plan.priceMonthly)
+    let finalValue = baseValue
+    if (discountValue && Number(discountValue) > 0) {
+      const dv = Number(discountValue)
+      finalValue = discountType === 'FIXED' ? Math.max(0, baseValue - dv) : Math.max(0, baseValue * (1 - dv / 100))
+    }
+    finalValue = Math.round(finalValue * 100) / 100
+
+    const desc = `${plan.name} (${planCycle === 'YEARLY' ? 'Anual' : 'Mensal'}) — ${tenant.name}`
+    const cnpjClean = tenant.cnpj.replace(/\D/g, '')
+
+    if (paymentMethod === 'PIX') {
+      const result = await createPixCharge(tenantId, {
+        value: finalValue,
+        description: desc,
+        debtorName: tenant.name,
+        debtorCpf: cnpjClean,
+      })
+      return res.json({ success: true, data: { ...result, amount: finalValue, paymentMethod: 'PIX' } })
+    } else if (paymentMethod === 'BOLETO') {
+      const dueDate = new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10)
+      const result = await createBoletoCharge(tenantId, {
+        value: finalValue,
+        description: desc,
+        dueDate,
+        debtorName: tenant.name,
+        debtorCpf: cnpjClean,
+        debtorEmail: tenant.email,
+        debtorStreet: tenant.addressStreet ?? 'N/A',
+        debtorCity: tenant.addressCity ?? 'São Paulo',
+        debtorState: tenant.addressState ?? 'SP',
+        debtorZipCode: tenant.addressZip ?? '01000000',
+      })
+      return res.json({ success: true, data: { ...result, amount: finalValue, paymentMethod: 'BOLETO' } })
+    } else {
+      return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'paymentMethod deve ser PIX ou BOLETO' } })
+    }
+  } catch (error: any) {
+    console.error('CREATE_TENANT_CHARGE_ERROR:', error)
+    return res.status(500).json({
+      success: false,
+      error: {
+        code: error?.code ?? 'INTERNAL_ERROR',
+        message: error?.message ?? 'Erro ao criar cobrança',
         detail: error?.meta ?? null,
       },
     })

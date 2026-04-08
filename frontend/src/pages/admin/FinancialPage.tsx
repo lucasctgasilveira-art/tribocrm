@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react'
-import { TrendingUp, BarChart2, AlertCircle, UserMinus, DollarSign, Download, Loader2, X, QrCode, FileText } from 'lucide-react'
-import { QRCodeSVG } from 'qrcode.react'
+import { TrendingUp, BarChart2, AlertCircle, UserMinus, DollarSign, Download, Loader2 } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
+import ChargeNowModal from '../../components/admin/ChargeNowModal'
 import { adminMenuItems } from '../../config/adminMenu'
 import { getFinancial } from '../../services/admin.service'
-import api from '../../services/api'
 
 // ── Types ──
 
@@ -167,98 +166,8 @@ export default function FinancialPage() {
           Mostrando {charges.length} cobrança{charges.length !== 1 ? 's' : ''}
         </div>
       </div>
-      {chargeModal && <ChargeNowModal charge={chargeModal} onClose={() => setChargeModal(null)} />}
+      {chargeModal && <ChargeNowModal mode="retry" charge={chargeModal} onClose={() => setChargeModal(null)} />}
     </AppLayout>
   )
 }
 
-function ChargeNowModal({ charge, onClose }: { charge: Charge; onClose: () => void }) {
-  const [method, setMethod] = useState<'PIX' | 'BOLETO'>('PIX')
-  const [loading, setLoading] = useState(false)
-  const [pixResult, setPixResult] = useState<{ pixCopiaECola: string } | null>(null)
-  const [boletoResult, setBoletoResult] = useState<{ boletoUrl: string; barCode: string } | null>(null)
-  const [error, setError] = useState('')
-  const [copied, setCopied] = useState(false)
-  const [applyDiscount, setApplyDiscount] = useState(false)
-  const [discType, setDiscType] = useState('PERCENT')
-  const [discValue, setDiscValue] = useState('')
-
-  const originalValue = Number(charge.amount)
-  const discountedValue = applyDiscount && discValue ? (discType === 'PERCENT' ? originalValue * (1 - parseFloat(discValue) / 100) : originalValue - parseFloat(discValue)) : originalValue
-  const finalValue = Math.max(0, Math.round(discountedValue * 100) / 100)
-
-  async function handleGenerate() {
-    setLoading(true); setError('')
-    try {
-      const res = await api.post(`/admin/charges/${charge.id}/retry`, { paymentMethod: method, discountValue: applyDiscount ? finalValue : undefined })
-      if (method === 'PIX') setPixResult({ pixCopiaECola: res.data.data.pixCopiaECola ?? '' })
-      else setBoletoResult({ boletoUrl: res.data.data.boletoUrl ?? '', barCode: res.data.data.barCode ?? '' })
-    } catch (e: any) { setError(e.response?.data?.error?.message ?? 'Erro ao gerar cobrança') }
-    setLoading(false)
-  }
-
-  void (pixResult || boletoResult) // track done state for future use
-
-  return (
-    <>
-      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
-      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 440, maxWidth: '90vw', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
-          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Cobrar agora — {charge.tenant.name}</h2>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
-        </div>
-        <div style={{ padding: 24, textAlign: 'center' }}>
-          {pixResult ? (
-            <>
-              <div style={{ fontSize: 20, fontWeight: 800, color: '#22c55e', marginBottom: 8 }}>{fmt(Number(charge.amount))}</div>
-              <div style={{ background: '#fff', borderRadius: 12, padding: 16, display: 'inline-block', marginBottom: 16 }}><QRCodeSVG value={pixResult.pixCopiaECola} size={180} level="M" includeMargin /></div>
-              <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', fontSize: 11, color: 'var(--text-secondary)', wordBreak: 'break-all', marginBottom: 12, textAlign: 'left' }}>{pixResult.pixCopiaECola}</div>
-              <button onClick={() => { navigator.clipboard.writeText(pixResult.pixCopiaECola); setCopied(true); setTimeout(() => setCopied(false), 2000) }} style={{ background: '#22c55e', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', width: '100%' }}>{copied ? 'Copiado!' : 'Copiar código PIX'}</button>
-            </>
-          ) : boletoResult ? (
-            <>
-              <div style={{ fontSize: 20, fontWeight: 800, color: '#3b82f6', marginBottom: 16 }}>{fmt(Number(charge.amount))}</div>
-              {boletoResult.barCode && <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'monospace', wordBreak: 'break-all', marginBottom: 12 }}>{boletoResult.barCode}</div>}
-              {boletoResult.boletoUrl && <a href={boletoResult.boletoUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: '#3b82f6', color: '#fff', borderRadius: 8, padding: '9px 0', fontSize: 13, fontWeight: 600, textDecoration: 'none', width: '100%' }}><FileText size={14} /> Abrir boleto</a>}
-            </>
-          ) : (
-            <>
-              <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 4 }}>{fmt(Number(charge.amount))}</div>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>{charge.tenant.plan.name} · Vencimento {new Date(charge.dueDate).toLocaleDateString('pt-BR')}</div>
-              <div style={{ fontSize: 12, color: '#ef4444', marginBottom: 12 }}>Status: {charge.status === 'OVERDUE' ? 'Vencido' : 'Pendente'}</div>
-              {/* Discount */}
-              <div style={{ textAlign: 'left', marginBottom: 16, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: 12 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)' }}>
-                  <input type="checkbox" checked={applyDiscount} onChange={() => setApplyDiscount(!applyDiscount)} style={{ accentColor: '#f97316' }} /> Aplicar desconto nesta cobrança
-                </label>
-                {applyDiscount && (
-                  <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center' }}>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      {[{ k: 'PERCENT', l: '%' }, { k: 'FIXED', l: 'R$' }].map(t => (
-                        <label key={t.k} onClick={() => setDiscType(t.k)} style={{ display: 'flex', alignItems: 'center', gap: 3, cursor: 'pointer', fontSize: 12, color: 'var(--text-primary)' }}>
-                          <div style={{ width: 12, height: 12, borderRadius: '50%', border: `2px solid ${discType === t.k ? '#f97316' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{discType === t.k && <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#f97316' }} />}</div>{t.l}
-                        </label>
-                      ))}
-                    </div>
-                    <input type="number" value={discValue} onChange={e => setDiscValue(e.target.value)} placeholder="Valor" style={{ width: 80, background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 8px', fontSize: 12, color: 'var(--text-primary)', outline: 'none' }} />
-                    {discValue && <span style={{ fontSize: 12, color: '#22c55e', fontWeight: 600 }}>= {fmt(finalValue)}</span>}
-                  </div>
-                )}
-              </div>
-              <div style={{ display: 'flex', gap: 10, marginBottom: 16, justifyContent: 'center' }}>
-                {([{ k: 'PIX' as const, icon: QrCode, c: '#22c55e', l: 'PIX' }, { k: 'BOLETO' as const, icon: FileText, c: '#3b82f6', l: 'Boleto' }]).map(m => {
-                  const I = m.icon; const a = method === m.k
-                  return <div key={m.k} onClick={() => setMethod(m.k)} style={{ flex: 1, padding: 14, borderRadius: 10, border: `1px solid ${a ? m.c : 'var(--border)'}`, background: a ? `${m.c}0D` : 'transparent', cursor: 'pointer', textAlign: 'center' }}><I size={22} color={a ? m.c : 'var(--text-muted)'} strokeWidth={1.5} /><div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginTop: 4 }}>{m.l}</div></div>
-                })}
-              </div>
-              {error && <div style={{ fontSize: 12, color: '#ef4444', marginBottom: 12 }}>{error}</div>}
-              <button onClick={handleGenerate} disabled={loading} style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                {loading && <Loader2 size={14} className="animate-spin" />}{loading ? 'Gerando...' : 'Gerar cobrança'}
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-    </>
-  )
-}

@@ -317,6 +317,16 @@ model Tenant {
   discountUntil  DateTime?    @map("discount_until")
   discountCycles Int?         @map("discount_cycles")
   discountReason String?      @map("discount_reason") @db.Text
+  site                String?  @db.VarChar(255)
+  responsibleName     String?  @map("responsible_name") @db.VarChar(150)
+  foundedAt           DateTime? @map("founded_at") @db.Date
+  addressStreet       String?  @map("address_street") @db.VarChar(255)
+  addressNumber       String?  @map("address_number") @db.VarChar(20)
+  addressComplement   String?  @map("address_complement") @db.VarChar(150)
+  addressNeighborhood String?  @map("address_neighborhood") @db.VarChar(150)
+  addressCity         String?  @map("address_city") @db.VarChar(150)
+  addressState        String?  @map("address_state") @db.VarChar(2)
+  addressZip          String?  @map("address_zip") @db.VarChar(10)
   createdAt      DateTime     @default(now()) @map("created_at")
   updatedAt      DateTime     @updatedAt @map("updated_at")
   plan           Plan         @relation(fields: [planId], references: [id])
