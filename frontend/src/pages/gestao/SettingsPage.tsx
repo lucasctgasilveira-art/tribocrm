@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { GripVertical, Plus, X, CheckSquare, Mail, Calendar, Globe, MoreHorizontal, Info, Loader2 } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
 import api from '../../services/api'
+import { getPipelines, updatePipeline, type PipelineDistributionType } from '../../services/pipeline.service'
+import { getUsers, getTeams } from '../../services/users.service'
 
 type Tab = 'pipeline' | 'loss' | 'tasks' | 'integrations'
 
@@ -142,7 +144,197 @@ function PipelineTab() {
     </div>
 
     {newFunnelModal && <NewFunnelModal onClose={() => setNewFunnelModal(false)} onCreate={handleCreateFunnel} currentCount={pipelines.length} />}
+
+    <div style={{ marginTop: 20 }}>
+      <DistributionRuleCard />
+    </div>
     </>
+  )
+}
+
+// ── Distribution Rule Card (real API, isolated from the mocked stages above) ──
+
+interface PipelineLite {
+  id: string
+  name: string
+  distributionType: PipelineDistributionType
+  teamId: string | null
+  specificUserId: string | null
+}
+
+interface UserLite { id: string; name: string }
+interface TeamLite { id: string; name: string }
+
+function DistributionRuleCard() {
+  const [pipelinesList, setPipelinesList] = useState<PipelineLite[]>([])
+  const [users, setUsers] = useState<UserLite[]>([])
+  const [teams, setTeams] = useState<TeamLite[]>([])
+  const [selectedId, setSelectedId] = useState('')
+  const [distType, setDistType] = useState<PipelineDistributionType>('MANUAL')
+  const [teamId, setTeamId] = useState('')
+  const [specificUserId, setSpecificUserId] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [toast, setToast] = useState<{ msg: string; type: 'ok' | 'err' } | null>(null)
+
+  useEffect(() => {
+    let mounted = true
+    Promise.all([getPipelines(), getUsers(), getTeams()])
+      .then(([ps, us, ts]) => {
+        if (!mounted) return
+        const list: PipelineLite[] = (ps ?? []).map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          distributionType: p.distributionType ?? 'MANUAL',
+          teamId: p.teamId ?? null,
+          specificUserId: p.specificUserId ?? null,
+        }))
+        setPipelinesList(list)
+        setUsers((us ?? []).map((u: any) => ({ id: u.id, name: u.name })))
+        setTeams((ts ?? []).map((t: any) => ({ id: t.id, name: t.name })))
+        if (list[0]) {
+          setSelectedId(list[0].id)
+          setDistType(list[0].distributionType)
+          setTeamId(list[0].teamId ?? '')
+          setSpecificUserId(list[0].specificUserId ?? '')
+        }
+      })
+      .catch(() => { /* keep empty */ })
+      .finally(() => { if (mounted) setLoading(false) })
+    return () => { mounted = false }
+  }, [])
+
+  function handleSelectPipeline(id: string) {
+    setSelectedId(id)
+    const p = pipelinesList.find(x => x.id === id)
+    if (p) {
+      setDistType(p.distributionType)
+      setTeamId(p.teamId ?? '')
+      setSpecificUserId(p.specificUserId ?? '')
+    }
+  }
+
+  function showToast(msg: string, type: 'ok' | 'err' = 'ok') {
+    setToast({ msg, type })
+    setTimeout(() => setToast(null), 3500)
+  }
+
+  async function handleSave() {
+    if (!selectedId) return
+    if (distType === 'ROUND_ROBIN_TEAM' && !teamId) { showToast('Selecione uma equipe', 'err'); return }
+    if (distType === 'SPECIFIC_USER' && !specificUserId) { showToast('Selecione um vendedor', 'err'); return }
+    setSaving(true)
+    try {
+      const updated = await updatePipeline(selectedId, {
+        distributionType: distType,
+        teamId: distType === 'ROUND_ROBIN_TEAM' ? teamId : null,
+        specificUserId: distType === 'SPECIFIC_USER' ? specificUserId : null,
+      })
+      setPipelinesList(prev => prev.map(p => p.id === selectedId
+        ? { ...p, distributionType: updated.distributionType, teamId: updated.teamId, specificUserId: updated.specificUserId }
+        : p,
+      ))
+      showToast('Regra de distribuição salva')
+    } catch (e: any) {
+      showToast(e?.response?.data?.error?.message ?? 'Erro ao salvar regra', 'err')
+    }
+    setSaving(false)
+  }
+
+  const radios: { k: PipelineDistributionType; l: string; d: string }[] = [
+    { k: 'MANUAL', l: 'Manual', d: 'O vendedor é escolhido na hora de criar o lead' },
+    { k: 'ROUND_ROBIN_ALL', l: 'Round-robin automático', d: 'Distribui em sequência entre todos os vendedores ativos' },
+    { k: 'ROUND_ROBIN_TEAM', l: 'Por equipe', d: 'Distribui em round-robin entre os membros de uma equipe específica' },
+    { k: 'SPECIFIC_USER', l: 'Vendedor fixo', d: 'Todos os leads vão para um vendedor específico' },
+  ]
+
+  return (
+    <div style={card}>
+      <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+        <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Regra de distribuição de leads</span>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Define como novos leads criados manualmente neste pipeline são atribuídos aos vendedores</div>
+      </div>
+
+      {loading ? (
+        <div style={{ padding: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+          <Loader2 size={16} className="animate-spin" color="#f97316" />
+          <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Carregando...</span>
+        </div>
+      ) : pipelinesList.length === 0 ? (
+        <div style={{ padding: 24, textAlign: 'center', fontSize: 13, color: 'var(--text-muted)' }}>Nenhum pipeline cadastrado.</div>
+      ) : (
+        <div style={{ padding: 20 }}>
+          <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Pipeline</label>
+          <select value={selectedId} onChange={e => handleSelectPipeline(e.target.value)}
+            style={{ ...inputS, appearance: 'none', cursor: 'pointer', marginBottom: 16 }}>
+            {pipelinesList.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+
+          <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 8 }}>Como distribuir novos leads?</label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+            {radios.map(opt => {
+              const active = distType === opt.k
+              return (
+                <label key={opt.k} onClick={() => setDistType(opt.k)}
+                  style={{
+                    display: 'flex', gap: 10, padding: 12, cursor: 'pointer',
+                    border: `1px solid ${active ? '#f97316' : 'var(--border)'}`,
+                    background: active ? 'rgba(249,115,22,0.06)' : 'transparent',
+                    borderRadius: 8,
+                  }}>
+                  <div style={{
+                    width: 16, height: 16, borderRadius: '50%', flexShrink: 0, marginTop: 2,
+                    border: `2px solid ${active ? '#f97316' : 'var(--border)'}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {active && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f97316' }} />}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{opt.l}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{opt.d}</div>
+                  </div>
+                </label>
+              )
+            })}
+          </div>
+
+          {distType === 'ROUND_ROBIN_TEAM' && (
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Equipe <span style={{ color: '#f97316' }}>*</span></label>
+              <select value={teamId} onChange={e => setTeamId(e.target.value)} style={{ ...inputS, appearance: 'none', cursor: 'pointer' }}>
+                <option value="">Selecione uma equipe...</option>
+                {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+              {teams.length === 0 && <div style={{ fontSize: 11, color: '#f59e0b', marginTop: 6 }}>Nenhuma equipe cadastrada.</div>}
+            </div>
+          )}
+
+          {distType === 'SPECIFIC_USER' && (
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Vendedor <span style={{ color: '#f97316' }}>*</span></label>
+              <select value={specificUserId} onChange={e => setSpecificUserId(e.target.value)} style={{ ...inputS, appearance: 'none', cursor: 'pointer' }}>
+                <option value="">Selecione um vendedor...</option>
+                {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+              </select>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button onClick={handleSave} disabled={saving}
+              style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 22px', fontSize: 13, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: saving ? 0.7 : 1 }}>
+              {saving && <Loader2 size={14} className="animate-spin" />}
+              {saving ? 'Salvando...' : 'Salvar regra'}
+            </button>
+          </div>
+
+          {toast && (
+            <div style={{ marginTop: 12, padding: '8px 12px', borderRadius: 8, fontSize: 12, background: toast.type === 'ok' ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)', color: toast.type === 'ok' ? '#22c55e' : '#ef4444', border: `1px solid ${toast.type === 'ok' ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}` }}>
+              {toast.msg}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   )
 }
 

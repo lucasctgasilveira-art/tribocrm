@@ -160,3 +160,66 @@ export async function createPipeline(req: Request, res: Response): Promise<void>
     })
   }
 }
+
+export async function updatePipeline(req: Request, res: Response): Promise<void> {
+  try {
+    const id = req.params.id as string
+    const tenantId = req.user!.tenantId
+
+    const existing = await prisma.pipeline.findFirst({ where: { id, tenantId } })
+    if (!existing) {
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Pipeline não encontrado' } })
+      return
+    }
+
+    const { name, distributionType, teamId, specificUserId } = req.body as Record<string, string | null | undefined>
+
+    if (distributionType !== undefined && distributionType !== null) {
+      if (!['MANUAL', 'ROUND_ROBIN_ALL', 'ROUND_ROBIN_TEAM', 'SPECIFIC_USER'].includes(distributionType)) {
+        res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'distributionType inválido' } })
+        return
+      }
+    }
+
+    // Validate cross-references against the tenant
+    if (teamId !== undefined && teamId !== null && teamId !== '') {
+      const team = await prisma.team.findFirst({ where: { id: teamId, tenantId }, select: { id: true } })
+      if (!team) {
+        res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Equipe não encontrada neste tenant' } })
+        return
+      }
+    }
+    if (specificUserId !== undefined && specificUserId !== null && specificUserId !== '') {
+      const user = await prisma.user.findFirst({ where: { id: specificUserId, tenantId, deletedAt: null }, select: { id: true } })
+      if (!user) {
+        res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Vendedor não encontrado neste tenant' } })
+        return
+      }
+    }
+
+    const data: Record<string, unknown> = {}
+    if (name !== undefined && name !== null) data.name = String(name).trim()
+    if (distributionType !== undefined) {
+      data.distributionType = distributionType
+      // Reset the rotation cursor whenever the rule changes — otherwise we'd
+      // resume from a stale userId that may not even belong to the new pool.
+      data.lastAssignedUserId = null
+    }
+    if (teamId !== undefined) data.teamId = teamId === '' ? null : teamId
+    if (specificUserId !== undefined) data.specificUserId = specificUserId === '' ? null : specificUserId
+
+    const updated = await prisma.pipeline.update({
+      where: { id },
+      data,
+      include: { stages: { orderBy: { sortOrder: 'asc' } } },
+    })
+
+    res.json({ success: true, data: updated })
+  } catch (error) {
+    console.error('[Pipeline] updatePipeline error:', error)
+    res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Erro interno do servidor' },
+    })
+  }
+}
