@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { TrendingUp, BarChart2, AlertCircle, UserMinus, DollarSign, Download, Loader2, Search, X } from 'lucide-react'
+import { TrendingUp, BarChart2, AlertCircle, UserMinus, DollarSign, Download, Loader2, Search, X, Plus, MoreHorizontal } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import ChargeNowModal from '../../components/admin/ChargeNowModal'
+import UpdateChargeModal from '../../components/admin/UpdateChargeModal'
 import { adminMenuItems } from '../../config/adminMenu'
-import { getFinancial, getTenants, getTenant } from '../../services/admin.service'
+import { getFinancial, getTenants, getTenant, updateCharge } from '../../services/admin.service'
 
 // ── Types ──
 
@@ -18,6 +19,8 @@ interface Charge {
   dueDate: string
   paidAt: string | null
   status: string
+  paymentMethod: string
+  note: string | null
   tenant: { id: string; name: string; plan: { id: string; name: string; slug: string } }
 }
 
@@ -37,9 +40,15 @@ interface TenantSearchResult {
 
 const statusS: Record<string, { bg: string; color: string; label: string }> = {
   PAID: { bg: 'rgba(34,197,94,0.12)', color: '#22c55e', label: 'Pago' },
+  PAID_MANUAL: { bg: 'rgba(168,85,247,0.12)', color: '#a855f7', label: 'Pago manualmente' },
   PENDING: { bg: 'rgba(245,158,11,0.12)', color: '#f59e0b', label: 'Pendente' },
   OVERDUE: { bg: 'rgba(239,68,68,0.12)', color: '#ef4444', label: 'Vencido' },
   CANCELLED: { bg: 'rgba(107,114,128,0.12)', color: 'var(--text-muted)', label: 'Cancelado' },
+}
+
+function statusKey(c: { status: string; paymentMethod: string }): string {
+  if (c.status === 'PAID' && c.paymentMethod === 'MANUAL') return 'PAID_MANUAL'
+  return c.status
 }
 
 const planColors: Record<string, { bg: string; color: string }> = {
@@ -70,6 +79,25 @@ export default function FinancialPage() {
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState<Period>('month')
   const [chargeModal, setChargeModal] = useState<Charge | null>(null)
+  const [updateModal, setUpdateModal] = useState<Charge | null>(null)
+  const [newChargeModal, setNewChargeModal] = useState(false)
+  const [openMenu, setOpenMenu] = useState<string | null>(null)
+  const [reloadKey, setReloadKey] = useState(0)
+  const [toast, setToast] = useState('')
+
+  function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 3000) }
+  function reload() { setReloadKey(k => k + 1) }
+
+  async function handleCancelCharge(c: Charge) {
+    if (!confirm('Tem certeza? Esta ação não pode ser desfeita.')) return
+    try {
+      await updateCharge(c.id, { status: 'CANCELLED' })
+      showToast('Cobrança cancelada')
+      reload()
+    } catch (e: any) {
+      showToast(e.response?.data?.error?.message ?? 'Erro ao cancelar cobrança')
+    }
+  }
 
   // Selected tenant info (when filtered)
   const [selectedTenant, setSelectedTenant] = useState<{ id: string; name: string; cnpj: string } | null>(null)
@@ -98,7 +126,7 @@ export default function FinancialPage() {
       }
     }
     load()
-  }, [period, tenantId])
+  }, [period, tenantId, reloadKey])
 
   // Load selected tenant info when tenantId is in URL
   useEffect(() => {
@@ -256,9 +284,14 @@ export default function FinancialPage() {
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Cobranças</span>
-            <button style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', fontSize: 11, color: 'var(--text-secondary)', cursor: 'pointer' }}>
-              <Download size={12} strokeWidth={1.5} /> Exportar CSV
-            </button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setNewChargeModal(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f97316', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                <Plus size={13} strokeWidth={2.2} /> Gerar Nova Cobrança
+              </button>
+              <button style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', fontSize: 11, color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                <Download size={12} strokeWidth={1.5} /> Exportar CSV
+              </button>
+            </div>
           </div>
           {loading ? (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 60, gap: 10 }}>
@@ -277,9 +310,10 @@ export default function FinancialPage() {
                   {charges.length === 0 ? (
                     <tr><td colSpan={9} style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>Nenhuma cobrança encontrada para este cliente</td></tr>
                   ) : charges.map(c => {
-                    const s = statusS[c.status] ?? statusS.PENDING!
+                    const s = statusS[statusKey(c)] ?? statusS.PENDING!
                     const pc = planColors[c.tenant.plan.slug] ?? planColors.solo
                     const disc = c.discountValue !== null && c.discountValue !== undefined ? Number(c.discountValue) : 0
+                    const canEdit = c.status === 'PENDING' || c.status === 'OVERDUE'
                     return (
                       <tr key={c.id} onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-elevated)' }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
                         <td style={tdS}>{c.tenant.name}</td>
@@ -290,12 +324,42 @@ export default function FinancialPage() {
                         <td style={tdS}>{fmtDate(c.dueDate)}</td>
                         <td style={tdS}>{fmtDate(c.paidAt)}</td>
                         <td style={tdS}><span style={{ background: s.bg, color: s.color, borderRadius: 999, padding: '3px 10px', fontSize: 11, fontWeight: 500 }}>{s.label}</span></td>
-                        <td style={tdS}>
-                          {c.status === 'OVERDUE' || c.status === 'PENDING' ? (
-                            <button onClick={() => setChargeModal(c)} style={{ background: 'rgba(249,115,22,0.12)', color: '#f97316', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>Cobrar agora</button>
-                          ) : c.status === 'PAID' ? (
+                        <td style={{ ...tdS, position: 'relative' }}>
+                          {canEdit ? (
+                            <>
+                              <button onClick={() => setOpenMenu(openMenu === c.id ? null : c.id)} style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--border)', background: openMenu === c.id ? 'var(--border)' : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
+                                <MoreHorizontal size={14} strokeWidth={1.5} />
+                              </button>
+                              {openMenu === c.id && (
+                                <>
+                                  <div onClick={() => setOpenMenu(null)} style={{ position: 'fixed', inset: 0, zIndex: 29 }} />
+                                  <div style={{ position: 'absolute', right: 14, top: '100%', zIndex: 30, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.5)', minWidth: 200, padding: '4px 0', marginTop: 4 }}>
+                                    <div onClick={() => { setOpenMenu(null); setUpdateModal(c) }}
+                                      style={{ padding: '8px 14px', fontSize: 13, color: 'var(--text-primary)', cursor: 'pointer' }}
+                                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+                                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
+                                      Atualizar Cobrança
+                                    </div>
+                                    <div onClick={() => { setOpenMenu(null); setChargeModal(c) }}
+                                      style={{ padding: '8px 14px', fontSize: 13, color: 'var(--text-primary)', cursor: 'pointer' }}
+                                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+                                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
+                                      Reenviar Cobrança
+                                    </div>
+                                    <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
+                                    <div onClick={() => { setOpenMenu(null); handleCancelCharge(c) }}
+                                      style={{ padding: '8px 14px', fontSize: 13, color: '#ef4444', cursor: 'pointer' }}
+                                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.06)' }}
+                                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
+                                      Cancelar Cobrança
+                                    </div>
+                                  </div>
+                                </>
+                              )}
+                            </>
+                          ) : (
                             <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>—</span>
-                          ) : null}
+                          )}
                         </td>
                       </tr>
                     )
@@ -310,7 +374,25 @@ export default function FinancialPage() {
         </div>
       ) : null}
 
-      {chargeModal && <ChargeNowModal mode="retry" charge={chargeModal} onClose={() => setChargeModal(null)} />}
+      {chargeModal && <ChargeNowModal mode="retry" charge={chargeModal} onClose={() => { setChargeModal(null); reload() }} />}
+      {newChargeModal && (
+        <ChargeNowModal
+          mode="create"
+          tenantId={tenantId ?? undefined}
+          tenantName={selectedTenant?.name}
+          onClose={() => { setNewChargeModal(false); reload() }}
+          onCreated={() => { showToast('Cobrança gerada'); reload() }}
+        />
+      )}
+      {updateModal && (
+        <UpdateChargeModal
+          charge={updateModal}
+          onClose={() => setUpdateModal(null)}
+          onUpdated={() => { setUpdateModal(null); showToast('Cobrança atualizada'); reload() }}
+          onResend={() => { const c = updateModal; setUpdateModal(null); setChargeModal(c) }}
+        />
+      )}
+      {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: '4px solid #22c55e', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 60 }}>{toast}</div>}
     </AppLayout>
   )
 }

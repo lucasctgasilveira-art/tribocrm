@@ -33,4 +33,9 @@ export async function getFinancial(params?: { period?: string; status?: string; 
   return response.data.data
 }
 
-export default { getAdminDashboard, getTenants, getTenant, updateTenant, getFinancial }
+export async function updateCharge(id: string, payload: Record<string, unknown>) {
+  const response = await api.patch(`/admin/charges/${id}`, payload)
+  return response.data.data
+}
+
+export default { getAdminDashboard, getTenants, getTenant, updateTenant, getFinancial, updateCharge }

@@ -38,6 +38,7 @@ enum PaymentMethod {
   PIX
   BOLETO
   CREDIT_CARD
+  MANUAL
 }
 
 enum UserRole {
@@ -386,6 +387,7 @@ model Charge {
   referenceMonth String?      @map("reference_month") @db.VarChar(7)
   boletoUrl     String?       @map("boleto_url") @db.Text
   pixCopiaECola String?       @map("pix_copia_e_cola") @db.Text
+  note          String?       @db.Text
   createdAt     DateTime      @default(now()) @map("created_at")
   tenant        Tenant        @relation(fields: [tenantId], references: [id])
   @@map("charges")

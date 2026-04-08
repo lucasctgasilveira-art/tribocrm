@@ -283,6 +283,67 @@ router.post('/tenants/:id/discount', async (req: Request, res: Response) => {
   } catch (error: any) { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }) }
 })
 
+// ── Update Charge (manual ops: discount, manual paid, cancel) ──
+
+router.patch('/charges/:id', async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string
+    const charge = await prisma.charge.findUnique({ where: { id } })
+    if (!charge) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Cobrança não encontrada' } })
+    }
+    if (charge.status !== 'PENDING' && charge.status !== 'OVERDUE') {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'INVALID_STATE', message: 'Apenas cobranças PENDING ou OVERDUE podem ser alteradas' },
+      })
+    }
+
+    const { discountValue, amount, status, paidAt, paymentMethod, note } = req.body ?? {}
+
+    if (status !== undefined && status !== 'PAID' && status !== 'CANCELLED') {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'status só pode ser PAID ou CANCELLED' },
+      })
+    }
+    if (paymentMethod !== undefined && paymentMethod !== 'MANUAL') {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'paymentMethod só pode ser MANUAL nesta rota' },
+      })
+    }
+
+    const data: any = {}
+    if (discountValue !== undefined) data.discountValue = discountValue === null ? null : Number(discountValue)
+    if (amount !== undefined) data.amount = Number(amount)
+    if (status !== undefined) {
+      data.status = status
+      if (status === 'PAID') data.paidAt = paidAt ? new Date(paidAt) : new Date()
+    }
+    if (paymentMethod !== undefined) data.paymentMethod = paymentMethod
+    if (note !== undefined) data.note = note || null
+
+    const updated = await prisma.charge.update({
+      where: { id },
+      data,
+      include: { tenant: { select: { id: true, name: true, plan: { select: { id: true, name: true, slug: true } } } } },
+    })
+
+    return res.json({ success: true, data: updated })
+  } catch (error: any) {
+    console.error('UPDATE_CHARGE_ERROR:', error)
+    return res.status(500).json({
+      success: false,
+      error: {
+        code: error?.code ?? 'INTERNAL_ERROR',
+        message: error?.message ?? 'Erro ao atualizar cobrança',
+        detail: error?.meta ?? null,
+      },
+    })
+  }
+})
+
 // ── Retry Charge ──
 
 router.post('/charges/:id/retry', async (req: Request, res: Response) => {

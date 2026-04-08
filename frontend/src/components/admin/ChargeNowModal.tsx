@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
-import { X, Loader2, QrCode, FileText } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { X, Loader2, QrCode, FileText, Search } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import api from '../../services/api'
+import { getTenants } from '../../services/admin.service'
 
 type Method = 'PIX' | 'BOLETO'
 type Cycle = 'MONTHLY' | 'YEARLY'
@@ -12,6 +13,13 @@ interface Plan {
   name: string
   priceMonthly: number | string
   priceYearly: number | string
+}
+
+interface TenantSearchResult {
+  id: string
+  name: string
+  tradeName: string | null
+  cnpj: string
 }
 
 interface RetryProps {
@@ -28,14 +36,20 @@ interface RetryProps {
 
 interface CreateProps {
   mode: 'create'
-  tenantId: string
-  tenantName: string
+  tenantId?: string         // optional — if absent, the modal shows a tenant search step first
+  tenantName?: string
   defaultPlanId?: string
   onClose: () => void
   onCreated?: () => void
 }
 
 type Props = RetryProps | CreateProps
+
+function formatCnpj(cnpj: string) {
+  const d = cnpj.replace(/\D/g, '')
+  if (d.length !== 14) return cnpj
+  return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12, 14)}`
+}
 
 function fmt(v: number) {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 })
@@ -57,6 +71,17 @@ export default function ChargeNowModal(props: Props) {
   const [selectedPlanId, setSelectedPlanId] = useState('')
   const [cycle, setCycle] = useState<Cycle>('MONTHLY')
 
+  // Dynamically-selected tenant when create-mode is invoked without a fixed tenantId
+  const [pickedTenant, setPickedTenant] = useState<{ id: string; name: string; cnpj: string } | null>(
+    props.mode === 'create' && props.tenantId && props.tenantName
+      ? { id: props.tenantId, name: props.tenantName, cnpj: '' }
+      : null
+  )
+  const [tSearch, setTSearch] = useState('')
+  const [tResults, setTResults] = useState<TenantSearchResult[]>([])
+  const [tSearching, setTSearching] = useState(false)
+  const tDebounce = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   useEffect(() => {
     if (props.mode !== 'create') return
     api.get('/payments/plans').then(r => {
@@ -67,8 +92,24 @@ export default function ChargeNowModal(props: Props) {
     }).catch(() => setPlans([]))
   }, [props.mode, props.mode === 'create' ? props.defaultPlanId : ''])
 
+  function handleTSearchChange(v: string) {
+    setTSearch(v)
+    if (tDebounce.current) clearTimeout(tDebounce.current)
+    if (!v.trim()) { setTResults([]); return }
+    tDebounce.current = setTimeout(async () => {
+      setTSearching(true)
+      try {
+        const r = await getTenants({ search: v, perPage: 10 })
+        setTResults(r.data ?? [])
+      } catch { setTResults([]) }
+      finally { setTSearching(false) }
+    }, 300)
+  }
+
   const isRetry = props.mode === 'retry'
-  const tenantName = isRetry ? props.charge.tenant.name : props.tenantName
+  const tenantName = isRetry ? props.charge.tenant.name : (pickedTenant?.name ?? '')
+  const effectiveTenantId = isRetry ? '' : (pickedTenant?.id ?? '')
+  const needsTenantPick = !isRetry && !pickedTenant
 
   // Compute base value
   let baseValue = 0
@@ -100,8 +141,9 @@ export default function ChargeNowModal(props: Props) {
           discountValue: applyDiscount ? finalValue : undefined,
         })
       } else {
+        if (!effectiveTenantId) { setError('Selecione um cliente'); setLoading(false); return }
         if (!selectedPlanId) { setError('Selecione um plano'); setLoading(false); return }
-        res = await api.post(`/admin/tenants/${props.tenantId}/charge`, {
+        res = await api.post(`/admin/tenants/${effectiveTenantId}/charge`, {
           planId: selectedPlanId,
           planCycle: cycle,
           paymentMethod: method,
@@ -126,11 +168,41 @@ export default function ChargeNowModal(props: Props) {
       <div onClick={props.onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
       <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 480, maxWidth: '90vw', maxHeight: '90vh', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
-          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Cobrar agora — {tenantName}</h2>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{needsTenantPick ? 'Gerar nova cobrança' : `Cobrar agora — ${tenantName}`}</h2>
           <button onClick={props.onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
         </div>
         <div style={{ padding: 24, textAlign: 'center', overflowY: 'auto' }}>
-          {pixResult ? (
+          {needsTenantPick ? (
+            <div style={{ textAlign: 'left' }}>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 8 }}>Selecione o cliente</label>
+              <div style={{ position: 'relative' }}>
+                <Search size={14} color="var(--text-muted)" strokeWidth={1.5} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
+                <input
+                  type="text"
+                  value={tSearch}
+                  onChange={e => handleTSearchChange(e.target.value)}
+                  placeholder="Buscar por Razão Social, Nome Fantasia ou CNPJ"
+                  autoFocus
+                  style={{ width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px 10px 34px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+              <div style={{ marginTop: 8, maxHeight: 280, overflowY: 'auto', border: tResults.length > 0 || tSearching ? '1px solid var(--border)' : 'none', borderRadius: 8 }}>
+                {tSearching ? (
+                  <div style={{ padding: 16, textAlign: 'center', fontSize: 13, color: 'var(--text-muted)' }}>Buscando...</div>
+                ) : tSearch.trim() && tResults.length === 0 ? (
+                  <div style={{ padding: 16, textAlign: 'center', fontSize: 13, color: 'var(--text-muted)' }}>Nenhum cliente encontrado</div>
+                ) : tResults.map(t => (
+                  <div key={t.id} onClick={() => { setPickedTenant({ id: t.id, name: t.name, cnpj: t.cnpj }); setTSearch(''); setTResults([]) }}
+                    style={{ padding: '10px 14px', fontSize: 13, cursor: 'pointer', borderBottom: '1px solid var(--border)' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
+                    <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{t.name}{t.tradeName ? ` (${t.tradeName})` : ''}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>CNPJ: {formatCnpj(t.cnpj)}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : pixResult ? (
             <>
               <div style={{ fontSize: 20, fontWeight: 800, color: '#22c55e', marginBottom: 8 }}>{fmt(finalValue)}</div>
               <div style={{ background: '#fff', borderRadius: 12, padding: 16, display: 'inline-block', marginBottom: 16 }}><QRCodeSVG value={pixResult.pixCopiaECola} size={180} level="M" includeMargin /></div>
@@ -145,6 +217,16 @@ export default function ChargeNowModal(props: Props) {
             </>
           ) : (
             <>
+              {/* Selected tenant chip when picked dynamically */}
+              {!isRetry && pickedTenant && !props.tenantId && (
+                <div style={{ textAlign: 'left', marginBottom: 12, padding: '10px 12px', background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.3)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Cliente</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{pickedTenant.name}</div>
+                  </div>
+                  <button onClick={() => setPickedTenant(null)} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', fontSize: 11, color: 'var(--text-secondary)', cursor: 'pointer' }}>Trocar</button>
+                </div>
+              )}
               {/* Create-mode: plan + cycle selectors */}
               {!isRetry && (
                 <div style={{ textAlign: 'left', marginBottom: 16 }}>
