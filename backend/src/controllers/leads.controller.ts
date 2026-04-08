@@ -344,12 +344,23 @@ export async function importLeads(req: Request, res: Response): Promise<void> {
       return
     }
 
-    const { pipelineId, stageId, responsibleId } = req.body as Record<string, string | undefined>
+    const {
+      pipelineId, stageId, responsibleId, teamId,
+      distributionType = 'SPECIFIC_USER',
+    } = req.body as Record<string, string | undefined>
 
     if (!pipelineId || !stageId) {
       res.status(400).json({
         success: false,
         error: { code: 'VALIDATION_ERROR', message: 'pipelineId e stageId são obrigatórios' },
+      })
+      return
+    }
+
+    if (!['ROUND_ROBIN_ALL', 'ROUND_ROBIN_TEAM', 'SPECIFIC_USER'].includes(distributionType)) {
+      res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'distributionType inválido' },
       })
       return
     }
@@ -366,21 +377,84 @@ export async function importLeads(req: Request, res: Response): Promise<void> {
       return
     }
 
-    // Resolve responsible: provided or fallback to current user
-    let resolvedResponsibleId = userId
-    if (responsibleId && responsibleId !== '') {
-      const respUser = await prisma.user.findFirst({
-        where: { id: responsibleId, tenantId, deletedAt: null },
+    // Resolve the rotation pool of user IDs based on distributionType.
+    // For SPECIFIC_USER it's a single-element list (so the round-robin
+    // logic later still works — every lead gets the same one). For
+    // ROUND_ROBIN_* it's the list of eligible sellers.
+    let rotationPool: string[] = []
+    let resolvedTeamId: string | null = null
+
+    if (distributionType === 'SPECIFIC_USER') {
+      let chosen = userId // fallback to current user
+      if (responsibleId && responsibleId !== '') {
+        const respUser = await prisma.user.findFirst({
+          where: { id: responsibleId, tenantId, deletedAt: null },
+          select: { id: true },
+        })
+        if (!respUser) {
+          res.status(400).json({
+            success: false,
+            error: { code: 'VALIDATION_ERROR', message: 'Responsável não encontrado neste tenant' },
+          })
+          return
+        }
+        chosen = respUser.id
+      }
+      rotationPool = [chosen]
+    } else if (distributionType === 'ROUND_ROBIN_ALL') {
+      const sellers = await prisma.user.findMany({
+        where: {
+          tenantId,
+          deletedAt: null,
+          isActive: true,
+          role: { in: ['SELLER', 'TEAM_LEADER', 'MANAGER'] },
+        },
         select: { id: true },
+        orderBy: { name: 'asc' },
       })
-      if (!respUser) {
+      if (sellers.length === 0) {
         res.status(400).json({
           success: false,
-          error: { code: 'VALIDATION_ERROR', message: 'Responsável não encontrado neste tenant' },
+          error: { code: 'NO_SELLERS', message: 'Nenhum vendedor ativo encontrado para distribuição automática' },
         })
         return
       }
-      resolvedResponsibleId = respUser.id
+      rotationPool = sellers.map(s => s.id)
+    } else if (distributionType === 'ROUND_ROBIN_TEAM') {
+      if (!teamId) {
+        res.status(400).json({
+          success: false,
+          error: { code: 'VALIDATION_ERROR', message: 'teamId é obrigatório quando distributionType=ROUND_ROBIN_TEAM' },
+        })
+        return
+      }
+      const team = await prisma.team.findFirst({
+        where: { id: teamId, tenantId },
+        include: {
+          members: {
+            include: { user: { select: { id: true, isActive: true, deletedAt: true } } },
+          },
+        },
+      })
+      if (!team) {
+        res.status(400).json({
+          success: false,
+          error: { code: 'VALIDATION_ERROR', message: 'Equipe não encontrada neste tenant' },
+        })
+        return
+      }
+      const activeMembers = team.members
+        .filter(m => m.user.isActive && m.user.deletedAt === null)
+        .map(m => m.user.id)
+      if (activeMembers.length === 0) {
+        res.status(400).json({
+          success: false,
+          error: { code: 'EMPTY_TEAM', message: 'A equipe selecionada não possui membros ativos' },
+        })
+        return
+      }
+      rotationPool = activeMembers
+      resolvedTeamId = team.id
     }
 
     // Parse XLSX
@@ -502,11 +576,12 @@ export async function importLeads(req: Request, res: Response): Promise<void> {
     let imported = 0
     if (valid.length > 0) {
       const result = await prisma.lead.createMany({
-        data: valid.map(v => ({
+        data: valid.map((v, i) => ({
           tenantId,
           pipelineId,
           stageId,
-          responsibleId: resolvedResponsibleId,
+          responsibleId: rotationPool[i % rotationPool.length]!,
+          teamId: resolvedTeamId,
           createdBy: userId,
           name: v.name,
           company: v.company,

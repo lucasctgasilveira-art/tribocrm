@@ -8,7 +8,7 @@ import ImportLeadsModal from '../../components/shared/ImportLeadsModal/ImportLea
 import LeadDrawer from '../../components/shared/LeadDrawer/LeadDrawer'
 import { getLeads, createLead } from '../../services/leads.service'
 import { getPipelines } from '../../services/pipeline.service'
-import { getUsers } from '../../services/users.service'
+import { getUsers, getTeams } from '../../services/users.service'
 
 // ── Types ──
 
@@ -81,6 +81,7 @@ export default function GestaoLeadsPage() {
   const [meta, setMeta] = useState<Meta>({ total: 0, page: 1, perPage: 20, totalPages: 0 })
   const [pipelines, setPipelines] = useState<PipelineOption[]>([])
   const [usersList, setUsersList] = useState<{ id: string; name: string }[]>([])
+  const [teamsList, setTeamsList] = useState<{ id: string; name: string }[]>([])
   const [reloadKey, setReloadKey] = useState(0)
   const reload = useCallback(() => setReloadKey(k => k + 1), [])
   const [loading, setLoading] = useState(true)
@@ -119,9 +120,14 @@ export default function GestaoLeadsPage() {
     getPipelines().then((data: PipelineOption[]) => setPipelines(data)).catch(() => {})
   }, [])
 
-  // Load users (for import "Responsável" dropdown)
+  // Load users (for import "Vendedor específico" dropdown)
   useEffect(() => {
     getUsers().then((data: Array<{ id: string; name: string }>) => setUsersList(data ?? [])).catch(() => setUsersList([]))
+  }, [])
+
+  // Load teams (for import "Por equipe" dropdown)
+  useEffect(() => {
+    getTeams().then((data: Array<{ id: string; name: string }>) => setTeamsList(data ?? [])).catch(() => setTeamsList([]))
   }, [])
 
   // Compute status filter from tab
@@ -432,6 +438,7 @@ export default function GestaoLeadsPage() {
         onClose={() => setImportOpen(false)}
         pipelines={pipelines}
         users={usersList}
+        teams={teamsList}
         onImported={(result) => { if (result.imported > 0) { reload() } }}
       />
       {drawerLead && (

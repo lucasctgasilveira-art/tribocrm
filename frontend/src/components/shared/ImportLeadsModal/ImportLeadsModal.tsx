@@ -13,15 +13,22 @@ interface UserOption {
   name: string
 }
 
+interface TeamOption {
+  id: string
+  name: string
+}
+
 interface Props {
   open: boolean
   onClose: () => void
   pipelines: PipelineOption[]
   users: UserOption[]
+  teams: TeamOption[]
   onImported?: (result: ImportLeadsResult) => void
 }
 
 type Step = 1 | 2
+type DistributionType = 'ROUND_ROBIN_ALL' | 'ROUND_ROBIN_TEAM' | 'SPECIFIC_USER'
 
 const columns = [
   { name: 'Nome', required: true },
@@ -45,13 +52,15 @@ const CSS = `
   .im-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}.im-body{scrollbar-width:thin;scrollbar-color:var(--border) transparent}
 `
 
-export default function ImportLeadsModal({ open, onClose, pipelines, users, onImported }: Props) {
+export default function ImportLeadsModal({ open, onClose, pipelines, users, teams, onImported }: Props) {
   const [step, setStep] = useState<Step>(1)
   const [file, setFile] = useState<File | null>(null)
   const [dragOver, setDragOver] = useState(false)
   const [pipelineId, setPipelineId] = useState('')
   const [stageId, setStageId] = useState('')
+  const [distributionType, setDistributionType] = useState<DistributionType>('ROUND_ROBIN_ALL')
   const [responsibleId, setResponsibleId] = useState('')
+  const [teamId, setTeamId] = useState('')
   const [importing, setImporting] = useState(false)
   const [result, setResult] = useState<ImportLeadsResult | null>(null)
   const [error, setError] = useState('')
@@ -67,7 +76,8 @@ export default function ImportLeadsModal({ open, onClose, pipelines, users, onIm
 
   function reset() {
     setStep(1); setFile(null); setDragOver(false)
-    setPipelineId(''); setStageId(''); setResponsibleId('')
+    setPipelineId(''); setStageId('')
+    setDistributionType('ROUND_ROBIN_ALL'); setResponsibleId(''); setTeamId('')
     setImporting(false); setResult(null); setError('')
   }
 
@@ -109,13 +119,23 @@ export default function ImportLeadsModal({ open, onClose, pipelines, users, onIm
       setError('Selecione o arquivo, o pipeline e a etapa inicial.')
       return
     }
+    if (distributionType === 'ROUND_ROBIN_TEAM' && !teamId) {
+      setError('Selecione uma equipe para a distribuição por equipe.')
+      return
+    }
     setImporting(true); setError('')
     try {
       const fd = new FormData()
       fd.append('file', file)
       fd.append('pipelineId', pipelineId)
       fd.append('stageId', stageId)
-      if (responsibleId) fd.append('responsibleId', responsibleId)
+      fd.append('distributionType', distributionType)
+      if (distributionType === 'SPECIFIC_USER' && responsibleId) {
+        fd.append('responsibleId', responsibleId)
+      }
+      if (distributionType === 'ROUND_ROBIN_TEAM') {
+        fd.append('teamId', teamId)
+      }
       const data = await importLeads(fd)
       setResult(data)
       onImported?.(data)
@@ -129,7 +149,8 @@ export default function ImportLeadsModal({ open, onClose, pipelines, users, onIm
     ? (file.size < 1024 ? `${file.size} B` : file.size < 1048576 ? `${(file.size / 1024).toFixed(1)} KB` : `${(file.size / 1048576).toFixed(1)} MB`)
     : ''
 
-  const canImport = !!file && !!pipelineId && !!stageId && !importing && !result
+  const distOk = distributionType !== 'ROUND_ROBIN_TEAM' || !!teamId
+  const canImport = !!file && !!pipelineId && !!stageId && distOk && !importing && !result
 
   return (
     <>
@@ -259,13 +280,64 @@ export default function ImportLeadsModal({ open, onClose, pipelines, users, onIm
                 </div>
 
                 <div>
-                  <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Responsável <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>(opcional — se vazio, será você)</span></label>
-                  <select value={responsibleId} onChange={e => setResponsibleId(e.target.value)}
-                    style={{ width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', cursor: 'pointer', appearance: 'none' }}>
-                    <option value="">Eu mesmo</option>
-                    {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-                  </select>
+                  <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Distribuição dos leads</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {([
+                      { k: 'ROUND_ROBIN_ALL' as const, l: 'Distribuição automática (round-robin)', d: 'Distribui em sequência entre todos os vendedores ativos' },
+                      { k: 'ROUND_ROBIN_TEAM' as const, l: 'Por equipe', d: 'Distribui em round-robin entre os membros da equipe selecionada' },
+                      { k: 'SPECIFIC_USER' as const, l: 'Vendedor específico', d: 'Atribui todos os leads a um único vendedor' },
+                    ]).map(opt => {
+                      const active = distributionType === opt.k
+                      return (
+                        <label key={opt.k}
+                          onClick={() => setDistributionType(opt.k)}
+                          style={{
+                            display: 'flex', gap: 10, padding: 10, cursor: 'pointer',
+                            border: `1px solid ${active ? '#f97316' : 'var(--border)'}`,
+                            background: active ? 'rgba(249,115,22,0.06)' : 'transparent',
+                            borderRadius: 8,
+                          }}>
+                          <div style={{
+                            width: 16, height: 16, borderRadius: '50%', flexShrink: 0, marginTop: 2,
+                            border: `2px solid ${active ? '#f97316' : 'var(--border)'}`,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          }}>
+                            {active && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f97316' }} />}
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{opt.l}</div>
+                            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{opt.d}</div>
+                          </div>
+                        </label>
+                      )
+                    })}
+                  </div>
                 </div>
+
+                {distributionType === 'ROUND_ROBIN_TEAM' && (
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Equipe <span style={{ color: '#f97316' }}>*</span></label>
+                    <select value={teamId} onChange={e => setTeamId(e.target.value)}
+                      style={{ width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', cursor: 'pointer', appearance: 'none' }}>
+                      <option value="">Selecione uma equipe...</option>
+                      {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                    </select>
+                    {teams.length === 0 && (
+                      <div style={{ fontSize: 11, color: '#f59e0b', marginTop: 6 }}>Nenhuma equipe cadastrada neste tenant.</div>
+                    )}
+                  </div>
+                )}
+
+                {distributionType === 'SPECIFIC_USER' && (
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Vendedor <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>(se vazio, será você)</span></label>
+                    <select value={responsibleId} onChange={e => setResponsibleId(e.target.value)}
+                      style={{ width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', cursor: 'pointer', appearance: 'none' }}>
+                      <option value="">Eu mesmo</option>
+                      {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                    </select>
+                  </div>
+                )}
               </div>
 
               {error && <div style={{ fontSize: 12, color: '#ef4444', marginTop: 12 }}>{error}</div>}
