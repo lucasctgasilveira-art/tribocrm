@@ -187,18 +187,23 @@ export default function FinancialPage() {
     <AppLayout menuItems={adminMenuItems}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Financeiro</h1>
-        {!tenantId && (
-          <div style={{ display: 'flex', gap: 4 }}>
-            {periods.map(p => (
-              <button key={p.key} onClick={() => setPeriod(p.key)} style={{
-                borderRadius: 999, padding: '6px 14px', fontSize: 12, fontWeight: 500, cursor: 'pointer',
-                background: period === p.key ? 'rgba(249,115,22,0.12)' : 'var(--bg-card)',
-                border: `1px solid ${period === p.key ? '#f97316' : 'var(--border)'}`,
-                color: period === p.key ? '#f97316' : 'var(--text-muted)',
-              }}>{p.label}</button>
-            ))}
-          </div>
-        )}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {!tenantId && (
+            <div style={{ display: 'flex', gap: 4 }}>
+              {periods.map(p => (
+                <button key={p.key} onClick={() => setPeriod(p.key)} style={{
+                  borderRadius: 999, padding: '6px 14px', fontSize: 12, fontWeight: 500, cursor: 'pointer',
+                  background: period === p.key ? 'rgba(249,115,22,0.12)' : 'var(--bg-card)',
+                  border: `1px solid ${period === p.key ? '#f97316' : 'var(--border)'}`,
+                  color: period === p.key ? '#f97316' : 'var(--text-muted)',
+                }}>{p.label}</button>
+              ))}
+            </div>
+          )}
+          <button onClick={() => setNewChargeModal(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            <Plus size={14} strokeWidth={2.2} /> Gerar Nova Cobrança
+          </button>
+        </div>
       </div>
 
       {/* KPIs (sempre visíveis — métricas globais) */}
@@ -284,14 +289,9 @@ export default function FinancialPage() {
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Cobranças</span>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => setNewChargeModal(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f97316', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                <Plus size={13} strokeWidth={2.2} /> Gerar Nova Cobrança
-              </button>
-              <button style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', fontSize: 11, color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                <Download size={12} strokeWidth={1.5} /> Exportar CSV
-              </button>
-            </div>
+            <button style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', fontSize: 11, color: 'var(--text-secondary)', cursor: 'pointer' }}>
+              <Download size={12} strokeWidth={1.5} /> Exportar CSV
+            </button>
           </div>
           {loading ? (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 60, gap: 10 }}>
