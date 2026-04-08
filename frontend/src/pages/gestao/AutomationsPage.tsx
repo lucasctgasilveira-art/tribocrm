@@ -20,7 +20,11 @@ interface Template {
   badgeLabel: string; badgeColor: string; badgeBg: string
   builderSubtitle: string
   triggerType: string; actionType: string
-  configType: 'whatsapp' | 'email' | 'task' | 'duplicate' | 'notify' | 'meta' | 'move' | 'roundrobin' | 'tag'
+  configType: 'whatsapp' | 'email' | 'task' | 'duplicate' | 'notify' | 'meta' | 'move' | 'roundrobin' | 'tag' | 'system'
+  // System templates are read-only documentation cards — they describe
+  // automations that already run automatically at the platform level
+  // (Instância 1 / Super Admin) and cannot be created or toggled by tenants.
+  system?: boolean
 }
 
 interface ApiAutomation {
@@ -72,6 +76,16 @@ function t(id: string, tIcon: LucideIcon, tColor: string, tTitle: string, tSub: 
   return { id, triggerIcon: tIcon, triggerColor: tColor, triggerTitle: tTitle, triggerSub: tSub, actionIcon: aIcon, actionColor: aColor, actionTitle: aTitle, badgeLabel: badge, badgeColor: bColor, badgeBg: bBg, builderSubtitle: sub, triggerType: tType, actionType: aType, configType: cType }
 }
 
+function tSys(id: string, tIcon: LucideIcon, tColor: string, tTitle: string, tSub: string, aIcon: LucideIcon, aColor: string, aTitle: string, sub: string, tType: string, aType: string): Template {
+  return {
+    id, triggerIcon: tIcon, triggerColor: tColor, triggerTitle: tTitle, triggerSub: tSub,
+    actionIcon: aIcon, actionColor: aColor, actionTitle: aTitle,
+    badgeLabel: 'Sistema', badgeColor: '#a855f7', badgeBg: 'rgba(168,85,247,0.12)',
+    builderSubtitle: sub, triggerType: tType, actionType: aType,
+    configType: 'system', system: true,
+  }
+}
+
 const templates: { section: string; items: Template[] }[] = [
   {
     section: 'Seguimento de leads',
@@ -121,6 +135,14 @@ const templates: { section: string; items: Template[] }[] = [
       t('t23', Repeat, '#22c55e', 'Cliente comprar 2ª vez', 'Qualquer pipeline', Tag, '#a855f7', 'Tag "Cliente recorrente" + notificar', 'Tag automática', '#a855f7', 'rgba(168,85,247,0.12)', 'Identifique clientes recorrentes', 'REPEAT_PURCHASE', 'ADD_TAG', 'tag'),
       t('t24', ShieldCheck, '#a855f7', 'Solicitação de desconto', 'Qualquer lead', Bell, '#f97316', 'Notificar gestor para aprovação', 'Notificação interna', '#f59e0b', 'rgba(245,158,11,0.12)', 'Peça aprovação do gestor para descontos', 'DISCOUNT_REQUESTED', 'NOTIFY_USER', 'notify'),
       t('t25', ShieldCheck, '#22c55e', 'Desconto aprovado/recusado', 'Qualquer lead', Bell, '#f97316', 'Notificar vendedor', 'Notificação interna', '#f59e0b', 'rgba(245,158,11,0.12)', 'Avise o vendedor sobre a decisão', 'DISCOUNT_REQUESTED', 'NOTIFY_USER', 'notify'),
+    ],
+  },
+  {
+    section: 'Sistema',
+    items: [
+      tSys('t26', Clock, '#f59e0b', 'Plano próximo do vencimento (D-3)', 'Tenant em ACTIVE/TRIAL', Mail, '#3b82f6', 'Enviar aviso por e-mail ao gestor', 'Alerta automático 3 dias antes da expiração do plano', 'PLAN_EXPIRING', 'SEND_EMAIL'),
+      tSys('t27', Plus, '#22c55e', 'Novo usuário cadastrado', 'Qualquer instância', Mail, '#3b82f6', 'Enviar e-mail de boas-vindas com senha temporária', 'Onboarding automático ao criar um usuário', 'USER_CREATED', 'SEND_EMAIL'),
+      tSys('t28', ShieldCheck, '#ef4444', 'Limite de usuários do plano atingido', 'Qualquer plano', Bell, '#f97316', 'Bloquear cadastro + notificar gestor para upgrade', 'Trava automática quando o tenant atinge o teto de usuários', 'USER_LIMIT_REACHED', 'NOTIFY_USER'),
     ],
   },
 ]
@@ -216,13 +238,23 @@ export default function AutomationsPage() {
                       <span style={{ background: tmpl.badgeBg, color: tmpl.badgeColor, borderRadius: 4, padding: '2px 6px', fontSize: 10 }}>{tmpl.badgeLabel}</span>
                     </div>
                   </div>
-                  <button onClick={() => setBuilder(tmpl)} style={{
-                    position: 'absolute', bottom: 0, left: 0, right: 0,
-                    background: '#f97316', color: '#fff', border: 'none', padding: 10,
-                    fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                    opacity: isHov ? 1 : 0, transition: 'opacity 0.2s',
-                    borderRadius: '0 0 12px 12px',
-                  }}>Usar este modelo</button>
+                  {tmpl.system ? (
+                    <div style={{
+                      position: 'absolute', top: 10, right: 10,
+                      background: 'rgba(168,85,247,0.12)', color: '#a855f7',
+                      border: '1px solid rgba(168,85,247,0.3)',
+                      borderRadius: 4, padding: '2px 8px', fontSize: 10, fontWeight: 600,
+                      letterSpacing: '0.5px', textTransform: 'uppercase',
+                    }}>Fixa do sistema</div>
+                  ) : (
+                    <button onClick={() => setBuilder(tmpl)} style={{
+                      position: 'absolute', bottom: 0, left: 0, right: 0,
+                      background: '#f97316', color: '#fff', border: 'none', padding: 10,
+                      fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                      opacity: isHov ? 1 : 0, transition: 'opacity 0.2s',
+                      borderRadius: '0 0 12px 12px',
+                    }}>Usar este modelo</button>
+                  )}
                 </div>
               )
             })}
