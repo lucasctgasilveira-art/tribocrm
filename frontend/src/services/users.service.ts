@@ -10,11 +10,22 @@ export interface UsersParams {
 export interface CreateUserPayload {
   name: string
   email: string
-  password: string
+  password?: string
   role: string
   cpf?: string
   birthday?: string
   teamId?: string
+}
+
+export interface CreateUserResult {
+  id: string
+  name: string
+  email: string
+  role: string
+  isActive: boolean
+  createdAt: string
+  tempPassword?: string
+  emailSent: boolean
 }
 
 export interface CreateTeamPayload {
@@ -28,7 +39,7 @@ export async function getUsers(params?: UsersParams) {
   return response.data.data
 }
 
-export async function createUser(payload: CreateUserPayload) {
+export async function createUser(payload: CreateUserPayload): Promise<CreateUserResult> {
   const response = await api.post('/users', payload)
   return response.data.data
 }

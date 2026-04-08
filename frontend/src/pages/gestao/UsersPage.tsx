@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { Plus, MoreHorizontal, Search, Loader2 } from 'lucide-react'
+import { Plus, MoreHorizontal, Search, Loader2, X, CheckCircle2, AlertTriangle } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
-import { getUsers, updateUser } from '../../services/users.service'
+import { getUsers, updateUser, createUser, getTeams, type CreateUserResult } from '../../services/users.service'
 
 // ── Types ──
 
@@ -66,6 +66,8 @@ export default function UsersPage() {
   const [roleF, setRoleF] = useState('')
   const [activeF, setActiveF] = useState('')
   const [openMenu, setOpenMenu] = useState<string | null>(null)
+  const [newUserModalOpen, setNewUserModalOpen] = useState(false)
+  const [createResult, setCreateResult] = useState<CreateUserResult | null>(null)
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const handleSearch = useCallback((value: string) => {
@@ -112,7 +114,7 @@ export default function UsersPage() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Usuários</h1>
-        <button style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+        <button onClick={() => setNewUserModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
           <Plus size={15} strokeWidth={2} /> Novo Usuário
         </button>
       </div>
@@ -212,6 +214,148 @@ export default function UsersPage() {
           ))}
         </div>
       )}
+
+      {newUserModalOpen && (
+        <NewUserModal
+          onClose={() => setNewUserModalOpen(false)}
+          onCreated={(result) => { setNewUserModalOpen(false); setCreateResult(result); loadUsers() }}
+        />
+      )}
+      {createResult && <CreateResultDialog result={createResult} onClose={() => setCreateResult(null)} />}
     </AppLayout>
+  )
+}
+
+// ── New User Modal ──
+
+function NewUserModal({ onClose, onCreated }: { onClose: () => void; onCreated: (r: CreateUserResult) => void }) {
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [role, setRole] = useState('SELLER')
+  const [teamId, setTeamId] = useState('')
+  const [teams, setTeams] = useState<{ id: string; name: string }[]>([])
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    getTeams().then((data: Array<{ id: string; name: string }>) => setTeams(data ?? [])).catch(() => setTeams([]))
+  }, [])
+
+  const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  const canSave = name.trim().length >= 2 && emailRe.test(email) && !saving
+
+  async function handleSave() {
+    if (!canSave) return
+    setSaving(true); setError('')
+    try {
+      const result = await createUser({
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        role,
+        teamId: teamId || undefined,
+        // password is intentionally omitted — backend generates a temporary one
+      })
+      onCreated(result)
+    } catch (e: any) {
+      setError(e?.response?.data?.error?.message ?? 'Erro ao criar usuário')
+      setSaving(false)
+    }
+  }
+
+  const inputS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 480, maxWidth: '90vw', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Novo Usuário</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+        </div>
+        <div style={{ padding: 24 }}>
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Nome <span style={{ color: '#f97316' }}>*</span></label>
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="Nome completo" style={inputS} autoFocus />
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>E-mail <span style={{ color: '#f97316' }}>*</span></label>
+            <input value={email} onChange={e => setEmail(e.target.value)} type="email" placeholder="email@empresa.com" style={inputS} />
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Cargo <span style={{ color: '#f97316' }}>*</span></label>
+            <select value={role} onChange={e => setRole(e.target.value)} style={{ ...inputS, appearance: 'none', cursor: 'pointer' }}>
+              <option value="SELLER">Vendedor</option>
+              <option value="TEAM_LEADER">Líder</option>
+              <option value="MANAGER">Gestor</option>
+            </select>
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Equipe <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>(opcional)</span></label>
+            <select value={teamId} onChange={e => setTeamId(e.target.value)} style={{ ...inputS, appearance: 'none', cursor: 'pointer' }}>
+              <option value="">Sem equipe</option>
+              {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          </div>
+          <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: 12, fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+            Uma senha temporária será gerada automaticamente e enviada por e-mail ao usuário com instruções de acesso.
+          </div>
+          {error && <div style={{ fontSize: 12, color: '#ef4444', marginTop: 12 }}>{error}</div>}
+        </div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
+          <button onClick={handleSave} disabled={!canSave} style={{ background: canSave ? '#f97316' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 22px', fontSize: 13, fontWeight: 600, color: canSave ? '#fff' : 'var(--text-muted)', cursor: canSave ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 6 }}>
+            {saving && <Loader2 size={14} className="animate-spin" />}
+            {saving ? 'Criando...' : 'Criar usuário'}
+          </button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ── Result Dialog (success / fallback when SMTP not configured) ──
+
+function CreateResultDialog({ result, onClose }: { result: CreateUserResult; onClose: () => void }) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 460, maxWidth: '90vw', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, padding: 24 }}>
+        {result.emailSent ? (
+          <>
+            <div style={{ textAlign: 'center', marginBottom: 16 }}>
+              <CheckCircle2 size={44} color="#22c55e" strokeWidth={1.5} />
+              <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: '12px 0 6px' }}>Usuário criado!</h2>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+                Um e-mail de boas-vindas foi enviado para <strong style={{ color: 'var(--text-primary)' }}>{result.email}</strong> com as instruções de acesso.
+              </p>
+            </div>
+            <button onClick={onClose} style={{ width: '100%', background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Concluir</button>
+          </>
+        ) : (
+          <>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 16 }}>
+              <AlertTriangle size={22} color="#f59e0b" strokeWidth={1.8} style={{ flexShrink: 0, marginTop: 2 }} />
+              <div>
+                <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 4px' }}>Usuário criado, mas o e-mail não pôde ser enviado</h2>
+                <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+                  O servidor SMTP não está configurado ou retornou erro. Entregue manualmente os dados de acesso para <strong style={{ color: 'var(--text-primary)' }}>{result.email}</strong>:
+                </p>
+              </div>
+            </div>
+            {result.tempPassword && (
+              <div style={{ background: 'var(--bg)', border: '2px solid #f97316', borderRadius: 10, padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
+                <code style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: 2, fontFamily: 'monospace' }}>{result.tempPassword}</code>
+                <button onClick={() => { navigator.clipboard.writeText(result.tempPassword!); setCopied(true); setTimeout(() => setCopied(false), 2000) }} style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                  {copied ? 'Copiado!' : 'Copiar'}
+                </button>
+              </div>
+            )}
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 16 }}>Esta senha não poderá ser recuperada depois — copie antes de fechar.</div>
+            <button onClick={onClose} style={{ width: '100%', background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Concluir</button>
+          </>
+        )}
+      </div>
+    </>
   )
 }

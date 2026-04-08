@@ -2,6 +2,16 @@ import { Request, Response } from 'express'
 import bcrypt from 'bcryptjs'
 import { prisma } from '../lib/prisma'
 import { Prisma } from '@prisma/client'
+import { sendMail } from '../services/mailer.service'
+
+function generateTempPassword(): string {
+  const pool = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  let pwd = ''
+  for (let i = 0; i < 8; i++) pwd += pool[Math.floor(Math.random() * pool.length)]
+  return pwd
+}
+
+const LOGIN_URL = 'https://tribocrm.vercel.app/login'
 
 // ── Users ──
 
@@ -68,10 +78,10 @@ export async function createUser(req: Request, res: Response): Promise<void> {
     const tenantId = req.user!.tenantId
     const { name, email, password, role, cpf, birthday, teamId } = req.body
 
-    if (!name || !email || !password || !role) {
+    if (!name || !email || !role) {
       res.status(400).json({
         success: false,
-        error: { code: 'VALIDATION_ERROR', message: 'name, email, password e role são obrigatórios' },
+        error: { code: 'VALIDATION_ERROR', message: 'name, email e role são obrigatórios' },
       })
       return
     }
@@ -88,7 +98,12 @@ export async function createUser(req: Request, res: Response): Promise<void> {
       return
     }
 
-    const passwordHash = await bcrypt.hash(password, 12)
+    // password is now optional — generate a temp one when missing so the
+    // welcome email can deliver it. The plain value is only kept in memory
+    // for this request and never logged.
+    const generatedPassword = !password || String(password).trim() === ''
+    const plainPassword = generatedPassword ? generateTempPassword() : String(password)
+    const passwordHash = await bcrypt.hash(plainPassword, 12)
 
     const user = await prisma.user.create({
       data: {
@@ -116,7 +131,61 @@ export async function createUser(req: Request, res: Response): Promise<void> {
       })
     }
 
-    res.status(201).json({ success: true, data: user })
+    // Welcome email — uses tradeName when available, falls back to name
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { name: true, tradeName: true },
+    })
+    const companyName = tenant?.tradeName ?? tenant?.name ?? 'sua empresa'
+
+    const subject = 'Bem-vindo ao TriboCRM — seu acesso está pronto!'
+    const text = [
+      `Olá ${user.name},`,
+      '',
+      `Você foi adicionado ao TriboCRM pela empresa ${companyName}.`,
+      '',
+      'Seus dados de acesso:',
+      `E-mail: ${user.email}`,
+      `Senha temporária: ${plainPassword}`,
+      '',
+      `Acesse em: ${LOGIN_URL}`,
+      '',
+      'Recomendamos que você altere sua senha no primeiro acesso.',
+      '',
+      'Equipe TriboCRM',
+    ].join('\n')
+    const html = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; color: #1f2937; line-height: 1.6;">
+        <h2 style="color: #f97316; margin-bottom: 16px;">Bem-vindo ao TriboCRM!</h2>
+        <p>Olá <strong>${user.name}</strong>,</p>
+        <p>Você foi adicionado ao TriboCRM pela empresa <strong>${companyName}</strong>.</p>
+        <div style="background: #f3f4f6; border-left: 4px solid #f97316; padding: 16px; border-radius: 8px; margin: 20px 0;">
+          <p style="margin: 0 0 8px 0;"><strong>Seus dados de acesso:</strong></p>
+          <p style="margin: 4px 0;">E-mail: <code>${user.email}</code></p>
+          <p style="margin: 4px 0;">Senha temporária: <code style="background: #fff; padding: 2px 8px; border-radius: 4px; font-weight: 700;">${plainPassword}</code></p>
+        </div>
+        <p style="margin: 20px 0;">
+          <a href="${LOGIN_URL}" style="background: #f97316; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block;">Acessar o TriboCRM</a>
+        </p>
+        <p style="font-size: 13px; color: #6b7280;">Recomendamos que você altere sua senha no primeiro acesso.</p>
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+        <p style="font-size: 12px; color: #9ca3af;">Equipe TriboCRM</p>
+      </div>
+    `
+
+    const mailResult = await sendMail({ to: user.email, subject, text, html })
+
+    res.status(201).json({
+      success: true,
+      data: {
+        ...user,
+        // Only return the plain password to the caller when we generated it
+        // ourselves AND the email failed — that's the manual delivery escape
+        // hatch. If the caller passed an explicit password, never echo it.
+        tempPassword: generatedPassword && !mailResult.sent ? plainPassword : undefined,
+        emailSent: mailResult.sent,
+      },
+    })
   } catch (error) {
     console.error('[Users] createUser error:', error)
     res.status(500).json({
