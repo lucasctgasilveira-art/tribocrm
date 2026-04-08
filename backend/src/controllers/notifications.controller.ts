@@ -1,7 +1,21 @@
 import { Request, Response } from 'express'
 import { prisma } from '../lib/prisma'
 
+// Super Admin sessions carry tenantId='platform' (a sentinel string, not a UUID)
+// to distinguish them from regular tenant users in the same JWT shape. The
+// notifications table is scoped per-tenant with tenantId @db.Uuid, so any
+// notification query for a Super Admin would crash Prisma with a UUID-parse
+// error. Super Admins simply don't have notifications in this model — return
+// an empty list instead of touching the DB.
+function isPlatformAdmin(req: Request): boolean {
+  return req.user?.tenantId === 'platform'
+}
+
 export async function getNotifications(req: Request, res: Response): Promise<void> {
+  if (isPlatformAdmin(req)) {
+    res.json({ success: true, data: [], meta: { unreadCount: 0 } })
+    return
+  }
   try {
     const userId = req.user!.userId
     const tenantId = req.user!.tenantId
@@ -39,6 +53,10 @@ export async function getNotifications(req: Request, res: Response): Promise<voi
 }
 
 export async function markAsRead(req: Request, res: Response): Promise<void> {
+  if (isPlatformAdmin(req)) {
+    res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Notificação não encontrada' } })
+    return
+  }
   try {
     const id = req.params.id as string
     const userId = req.user!.userId
@@ -72,6 +90,10 @@ export async function markAsRead(req: Request, res: Response): Promise<void> {
 }
 
 export async function markAllAsRead(req: Request, res: Response): Promise<void> {
+  if (isPlatformAdmin(req)) {
+    res.json({ success: true, data: { count: 0 } })
+    return
+  }
   try {
     const userId = req.user!.userId
     const tenantId = req.user!.tenantId
