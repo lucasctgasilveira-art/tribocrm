@@ -244,6 +244,33 @@ export async function createDiscountRequest(req: Request, res: Response): Promis
       },
     })
 
+    // Notify OWNER/MANAGER users when a discount is pending approval
+    if (!autoApprove) {
+      try {
+        const [lead, seller, managers] = await Promise.all([
+          prisma.lead.findUnique({ where: { id: leadId }, select: { name: true } }),
+          prisma.user.findUnique({ where: { id: userId }, select: { name: true } }),
+          prisma.user.findMany({
+            where: { tenantId, deletedAt: null, isActive: true, role: { in: ['OWNER', 'MANAGER'] } },
+            select: { id: true },
+          }),
+        ])
+        const body = `${seller?.name ?? 'Vendedor'} solicitou desconto de ${discountPercent}% em ${lead?.name ?? 'lead'}`
+        await prisma.notification.createMany({
+          data: managers.map(m => ({
+            tenantId,
+            userId: m.id,
+            type: 'DISCOUNT_PENDING' as const,
+            title: 'Solicitação de desconto',
+            body,
+            link: `/gestao/leads/${leadId}`,
+          })),
+        })
+      } catch (notifErr) {
+        console.error('[Products] discount notification failed:', notifErr)
+      }
+    }
+
     res.status(201).json({ success: true, data: request })
   } catch (error) {
     console.error('[Products] createDiscountRequest error:', error)
@@ -303,6 +330,28 @@ export async function reviewDiscountRequest(req: Request, res: Response): Promis
         product: { select: { id: true, name: true, price: true } },
       },
     })
+
+    // Notify the requesting seller about the decision
+    try {
+      const lead = await prisma.lead.findUnique({ where: { id: existing.leadId }, select: { name: true } })
+      const pct = Number(existing.requestedDiscount)
+      const leadName = lead?.name ?? 'lead'
+      const body = status === 'APPROVED'
+        ? `Seu desconto de ${pct}% para ${leadName} foi aprovado!`
+        : `Seu desconto de ${pct}% para ${leadName} foi recusado.`
+      await prisma.notification.create({
+        data: {
+          tenantId,
+          userId: existing.requestedBy,
+          type: 'DISCOUNT_PENDING' as const,
+          title: status === 'APPROVED' ? 'Desconto aprovado' : 'Desconto recusado',
+          body,
+          link: `/vendas/leads/${existing.leadId}`,
+        },
+      })
+    } catch (notifErr) {
+      console.error('[Products] review notification failed:', notifErr)
+    }
 
     res.json({ success: true, data: request })
   } catch (error) {

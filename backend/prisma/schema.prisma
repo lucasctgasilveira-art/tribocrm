@@ -125,6 +125,8 @@ enum AutomationTrigger {
   GOAL_REACHED
   FORM_SUBMITTED
   EMAIL_OPENED
+  DISCOUNT_REQUESTED
+  REPEAT_PURCHASE
 }
 
 enum AutomationAction {
