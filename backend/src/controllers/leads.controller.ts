@@ -413,6 +413,38 @@ export async function updateLead(req: Request, res: Response): Promise<void> {
       },
     })
 
+    // Detect repeat purchase: if the lead is being moved to WON and
+    // it had a previous wonAt (meaning it was won before), this is a
+    // returning customer. Notify the seller and log it.
+    if (status === 'WON' && existing.wonAt !== null) {
+      try {
+        await prisma.notification.create({
+          data: {
+            tenantId,
+            userId: existing.responsibleId,
+            type: 'EMAIL_OPENED', // Closest generic type; REPEAT_PURCHASE is an AutomationTrigger, not NotificationType
+            title: 'Cliente recorrente!',
+            body: `${existing.name} comprou novamente! Cliente recorrente.`,
+            link: `/vendas/leads/${id}`,
+          },
+        })
+
+        // Log in interaction history
+        await prisma.interaction.create({
+          data: {
+            tenantId,
+            leadId: id,
+            userId: existing.responsibleId,
+            type: 'SYSTEM',
+            content: `Compra recorrente registrada. Lead ${existing.name} fechou novamente.`,
+            isAuto: true,
+          },
+        })
+      } catch (notifErr) {
+        console.error('[Leads] repeat purchase notification failed:', notifErr)
+      }
+    }
+
     res.json({ success: true, data: lead })
   } catch (error) {
     console.error('[Leads] updateLead error:', error)
