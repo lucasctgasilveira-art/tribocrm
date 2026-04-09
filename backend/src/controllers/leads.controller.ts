@@ -426,6 +426,146 @@ export async function deleteLead(req: Request, res: Response): Promise<void> {
   }
 }
 
+// ── Bulk Update Leads ──
+
+type BulkAction = 'change_responsible' | 'change_stage' | 'change_temperature' | 'redistribute' | 'delete'
+
+export async function bulkUpdateLeads(req: Request, res: Response): Promise<void> {
+  try {
+    const tenantId = req.user!.tenantId
+    const { leadIds, action, payload } = req.body as {
+      leadIds: string[]
+      action: BulkAction
+      payload?: Record<string, unknown>
+    }
+
+    if (!Array.isArray(leadIds) || leadIds.length === 0) {
+      res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'leadIds obrigatório e não pode ser vazio' } })
+      return
+    }
+    if (!action) {
+      res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'action obrigatória' } })
+      return
+    }
+
+    // Verify all leads belong to the tenant
+    const leadCount = await prisma.lead.count({
+      where: { id: { in: leadIds }, tenantId, deletedAt: null },
+    })
+    if (leadCount !== leadIds.length) {
+      res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Um ou mais leads não foram encontrados neste tenant' } })
+      return
+    }
+
+    const whereIds = { id: { in: leadIds }, tenantId, deletedAt: null }
+
+    if (action === 'change_responsible') {
+      const newResponsibleId = String(payload?.responsibleId ?? '')
+      if (!newResponsibleId) {
+        res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'responsibleId obrigatório' } })
+        return
+      }
+      const user = await prisma.user.findFirst({ where: { id: newResponsibleId, tenantId, deletedAt: null }, select: { id: true } })
+      if (!user) {
+        res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Responsável não encontrado' } })
+        return
+      }
+      const result = await prisma.lead.updateMany({ where: whereIds, data: { responsibleId: newResponsibleId } })
+      res.json({ success: true, data: { updated: result.count } })
+      return
+    }
+
+    if (action === 'change_stage') {
+      const newStageId = String(payload?.stageId ?? '')
+      if (!newStageId) {
+        res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'stageId obrigatório' } })
+        return
+      }
+      const stage = await prisma.pipelineStage.findFirst({ where: { id: newStageId, tenantId }, select: { id: true } })
+      if (!stage) {
+        res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Etapa não encontrada' } })
+        return
+      }
+      const result = await prisma.lead.updateMany({ where: whereIds, data: { stageId: newStageId } })
+      res.json({ success: true, data: { updated: result.count } })
+      return
+    }
+
+    if (action === 'change_temperature') {
+      const newTemp = String(payload?.temperature ?? '')
+      if (!['HOT', 'WARM', 'COLD'].includes(newTemp)) {
+        res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'temperature deve ser HOT, WARM ou COLD' } })
+        return
+      }
+      const result = await prisma.lead.updateMany({ where: whereIds, data: { temperature: newTemp as 'HOT' | 'WARM' | 'COLD' } })
+      res.json({ success: true, data: { updated: result.count } })
+      return
+    }
+
+    if (action === 'redistribute') {
+      const distType = String(payload?.distributionType ?? 'ROUND_ROBIN_ALL')
+      let pool: string[] = []
+
+      if (distType === 'SPECIFIC_USER') {
+        const uid = String(payload?.responsibleId ?? '')
+        if (!uid) { res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'responsibleId obrigatório' } }); return }
+        pool = [uid]
+      } else if (distType === 'ROUND_ROBIN_TEAM') {
+        const tid = String(payload?.teamId ?? '')
+        if (!tid) { res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'teamId obrigatório' } }); return }
+        const members = await prisma.teamMember.findMany({
+          where: { teamId: tid, tenantId, user: { isActive: true, deletedAt: null } },
+          select: { userId: true },
+          orderBy: { joinedAt: 'asc' },
+        })
+        pool = members.map(m => m.userId)
+      } else {
+        // ROUND_ROBIN_ALL
+        const sellers = await prisma.user.findMany({
+          where: { tenantId, deletedAt: null, isActive: true, role: { in: ['SELLER', 'TEAM_LEADER', 'MANAGER'] } },
+          select: { id: true },
+          orderBy: { name: 'asc' },
+        })
+        pool = sellers.map(s => s.id)
+      }
+
+      if (pool.length === 0) {
+        res.status(400).json({ success: false, error: { code: 'NO_SELLERS', message: 'Nenhum vendedor disponível para redistribuição' } })
+        return
+      }
+
+      // Update each lead individually for round-robin
+      let updated = 0
+      for (let i = 0; i < leadIds.length; i++) {
+        await prisma.lead.update({
+          where: { id: leadIds[i] },
+          data: { responsibleId: pool[i % pool.length]! },
+        })
+        updated++
+      }
+      res.json({ success: true, data: { updated } })
+      return
+    }
+
+    if (action === 'delete') {
+      const result = await prisma.lead.updateMany({
+        where: whereIds,
+        data: { deletedAt: new Date() },
+      })
+      res.json({ success: true, data: { updated: result.count } })
+      return
+    }
+
+    res.status(400).json({ success: false, error: { code: 'UNKNOWN_ACTION', message: `Ação '${action}' não reconhecida` } })
+  } catch (error: any) {
+    console.error('[Leads] bulkUpdateLeads error:', error)
+    res.status(500).json({
+      success: false,
+      error: { code: error?.code ?? 'INTERNAL_ERROR', message: error?.message ?? 'Erro ao executar ação em lote' },
+    })
+  }
+}
+
 // ── Import Leads from XLSX ──
 
 interface ImportRow {

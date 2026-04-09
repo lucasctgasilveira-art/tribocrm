@@ -78,6 +78,11 @@ export async function downloadImportTemplate(): Promise<void> {
   window.URL.revokeObjectURL(url)
 }
 
+export async function bulkUpdateLeads(leadIds: string[], action: string, payload?: Record<string, unknown>): Promise<{ updated: number }> {
+  const response = await api.patch('/leads/bulk', { leadIds, action, payload })
+  return response.data.data
+}
+
 export async function exportLeads(format: 'xlsx' | 'csv', filters: LeadsParams = {}): Promise<void> {
   const response = await api.get('/leads/export', {
     params: { format, ...filters },

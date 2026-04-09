@@ -7,6 +7,7 @@ import NewLeadModal, { type NewLeadData } from '../../components/shared/NewLeadM
 import ImportLeadsModal from '../../components/shared/ImportLeadsModal/ImportLeadsModal'
 import LeadDrawer from '../../components/shared/LeadDrawer/LeadDrawer'
 import { getLeads, createLead, exportLeads } from '../../services/leads.service'
+import BulkActionsModal from '../../components/shared/BulkActionsModal/BulkActionsModal'
 import { getPipelines } from '../../services/pipeline.service'
 import { getUsers, getTeams } from '../../services/users.service'
 
@@ -131,6 +132,9 @@ export default function GestaoLeadsPage() {
   const [hov, setHov] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
+  const [bulkModalOpen, setBulkModalOpen] = useState(false)
+  const [toast, setToast] = useState('')
+  function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 3000) }
   const [exportOpen, setExportOpen] = useState(false)
   const [drawerLead, setDrawerLead] = useState<Lead | null>(null)
 
@@ -196,7 +200,7 @@ export default function GestaoLeadsPage() {
   // Available stages based on selected pipeline
   const stageOptions = useMemo(() => {
     if (!pipelineId) {
-      const allStages: { id: string; name: string }[] = []
+      const allStages: { id: string; name: string; color: string }[] = []
       pipelines.forEach(p => p.stages?.forEach(s => {
         if (!allStages.find(x => x.name === s.name)) allStages.push(s)
       }))
@@ -368,11 +372,14 @@ export default function GestaoLeadsPage() {
       ) : (
         /* Table */
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
-          {/* Selection counter */}
+          {/* Selection counter + bulk actions button */}
           {someSelected && (
             <div style={{ padding: '10px 20px', background: 'rgba(249,115,22,0.08)', borderBottom: '1px solid rgba(249,115,22,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: 13, color: '#f97316', fontWeight: 600 }}>{selectedIds.size} lead{selectedIds.size !== 1 ? 's' : ''} selecionado{selectedIds.size !== 1 ? 's' : ''}</span>
-              <button onClick={() => setSelectedIds(new Set())} style={{ fontSize: 12, color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Limpar seleção</button>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <button onClick={() => setBulkModalOpen(true)} style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 16px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Ações</button>
+                <button onClick={() => setSelectedIds(new Set())} style={{ fontSize: 12, color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Limpar</button>
+              </div>
             </div>
           )}
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -516,6 +523,17 @@ export default function GestaoLeadsPage() {
           instance="gestao"
         />
       )}
+      {bulkModalOpen && (
+        <BulkActionsModal
+          leadIds={Array.from(selectedIds)}
+          onClose={() => setBulkModalOpen(false)}
+          onDone={(msg) => { setBulkModalOpen(false); setSelectedIds(new Set()); showToast(msg); reload() }}
+          users={usersList}
+          teams={teamsList}
+          stages={stageOptions}
+        />
+      )}
+      {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: '4px solid #22c55e', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 60 }}>{toast}</div>}
     </AppLayout>
   )
 }

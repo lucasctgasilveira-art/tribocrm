@@ -3,7 +3,7 @@ import multer from 'multer'
 import { authMiddleware } from '../middleware/auth.middleware'
 import {
   getLeads, getLead, createLead, updateLead, deleteLead,
-  importLeads, getImportTemplate, exportLeads,
+  importLeads, getImportTemplate, exportLeads, bulkUpdateLeads,
 } from '../controllers/leads.controller'
 
 const router = Router()
@@ -29,6 +29,7 @@ const upload = multer({
 router.get('/import/template', getImportTemplate)
 router.post('/import', upload.single('file'), importLeads)
 router.get('/export', exportLeads)
+router.patch('/bulk', bulkUpdateLeads)
 
 router.get('/', getLeads)
 router.get('/:id', getLead)
