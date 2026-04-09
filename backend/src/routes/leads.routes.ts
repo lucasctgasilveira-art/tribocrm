@@ -4,6 +4,7 @@ import { authMiddleware } from '../middleware/auth.middleware'
 import {
   getLeads, getLead, createLead, updateLead, deleteLead,
   importLeads, getImportTemplate, exportLeads, bulkUpdateLeads,
+  getLossReasons,
 } from '../controllers/leads.controller'
 
 const router = Router()
@@ -29,6 +30,7 @@ const upload = multer({
 router.get('/import/template', getImportTemplate)
 router.post('/import', upload.single('file'), importLeads)
 router.get('/export', exportLeads)
+router.get('/loss-reasons', getLossReasons)
 router.patch('/bulk', bulkUpdateLeads)
 
 router.get('/', getLeads)

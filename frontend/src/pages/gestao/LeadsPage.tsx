@@ -6,7 +6,7 @@ import { gestaoMenuItems } from '../../config/gestaoMenu'
 import NewLeadModal, { type NewLeadData } from '../../components/shared/NewLeadModal/NewLeadModal'
 import ImportLeadsModal from '../../components/shared/ImportLeadsModal/ImportLeadsModal'
 import LeadDrawer from '../../components/shared/LeadDrawer/LeadDrawer'
-import { getLeads, createLead, exportLeads } from '../../services/leads.service'
+import { getLeads, createLead, exportLeads, updateLead, deleteLead, getLossReasons } from '../../services/leads.service'
 import BulkActionsModal from '../../components/shared/BulkActionsModal/BulkActionsModal'
 import { getPipelines } from '../../services/pipeline.service'
 import { getUsers, getTeams } from '../../services/users.service'
@@ -51,7 +51,7 @@ const tempDisplay: Record<string, { label: string; color: string }> = {
   COLD: { label: '❄️ Frio', color: '#3b82f6' },
 }
 
-const menuOpts = ['Ver detalhes', 'Editar', 'Mover etapa', 'Arquivar']
+const menuOpts = ['Ver detalhes', 'Editar', 'Mover etapa', 'Excluir da conta']
 
 function fmt(v: number) { return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 }) }
 function ini(n: string) { return n.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() }
@@ -133,6 +133,9 @@ export default function GestaoLeadsPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [bulkModalOpen, setBulkModalOpen] = useState(false)
+  const [editLead, setEditLead] = useState<Lead | null>(null)
+  const [moveLeadObj, setMoveLeadObj] = useState<Lead | null>(null)
+  const [lossReasons, setLossReasons] = useState<{ id: string; name: string }[]>([])
   const [toast, setToast] = useState('')
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 3000) }
   const [exportOpen, setExportOpen] = useState(false)
@@ -162,6 +165,11 @@ export default function GestaoLeadsPage() {
   // Load teams (for import "Por equipe" dropdown)
   useEffect(() => {
     getTeams().then((data: Array<{ id: string; name: string }>) => setTeamsList(data ?? [])).catch(() => setTeamsList([]))
+  }, [])
+
+  // Load loss reasons (for "Mover etapa" → Perdido)
+  useEffect(() => {
+    getLossReasons().then(setLossReasons).catch(() => setLossReasons([]))
   }, [])
 
   // Compute status filter from tab
@@ -451,17 +459,30 @@ export default function GestaoLeadsPage() {
                         <MoreHorizontal size={14} strokeWidth={1.5} />
                       </button>
                       {menu === l.id && (
-                        <div style={{ position: 'absolute', right: 20, top: 48, zIndex: 20, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', minWidth: 160, padding: '4px 0' }}>
-                          {menuOpts.map(opt => (
-                            <div key={opt}
-                              onClick={(e) => { e.stopPropagation(); setMenu(null); if (opt === 'Ver detalhes') setDrawerLead(l) }}
-                              style={{ padding: '8px 14px', fontSize: 13, color: 'var(--text-primary)', cursor: 'pointer' }}
-                              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
-                              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}>
-                              {opt}
-                            </div>
-                          ))}
-                        </div>
+                        <>
+                          <div onClick={(e) => { e.stopPropagation(); setMenu(null) }} style={{ position: 'fixed', inset: 0, zIndex: 19 }} />
+                          <div style={{ position: 'absolute', right: 20, top: 48, zIndex: 20, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', minWidth: 170, padding: '4px 0' }}>
+                            {menuOpts.map(opt => (
+                              <div key={opt}
+                                onClick={(e) => {
+                                  e.stopPropagation(); setMenu(null)
+                                  if (opt === 'Ver detalhes') setDrawerLead(l)
+                                  else if (opt === 'Editar') setEditLead(l)
+                                  else if (opt === 'Mover etapa') setMoveLeadObj(l)
+                                  else if (opt === 'Excluir da conta') {
+                                    if (confirm('Excluir este lead permanentemente? Esta ação não pode ser desfeita.')) {
+                                      deleteLead(l.id).then(() => { showToast('Lead excluído'); reload() }).catch(() => showToast('Erro ao excluir'))
+                                    }
+                                  }
+                                }}
+                                style={{ padding: '8px 14px', fontSize: 13, color: opt === 'Excluir da conta' ? '#ef4444' : 'var(--text-primary)', cursor: 'pointer' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}>
+                                {opt}
+                              </div>
+                            ))}
+                          </div>
+                        </>
                       )}
                     </td>
                   </tr>
@@ -533,7 +554,182 @@ export default function GestaoLeadsPage() {
           stages={stageOptions}
         />
       )}
+      {editLead && <EditLeadInlineModal lead={editLead} users={usersList} onClose={() => setEditLead(null)} onSaved={() => { setEditLead(null); showToast('Lead atualizado'); reload() }} />}
+      {moveLeadObj && <MoveStageInlineModal lead={moveLeadObj} stages={stageOptions} lossReasons={lossReasons} onClose={() => setMoveLeadObj(null)} onMoved={() => { setMoveLeadObj(null); showToast('Etapa alterada'); reload() }} />}
       {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: '4px solid #22c55e', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 60 }}>{toast}</div>}
     </AppLayout>
+  )
+}
+
+// ── Edit Lead Modal (inline) ──
+
+const editInputS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
+
+function EditLeadInlineModal({ lead, users, onClose, onSaved }: { lead: Lead; users: { id: string; name: string }[]; onClose: () => void; onSaved: () => void }) {
+  const [name, setName] = useState(lead.name)
+  const [company, setCompany] = useState(lead.company ?? '')
+  const [email, setEmail] = useState(lead.email ?? '')
+  const [phone, setPhone] = useState(lead.phone ?? '')
+  const [whatsapp, setWhatsapp] = useState(lead.whatsapp ?? '')
+  const [temp, setTemp] = useState(lead.temperature)
+  const [expectedValue, setExpectedValue] = useState(String(Number(lead.expectedValue) || ''))
+  const [respId, setRespId] = useState(lead.responsible.id)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleSave() {
+    if (!name.trim()) { setError('Nome é obrigatório'); return }
+    setSaving(true); setError('')
+    try {
+      await updateLead(lead.id, {
+        name: name.trim(),
+        company: company || undefined,
+        email: email || undefined,
+        phone: phone || undefined,
+        whatsapp: whatsapp || undefined,
+        expectedValue: parseFloat(expectedValue) || undefined,
+        temperature: temp,
+        responsibleId: respId,
+      })
+      onSaved()
+    } catch (e: any) { setError(e?.response?.data?.error?.message ?? 'Erro ao salvar'); setSaving(false) }
+  }
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 520, maxWidth: '90vw', maxHeight: '90vh', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Editar Lead</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}>&times;</button>
+        </div>
+        <div style={{ padding: 24, overflowY: 'auto', flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div style={{ gridColumn: '1 / -1' }}><label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Nome *</label><input value={name} onChange={e => setName(e.target.value)} style={editInputS} /></div>
+          <div><label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Empresa</label><input value={company} onChange={e => setCompany(e.target.value)} style={editInputS} /></div>
+          <div><label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>E-mail</label><input value={email} onChange={e => setEmail(e.target.value)} style={editInputS} /></div>
+          <div><label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Telefone</label><input value={phone} onChange={e => setPhone(e.target.value)} style={editInputS} /></div>
+          <div><label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>WhatsApp</label><input value={whatsapp} onChange={e => setWhatsapp(e.target.value)} style={editInputS} /></div>
+          <div><label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Valor esperado</label><input type="number" value={expectedValue} onChange={e => setExpectedValue(e.target.value)} style={editInputS} /></div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Temperatura</label>
+            <select value={temp} onChange={e => setTemp(e.target.value as Lead['temperature'])} style={{ ...editInputS, appearance: 'none', cursor: 'pointer' }}>
+              <option value="HOT">Quente</option><option value="WARM">Morno</option><option value="COLD">Frio</option>
+            </select>
+          </div>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Responsável</label>
+            <select value={respId} onChange={e => setRespId(e.target.value)} style={{ ...editInputS, appearance: 'none', cursor: 'pointer' }}>
+              {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+            </select>
+          </div>
+          {error && <div style={{ gridColumn: '1 / -1', fontSize: 12, color: '#ef4444' }}>{error}</div>}
+        </div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
+          <button onClick={handleSave} disabled={saving || !name.trim()} style={{ background: name.trim() ? '#f97316' : 'var(--border)', color: name.trim() ? '#fff' : 'var(--text-muted)', border: 'none', borderRadius: 8, padding: '9px 22px', fontSize: 13, fontWeight: 600, cursor: name.trim() ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 6 }}>
+            {saving && <Loader2 size={14} className="animate-spin" />}{saving ? 'Salvando...' : 'Salvar'}
+          </button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ── Move Stage Modal (inline — handles Perdido + Venda Realizada special cases) ──
+
+function MoveStageInlineModal({ lead, stages, lossReasons, onClose, onMoved }: {
+  lead: Lead
+  stages: { id: string; name: string; color: string }[]
+  lossReasons: { id: string; name: string }[]
+  onClose: () => void
+  onMoved: () => void
+}) {
+  const [stageId, setStageId] = useState(lead.stage.id)
+  const [lossReasonId, setLossReasonId] = useState('')
+  const [closedValue, setClosedValue] = useState('')
+  const [wonAt, setWonAt] = useState(new Date().toISOString().slice(0, 10))
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const selectedStage = stages.find(s => s.id === stageId)
+  const stageName = selectedStage?.name?.toLowerCase() ?? ''
+  const isLost = stageName.includes('perdido') || stageName.includes('lost')
+  const isWon = stageName.includes('venda realizada') || stageName.includes('won')
+
+  async function handleMove() {
+    if (isLost && !lossReasonId) { setError('Selecione o motivo de perda'); return }
+    if (isWon && (!closedValue || !wonAt)) { setError('Valor fechado e data de fechamento são obrigatórios'); return }
+    setSaving(true); setError('')
+    try {
+      const payload: Record<string, unknown> = { stageId }
+      if (isLost) {
+        payload.status = 'LOST'
+        payload.lossReasonId = lossReasonId
+        payload.lostAt = new Date().toISOString()
+      }
+      if (isWon) {
+        payload.status = 'WON'
+        payload.closedValue = parseFloat(closedValue)
+        payload.wonAt = wonAt
+      }
+      await updateLead(lead.id, payload)
+      onMoved()
+    } catch (e: any) { setError(e?.response?.data?.error?.message ?? 'Erro ao mover lead'); setSaving(false) }
+  }
+
+  const changed = stageId !== lead.stage.id
+  const canSave = changed && !(isLost && !lossReasonId) && !(isWon && (!closedValue || !wonAt)) && !saving
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 460, maxWidth: '90vw', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <div>
+            <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Mover etapa</h2>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{lead.name} · Atual: {lead.stage.name}</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}>&times;</button>
+        </div>
+        <div style={{ padding: 24 }}>
+          <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Nova etapa</label>
+          <select value={stageId} onChange={e => setStageId(e.target.value)} style={{ ...editInputS, appearance: 'none', cursor: 'pointer', marginBottom: 16 }}>
+            {stages.map(s => <option key={s.id} value={s.id}>{s.name}{s.id === lead.stage.id ? ' (atual)' : ''}</option>)}
+          </select>
+
+          {isLost && (
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 12, fontWeight: 500, color: '#ef4444', display: 'block', marginBottom: 6 }}>Motivo de perda *</label>
+              <select value={lossReasonId} onChange={e => setLossReasonId(e.target.value)} style={{ ...editInputS, appearance: 'none', cursor: 'pointer', borderColor: 'rgba(239,68,68,0.4)' }}>
+                <option value="">Selecione o motivo...</option>
+                {lossReasons.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+              </select>
+              {lossReasons.length === 0 && <div style={{ fontSize: 11, color: '#f59e0b', marginTop: 6 }}>Nenhum motivo cadastrado. Vá em Configurações → Motivos de Perda.</div>}
+            </div>
+          )}
+
+          {isWon && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 500, color: '#22c55e', display: 'block', marginBottom: 6 }}>Valor fechado (R$) *</label>
+                <input type="number" value={closedValue} onChange={e => setClosedValue(e.target.value)} placeholder="0.00" style={{ ...editInputS, borderColor: 'rgba(34,197,94,0.4)' }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 500, color: '#22c55e', display: 'block', marginBottom: 6 }}>Data de fechamento *</label>
+                <input type="date" value={wonAt} onChange={e => setWonAt(e.target.value)} style={{ ...editInputS, borderColor: 'rgba(34,197,94,0.4)' }} />
+              </div>
+            </div>
+          )}
+
+          {error && <div style={{ fontSize: 12, color: '#ef4444', marginBottom: 12 }}>{error}</div>}
+        </div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
+          <button onClick={handleMove} disabled={!canSave} style={{ background: canSave ? (isLost ? '#ef4444' : isWon ? '#22c55e' : '#f97316') : 'var(--border)', color: canSave ? '#fff' : 'var(--text-muted)', border: 'none', borderRadius: 8, padding: '9px 22px', fontSize: 13, fontWeight: 600, cursor: canSave ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 6 }}>
+            {saving && <Loader2 size={14} className="animate-spin" />}{saving ? 'Movendo...' : isLost ? 'Marcar como Perdido' : isWon ? 'Marcar como Venda' : 'Mover'}
+          </button>
+        </div>
+      </div>
+    </>
   )
 }

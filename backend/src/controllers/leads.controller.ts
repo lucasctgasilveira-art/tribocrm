@@ -62,6 +62,21 @@ function cellText(cell: ExcelJS.Cell): string {
   return String(v)
 }
 
+export async function getLossReasons(req: Request, res: Response): Promise<void> {
+  try {
+    const tenantId = req.user!.tenantId
+    const reasons = await prisma.lossReason.findMany({
+      where: { tenantId, isActive: true },
+      orderBy: { sortOrder: 'asc' },
+      select: { id: true, name: true },
+    })
+    res.json({ success: true, data: reasons })
+  } catch (error) {
+    console.error('[Leads] getLossReasons error:', error)
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Erro interno do servidor' } })
+  }
+}
+
 export async function getLeads(req: Request, res: Response): Promise<void> {
   try {
     const tenantId = req.user!.tenantId
@@ -361,7 +376,11 @@ export async function updateLead(req: Request, res: Response): Promise<void> {
       return
     }
 
-    const { name, company, email, phone, whatsapp, expectedValue, stageId, temperature, status, notes } = req.body
+    const {
+      name, company, email, phone, whatsapp, expectedValue, stageId, temperature,
+      status, notes, responsibleId, cpf, cnpj, position, source,
+      lossReasonId, closedValue, wonAt, lostAt,
+    } = req.body
 
     const data: Prisma.LeadUpdateInput = {}
     if (name !== undefined) data.name = name
@@ -369,11 +388,20 @@ export async function updateLead(req: Request, res: Response): Promise<void> {
     if (email !== undefined) data.email = email
     if (phone !== undefined) data.phone = phone
     if (whatsapp !== undefined) data.whatsapp = whatsapp
+    if (cpf !== undefined) data.cpf = cpf || null
+    if (cnpj !== undefined) data.cnpj = cnpj || null
+    if (position !== undefined) data.position = position || null
+    if (source !== undefined) data.source = source || null
     if (expectedValue !== undefined) data.expectedValue = expectedValue ? new Prisma.Decimal(expectedValue) : null
     if (stageId !== undefined) data.stage = { connect: { id: stageId } }
     if (temperature !== undefined) data.temperature = temperature
     if (status !== undefined) data.status = status
     if (notes !== undefined) data.notes = notes
+    if (responsibleId !== undefined) data.responsible = { connect: { id: responsibleId } }
+    if (lossReasonId !== undefined) data.lossReasonId = lossReasonId || null
+    if (closedValue !== undefined) data.closedValue = closedValue ? new Prisma.Decimal(closedValue) : null
+    if (wonAt !== undefined) data.wonAt = wonAt ? new Date(wonAt) : null
+    if (lostAt !== undefined) data.lostAt = lostAt ? new Date(lostAt) : null
 
     const lead = await prisma.lead.update({
       where: { id },

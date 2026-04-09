@@ -42,7 +42,7 @@ export async function createLead(payload: LeadPayload) {
   return response.data.data
 }
 
-export async function updateLead(id: string, payload: Partial<LeadPayload>) {
+export async function updateLead(id: string, payload: Partial<LeadPayload> & Record<string, unknown>) {
   const response = await api.patch(`/leads/${id}`, payload)
   return response.data.data
 }
@@ -76,6 +76,11 @@ export async function downloadImportTemplate(): Promise<void> {
   a.click()
   a.remove()
   window.URL.revokeObjectURL(url)
+}
+
+export async function getLossReasons(): Promise<Array<{ id: string; name: string }>> {
+  const response = await api.get('/leads/loss-reasons')
+  return response.data.data ?? []
 }
 
 export async function bulkUpdateLeads(leadIds: string[], action: string, payload?: Record<string, unknown>): Promise<{ updated: number }> {
