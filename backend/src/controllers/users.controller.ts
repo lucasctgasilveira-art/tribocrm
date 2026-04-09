@@ -100,6 +100,48 @@ export async function createUser(req: Request, res: Response): Promise<void> {
       return
     }
 
+    // Plan user limit check
+    const [tenantForLimit, currentUserCount] = await Promise.all([
+      prisma.tenant.findUnique({
+        where: { id: tenantId },
+        include: { plan: { select: { maxUsers: true, name: true } } },
+      }),
+      prisma.user.count({ where: { tenantId, isActive: true, deletedAt: null } }),
+    ])
+
+    if (tenantForLimit?.plan && currentUserCount >= tenantForLimit.plan.maxUsers) {
+      // Notify the OWNER about the limit
+      try {
+        const owners = await prisma.user.findMany({
+          where: { tenantId, role: 'OWNER', isActive: true, deletedAt: null },
+          select: { id: true },
+        })
+        for (const o of owners) {
+          await prisma.notification.create({
+            data: {
+              tenantId,
+              userId: o.id,
+              type: 'TASK_DUE',
+              title: 'Limite de usuários atingido',
+              body: `Limite de usuários atingido (${currentUserCount}/${tenantForLimit.plan.maxUsers}). Faça upgrade do plano para adicionar mais.`,
+              link: '/gestao/assinatura',
+            },
+          })
+        }
+      } catch { /* notification failure should not block the 403 response */ }
+
+      res.status(403).json({
+        success: false,
+        error: {
+          code: 'PLAN_LIMIT_REACHED',
+          message: `Limite de ${tenantForLimit.plan.maxUsers} usuário(s) do plano ${tenantForLimit.plan.name} atingido. Faça upgrade para adicionar mais.`,
+          currentCount: currentUserCount,
+          maxAllowed: tenantForLimit.plan.maxUsers,
+        },
+      })
+      return
+    }
+
     // password is now optional — generate a temp one when missing so the
     // welcome email can deliver it. The plain value is only kept in memory
     // for this request and never logged.

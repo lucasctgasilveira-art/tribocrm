@@ -325,6 +325,7 @@ export default function UsersPage() {
 // ── New User Modal ──
 
 function NewUserModal({ onClose, onCreated }: { onClose: () => void; onCreated: (r: CreateUserResult) => void }) {
+  const nav = useNavigate()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [role, setRole] = useState('SELLER')
@@ -332,6 +333,7 @@ function NewUserModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
   const [teams, setTeams] = useState<{ id: string; name: string }[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [planLimitReached, setPlanLimitReached] = useState(false)
 
   useEffect(() => {
     getTeams().then((data: Array<{ id: string; name: string }>) => setTeams(data ?? [])).catch(() => setTeams([]))
@@ -353,7 +355,13 @@ function NewUserModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
       })
       onCreated(result)
     } catch (e: any) {
-      setError(e?.response?.data?.error?.message ?? 'Erro ao criar usuário')
+      const errData = e?.response?.data?.error
+      if (errData?.code === 'PLAN_LIMIT_REACHED') {
+        setError(`Limite do plano atingido (${errData.currentCount}/${errData.maxAllowed} usuários). Faça upgrade para adicionar mais.`)
+        setPlanLimitReached(true)
+      } else {
+        setError(errData?.message ?? 'Erro ao criar usuário')
+      }
       setSaving(false)
     }
   }
@@ -395,7 +403,16 @@ function NewUserModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
           <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: 12, fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
             Uma senha temporária será gerada automaticamente e enviada por e-mail ao usuário com instruções de acesso.
           </div>
-          {error && <div style={{ fontSize: 12, color: '#ef4444', marginTop: 12 }}>{error}</div>}
+          {error && (
+            <div style={{ fontSize: 12, color: '#ef4444', marginTop: 12 }}>
+              {error}
+              {planLimitReached && (
+                <button onClick={() => { onClose(); nav('/gestao/assinatura') }} style={{ display: 'block', marginTop: 8, background: '#f97316', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                  Ver planos
+                </button>
+              )}
+            </div>
+          )}
         </div>
         <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
           <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
