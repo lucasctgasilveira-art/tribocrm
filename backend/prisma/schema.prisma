@@ -124,6 +124,7 @@ enum AutomationTrigger {
   PRODUCT_ADDED
   GOAL_REACHED
   FORM_SUBMITTED
+  EMAIL_OPENED
 }
 
 enum AutomationAction {

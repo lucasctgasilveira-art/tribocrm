@@ -20,6 +20,7 @@ import adminRoutes from './routes/admin.routes'
 import oauthRoutes from './routes/oauth.routes'
 import paymentsRoutes from './routes/payments.routes'
 import webhooksRoutes from './routes/webhooks.routes'
+import emailRoutes from './routes/email.routes'
 
 const app = express()
 
@@ -78,6 +79,7 @@ app.get('/health', (_req, res) => {
 // validate our endpoint before registering the PIX webhook) get a 401 and
 // never reach their actual handler. Order matters here.
 app.use('/webhooks', webhooksRoutes)
+app.use('/email', emailRoutes)
 app.use('/oauth', oauthRoutes)
 app.use('/auth', authRoutes)
 app.use('/pipelines', pipelineRoutes)
