@@ -214,10 +214,14 @@ export async function updateUser(req: Request, res: Response): Promise<void> {
       return
     }
 
-    const { name, role, isActive, userStatus } = req.body
+    const { name, email, phone, cpf, birthday, role, isActive, userStatus, teamId } = req.body
 
     const data: Prisma.UserUpdateInput = {}
     if (name !== undefined) data.name = name
+    if (email !== undefined) data.email = String(email).toLowerCase()
+    if (phone !== undefined) data.phone = phone || null
+    if (cpf !== undefined) data.cpf = cpf || null
+    if (birthday !== undefined) data.birthday = birthday ? new Date(birthday) : null
     if (role !== undefined) data.role = role
     if (isActive !== undefined) data.isActive = isActive
     if (userStatus !== undefined) {
@@ -240,10 +244,24 @@ export async function updateUser(req: Request, res: Response): Promise<void> {
         name: true,
         email: true,
         role: true,
+        phone: true,
+        cpf: true,
+        birthday: true,
         isActive: true,
+        userStatus: true,
         createdAt: true,
       },
     })
+
+    // Handle team membership change when teamId is provided
+    if (teamId !== undefined) {
+      // Remove all current memberships
+      await prisma.teamMember.deleteMany({ where: { userId: id, tenantId } })
+      // Add new one if provided
+      if (teamId) {
+        await prisma.teamMember.create({ data: { tenantId, teamId, userId: id } })
+      }
+    }
 
     res.json({ success: true, data: user })
   } catch (error) {

@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { Plus, Search, Loader2, X, CheckCircle2, AlertTriangle } from 'lucide-react'
+import { Plus, Search, Loader2, X, CheckCircle2, AlertTriangle, MoreHorizontal } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
-import { getUsers, updateUser, createUser, getTeams, type CreateUserResult } from '../../services/users.service'
+import { useNavigate } from 'react-router-dom'
+import { getUsers, updateUser, createUser, getTeams, resetUserPassword, type CreateUserResult } from '../../services/users.service'
 import { bulkUpdateLeads } from '../../services/leads.service'
 
 // ── Types ──
@@ -67,9 +68,29 @@ export default function UsersPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [roleF, setRoleF] = useState('')
   const [statusF, setStatusF] = useState('')
+  const [openMenu, setOpenMenu] = useState<string | null>(null)
   const [vacationModal, setVacationModal] = useState<User | null>(null)
+  const [editUserModal, setEditUserModal] = useState<User | null>(null)
+  const [resetPwdResult, setResetPwdResult] = useState<{ name: string; password: string } | null>(null)
   const [toast, setToast] = useState('')
+  const navigate = useNavigate()
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 3000) }
+
+  function generateTempPassword(): string {
+    const pool = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+    let pwd = ''
+    for (let i = 0; i < 8; i++) pwd += pool[Math.floor(Math.random() * pool.length)]
+    return pwd
+  }
+
+  async function handleResetPassword(user: User) {
+    const pwd = generateTempPassword()
+    try {
+      await resetUserPassword(user.id, pwd)
+      setOpenMenu(null)
+      setResetPwdResult({ name: user.name, password: pwd })
+    } catch { showToast('Erro ao redefinir senha') }
+  }
   const [newUserModalOpen, setNewUserModalOpen] = useState(false)
   const [createResult, setCreateResult] = useState<CreateUserResult | null>(null)
 
@@ -235,6 +256,34 @@ export default function UsersPage() {
                   </div>
                 )
               })()}
+
+              {/* Actions row */}
+              <div style={{ display: 'flex', gap: 6, marginTop: 10, position: 'relative' }}>
+                <button onClick={() => setEditUserModal(u)} style={{ flex: 1, background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 0', fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}>Editar</button>
+                <button onClick={() => setOpenMenu(openMenu === u.id ? null : u.id)}
+                  style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid var(--border)', background: openMenu === u.id ? 'var(--border)' : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
+                  <MoreHorizontal size={14} strokeWidth={1.5} />
+                </button>
+                {openMenu === u.id && (
+                  <>
+                    <div onClick={() => setOpenMenu(null)} style={{ position: 'fixed', inset: 0, zIndex: 19 }} />
+                    <div style={{ position: 'absolute', right: 0, bottom: 40, zIndex: 20, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', minWidth: 180, padding: '4px 0' }}>
+                      {[
+                        { label: 'Editar perfil', action: () => { setOpenMenu(null); setEditUserModal(u) } },
+                        { label: 'Redefinir senha', action: () => handleResetPassword(u) },
+                        { label: 'Ver atividades', action: () => { setOpenMenu(null); navigate(`/gestao/relatorios?userId=${u.id}`) } },
+                      ].map(opt => (
+                        <div key={opt.label} onClick={opt.action}
+                          style={{ padding: '8px 14px', fontSize: 13, color: 'var(--text-primary)', cursor: 'pointer' }}
+                          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+                          onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
+                          {opt.label}
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -252,6 +301,20 @@ export default function UsersPage() {
           user={vacationModal}
           onClose={() => setVacationModal(null)}
           onDone={(msg) => { setVacationModal(null); showToast(msg); loadUsers() }}
+        />
+      )}
+      {editUserModal && (
+        <EditUserInlineModal
+          user={editUserModal}
+          onClose={() => setEditUserModal(null)}
+          onSaved={() => { setEditUserModal(null); showToast('Usuário atualizado'); loadUsers() }}
+        />
+      )}
+      {resetPwdResult && (
+        <ResetPasswordResultModal
+          name={resetPwdResult.name}
+          password={resetPwdResult.password}
+          onClose={() => setResetPwdResult(null)}
         />
       )}
       {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: '4px solid #22c55e', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 60 }}>{toast}</div>}
@@ -341,6 +404,116 @@ function NewUserModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
             {saving ? 'Criando...' : 'Criar usuário'}
           </button>
         </div>
+      </div>
+    </>
+  )
+}
+
+// ── Edit User Modal ──
+
+const editInputS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
+
+function EditUserInlineModal({ user, onClose, onSaved }: { user: User; onClose: () => void; onSaved: () => void }) {
+  const [name, setName] = useState(user.name)
+  const [email, setEmail] = useState(user.email)
+  const [phone, setPhone] = useState('')
+  const [cpf, setCpf] = useState('')
+  const [birthday, setBirthday] = useState('')
+  const [role, setRole] = useState(user.role)
+  const [teamId, setTeamId] = useState(user.teams[0]?.id ?? '')
+  const [teams, setTeams] = useState<{ id: string; name: string }[]>([])
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  // Load teams + full user data (phone, cpf, birthday are in the API response)
+  useEffect(() => {
+    getTeams().then((d: Array<{ id: string; name: string }>) => setTeams(d ?? [])).catch(() => {})
+    // The user object from the list already has phone, cpf etc if the select includes them
+    // They're typed loosely — set from whatever we have
+    const u = user as User & { phone?: string; cpf?: string; birthday?: string }
+    setPhone(u.phone ?? '')
+    setCpf(u.cpf ?? '')
+    setBirthday(u.birthday ? String(u.birthday).slice(0, 10) : '')
+  }, [user])
+
+  const canSave = name.trim().length >= 2 && email.includes('@') && !saving
+
+  async function handleSave() {
+    if (!canSave) return
+    setSaving(true); setError('')
+    try {
+      await updateUser(user.id, {
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        phone: phone || null,
+        cpf: cpf || null,
+        birthday: birthday || null,
+        role,
+        teamId: teamId || null,
+      } as Record<string, unknown>)
+      onSaved()
+    } catch (e: any) { setError(e?.response?.data?.error?.message ?? 'Erro ao salvar'); setSaving(false) }
+  }
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 520, maxWidth: '90vw', maxHeight: '90vh', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Editar Usuário</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+        </div>
+        <div style={{ padding: 24, overflowY: 'auto', flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div style={{ gridColumn: '1 / -1' }}><label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Nome *</label><input value={name} onChange={e => setName(e.target.value)} style={editInputS} /></div>
+          <div><label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>E-mail *</label><input value={email} onChange={e => setEmail(e.target.value)} type="email" style={editInputS} /></div>
+          <div><label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Telefone</label><input value={phone} onChange={e => setPhone(e.target.value)} style={editInputS} /></div>
+          <div><label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>CPF</label><input value={cpf} onChange={e => setCpf(e.target.value)} style={editInputS} /></div>
+          <div><label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Data de nascimento</label><input type="date" value={birthday} onChange={e => setBirthday(e.target.value)} style={editInputS} /></div>
+          <div><label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Cargo</label>
+            <select value={role} onChange={e => setRole(e.target.value)} style={{ ...editInputS, appearance: 'none', cursor: 'pointer' }}>
+              <option value="SELLER">Vendedor</option><option value="TEAM_LEADER">Líder</option><option value="MANAGER">Gestor</option>
+            </select>
+          </div>
+          <div><label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Equipe</label>
+            <select value={teamId} onChange={e => setTeamId(e.target.value)} style={{ ...editInputS, appearance: 'none', cursor: 'pointer' }}>
+              <option value="">Sem equipe</option>
+              {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          </div>
+          {error && <div style={{ gridColumn: '1 / -1', fontSize: 12, color: '#ef4444' }}>{error}</div>}
+        </div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
+          <button onClick={handleSave} disabled={!canSave} style={{ background: canSave ? '#f97316' : 'var(--border)', color: canSave ? '#fff' : 'var(--text-muted)', border: 'none', borderRadius: 8, padding: '9px 22px', fontSize: 13, fontWeight: 600, cursor: canSave ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 6 }}>
+            {saving && <Loader2 size={14} className="animate-spin" />}{saving ? 'Salvando...' : 'Salvar'}
+          </button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ── Reset Password Result Modal ──
+
+function ResetPasswordResultModal({ name, password, onClose }: { name: string; password: string; onClose: () => void }) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 440, maxWidth: '90vw', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, padding: 24 }}>
+        <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 8px' }}>Senha redefinida</h2>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 16 }}>
+          A nova senha temporária para <strong style={{ color: 'var(--text-primary)' }}>{name}</strong> foi gerada. Entregue-a ao usuário por um canal seguro:
+        </p>
+        <div style={{ background: 'var(--bg)', border: '2px solid #f97316', borderRadius: 10, padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
+          <code style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: 2, fontFamily: 'monospace' }}>{password}</code>
+          <button onClick={() => { navigator.clipboard.writeText(password); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
+            style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            {copied ? 'Copiado!' : 'Copiar'}
+          </button>
+        </div>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 16 }}>Esta senha não poderá ser recuperada depois de fechar — copie antes.</div>
+        <button onClick={onClose} style={{ width: '100%', background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Concluir</button>
       </div>
     </>
   )
