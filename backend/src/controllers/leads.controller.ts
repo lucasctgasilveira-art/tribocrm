@@ -234,6 +234,7 @@ async function resolveResponsibleForPipeline(
         tenantId,
         deletedAt: null,
         isActive: true,
+        userStatus: 'ACTIVE',
         role: { in: ['SELLER', 'TEAM_LEADER', 'MANAGER'] },
       },
       select: { id: true },
@@ -251,7 +252,7 @@ async function resolveResponsibleForPipeline(
       where: {
         teamId: pipeline.teamId,
         tenantId,
-        user: { isActive: true, deletedAt: null },
+        user: { isActive: true, userStatus: 'ACTIVE', deletedAt: null },
       },
       select: { userId: true },
       orderBy: { joinedAt: 'asc' },
@@ -542,7 +543,7 @@ export async function bulkUpdateLeads(req: Request, res: Response): Promise<void
         const tid = String(payload?.teamId ?? '')
         if (!tid) { res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'teamId obrigatório' } }); return }
         const members = await prisma.teamMember.findMany({
-          where: { teamId: tid, tenantId, user: { isActive: true, deletedAt: null } },
+          where: { teamId: tid, tenantId, user: { isActive: true, userStatus: 'ACTIVE', deletedAt: null } },
           select: { userId: true },
           orderBy: { joinedAt: 'asc' },
         })
@@ -550,7 +551,7 @@ export async function bulkUpdateLeads(req: Request, res: Response): Promise<void
       } else {
         // ROUND_ROBIN_ALL
         const sellers = await prisma.user.findMany({
-          where: { tenantId, deletedAt: null, isActive: true, role: { in: ['SELLER', 'TEAM_LEADER', 'MANAGER'] } },
+          where: { tenantId, deletedAt: null, isActive: true, userStatus: 'ACTIVE', role: { in: ['SELLER', 'TEAM_LEADER', 'MANAGER'] } },
           select: { id: true },
           orderBy: { name: 'asc' },
         })
@@ -684,6 +685,7 @@ export async function importLeads(req: Request, res: Response): Promise<void> {
           tenantId,
           deletedAt: null,
           isActive: true,
+          userStatus: 'ACTIVE',
           role: { in: ['SELLER', 'TEAM_LEADER', 'MANAGER'] },
         },
         select: { id: true },
@@ -709,7 +711,7 @@ export async function importLeads(req: Request, res: Response): Promise<void> {
         where: { id: teamId, tenantId },
         include: {
           members: {
-            include: { user: { select: { id: true, isActive: true, deletedAt: true } } },
+            include: { user: { select: { id: true, isActive: true, userStatus: true, deletedAt: true } } },
           },
         },
       })
@@ -721,7 +723,7 @@ export async function importLeads(req: Request, res: Response): Promise<void> {
         return
       }
       const activeMembers = team.members
-        .filter(m => m.user.isActive && m.user.deletedAt === null)
+        .filter(m => m.user.isActive && m.user.userStatus === 'ACTIVE' && m.user.deletedAt === null)
         .map(m => m.user.id)
       if (activeMembers.length === 0) {
         res.status(400).json({

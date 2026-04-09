@@ -18,12 +18,13 @@ const LOGIN_URL = 'https://tribocrm.vercel.app/login'
 export async function getUsers(req: Request, res: Response): Promise<void> {
   try {
     const tenantId = req.user!.tenantId
-    const { search, role, teamId, isActive } = req.query as Record<string, string | undefined>
+    const { search, role, teamId, isActive, userStatus } = req.query as Record<string, string | undefined>
 
     const where: Prisma.UserWhereInput = { tenantId, deletedAt: null }
 
     if (role) where.role = role as 'OWNER' | 'MANAGER' | 'TEAM_LEADER' | 'SELLER'
     if (isActive !== undefined) where.isActive = isActive === 'true'
+    if (userStatus) where.userStatus = userStatus
 
     if (search) {
       where.OR = [
@@ -48,6 +49,7 @@ export async function getUsers(req: Request, res: Response): Promise<void> {
         birthday: true,
         avatarUrl: true,
         isActive: true,
+        userStatus: true,
         lastLoginAt: true,
         createdAt: true,
         teamMemberships: {
@@ -212,12 +214,23 @@ export async function updateUser(req: Request, res: Response): Promise<void> {
       return
     }
 
-    const { name, role, isActive } = req.body
+    const { name, role, isActive, userStatus } = req.body
 
     const data: Prisma.UserUpdateInput = {}
     if (name !== undefined) data.name = name
     if (role !== undefined) data.role = role
     if (isActive !== undefined) data.isActive = isActive
+    if (userStatus !== undefined) {
+      if (!['ACTIVE', 'VACATION', 'INACTIVE'].includes(userStatus)) {
+        res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'userStatus deve ser ACTIVE, VACATION ou INACTIVE' } })
+        return
+      }
+      data.userStatus = userStatus
+      // INACTIVE implies isActive = false (can't login)
+      if (userStatus === 'INACTIVE') data.isActive = false
+      // ACTIVE/VACATION implies isActive = true (can login)
+      if (userStatus === 'ACTIVE' || userStatus === 'VACATION') data.isActive = true
+    }
 
     const user = await prisma.user.update({
       where: { id },

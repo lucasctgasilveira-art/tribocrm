@@ -407,6 +407,7 @@ model User {
   themePreference ThemePreference @default(DARK) @map("theme_preference")
   leadVisibility  VisibilityType  @default(OWN) @map("lead_visibility")
   isActive        Boolean         @default(true) @map("is_active")
+  userStatus      String          @default("ACTIVE") @map("user_status") @db.VarChar(20)
   rampingStartsAt DateTime?       @map("ramping_starts_at") @db.Date
   lastLoginAt     DateTime?       @map("last_login_at")
   firstLoginAt    DateTime?       @map("first_login_at")

@@ -1,12 +1,15 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { Plus, MoreHorizontal, Search, Loader2, X, CheckCircle2, AlertTriangle } from 'lucide-react'
+import { Plus, Search, Loader2, X, CheckCircle2, AlertTriangle } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
 import { getUsers, updateUser, createUser, getTeams, type CreateUserResult } from '../../services/users.service'
+import { bulkUpdateLeads } from '../../services/leads.service'
 
 // ── Types ──
 
 interface UserTeam { id: string; name: string }
+
+type UserStatus = 'ACTIVE' | 'VACATION' | 'INACTIVE'
 
 interface User {
   id: string
@@ -14,6 +17,7 @@ interface User {
   email: string
   role: string
   isActive: boolean
+  userStatus: UserStatus
   lastLoginAt: string | null
   createdAt: string
   teams: UserTeam[]
@@ -46,8 +50,6 @@ const roleLabels: Record<string, string> = {
   SELLER: 'Vendedor',
 }
 
-const menuOpts = ['Editar perfil', 'Redefinir senha', 'Ver atividades', 'Desativar']
-
 const dd: React.CSSProperties = {
   background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8,
   padding: '0 28px 0 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', height: 36,
@@ -64,8 +66,10 @@ export default function UsersPage() {
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [roleF, setRoleF] = useState('')
-  const [activeF, setActiveF] = useState('')
-  const [openMenu, setOpenMenu] = useState<string | null>(null)
+  const [statusF, setStatusF] = useState('')
+  const [vacationModal, setVacationModal] = useState<User | null>(null)
+  const [toast, setToast] = useState('')
+  function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 3000) }
   const [newUserModalOpen, setNewUserModalOpen] = useState(false)
   const [createResult, setCreateResult] = useState<CreateUserResult | null>(null)
 
@@ -82,7 +86,9 @@ export default function UsersPage() {
       const params: Record<string, string> = {}
       if (debouncedSearch) params.search = debouncedSearch
       if (roleF) params.role = roleF
-      if (activeF) params.isActive = activeF
+      if (statusF === 'ACTIVE') { params.isActive = 'true'; params.userStatus = 'ACTIVE' }
+      else if (statusF === 'VACATION') { params.isActive = 'true'; params.userStatus = 'VACATION' }
+      else if (statusF === 'INACTIVE') { params.isActive = 'false' }
       const data = await getUsers(params)
       setUsers(data)
     } catch {
@@ -90,16 +96,21 @@ export default function UsersPage() {
     } finally {
       setLoading(false)
     }
-  }, [debouncedSearch, roleF, activeF])
+  }, [debouncedSearch, roleF, statusF])
 
   useEffect(() => { loadUsers() }, [loadUsers])
 
-  async function handleDeactivate(id: string) {
+  async function handleStatusChange(user: User, newStatus: UserStatus) {
+    if (newStatus === 'VACATION') {
+      // Open vacation modal to optionally redistribute leads
+      setVacationModal(user)
+      return
+    }
     try {
-      await updateUser(id, { isActive: false })
-      setOpenMenu(null)
+      await updateUser(user.id, { userStatus: newStatus })
+      showToast(newStatus === 'ACTIVE' ? 'Usuário reativado' : 'Usuário desativado')
       loadUsers()
-    } catch { /* ignore */ }
+    } catch { showToast('Erro ao alterar status') }
   }
 
   const stats = useMemo(() => ({
@@ -143,10 +154,11 @@ export default function UsersPage() {
           <option value="TEAM_LEADER">Líder</option>
           <option value="SELLER">Vendedor</option>
         </select>
-        <select value={activeF} onChange={e => setActiveF(e.target.value)} style={dd}>
+        <select value={statusF} onChange={e => setStatusF(e.target.value)} style={dd}>
           <option value="">Todos</option>
-          <option value="true">Ativo</option>
-          <option value="false">Inativo</option>
+          <option value="ACTIVE">Ativo</option>
+          <option value="VACATION">Férias</option>
+          <option value="INACTIVE">Inativo</option>
         </select>
       </div>
 
@@ -175,9 +187,16 @@ export default function UsersPage() {
                     </span>
                   </div>
                 </div>
-                <span style={{ background: u.isActive ? 'rgba(34,197,94,0.12)' : 'rgba(107,114,128,0.12)', color: u.isActive ? '#22c55e' : 'var(--text-muted)', borderRadius: 999, padding: '2px 8px', fontSize: 10, fontWeight: 500, flexShrink: 0 }}>
-                  {u.isActive ? 'Ativo' : 'Inativo'}
-                </span>
+                {(() => {
+                  const st = u.userStatus ?? (u.isActive ? 'ACTIVE' : 'INACTIVE')
+                  const cfg: Record<string, { bg: string; color: string; label: string }> = {
+                    ACTIVE: { bg: 'rgba(249,115,22,0.12)', color: '#f97316', label: 'Ativo' },
+                    VACATION: { bg: 'rgba(234,179,8,0.12)', color: '#eab308', label: 'Férias' },
+                    INACTIVE: { bg: 'rgba(107,114,128,0.12)', color: 'var(--text-muted)', label: 'Inativo' },
+                  }
+                  const c = cfg[st] ?? cfg.ACTIVE!
+                  return <span style={{ background: c.bg, color: c.color, borderRadius: 999, padding: '2px 8px', fontSize: 10, fontWeight: 500, flexShrink: 0 }}>{c.label}</span>
+                })()}
               </div>
 
               {/* Email */}
@@ -188,28 +207,34 @@ export default function UsersPage() {
                 Último acesso: {formatLastAccess(u.lastLoginAt)}
               </div>
 
-              {/* Actions */}
-              <div style={{ display: 'flex', gap: 6, position: 'relative' }}>
-                <button style={{ flex: 1, background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 0', fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}>Editar</button>
-                <button onClick={() => setOpenMenu(openMenu === u.id ? null : u.id)}
-                  style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid var(--border)', background: openMenu === u.id ? 'var(--border)' : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
-                  <MoreHorizontal size={14} strokeWidth={1.5} />
-                </button>
-                {openMenu === u.id && (
-                  <div style={{ position: 'absolute', right: 0, bottom: 40, zIndex: 20, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', minWidth: 170, padding: '4px 0' }}>
-                    {menuOpts.map(opt => (
-                      <div key={opt}
-                        onClick={() => {
-                          if (opt === 'Desativar') handleDeactivate(u.id)
-                          else setOpenMenu(null)
-                        }}
-                        style={{ padding: '8px 14px', fontSize: 13, color: opt === 'Desativar' ? '#ef4444' : 'var(--text-primary)', cursor: 'pointer' }}
-                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>{opt}</div>
-                    ))}
+              {/* Status selector (3 states) */}
+              {(() => {
+                const currentSt = u.userStatus ?? (u.isActive ? 'ACTIVE' : 'INACTIVE')
+                const opts: { k: UserStatus; l: string; c: string }[] = [
+                  { k: 'ACTIVE', l: 'Ativo', c: '#f97316' },
+                  { k: 'VACATION', l: 'Férias', c: '#eab308' },
+                  { k: 'INACTIVE', l: 'Inativo', c: 'var(--text-muted)' },
+                ]
+                return (
+                  <div style={{ display: 'flex', gap: 4, background: 'var(--bg)', borderRadius: 8, padding: 3 }}>
+                    {opts.map(o => {
+                      const active = currentSt === o.k
+                      return (
+                        <button key={o.k}
+                          onClick={() => { if (!active) handleStatusChange(u, o.k) }}
+                          style={{
+                            flex: 1, padding: '6px 0', fontSize: 11, fontWeight: 600, border: 'none', borderRadius: 6, cursor: active ? 'default' : 'pointer',
+                            background: active ? o.c : 'transparent',
+                            color: active ? (o.k === 'INACTIVE' ? 'var(--text-primary)' : '#fff') : 'var(--text-muted)',
+                            transition: 'all 0.15s',
+                          }}>
+                          {o.l}
+                        </button>
+                      )
+                    })}
                   </div>
-                )}
-              </div>
+                )
+              })()}
             </div>
           ))}
         </div>
@@ -222,6 +247,14 @@ export default function UsersPage() {
         />
       )}
       {createResult && <CreateResultDialog result={createResult} onClose={() => setCreateResult(null)} />}
+      {vacationModal && (
+        <VacationModal
+          user={vacationModal}
+          onClose={() => setVacationModal(null)}
+          onDone={(msg) => { setVacationModal(null); showToast(msg); loadUsers() }}
+        />
+      )}
+      {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: '4px solid #22c55e', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 60 }}>{toast}</div>}
     </AppLayout>
   )
 }
@@ -306,6 +339,121 @@ function NewUserModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
           <button onClick={handleSave} disabled={!canSave} style={{ background: canSave ? '#f97316' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 22px', fontSize: 13, fontWeight: 600, color: canSave ? '#fff' : 'var(--text-muted)', cursor: canSave ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 6 }}>
             {saving && <Loader2 size={14} className="animate-spin" />}
             {saving ? 'Criando...' : 'Criar usuário'}
+          </button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ── Vacation Modal (optionally redistribute leads) ──
+
+function VacationModal({ user, onClose, onDone }: { user: User; onClose: () => void; onDone: (msg: string) => void }) {
+  const [redistribute, setRedistribute] = useState(false)
+  const [distType, setDistType] = useState<'ROUND_ROBIN_ALL' | 'SPECIFIC_USER' | 'ROUND_ROBIN_TEAM'>('ROUND_ROBIN_ALL')
+  const [distUserId, setDistUserId] = useState('')
+  const [distTeamId, setDistTeamId] = useState('')
+  const [users, setUsers] = useState<{ id: string; name: string }[]>([])
+  const [teams, setTeams] = useState<{ id: string; name: string }[]>([])
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    getUsers().then((d: Array<{ id: string; name: string }>) => setUsers(d.filter(u => u.id !== user.id))).catch(() => {})
+    getTeams().then((d: Array<{ id: string; name: string }>) => setTeams(d)).catch(() => {})
+  }, [user.id])
+
+  const inputS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box', appearance: 'none', cursor: 'pointer' }
+
+  async function handleConfirm() {
+    setSaving(true); setError('')
+    try {
+      // Set status to VACATION
+      await updateUser(user.id, { userStatus: 'VACATION' })
+
+      if (redistribute) {
+        // Find all active leads of this user
+        const api = (await import('../../services/api')).default
+        const res = await api.get('/leads', { params: { responsibleId: user.id, perPage: 1000, status: 'ACTIVE' } })
+        const leadIds: string[] = (res.data.data ?? []).map((l: { id: string }) => l.id)
+        if (leadIds.length > 0) {
+          const payload: Record<string, unknown> = { distributionType: distType }
+          if (distType === 'SPECIFIC_USER' && distUserId) payload.responsibleId = distUserId
+          if (distType === 'ROUND_ROBIN_TEAM' && distTeamId) payload.teamId = distTeamId
+          await bulkUpdateLeads(leadIds, 'redistribute', payload)
+        }
+      }
+
+      onDone('Usuário marcado como férias' + (redistribute ? ' e leads redistribuídos' : ''))
+    } catch (e: any) {
+      setError(e?.response?.data?.error?.message ?? 'Erro ao processar')
+      setSaving(false)
+    }
+  }
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 480, maxWidth: '90vw', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Marcar férias — {user.name}</h2>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>Deseja transferir os leads desse vendedor enquanto estiver de férias?</p>
+        </div>
+        <div style={{ padding: 24 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+            <label onClick={() => setRedistribute(false)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 12, cursor: 'pointer', border: `1px solid ${!redistribute ? '#eab308' : 'var(--border)'}`, background: !redistribute ? 'rgba(234,179,8,0.06)' : 'transparent', borderRadius: 8 }}>
+              <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${!redistribute ? '#eab308' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {!redistribute && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#eab308' }} />}
+              </div>
+              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Não — manter leads como estão</span>
+            </label>
+            <label onClick={() => setRedistribute(true)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 12, cursor: 'pointer', border: `1px solid ${redistribute ? '#eab308' : 'var(--border)'}`, background: redistribute ? 'rgba(234,179,8,0.06)' : 'transparent', borderRadius: 8 }}>
+              <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${redistribute ? '#eab308' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {redistribute && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#eab308' }} />}
+              </div>
+              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Sim — redistribuir leads</span>
+            </label>
+          </div>
+
+          {redistribute && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 12, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8 }}>
+              {([
+                { k: 'ROUND_ROBIN_ALL' as const, l: 'Todos os vendedores (round-robin)' },
+                { k: 'SPECIFIC_USER' as const, l: 'Vendedor específico' },
+                { k: 'ROUND_ROBIN_TEAM' as const, l: 'Equipe' },
+              ]).map(d => {
+                const active = distType === d.k
+                return (
+                  <label key={d.k} onClick={() => setDistType(d.k)} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)' }}>
+                    <div style={{ width: 14, height: 14, borderRadius: '50%', border: `2px solid ${active ? '#f97316' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {active && <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#f97316' }} />}
+                    </div>
+                    {d.l}
+                  </label>
+                )
+              })}
+              {distType === 'SPECIFIC_USER' && (
+                <select value={distUserId} onChange={e => setDistUserId(e.target.value)} style={inputS}>
+                  <option value="">Selecione vendedor...</option>
+                  {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                </select>
+              )}
+              {distType === 'ROUND_ROBIN_TEAM' && (
+                <select value={distTeamId} onChange={e => setDistTeamId(e.target.value)} style={inputS}>
+                  <option value="">Selecione equipe...</option>
+                  {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+              )}
+            </div>
+          )}
+
+          {error && <div style={{ fontSize: 12, color: '#ef4444', marginTop: 12 }}>{error}</div>}
+        </div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
+          <button onClick={handleConfirm} disabled={saving || (redistribute && distType === 'SPECIFIC_USER' && !distUserId) || (redistribute && distType === 'ROUND_ROBIN_TEAM' && !distTeamId)}
+            style={{ background: '#eab308', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 22px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: saving ? 0.7 : 1 }}>
+            {saving && <Loader2 size={14} className="animate-spin" />}{saving ? 'Processando...' : 'Confirmar férias'}
           </button>
         </div>
       </div>
