@@ -5,6 +5,7 @@ export interface LeadsParams {
   stageId?: string
   status?: string
   temperature?: string
+  responsibleId?: string
   search?: string
   page?: number
   perPage?: number

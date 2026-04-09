@@ -93,9 +93,38 @@ export default function GestaoLeadsPage() {
   const [pipelineId, setPipelineId] = useState<string>('')
   const [stageId, setStageId] = useState<string>('')
   const [temperature, setTemperature] = useState<string>('')
+  const [responsibleFilter, setResponsibleFilter] = useState<string>('')
   const [tab, setTab] = useState<'all' | 'active' | 'archived'>('all')
   const [page, setPage] = useState(1)
   const [sortBy, setSortBy] = useState('recent')
+
+  // Selection state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const allPageSelected = leads.length > 0 && leads.every(l => selectedIds.has(l.id))
+  const someSelected = selectedIds.size > 0
+
+  function toggleSelect(id: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
+  function toggleSelectAll() {
+    if (allPageSelected) {
+      setSelectedIds(prev => {
+        const next = new Set(prev)
+        leads.forEach(l => next.delete(l.id))
+        return next
+      })
+    } else {
+      setSelectedIds(prev => {
+        const next = new Set(prev)
+        leads.forEach(l => next.add(l.id))
+        return next
+      })
+    }
+  }
 
   // UI state
   const [menu, setMenu] = useState<string | null>(null)
@@ -138,8 +167,9 @@ export default function GestaoLeadsPage() {
     return ''
   }, [tab])
 
-  // Load leads when filters change
+  // Load leads when filters change — also clear selection
   useEffect(() => {
+    setSelectedIds(new Set())
     async function load() {
       setLoading(true)
       try {
@@ -148,6 +178,7 @@ export default function GestaoLeadsPage() {
         if (pipelineId) params.pipelineId = pipelineId
         if (stageId) params.stageId = stageId
         if (temperature) params.temperature = temperature
+        if (responsibleFilter) params.responsibleId = responsibleFilter
         if (statusFilter) params.status = statusFilter
         const result = await getLeads(params)
         setLeads(result.data)
@@ -160,7 +191,7 @@ export default function GestaoLeadsPage() {
       }
     }
     load()
-  }, [debouncedSearch, pipelineId, stageId, temperature, statusFilter, page, reloadKey])
+  }, [debouncedSearch, pipelineId, stageId, temperature, responsibleFilter, statusFilter, page, reloadKey])
 
   // Available stages based on selected pipeline
   const stageOptions = useMemo(() => {
@@ -306,6 +337,10 @@ export default function GestaoLeadsPage() {
           <option value="WARM">Morno</option>
           <option value="COLD">Frio</option>
         </select>
+        <select value={responsibleFilter} onChange={(e) => { setResponsibleFilter(e.target.value); setPage(1) }} style={dd}>
+          <option value="">Responsável</option>
+          {usersList.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+        </select>
         <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} style={dd}>
           <option value="recent">Mais recente</option>
           <option value="value">Maior valor</option>
@@ -333,9 +368,19 @@ export default function GestaoLeadsPage() {
       ) : (
         /* Table */
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+          {/* Selection counter */}
+          {someSelected && (
+            <div style={{ padding: '10px 20px', background: 'rgba(249,115,22,0.08)', borderBottom: '1px solid rgba(249,115,22,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 13, color: '#f97316', fontWeight: 600 }}>{selectedIds.size} lead{selectedIds.size !== 1 ? 's' : ''} selecionado{selectedIds.size !== 1 ? 's' : ''}</span>
+              <button onClick={() => setSelectedIds(new Set())} style={{ fontSize: 12, color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Limpar seleção</button>
+            </div>
+          )}
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: 'var(--bg)' }}>
+                <th style={{ padding: '12px 12px 12px 20px', width: 36 }}>
+                  <input type="checkbox" checked={allPageSelected} onChange={toggleSelectAll} style={{ accentColor: '#f97316', cursor: 'pointer' }} />
+                </th>
                 {['Lead', 'Etapa', 'Temperatura', 'Valor', 'Responsável', 'Última atividade', 'Ações'].map(h => (
                   <th key={h} style={{ padding: '12px 20px', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, textAlign: 'left', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
@@ -344,19 +389,24 @@ export default function GestaoLeadsPage() {
             <tbody>
               {sortedLeads.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>
+                  <td colSpan={8} style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>
                     Nenhum lead encontrado
                   </td>
                 </tr>
               ) : sortedLeads.map((l) => {
                 const sc = l.stage.color
                 const td = tempDisplay[l.temperature]
+                const isChecked = selectedIds.has(l.id)
                 return (
                   <tr key={l.id}
                     onClick={() => { if (menu !== l.id) setDrawerLead(l) }}
                     onMouseEnter={() => setHov(l.id)}
                     onMouseLeave={() => setHov(null)}
-                    style={{ borderBottom: '1px solid var(--border)', background: drawerLead?.id === l.id ? 'rgba(249,115,22,0.06)' : hov === l.id ? 'var(--bg-elevated)' : 'transparent', cursor: 'pointer', transition: 'background 0.1s', borderLeft: drawerLead?.id === l.id ? '2px solid #f97316' : '2px solid transparent' }}>
+                    style={{ borderBottom: '1px solid var(--border)', background: isChecked ? 'rgba(249,115,22,0.06)' : drawerLead?.id === l.id ? 'rgba(249,115,22,0.06)' : hov === l.id ? 'var(--bg-elevated)' : 'transparent', cursor: 'pointer', transition: 'background 0.1s', borderLeft: isChecked || drawerLead?.id === l.id ? '2px solid #f97316' : '2px solid transparent' }}>
+                    {/* Checkbox */}
+                    <td style={{ padding: '14px 12px 14px 20px', width: 36 }} onClick={e => e.stopPropagation()}>
+                      <input type="checkbox" checked={isChecked} onChange={() => toggleSelect(l.id)} style={{ accentColor: '#f97316', cursor: 'pointer' }} />
+                    </td>
                     {/* Lead */}
                     <td style={{ padding: '14px 20px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

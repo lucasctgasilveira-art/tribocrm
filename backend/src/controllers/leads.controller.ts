@@ -73,6 +73,7 @@ export async function getLeads(req: Request, res: Response): Promise<void> {
       stageId,
       status,
       temperature,
+      responsibleId,
       search,
       page = '1',
       perPage = '20',
@@ -93,6 +94,8 @@ export async function getLeads(req: Request, res: Response): Promise<void> {
 
     if (role === 'SELLER') {
       where.responsibleId = userId
+    } else if (responsibleId) {
+      where.responsibleId = responsibleId
     }
 
     if (search) {
