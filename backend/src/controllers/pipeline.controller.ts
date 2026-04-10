@@ -59,6 +59,7 @@ export async function getKanban(req: Request, res: Response): Promise<void> {
           id: stage.id,
           name: stage.name,
           color: stage.color,
+          type: stage.type,
           position: stage.sortOrder,
           leads,
         }

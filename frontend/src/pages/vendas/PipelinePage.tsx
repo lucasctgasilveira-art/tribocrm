@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, type DragEvent } from 'react'
+import { useState, useEffect, useCallback, useRef, type DragEvent } from 'react'
 import { Search, MessageCircle, Mail, Phone, Plus, Loader2 } from 'lucide-react'
 import api from '../../services/api'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
@@ -16,7 +16,7 @@ interface Lead {
   temperature: Temperature; lastContact: string | null; phone: string; email: string
 }
 
-interface StageConfig { id: string; name: string; color: string }
+interface StageConfig { id: string; name: string; color: string; type: string }
 
 interface ApiLead {
   id: string; name: string; company: string | null; phone: string | null; whatsapp: string | null; email: string | null
@@ -25,7 +25,7 @@ interface ApiLead {
 }
 
 interface KanbanStage {
-  id: string; name: string; color: string; position: number; leads: ApiLead[]
+  id: string; name: string; color: string; type?: string; position: number; leads: ApiLead[]
 }
 
 // ── Helpers ──
@@ -78,6 +78,13 @@ export default function VendasPipelinePage() {
   const [modalStage, setModalStage] = useState<string | undefined>(undefined)
   const [reloadKey, setReloadKey] = useState(0)
   const [toast, setToast] = useState('')
+  const boardRef = useRef<HTMLDivElement>(null)
+  const [wonLostDrop, setWonLostDrop] = useState<{ leadId: string; stageName: string; stageId: string; type: 'WON' | 'LOST' } | null>(null)
+  const [lossReasons, setLossReasons] = useState<{ id: string; name: string }[]>([])
+
+  useEffect(() => {
+    api.get('/leads/loss-reasons').then(r => setLossReasons(r.data.data ?? [])).catch(() => {})
+  }, [])
   const reload = useCallback(() => setReloadKey(k => k + 1), [])
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 3000) }
 
@@ -90,7 +97,7 @@ export default function VendasPipelinePage() {
           const pid = pipelineId || pipelinesData[0].id
           setPipelineId(pid)
           const kanban = await getKanban(pid)
-          setStages(kanban.stages.map((s: KanbanStage) => ({ id: s.id, name: s.name, color: s.color })))
+          setStages(kanban.stages.map((s: KanbanStage) => ({ id: s.id, name: s.name, color: s.color, type: s.type ?? 'NORMAL' })))
           const allLeads: Lead[] = []
           kanban.stages.forEach((s: KanbanStage) => {
             s.leads.forEach((l: ApiLead) => allLeads.push(mapApiLead(l, s.name)))
@@ -116,13 +123,29 @@ export default function VendasPipelinePage() {
   }
 
   const onDragStart = useCallback((e: DragEvent, id: string) => { setDraggedId(id); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', id) }, [])
-  const onDragOver = useCallback((e: DragEvent, s: string) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDropTarget(s) }, [])
+  const onDragOver = useCallback((e: DragEvent, s: string) => {
+    e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDropTarget(s)
+    const board = boardRef.current
+    if (board) {
+      const edge = 100
+      if (e.clientX < edge) board.scrollLeft -= 12
+      else if (e.clientX > window.innerWidth - edge) board.scrollLeft += 12
+    }
+  }, [])
   const onDragLeave = useCallback(() => setDropTarget(null), [])
   const onDrop = useCallback((e: DragEvent, targetStageName: string) => {
     e.preventDefault()
     const leadId = e.dataTransfer.getData('text/plain')
     const stageObj = stages.find(s => s.name === targetStageName)
     if (!stageObj) return
+    setDraggedId(null)
+    setDropTarget(null)
+
+    // Intercept WON/LOST stages
+    if (stageObj.type === 'WON' || stageObj.type === 'LOST') {
+      setWonLostDrop({ leadId, stageName: targetStageName, stageId: stageObj.id, type: stageObj.type })
+      return
+    }
 
     // Find the lead's current stage for rollback
     const prevLead = leads.find(l => l.id === leadId)
@@ -130,8 +153,6 @@ export default function VendasPipelinePage() {
 
     // Optimistic update
     setLeads(p => p.map(l => l.id === leadId ? { ...l, stage: targetStageName } : l))
-    setDraggedId(null)
-    setDropTarget(null)
 
     // Persist to backend
     api.patch(`/leads/${leadId}`, { stageId: stageObj.id })
@@ -218,7 +239,7 @@ export default function VendasPipelinePage() {
       </div>
 
       {/* Board */}
-      <div className="vp-board" style={{ flex: 1, overflowX: 'auto', overflowY: 'hidden', minHeight: 0 }}>
+      <div ref={boardRef} className="vp-board" style={{ flex: 1, overflowX: 'auto', overflowY: 'hidden', minHeight: 0 }}>
         <div style={{ display: 'flex', gap: 12, height: '100%', paddingBottom: 8 }}>
           {stages.map((stage) => {
             const sl = filtered.filter(l => l.stage === stage.name)
@@ -274,6 +295,15 @@ export default function VendasPipelinePage() {
 
       {selectedLead && <LeadDrawer lead={{ ...selectedLead, responsible: 'EU' }} onClose={() => { setSelectedLead(null); reload() }} stageColor={stages.find(s => s.name === selectedLead.stage)?.color ?? 'var(--text-muted)'} instance="vendas" />}
       <NewLeadModal open={modalOpen} onClose={() => setModalOpen(false)} onSubmit={handleNewLead} defaultStage={modalStage} />
+      {wonLostDrop && <WonLostModal drop={wonLostDrop} lossReasons={lossReasons} onClose={() => setWonLostDrop(null)} onConfirm={async (extra) => {
+        const { leadId, stageId, stageName } = wonLostDrop
+        try {
+          await api.patch(`/leads/${leadId}`, { stageId, ...extra })
+          setLeads(prev => prev.map(l => l.id === leadId ? { ...l, stage: stageName } : l))
+          showToast(wonLostDrop.type === 'WON' ? 'Venda registrada!' : 'Lead marcado como perdido')
+        } catch { showToast('Erro ao mover lead') }
+        setWonLostDrop(null)
+      }} />}
       {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: `4px solid ${toast.startsWith('Erro') ? '#ef4444' : '#22c55e'}`, borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 60, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>{toast}</div>}
     </AppLayout>
   )
@@ -286,4 +316,61 @@ function AddBtn({ onClick }: { onClick?: () => void }) {
 function ActBtn({ children, color, onClick }: { children: React.ReactNode; color: string; onClick?: () => void }) {
   const [h, setH] = useState(false)
   return <button type="button" onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)} onClick={(e) => { e.stopPropagation(); onClick?.() }} style={{ background: h ? 'var(--border)' : 'transparent', border: 'none', borderRadius: 6, padding: 4, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color, transition: 'background 0.15s' }}>{children}</button>
+}
+
+function WonLostModal({ drop, lossReasons, onClose, onConfirm }: {
+  drop: { type: 'WON' | 'LOST'; stageName: string }
+  lossReasons: { id: string; name: string }[]
+  onClose: () => void
+  onConfirm: (extra: Record<string, unknown>) => void
+}) {
+  const [closedValue, setClosedValue] = useState('')
+  const [wonAt, setWonAt] = useState(new Date().toISOString().slice(0, 10))
+  const [lossReasonId, setLossReasonId] = useState('')
+  const [saving, setSaving] = useState(false)
+  const isWon = drop.type === 'WON'
+  const canSave = isWon ? (closedValue && wonAt) : !!lossReasonId
+  const inputS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 420, maxWidth: '90vw', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51 }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{isWon ? 'Registrar Venda' : 'Marcar como Perdido'}</h2>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Movendo para: {drop.stageName}</div>
+        </div>
+        <div style={{ padding: 24 }}>
+          {isWon ? (
+            <>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ fontSize: 12, fontWeight: 500, color: '#22c55e', display: 'block', marginBottom: 6 }}>Valor fechado (R$) *</label>
+                <input type="number" autoFocus value={closedValue} onChange={e => setClosedValue(e.target.value)} placeholder="0.00" style={{ ...inputS, borderColor: 'rgba(34,197,94,0.4)' }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 500, color: '#22c55e', display: 'block', marginBottom: 6 }}>Data de fechamento *</label>
+                <input type="date" value={wonAt} onChange={e => setWonAt(e.target.value)} style={{ ...inputS, borderColor: 'rgba(34,197,94,0.4)' }} />
+              </div>
+            </>
+          ) : (
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 500, color: '#ef4444', display: 'block', marginBottom: 6 }}>Motivo de perda *</label>
+              <select autoFocus value={lossReasonId} onChange={e => setLossReasonId(e.target.value)} style={{ ...inputS, appearance: 'none' as const, cursor: 'pointer', borderColor: 'rgba(239,68,68,0.4)' }}>
+                <option value="">Selecione o motivo...</option>
+                {lossReasons.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+              </select>
+              {lossReasons.length === 0 && <div style={{ fontSize: 11, color: '#f59e0b', marginTop: 8 }}>Nenhum motivo cadastrado.</div>}
+            </div>
+          )}
+        </div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
+          <button onClick={() => { if (!canSave || saving) return; setSaving(true); isWon ? onConfirm({ status: 'WON', closedValue: parseFloat(closedValue), wonAt }) : onConfirm({ status: 'LOST', lossReasonId, lostAt: new Date().toISOString() }) }}
+            disabled={!canSave || saving} style={{ background: canSave ? (isWon ? '#22c55e' : '#ef4444') : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: canSave ? '#fff' : 'var(--text-muted)', cursor: canSave ? 'pointer' : 'not-allowed' }}>
+            {saving ? 'Salvando...' : isWon ? 'Registrar Venda' : 'Confirmar Perda'}
+          </button>
+        </div>
+      </div>
+    </>
+  )
 }

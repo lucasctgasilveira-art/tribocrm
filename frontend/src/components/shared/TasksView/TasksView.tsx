@@ -317,7 +317,7 @@ export default function TasksView({ menuItems }: TasksViewProps) {
   async function handleCreateManagerialTask(payload: { title: string; typeId: string; description?: string; dueDate?: string; participantIds?: string[]; responsibleId?: string; dueTime?: string; reminderMinutes?: number; taskMode?: string }) {
     await createManagerialTask({ title: payload.title, typeId: payload.typeId, description: payload.description, dueDate: payload.dueDate, participantIds: payload.participantIds })
     setNewTaskModal(false)
-    setCategory(payload.taskMode === 'lead' ? 'leads' : 'gerenciais')
+    setCategory('gerenciais')
     setReloadKey(k => k + 1)
     setToast('Tarefa criada!')
     setTimeout(() => setToast(''), 3000)
