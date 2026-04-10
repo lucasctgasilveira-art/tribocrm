@@ -55,7 +55,37 @@ const CSS = `
 export default function LeadDrawer({ lead, onClose, stageColor, instance = 'gestao' }: LeadDrawerProps) {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<Tab>('history')
+  const [toast, setToast] = useState('')
   const temp = tempConfig[lead.temperature] ?? tempConfig.COLD!
+
+  function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 3000) }
+
+  function cleanPhone(raw: string): string {
+    return raw.replace(/\D/g, '')
+  }
+
+  function handleWhatsApp() {
+    const num = cleanPhone(lead.phone)
+    if (!num) { showToast('Lead sem WhatsApp cadastrado'); return }
+    const full = num.length <= 11 ? `55${num}` : num
+    window.open(`https://wa.me/${full}`, '_blank')
+  }
+
+  function handleEmail() {
+    if (!lead.email || lead.email === '—') { showToast('Lead sem e-mail cadastrado'); return }
+    window.open(`mailto:${lead.email}`)
+  }
+
+  function handleCall() {
+    const num = cleanPhone(lead.phone)
+    if (!num) { showToast('Lead sem telefone cadastrado'); return }
+    window.open(`tel:${num}`)
+  }
+
+  function handleSchedule() {
+    onClose()
+    navigate(`/${instance}/leads/${lead.id}?tab=tasks`)
+  }
 
   const tabs: { key: Tab; label: string }[] = [
     { key: 'history', label: 'Histórico' },
@@ -126,10 +156,10 @@ export default function LeadDrawer({ lead, onClose, stageColor, instance = 'gest
 
         {/* S3 — Action buttons */}
         <div style={{ display: 'flex', gap: 8, padding: '14px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-          <ActionBtn icon={<MessageCircle size={18} strokeWidth={1.5} />} label="WhatsApp" color="#25d166" border="rgba(37,209,102,0.3)" />
-          <ActionBtn icon={<Mail size={18} strokeWidth={1.5} />} label="E-mail" color="#3b82f6" border="rgba(59,130,246,0.3)" />
-          <ActionBtn icon={<Phone size={18} strokeWidth={1.5} />} label="Ligar" color="#f97316" border="rgba(249,115,22,0.3)" />
-          <ActionBtn icon={<Calendar size={18} strokeWidth={1.5} />} label="Agendar" color="#a855f7" border="rgba(168,85,247,0.3)" />
+          <ActionBtn icon={<MessageCircle size={18} strokeWidth={1.5} />} label="WhatsApp" color="#25d166" border="rgba(37,209,102,0.3)" onClick={handleWhatsApp} />
+          <ActionBtn icon={<Mail size={18} strokeWidth={1.5} />} label="E-mail" color="#3b82f6" border="rgba(59,130,246,0.3)" onClick={handleEmail} />
+          <ActionBtn icon={<Phone size={18} strokeWidth={1.5} />} label="Ligar" color="#f97316" border="rgba(249,115,22,0.3)" onClick={handleCall} />
+          <ActionBtn icon={<Calendar size={18} strokeWidth={1.5} />} label="Agendar" color="#a855f7" border="rgba(168,85,247,0.3)" onClick={handleSchedule} />
         </div>
 
         {/* S4 — Tabs */}
@@ -162,6 +192,9 @@ export default function LeadDrawer({ lead, onClose, stageColor, instance = 'gest
           {activeTab === 'tasks' && <TasksTab />}
           {activeTab === 'info' && <InfoTab lead={lead} />}
         </div>
+
+        {/* Toast */}
+        {toast && <div style={{ position: 'absolute', bottom: 16, left: 16, right: 16, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: 'var(--text-primary)', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>{toast}</div>}
       </div>
     </>
   )
@@ -301,9 +334,9 @@ function Badge({ children, bg, color }: { children: React.ReactNode; bg: string;
   )
 }
 
-function ActionBtn({ icon, label, color, border }: { icon: React.ReactNode; label: string; color: string; border: string }) {
+function ActionBtn({ icon, label, color, border, onClick }: { icon: React.ReactNode; label: string; color: string; border: string; onClick?: () => void }) {
   return (
-    <button style={{
+    <button onClick={onClick} style={{
       flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
       padding: 8, borderRadius: 8, border: `1px solid ${border}`,
       background: 'transparent', color, cursor: 'pointer', transition: 'background 0.15s',
