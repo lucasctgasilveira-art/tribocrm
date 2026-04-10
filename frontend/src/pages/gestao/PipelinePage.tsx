@@ -509,20 +509,19 @@ export default function PipelinePage() {
       {/* Drawer */}
       {selectedLead && <LeadDrawer lead={selectedLead} onClose={() => { setSelectedLead(null); reload() }} stageColor={stages.find((s) => s.name === selectedLead.stage)?.color ?? 'var(--text-muted)'} instance="gestao" />}
       <NewLeadModal open={modalOpen} onClose={() => setModalOpen(false)} onSubmit={handleNewLead} defaultStage={modalStage} />
-      {wonLostDrop && <WonLostModal drop={wonLostDrop} lossReasons={lossReasons} onClose={() => setWonLostDrop(null)} onConfirm={async (patchPayload) => {
-        const drop = wonLostDrop
-        if (!drop) return
-        try {
-          const body = { stageId: drop.stageId, ...patchPayload }
-          console.log('[Pipeline] WonLost PATCH payload:', JSON.stringify(body))
-          await api.patch(`/leads/${drop.leadId}`, body)
-          setLeads(prev => prev.map(l => l.id === drop.leadId ? { ...l, stage: drop.stageName } : l))
-          if (drop.type === 'WON') {
-            const val = Number(patchPayload.closedValue).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-            showToast(`Venda registrada! Valor: ${val}`)
-          } else { showToast('Lead marcado como perdido') }
-        } catch (err) { console.error('[Pipeline] WonLost error:', err); showToast('Erro ao mover lead') }
-        setWonLostDrop(null)
+      {wonLostDrop && <WonLostConfirm drop={wonLostDrop} lossReasons={lossReasons} onClose={() => setWonLostDrop(null)} onDone={(leadId, stageId, stageName, type, patchPayload) => {
+        const body = { stageId, ...patchPayload }
+        console.log('[Pipeline] WonLost PATCH body:', JSON.stringify(body))
+        api.patch(`/leads/${leadId}`, body)
+          .then(() => {
+            setLeads(prev => prev.map(l => l.id === leadId ? { ...l, stage: stageName } : l))
+            if (type === 'WON') {
+              const val = Number(patchPayload.closedValue).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+              showToast(`Venda registrada! Valor: ${val}`)
+            } else { showToast('Lead marcado como perdido') }
+          })
+          .catch((err) => { console.error('[Pipeline] WonLost error:', err); showToast('Erro ao mover lead') })
+          .finally(() => setWonLostDrop(null))
       }} />}
       {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: `4px solid ${toast.startsWith('Erro') ? '#ef4444' : '#22c55e'}`, borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 60, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>{toast}</div>}
     </AppLayout>
@@ -569,11 +568,11 @@ function parseMoneyInput(raw: string): number {
   return Number(cleaned)
 }
 
-function WonLostModal({ drop, lossReasons, onClose, onConfirm }: {
-  drop: { type: 'WON' | 'LOST'; stageName: string }
+function WonLostConfirm({ drop, lossReasons, onClose, onDone }: {
+  drop: { leadId: string; stageId: string; stageName: string; type: 'WON' | 'LOST' }
   lossReasons: { id: string; name: string }[]
   onClose: () => void
-  onConfirm: (payload: Record<string, unknown>) => void
+  onDone: (leadId: string, stageId: string, stageName: string, type: string, payload: Record<string, unknown>) => void
 }) {
   const [closedValue, setClosedValue] = useState('')
   const [wonAt, setWonAt] = useState(new Date().toISOString().slice(0, 10))
@@ -589,12 +588,12 @@ function WonLostModal({ drop, lossReasons, onClose, onConfirm }: {
     setSaving(true)
     if (isWon) {
       const payload = { status: 'WON', closedValue: parsedValue, wonAt: new Date(wonAt + 'T00:00:00.000Z').toISOString() }
-      console.log('[WonLostModal] confirming WON:', payload)
-      onConfirm(payload)
+      console.log('[WonLostConfirm] WON payload:', JSON.stringify(payload), 'leadId:', drop.leadId)
+      onDone(drop.leadId, drop.stageId, drop.stageName, 'WON', payload)
     } else {
       const payload = { status: 'LOST', lossReasonId, lostAt: new Date().toISOString() }
-      console.log('[WonLostModal] confirming LOST:', payload)
-      onConfirm(payload)
+      console.log('[WonLostConfirm] LOST payload:', JSON.stringify(payload), 'leadId:', drop.leadId)
+      onDone(drop.leadId, drop.stageId, drop.stageName, 'LOST', payload)
     }
   }
 
