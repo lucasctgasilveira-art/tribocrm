@@ -31,9 +31,11 @@ interface ApiLead {
   id: string
   name: string
   company: string | null
+  email: string | null
   phone: string | null
   whatsapp: string | null
   expectedValue: string | number | null
+  closedValue: string | number | null
   temperature: Temperature
   stageId: string
   lastActivityAt: string | null
@@ -91,13 +93,13 @@ function mapApiLeadToLead(apiLead: ApiLead, stageName: string): Lead {
     id: apiLead.id,
     name: apiLead.name,
     company: apiLead.company ?? '',
-    value: Number(apiLead.expectedValue) || 0,
+    value: Number(apiLead.closedValue) || Number(apiLead.expectedValue) || 0,
     stage: stageName,
     temperature: apiLead.temperature,
     responsible: getInitials(apiLead.responsible.name),
     lastContact: formatTimeAgo(apiLead.lastActivityAt),
     phone: apiLead.phone ?? apiLead.whatsapp ?? '—',
-    email: '—',
+    email: apiLead.email ?? '—',
   }
 }
 

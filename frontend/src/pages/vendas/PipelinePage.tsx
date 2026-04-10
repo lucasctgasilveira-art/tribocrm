@@ -20,7 +20,7 @@ interface StageConfig { id: string; name: string; color: string; type: string }
 
 interface ApiLead {
   id: string; name: string; company: string | null; phone: string | null; whatsapp: string | null; email: string | null
-  expectedValue: string | number | null; temperature: Temperature; stageId: string; lastActivityAt: string | null
+  expectedValue: string | number | null; closedValue: string | number | null; temperature: Temperature; stageId: string; lastActivityAt: string | null
   responsible: { id: string; name: string }
 }
 
@@ -51,7 +51,7 @@ function formatTimeAgo(dateStr: string | null): string | null {
 
 function mapApiLead(l: ApiLead, stageName: string): Lead {
   return {
-    id: l.id, name: l.name, company: l.company ?? '', value: Number(l.expectedValue) || 0,
+    id: l.id, name: l.name, company: l.company ?? '', value: Number(l.closedValue) || Number(l.expectedValue) || 0,
     stage: stageName, temperature: l.temperature, lastContact: formatTimeAgo(l.lastActivityAt),
     phone: l.phone ?? l.whatsapp ?? '—', email: l.email ?? '—',
   }
