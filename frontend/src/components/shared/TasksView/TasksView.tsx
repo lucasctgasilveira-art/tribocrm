@@ -720,8 +720,9 @@ function NewManagerialTaskModal({ users, onClose, onSave }: {
   const [error, setError] = useState('')
   const [managerialTypes, setManagerialTypes] = useState<{ id: string; name: string }[]>([])
   const [leadSearch, setLeadSearch] = useState('')
-  const [leadOptions, setLeadOptions] = useState<{ id: string; name: string; company: string | null }[]>([])
+  const [leadOptions, setLeadOptions] = useState<{ id: string; name: string; company: string | null; responsible?: { id: string; name: string } }[]>([])
   const [selectedLeadId, setSelectedLeadId] = useState('')
+  const [selectedLeadData, setSelectedLeadData] = useState<{ id: string; name: string; company: string | null; responsible?: { id: string; name: string } } | null>(null)
 
   // Load leads when searching (for lead task mode)
   useEffect(() => {
@@ -730,7 +731,7 @@ function NewManagerialTaskModal({ users, onClose, onSave }: {
     if (q.length < 2) { setLeadOptions([]); return }
     const timer = setTimeout(() => {
       api.get('/leads', { params: { search: q, perPage: 10 } })
-        .then(r => setLeadOptions((r.data.data ?? []).map((l: any) => ({ id: l.id, name: l.name, company: l.company }))))
+        .then(r => setLeadOptions((r.data.data ?? []).map((l: any) => ({ id: l.id, name: l.name, company: l.company, responsible: l.responsible }))))
         .catch(() => setLeadOptions([]))
     }, 300)
     return () => clearTimeout(timer)
@@ -842,10 +843,15 @@ function NewManagerialTaskModal({ users, onClose, onSave }: {
           {taskMode === 'lead' && (
             <div style={{ marginBottom: 16 }}>
               <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Lead <span style={{ color: 'var(--accent)' }}>*</span></label>
-              {selectedLeadId ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'rgba(249,115,22,0.06)', border: '1px solid rgba(249,115,22,0.3)', borderRadius: 8 }}>
-                  <span style={{ flex: 1, fontSize: 13, color: 'var(--text-primary)' }}>{leadOptions.find(l => l.id === selectedLeadId)?.name ?? 'Lead selecionado'}</span>
-                  <button onClick={() => { setSelectedLeadId(''); setLeadSearch('') }} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 2 }}><X size={14} /></button>
+              {selectedLeadId && selectedLeadData ? (
+                <div style={{ padding: '8px 12px', background: 'rgba(249,115,22,0.06)', border: '1px solid rgba(249,115,22,0.3)', borderRadius: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ flex: 1, fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{selectedLeadData.name}</span>
+                    <button onClick={() => { setSelectedLeadId(''); setSelectedLeadData(null); setLeadSearch('') }} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 2 }}><X size={14} /></button>
+                  </div>
+                  {selectedLeadData.responsible && (
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Responsável: {selectedLeadData.responsible.name}</div>
+                  )}
                 </div>
               ) : (
                 <div style={{ position: 'relative' }}>
@@ -853,12 +859,12 @@ function NewManagerialTaskModal({ users, onClose, onSave }: {
                   {leadOptions.length > 0 && (
                     <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, marginTop: 4, maxHeight: 160, overflowY: 'auto', zIndex: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
                       {leadOptions.map(l => (
-                        <div key={l.id} onClick={() => { setSelectedLeadId(l.id); setLeadSearch(''); setLeadOptions([]) }}
+                        <div key={l.id} onClick={() => { setSelectedLeadId(l.id); setSelectedLeadData(l); setLeadSearch(''); setLeadOptions([]) }}
                           style={{ padding: '8px 12px', cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)', borderBottom: '1px solid var(--border)' }}
                           onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-elevated)' }}
                           onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
                           <div>{l.name}</div>
-                          {l.company && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{l.company}</div>}
+                          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{l.company ?? ''}{l.responsible ? ` · ${l.responsible.name}` : ''}</div>
                         </div>
                       ))}
                     </div>
