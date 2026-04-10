@@ -510,11 +510,22 @@ export default function PipelinePage() {
       {selectedLead && <LeadDrawer lead={selectedLead} onClose={() => { setSelectedLead(null); reload() }} stageColor={stages.find((s) => s.name === selectedLead.stage)?.color ?? 'var(--text-muted)'} instance="gestao" />}
       <NewLeadModal open={modalOpen} onClose={() => setModalOpen(false)} onSubmit={handleNewLead} defaultStage={modalStage} />
       {wonLostDrop && <WonLostModal drop={wonLostDrop} lossReasons={lossReasons} onClose={() => setWonLostDrop(null)} onConfirm={async (extra) => {
-        const { leadId, stageId, stageName } = wonLostDrop
+        const drop = wonLostDrop
+        if (!drop) return
         try {
-          await api.patch(`/leads/${leadId}`, { stageId, ...extra })
-          setLeads(prev => prev.map(l => l.id === leadId ? { ...l, stage: stageName } : l))
-          showToast(wonLostDrop.type === 'WON' ? 'Venda registrada!' : 'Lead marcado como perdido')
+          const payload: Record<string, unknown> = { stageId: drop.stageId }
+          if (drop.type === 'WON') {
+            payload.status = 'WON'
+            payload.closedValue = extra.closedValue
+            payload.wonAt = extra.wonAt
+          } else {
+            payload.status = 'LOST'
+            payload.lossReasonId = extra.lossReasonId
+            payload.lostAt = extra.lostAt
+          }
+          await api.patch(`/leads/${drop.leadId}`, payload)
+          setLeads(prev => prev.map(l => l.id === drop.leadId ? { ...l, stage: drop.stageName } : l))
+          showToast(drop.type === 'WON' ? 'Venda registrada!' : 'Lead marcado como perdido')
         } catch { showToast('Erro ao mover lead') }
         setWonLostDrop(null)
       }} />}
