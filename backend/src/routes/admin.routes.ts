@@ -7,6 +7,7 @@ import {
   getAdminDashboard, getTenants, getTenant, updateTenant, getFinancial,
 } from '../controllers/admin.controller'
 import { registerPixWebhook, createPixCharge, createBoletoCharge } from '../services/efi.service'
+import { sendMail } from '../services/mailer.service'
 
 function generateTempPassword(): string {
   const pool = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -531,6 +532,28 @@ router.patch('/team/:id/permissions', async (req: Request, res: Response) => {
     const user = await prisma.adminUser.update({ where: { id: req.params.id as string }, data: { permissions } })
     res.json({ success: true, data: { id: user.id, role: user.role, permissions: user.permissions } })
   } catch (error: any) { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }) }
+})
+
+// ── Test SMTP Email ──
+
+router.post('/test-email', async (req: Request, res: Response) => {
+  try {
+    const { to } = req.body ?? {}
+    if (!to) {
+      return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Campo obrigatório: to' } })
+    }
+    const result = await sendMail({
+      to,
+      subject: '✅ TriboCRM — Teste de e-mail',
+      text: 'Se você recebeu este e-mail, o SMTP está configurado corretamente no TriboCRM!',
+    })
+    if (result.sent) {
+      return res.json({ success: true, sent: true })
+    }
+    return res.json({ success: false, error: result.error ?? result.reason ?? 'Falha ao enviar e-mail' })
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error?.message ?? 'Erro interno ao enviar e-mail de teste' })
+  }
 })
 
 export default router
