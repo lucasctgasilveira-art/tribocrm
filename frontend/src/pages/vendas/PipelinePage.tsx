@@ -76,7 +76,6 @@ export default function VendasPipelinePage() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [modalStage, setModalStage] = useState<string | undefined>(undefined)
-  const [reloadKey, setReloadKey] = useState(0)
   const [toast, setToast] = useState('')
   const boardRef = useRef<HTMLDivElement>(null)
   const [wonLostDrop, setWonLostDrop] = useState<{ leadId: string; stageName: string; stageId: string; type: 'WON' | 'LOST' } | null>(null)
@@ -85,7 +84,6 @@ export default function VendasPipelinePage() {
   useEffect(() => {
     api.get('/leads/loss-reasons').then(r => setLossReasons(r.data.data ?? [])).catch(() => {})
   }, [])
-  const reload = useCallback(() => setReloadKey(k => k + 1), [])
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 3000) }
 
   useEffect(() => {
@@ -108,7 +106,7 @@ export default function VendasPipelinePage() {
       finally { setLoading(false) }
     }
     load()
-  }, [reloadKey]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const filtered = leads.filter(l => {
     if (!search) return true
@@ -293,14 +291,14 @@ export default function VendasPipelinePage() {
 
       </div>
 
-      {selectedLead && <LeadDrawer lead={{ ...selectedLead, responsible: 'EU' }} onClose={() => { setSelectedLead(null); reload() }} stageColor={stages.find(s => s.name === selectedLead.stage)?.color ?? 'var(--text-muted)'} instance="vendas" />}
+      {selectedLead && <LeadDrawer lead={{ ...selectedLead, responsible: 'EU' }} onClose={() => setSelectedLead(null)} stageColor={stages.find(s => s.name === selectedLead.stage)?.color ?? 'var(--text-muted)'} instance="vendas" />}
       <NewLeadModal open={modalOpen} onClose={() => setModalOpen(false)} onSubmit={handleNewLead} defaultStage={modalStage} />
       {wonLostDrop && <WonLostConfirm drop={wonLostDrop} lossReasons={lossReasons} onClose={() => setWonLostDrop(null)} onDone={(leadId, stageId, stageName, type, patchPayload) => {
         const body = { stageId, ...patchPayload }
         console.log('[Pipeline] WonLost PATCH body:', JSON.stringify(body))
         api.patch(`/leads/${leadId}`, body)
           .then(() => {
-            setLeads(prev => prev.map(l => l.id === leadId ? { ...l, stage: stageName } : l))
+            setLeads(prev => prev.map(l => l.id === leadId ? { ...l, stage: stageName, value: type === 'WON' ? Number(patchPayload.closedValue) : l.value } : l))
             if (type === 'WON') {
               const val = Number(patchPayload.closedValue).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
               showToast(`Venda registrada! Valor: ${val}`)

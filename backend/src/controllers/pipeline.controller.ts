@@ -37,8 +37,10 @@ export async function getKanban(req: Request, res: Response): Promise<void> {
 
     const stagesWithLeads = await Promise.all(
       pipeline.stages.map(async (stage: typeof pipeline.stages[number]) => {
+        // WON/LOST stages show their respective status; NORMAL stages show ACTIVE
+        const statusFilter = stage.type === 'WON' ? 'WON' : stage.type === 'LOST' ? 'LOST' : 'ACTIVE'
         const leads = await prisma.lead.findMany({
-          where: { stageId: stage.id, tenantId: req.user!.tenantId, status: 'ACTIVE', deletedAt: null },
+          where: { stageId: stage.id, tenantId: req.user!.tenantId, status: statusFilter, deletedAt: null },
           orderBy: { updatedAt: 'desc' },
           take: 30,
           select: {
