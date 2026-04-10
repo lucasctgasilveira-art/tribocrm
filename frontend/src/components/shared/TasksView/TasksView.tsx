@@ -227,6 +227,7 @@ export default function TasksView({ menuItems }: TasksViewProps) {
   const [selectedTask, setSelectedTask] = useState<DisplayTask | null>(null)
   const [toast, setToast] = useState('')
   const [newTaskModal, setNewTaskModal] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
   const [availableUsers, setAvailableUsers] = useState<{ id: string; name: string }[]>([])
 
   useEffect(() => {
@@ -279,7 +280,7 @@ export default function TasksView({ menuItems }: TasksViewProps) {
     }
     load()
     loadCounts()
-  }, [category, periodFilter, typeFilter, loadCounts])
+  }, [category, periodFilter, typeFilter, loadCounts, reloadKey])
 
   // Load managerial tasks
   useEffect(() => {
@@ -296,7 +297,7 @@ export default function TasksView({ menuItems }: TasksViewProps) {
       }
     }
     load()
-  }, [category])
+  }, [category, reloadKey])
 
   async function handleToggleDone(id: string) {
     try {
@@ -317,6 +318,7 @@ export default function TasksView({ menuItems }: TasksViewProps) {
     await createManagerialTask({ title: payload.title, typeId: payload.typeId, description: payload.description, dueDate: payload.dueDate, participantIds: payload.participantIds })
     setNewTaskModal(false)
     setCategory(payload.taskMode === 'lead' ? 'leads' : 'gerenciais')
+    setReloadKey(k => k + 1)
     setToast('Tarefa criada!')
     setTimeout(() => setToast(''), 3000)
   }

@@ -76,6 +76,10 @@ export default function VendasPipelinePage() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [modalStage, setModalStage] = useState<string | undefined>(undefined)
+  const [reloadKey, setReloadKey] = useState(0)
+  const [toast, setToast] = useState('')
+  const reload = useCallback(() => setReloadKey(k => k + 1), [])
+  function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 3000) }
 
   useEffect(() => {
     async function load() {
@@ -83,8 +87,9 @@ export default function VendasPipelinePage() {
       try {
         const pipelinesData = await getPipelines()
         if (pipelinesData.length > 0) {
-          setPipelineId(pipelinesData[0].id)
-          const kanban = await getKanban(pipelinesData[0].id)
+          const pid = pipelineId || pipelinesData[0].id
+          setPipelineId(pid)
+          const kanban = await getKanban(pid)
           setStages(kanban.stages.map((s: KanbanStage) => ({ id: s.id, name: s.name, color: s.color })))
           const allLeads: Lead[] = []
           kanban.stages.forEach((s: KanbanStage) => {
@@ -96,7 +101,7 @@ export default function VendasPipelinePage() {
       finally { setLoading(false) }
     }
     load()
-  }, [])
+  }, [reloadKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const filtered = leads.filter(l => {
     if (!search) return true
@@ -129,10 +134,12 @@ export default function VendasPipelinePage() {
     setDropTarget(null)
 
     // Persist to backend
-    api.patch(`/leads/${leadId}`, { stageId: stageObj.id }).catch(() => {
-      // Rollback on failure
-      if (prevStage) setLeads(p => p.map(l => l.id === leadId ? { ...l, stage: prevStage } : l))
-    })
+    api.patch(`/leads/${leadId}`, { stageId: stageObj.id })
+      .then(() => showToast(`Lead movido para ${targetStageName}`))
+      .catch(() => {
+        if (prevStage) setLeads(p => p.map(l => l.id === leadId ? { ...l, stage: prevStage } : l))
+        showToast('Erro ao mover lead')
+      })
   }, [stages, leads])
   const onDragEnd = useCallback(() => { setDraggedId(null); setDropTarget(null) }, [])
 
@@ -155,17 +162,11 @@ export default function VendasPipelinePage() {
       if (res.success) {
         const created = res.data
         setLeads(prev => [mapApiLead(created, data.stage), ...prev])
+        showToast('Lead criado!')
       }
     } catch (err) {
       console.error('[Pipeline] Error creating lead:', err)
-      // Fallback: add locally so user sees something
-      const newLead: Lead = {
-        id: String(Date.now()), name: data.name, company: data.company,
-        value: parseInt(data.value) || 0, stage: data.stage,
-        temperature: tempMap[data.temperature] ?? 'WARM',
-        lastContact: 'agora', phone: data.phone || '—', email: data.email || '—',
-      }
-      setLeads(prev => [newLead, ...prev])
+      showToast('Erro ao criar lead')
     }
   }
 
@@ -271,8 +272,9 @@ export default function VendasPipelinePage() {
 
       </div>
 
-      {selectedLead && <LeadDrawer lead={{ ...selectedLead, responsible: 'EU' }} onClose={() => setSelectedLead(null)} stageColor={stages.find(s => s.name === selectedLead.stage)?.color ?? 'var(--text-muted)'} instance="vendas" />}
+      {selectedLead && <LeadDrawer lead={{ ...selectedLead, responsible: 'EU' }} onClose={() => { setSelectedLead(null); reload() }} stageColor={stages.find(s => s.name === selectedLead.stage)?.color ?? 'var(--text-muted)'} instance="vendas" />}
       <NewLeadModal open={modalOpen} onClose={() => setModalOpen(false)} onSubmit={handleNewLead} defaultStage={modalStage} />
+      {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: `4px solid ${toast.startsWith('Erro') ? '#ef4444' : '#22c55e'}`, borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 60, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>{toast}</div>}
     </AppLayout>
   )
 }
