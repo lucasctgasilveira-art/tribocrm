@@ -6,6 +6,7 @@ import { gestaoMenuItems } from '../../config/gestaoMenu'
 import LeadDrawer from '../../components/shared/LeadDrawer/LeadDrawer'
 import NewLeadModal, { type NewLeadData } from '../../components/shared/NewLeadModal/NewLeadModal'
 import { getPipelines, getKanban } from '../../services/pipeline.service'
+import api from '../../services/api'
 
 // ── Types ──
 
@@ -140,8 +141,12 @@ export default function PipelinePage() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [modalStage, setModalStage] = useState<string | undefined>(undefined)
+  const [reloadKey, setReloadKey] = useState(0)
+  const [toast, setToast] = useState('')
+  const reload = useCallback(() => setReloadKey(k => k + 1), [])
+  function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 3000) }
 
-  // Load pipelines on mount
+  // Load pipelines on mount + reload
   useEffect(() => {
     async function load() {
       try {
@@ -151,9 +156,9 @@ export default function PipelinePage() {
         setPipelines(pipelinesData.map((p: PipelineItem) => ({ id: p.id, name: p.name })))
 
         if (pipelinesData.length > 0) {
-          const firstId = pipelinesData[0].id
-          setSelectedPipelineId(firstId)
-          const kanban: KanbanData = await getKanban(firstId)
+          const pid = selectedPipelineId ?? pipelinesData[0].id
+          setSelectedPipelineId(pid)
+          const kanban: KanbanData = await getKanban(pid)
           setStages(kanban.stages.map((s: KanbanStage) => ({ id: s.id, name: s.name, color: s.color, position: s.position })))
           const allLeads: Lead[] = []
           kanban.stages.forEach((s: KanbanStage) => {
@@ -168,7 +173,7 @@ export default function PipelinePage() {
       }
     }
     load()
-  }, [])
+  }, [reloadKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Switch pipeline
   async function handlePipelineChange(pipelineId: string) {
@@ -246,25 +251,53 @@ export default function PipelinePage() {
 
   const onDrop = useCallback((e: DragEvent, stageName: string) => {
     e.preventDefault()
-    const id = e.dataTransfer.getData('text/plain')
-    setLeads((prev) => prev.map((l) => l.id === id ? { ...l, stage: stageName } : l))
+    const leadId = e.dataTransfer.getData('text/plain')
+    const stageObj = stages.find(s => s.name === stageName)
+    if (!stageObj) return
+
+    // Find previous stage for rollback
+    const prevLead = leads.find(l => l.id === leadId)
+    const prevStage = prevLead?.stage
+
+    // Optimistic update
+    setLeads((prev) => prev.map((l) => l.id === leadId ? { ...l, stage: stageName } : l))
     setDraggedId(null)
     setDropTarget(null)
-  }, [])
+
+    // Persist to backend
+    api.patch(`/leads/${leadId}`, { stageId: stageObj.id })
+      .then(() => showToast(`Lead movido para ${stageName}`))
+      .catch(() => {
+        if (prevStage) setLeads((prev) => prev.map((l) => l.id === leadId ? { ...l, stage: prevStage } : l))
+        showToast('Erro ao mover lead')
+      })
+  }, [stages, leads])
 
   const onDragEnd = useCallback(() => { setDraggedId(null); setDropTarget(null) }, [])
 
-  function handleNewLead(data: NewLeadData) {
+  async function handleNewLead(data: NewLeadData) {
     const tempMap: Record<string, Lead['temperature']> = { Quente: 'HOT', Morno: 'WARM', Frio: 'COLD' }
-    const newLead: Lead = {
-      id: String(Date.now()),
-      name: data.name, company: data.company,
-      value: parseInt(data.value) || 0,
-      stage: data.stage, temperature: tempMap[data.temperature] ?? 'WARM',
-      responsible: data.responsible.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase(),
-      lastContact: 'agora', phone: data.phone || '—', email: data.email || '—',
+    const stageObj = stages.find(s => s.name === data.stage)
+    if (!stageObj || !selectedPipelineId) return
+
+    try {
+      const { data: res } = await api.post('/leads', {
+        name: data.name,
+        company: data.company || null,
+        email: data.email || null,
+        phone: data.phone || null,
+        expectedValue: parseInt(data.value) || null,
+        stageId: stageObj.id,
+        pipelineId: selectedPipelineId,
+        temperature: tempMap[data.temperature] ?? 'WARM',
+      })
+      if (res.success) {
+        setLeads((prev) => [mapApiLeadToLead(res.data, data.stage), ...prev])
+        showToast('Lead criado com sucesso!')
+      }
+    } catch {
+      showToast('Erro ao criar lead')
     }
-    setLeads((prev) => [newLead, ...prev])
   }
 
   // ── Loading / Error states ──
@@ -453,8 +486,9 @@ export default function PipelinePage() {
       </div>{/* end outer flex container */}
 
       {/* Drawer */}
-      {selectedLead && <LeadDrawer lead={selectedLead} onClose={() => setSelectedLead(null)} stageColor={stages.find((s) => s.name === selectedLead.stage)?.color ?? 'var(--text-muted)'} instance="gestao" />}
+      {selectedLead && <LeadDrawer lead={selectedLead} onClose={() => { setSelectedLead(null); reload() }} stageColor={stages.find((s) => s.name === selectedLead.stage)?.color ?? 'var(--text-muted)'} instance="gestao" />}
       <NewLeadModal open={modalOpen} onClose={() => setModalOpen(false)} onSubmit={handleNewLead} defaultStage={modalStage} />
+      {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: `4px solid ${toast.startsWith('Erro') ? '#ef4444' : '#22c55e'}`, borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 60, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>{toast}</div>}
     </AppLayout>
   )
 }
