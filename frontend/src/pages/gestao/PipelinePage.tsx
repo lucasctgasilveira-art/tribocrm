@@ -509,24 +509,19 @@ export default function PipelinePage() {
       {/* Drawer */}
       {selectedLead && <LeadDrawer lead={selectedLead} onClose={() => { setSelectedLead(null); reload() }} stageColor={stages.find((s) => s.name === selectedLead.stage)?.color ?? 'var(--text-muted)'} instance="gestao" />}
       <NewLeadModal open={modalOpen} onClose={() => setModalOpen(false)} onSubmit={handleNewLead} defaultStage={modalStage} />
-      {wonLostDrop && <WonLostModal drop={wonLostDrop} lossReasons={lossReasons} onClose={() => setWonLostDrop(null)} onConfirm={async (extra) => {
+      {wonLostDrop && <WonLostModal drop={wonLostDrop} lossReasons={lossReasons} onClose={() => setWonLostDrop(null)} onConfirm={async (patchPayload) => {
         const drop = wonLostDrop
         if (!drop) return
         try {
-          const payload: Record<string, unknown> = { stageId: drop.stageId }
-          if (drop.type === 'WON') {
-            payload.status = 'WON'
-            payload.closedValue = extra.closedValue
-            payload.wonAt = extra.wonAt
-          } else {
-            payload.status = 'LOST'
-            payload.lossReasonId = extra.lossReasonId
-            payload.lostAt = extra.lostAt
-          }
-          await api.patch(`/leads/${drop.leadId}`, payload)
+          const body = { stageId: drop.stageId, ...patchPayload }
+          console.log('[Pipeline] WonLost PATCH payload:', JSON.stringify(body))
+          await api.patch(`/leads/${drop.leadId}`, body)
           setLeads(prev => prev.map(l => l.id === drop.leadId ? { ...l, stage: drop.stageName } : l))
-          showToast(drop.type === 'WON' ? 'Venda registrada!' : 'Lead marcado como perdido')
-        } catch { showToast('Erro ao mover lead') }
+          if (drop.type === 'WON') {
+            const val = Number(patchPayload.closedValue).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+            showToast(`Venda registrada! Valor: ${val}`)
+          } else { showToast('Lead marcado como perdido') }
+        } catch (err) { console.error('[Pipeline] WonLost error:', err); showToast('Erro ao mover lead') }
         setWonLostDrop(null)
       }} />}
       {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: `4px solid ${toast.startsWith('Erro') ? '#ef4444' : '#22c55e'}`, borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 60, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>{toast}</div>}
@@ -567,11 +562,18 @@ function ActionBtn({ children, color }: { children: React.ReactNode; color: stri
 
 // ── WON/LOST Confirmation Modal ──
 
+function parseMoneyInput(raw: string): number {
+  // Handle BR format: "15.000,50" → 15000.50, or "15000.50", or "15000"
+  const cleaned = raw.replace(/\s/g, '')
+  if (cleaned.includes(',')) return Number(cleaned.replace(/\./g, '').replace(',', '.'))
+  return Number(cleaned)
+}
+
 function WonLostModal({ drop, lossReasons, onClose, onConfirm }: {
   drop: { type: 'WON' | 'LOST'; stageName: string }
   lossReasons: { id: string; name: string }[]
   onClose: () => void
-  onConfirm: (extra: Record<string, unknown>) => void
+  onConfirm: (payload: Record<string, unknown>) => void
 }) {
   const [closedValue, setClosedValue] = useState('')
   const [wonAt, setWonAt] = useState(new Date().toISOString().slice(0, 10))
@@ -579,15 +581,20 @@ function WonLostModal({ drop, lossReasons, onClose, onConfirm }: {
   const [saving, setSaving] = useState(false)
 
   const isWon = drop.type === 'WON'
-  const canSave = isWon ? (closedValue && wonAt) : !!lossReasonId
+  const parsedValue = parseMoneyInput(closedValue)
+  const canSave = isWon ? (closedValue.trim() !== '' && !isNaN(parsedValue) && parsedValue > 0 && !!wonAt) : !!lossReasonId
 
   function handleConfirm() {
     if (!canSave || saving) return
     setSaving(true)
     if (isWon) {
-      onConfirm({ status: 'WON', closedValue: parseFloat(closedValue), wonAt })
+      const payload = { status: 'WON', closedValue: parsedValue, wonAt }
+      console.log('[WonLostModal] confirming WON:', payload)
+      onConfirm(payload)
     } else {
-      onConfirm({ status: 'LOST', lossReasonId, lostAt: new Date().toISOString() })
+      const payload = { status: 'LOST', lossReasonId, lostAt: new Date().toISOString() }
+      console.log('[WonLostModal] confirming LOST:', payload)
+      onConfirm(payload)
     }
   }
 
@@ -608,7 +615,10 @@ function WonLostModal({ drop, lossReasons, onClose, onConfirm }: {
             <>
               <div style={{ marginBottom: 16 }}>
                 <label style={{ fontSize: 12, fontWeight: 500, color: '#22c55e', display: 'block', marginBottom: 6 }}>Valor fechado (R$) *</label>
-                <input type="number" autoFocus value={closedValue} onChange={e => setClosedValue(e.target.value)} placeholder="0.00" style={{ ...inputS, borderColor: 'rgba(34,197,94,0.4)' }} />
+                <input type="text" inputMode="decimal" autoFocus value={closedValue} onChange={e => setClosedValue(e.target.value)} placeholder="Ex: 15000 ou 15.000,00" style={{ ...inputS, borderColor: 'rgba(34,197,94,0.4)' }} />
+                {closedValue && !isNaN(parsedValue) && parsedValue > 0 && (
+                  <div style={{ fontSize: 11, color: '#22c55e', marginTop: 4 }}>{parsedValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+                )}
               </div>
               <div>
                 <label style={{ fontSize: 12, fontWeight: 500, color: '#22c55e', display: 'block', marginBottom: 6 }}>Data de fechamento *</label>

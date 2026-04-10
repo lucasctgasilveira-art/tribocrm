@@ -315,13 +315,20 @@ export default function TasksView({ menuItems }: TasksViewProps) {
   }
 
   async function handleCreateTask(payload: { title: string; typeId: string; description?: string; dueDate?: string; participantIds?: string[]; responsibleId?: string; dueTime?: string; reminderMinutes?: number; taskMode?: string; leadId?: string }) {
-    if (payload.taskMode === 'lead' && payload.leadId) {
+    if (payload.taskMode === 'lead') {
+      if (!payload.leadId) {
+        setToast('Selecione um lead para criar a tarefa')
+        setTimeout(() => setToast(''), 3000)
+        return
+      }
+      console.log('[TasksView] creating lead task:', { leadId: payload.leadId, type: payload.typeId, title: payload.title })
       await createLeadTask({ leadId: payload.leadId, type: payload.typeId, title: payload.title, description: payload.description, dueDate: payload.dueDate, responsibleId: payload.responsibleId })
       setNewTaskModal(false)
       setCategory('leads')
       setReloadKey(k => k + 1)
       setToast('Tarefa de lead criada!')
     } else {
+      console.log('[TasksView] creating managerial task:', { typeId: payload.typeId, title: payload.title })
       await createManagerialTask({ title: payload.title, typeId: payload.typeId, description: payload.description, dueDate: payload.dueDate, participantIds: payload.participantIds })
       setNewTaskModal(false)
       setCategory('gerenciais')
