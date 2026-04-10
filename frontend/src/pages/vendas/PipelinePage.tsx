@@ -343,7 +343,7 @@ function WonLostModal({ drop, lossReasons, onClose, onConfirm }: {
     if (!canSave || saving) return
     setSaving(true)
     if (isWon) {
-      const payload = { status: 'WON', closedValue: parsedValue, wonAt }
+      const payload = { status: 'WON', closedValue: parsedValue, wonAt: new Date(wonAt + 'T00:00:00.000Z').toISOString() }
       console.log('[WonLostModal] confirming WON:', payload)
       onConfirm(payload)
     } else {

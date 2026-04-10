@@ -405,8 +405,26 @@ export async function updateLead(req: Request, res: Response): Promise<void> {
     if (notes !== undefined) data.notes = notes
     if (responsibleId !== undefined) data.responsible = { connect: { id: responsibleId } }
     if (lossReasonId !== undefined) data.lossReasonId = lossReasonId || null
-    if (closedValue !== undefined) data.closedValue = closedValue ? new Prisma.Decimal(closedValue) : null
-    if (wonAt !== undefined) data.wonAt = wonAt ? new Date(wonAt) : null
+    if (closedValue !== undefined) {
+      try {
+        data.closedValue = closedValue ? new Prisma.Decimal(String(closedValue)) : null
+      } catch (e) {
+        console.error('[Leads] closedValue conversion failed:', closedValue, e)
+        data.closedValue = null
+      }
+    }
+    if (wonAt !== undefined) {
+      try {
+        data.wonAt = wonAt ? new Date(wonAt) : null
+        if (data.wonAt && isNaN(data.wonAt.getTime())) {
+          console.error('[Leads] wonAt invalid date:', wonAt)
+          data.wonAt = null
+        }
+      } catch (e) {
+        console.error('[Leads] wonAt conversion failed:', wonAt, e)
+        data.wonAt = null
+      }
+    }
     if (lostAt !== undefined) data.lostAt = lostAt ? new Date(lostAt) : null
 
     const lead = await prisma.lead.update({

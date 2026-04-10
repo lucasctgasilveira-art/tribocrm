@@ -669,8 +669,8 @@ function MoveStageInlineModal({ lead, stages, lossReasons, onClose, onMoved }: {
       }
       if (isWon) {
         payload.status = 'WON'
-        payload.closedValue = parseFloat(closedValue)
-        payload.wonAt = wonAt
+        payload.closedValue = Number(closedValue.replace(/\./g, '').replace(',', '.')) || parseFloat(closedValue)
+        payload.wonAt = new Date(wonAt + 'T00:00:00.000Z').toISOString()
       }
       await updateLead(lead.id, payload)
       onMoved()
