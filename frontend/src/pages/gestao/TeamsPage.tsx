@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Shuffle, Plus, Loader2, X } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
-import { getTeams, createTeam, getUsers } from '../../services/users.service'
+import { getTeams, createTeam, updateTeam, getUsers } from '../../services/users.service'
 
 // ── Types ──
 
@@ -42,6 +42,10 @@ export default function TeamsPage() {
   const [users, setUsers] = useState<UserOption[]>([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
+  const [editTeam, setEditTeam] = useState<Team | null>(null)
+  const [membersTeam, setMembersTeam] = useState<Team | null>(null)
+  const [toast, setToast] = useState('')
+  function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 3000) }
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -62,8 +66,27 @@ export default function TeamsPage() {
     try {
       await createTeam(payload)
       setModalOpen(false)
+      showToast('Time criado com sucesso!')
       loadData()
-    } catch { /* ignore */ }
+    } catch { showToast('Erro ao criar time') }
+  }
+
+  async function handleEditSave(teamId: string, payload: { name: string; leaderId?: string }) {
+    try {
+      await updateTeam(teamId, payload)
+      setEditTeam(null)
+      showToast('Time atualizado!')
+      loadData()
+    } catch { showToast('Erro ao atualizar time') }
+  }
+
+  async function handleMembersSave(teamId: string, memberIds: string[]) {
+    try {
+      await updateTeam(teamId, { memberIds })
+      setMembersTeam(null)
+      showToast('Membros atualizados!')
+      loadData()
+    } catch { showToast('Erro ao atualizar membros') }
   }
 
   return (
@@ -92,8 +115,7 @@ export default function TeamsPage() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
                   <span style={{ background: tc.bg, color: tc.color, borderRadius: 999, padding: '4px 12px', fontSize: 13, fontWeight: 600 }}>{t.name}</span>
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <button style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', fontSize: 11, color: 'var(--text-secondary)', cursor: 'pointer' }}>Editar</button>
-                    <button style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--border)', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>···</button>
+                    <button onClick={() => setEditTeam(t)} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', fontSize: 11, color: 'var(--text-secondary)', cursor: 'pointer' }}>Editar</button>
                   </div>
                 </div>
 
@@ -138,18 +160,27 @@ export default function TeamsPage() {
                 </div>
 
                 {/* Action */}
-                <button style={{ width: '100%', background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 0', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Gerenciar membros</button>
+                <button onClick={() => setMembersTeam(t)} style={{ width: '100%', background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 0', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Gerenciar membros</button>
               </div>
             )
           })}
         </div>
       )}
       {modalOpen && <NewTeamModal users={users} onClose={() => setModalOpen(false)} onSave={handleCreate} />}
+      {editTeam && <EditTeamModal team={editTeam} users={users} onClose={() => setEditTeam(null)} onSave={handleEditSave} />}
+      {membersTeam && <ManageMembersModal team={membersTeam} users={users} onClose={() => setMembersTeam(null)} onSave={handleMembersSave} />}
+      {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: `4px solid ${toast.startsWith('Erro') ? '#ef4444' : '#22c55e'}`, borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 60, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>{toast}</div>}
     </AppLayout>
   )
 }
 
 // ── New Team Modal ──
+
+const modalOverlay: React.CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }
+const modalBox: React.CSSProperties = { position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 480, maxWidth: '90vw', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }
+const modalHeader: React.CSSProperties = { padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }
+const modalFooter: React.CSSProperties = { padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }
+const inputStyle: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
 
 function NewTeamModal({ users, onClose, onSave }: { users: UserOption[]; onClose: () => void; onSave: (p: { name: string; leaderId?: string }) => void }) {
   const [name, setName] = useState('')
@@ -198,6 +229,112 @@ function NewTeamModal({ users, onClose, onSave }: { users: UserOption[]; onClose
         <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
           <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
           <button onClick={() => { if (canSave) onSave({ name, leaderId: leaderId || undefined }) }} disabled={!canSave} style={{ background: canSave ? 'var(--accent)' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: canSave ? '#fff' : 'var(--text-muted)', cursor: canSave ? 'pointer' : 'not-allowed' }}>Criar Time</button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ── Edit Team Modal ──
+
+function EditTeamModal({ team, users, onClose, onSave }: { team: Team; users: UserOption[]; onClose: () => void; onSave: (id: string, p: { name: string; leaderId?: string }) => void }) {
+  const [name, setName] = useState(team.name)
+  const [leaderId, setLeaderId] = useState(team.leader?.id ?? '')
+  const canSave = name.trim().length > 0
+
+  return (
+    <>
+      <div onClick={onClose} style={modalOverlay} />
+      <div style={modalBox}>
+        <div style={modalHeader}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Editar Time</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+        </div>
+        <div style={{ padding: 24 }}>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Nome do time <span style={{ color: 'var(--accent)' }}>*</span></label>
+            <input autoFocus value={name} onChange={e => setName(e.target.value)} style={inputStyle} />
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Líder do time</label>
+            <select value={leaderId} onChange={e => setLeaderId(e.target.value)} style={{ ...inputStyle, appearance: 'none' as const, cursor: 'pointer' }}>
+              <option value="">Sem líder</option>
+              {users.filter(u => u.role === 'TEAM_LEADER' || u.role === 'MANAGER' || u.role === 'OWNER').map(u => (
+                <option key={u.id} value={u.id}>{u.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div style={modalFooter}>
+          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
+          <button onClick={() => { if (canSave) onSave(team.id, { name, leaderId: leaderId || undefined }) }} disabled={!canSave} style={{ background: canSave ? 'var(--accent)' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: canSave ? '#fff' : 'var(--text-muted)', cursor: canSave ? 'pointer' : 'not-allowed' }}>Salvar</button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ── Manage Members Modal ──
+
+function ManageMembersModal({ team, users, onClose, onSave }: { team: Team; users: UserOption[]; onClose: () => void; onSave: (id: string, memberIds: string[]) => void }) {
+  const [memberIds, setMemberIds] = useState<Set<string>>(new Set(team.members.map(m => m.userId)))
+  const [addUserId, setAddUserId] = useState('')
+
+  const availableUsers = users.filter(u => !memberIds.has(u.id) && u.id !== team.leader?.id)
+
+  function addMember() {
+    if (!addUserId) return
+    setMemberIds(prev => new Set([...prev, addUserId]))
+    setAddUserId('')
+  }
+
+  function removeMember(uid: string) {
+    setMemberIds(prev => { const n = new Set(prev); n.delete(uid); return n })
+  }
+
+  return (
+    <>
+      <div onClick={onClose} style={modalOverlay} />
+      <div style={modalBox}>
+        <div style={modalHeader}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Membros — {team.name}</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+        </div>
+        <div style={{ padding: 24, maxHeight: 400, overflowY: 'auto' }}>
+          {/* Add member */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+            <select value={addUserId} onChange={e => setAddUserId(e.target.value)} style={{ ...inputStyle, flex: 1, appearance: 'none' as const, cursor: 'pointer' }}>
+              <option value="">Adicionar membro...</option>
+              {availableUsers.map(u => <option key={u.id} value={u.id}>{u.name} ({u.role})</option>)}
+            </select>
+            <button onClick={addMember} disabled={!addUserId} style={{ background: addUserId ? 'var(--accent)' : 'var(--border)', color: addUserId ? '#fff' : 'var(--text-muted)', border: 'none', borderRadius: 8, padding: '0 16px', fontSize: 13, fontWeight: 600, cursor: addUserId ? 'pointer' : 'not-allowed', whiteSpace: 'nowrap' }}>
+              <Plus size={14} strokeWidth={2} />
+            </button>
+          </div>
+          {/* Members list */}
+          {memberIds.size === 0 ? (
+            <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)', fontSize: 13 }}>Nenhum membro</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {Array.from(memberIds).map(uid => {
+                const u = users.find(u => u.id === uid)
+                return (
+                  <div key={uid} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--bg)', borderRadius: 8, border: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(249,115,22,0.2)', color: '#f97316', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{ini(u?.name ?? '?')}</div>
+                      <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{u?.name ?? uid}</span>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{u?.role ?? ''}</span>
+                    </div>
+                    <button onClick={() => removeMember(uid)} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '2px 8px', fontSize: 11, color: '#ef4444', cursor: 'pointer' }}>Remover</button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+        <div style={modalFooter}>
+          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
+          <button onClick={() => onSave(team.id, Array.from(memberIds))} style={{ background: 'var(--accent)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer' }}>Salvar</button>
         </div>
       </div>
     </>
