@@ -1,50 +1,17 @@
-import nodemailer, { type Transporter } from 'nodemailer'
-
 /**
- * Generic SMTP mailer.
+ * Brevo (ex-Sendinblue) HTTP API mailer.
  *
- * Reads SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASS / SMTP_FROM from env.
- * If any of the required fields is missing, every send call resolves with
- * { sent: false, reason: 'not_configured' } and logs a warning. The intent
- * is that nothing in the codebase ever throws because the SMTP isn't set —
- * the user-facing flow (e.g. createUser) succeeds either way and the
- * caller decides how to surface the email status to the UI.
+ * Uses POST https://api.brevo.com/v3/smtp/email with BREVO_API_KEY.
+ * If the key is missing, every send call resolves with
+ * { sent: false, reason: 'not_configured' } and logs a warning.
+ * Nothing in the codebase ever throws because the mailer isn't set —
+ * the caller decides how to surface the email status to the UI.
  */
 
-let transporter: Transporter | null = null
-let cachedConfigured: boolean | null = null
+const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email'
 
 export function isMailerConfigured(): boolean {
-  if (cachedConfigured !== null) return cachedConfigured
-  const host = process.env.SMTP_HOST
-  const user = process.env.SMTP_USER
-  const pass = process.env.SMTP_PASS
-  cachedConfigured = !!(host && user && pass)
-  return cachedConfigured
-}
-
-function getTransporter(): Transporter | null {
-  if (transporter) return transporter
-  if (!isMailerConfigured()) return null
-
-  const host = process.env.SMTP_HOST!
-  const port = parseInt(process.env.SMTP_PORT ?? '587', 10)
-  const user = process.env.SMTP_USER!
-  const pass = process.env.SMTP_PASS!
-  const secure = process.env.SMTP_SECURE === 'true'
-
-  // secure=true for port 465 (implicit TLS), false for 587 (STARTTLS)
-  transporter = nodemailer.createTransport({
-    host,
-    port,
-    secure,
-    auth: { user, pass },
-    tls: { rejectUnauthorized: false },
-    connectionTimeout: 10_000,
-    greetingTimeout: 10_000,
-    socketTimeout: 15_000,
-  })
-  return transporter
+  return !!process.env.BREVO_API_KEY
 }
 
 export interface SendMailOptions {
@@ -62,22 +29,41 @@ export interface SendMailResult {
 }
 
 export async function sendMail(opts: SendMailOptions): Promise<SendMailResult> {
-  const t = getTransporter()
-  if (!t) {
-    console.warn(`[Mailer] not configured, skipping email to ${opts.to} (subject: ${opts.subject.slice(0, 60)})`)
+  if (!isMailerConfigured()) {
+    console.warn(`[Mailer] BREVO_API_KEY not configured, skipping email to ${opts.to} (subject: ${opts.subject.slice(0, 60)})`)
     return { sent: false, reason: 'not_configured' }
   }
-  const from = process.env.SMTP_FROM ?? process.env.SMTP_USER!
+
+  const fromEmail = process.env.SMTP_FROM_EMAIL || 'noreply@tribodevendas.com.br'
+
+  const body = {
+    sender: { name: 'TriboCRM', email: fromEmail },
+    to: [{ email: opts.to }],
+    subject: opts.subject,
+    htmlContent: opts.html || `<p>${opts.text}</p>`,
+    textContent: opts.text,
+  }
 
   try {
-    const info = await t.sendMail({
-      from,
-      to: opts.to,
-      subject: opts.subject,
-      text: opts.text,
-      html: opts.html,
+    const res = await fetch(BREVO_API_URL, {
+      method: 'POST',
+      headers: {
+        'api-key': process.env.BREVO_API_KEY!,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(15_000),
     })
-    return { sent: true, messageId: info.messageId }
+
+    if (!res.ok) {
+      const errBody = await res.text()
+      console.error(`[Mailer] Brevo API error ${res.status}:`, errBody)
+      return { sent: false, reason: 'send_error', error: `Brevo ${res.status}: ${errBody}` }
+    }
+
+    const data = await res.json() as { messageId?: string }
+    return { sent: true, messageId: data.messageId }
   } catch (err: any) {
     console.error('[Mailer] sendMail failed:', err?.message ?? err)
     return { sent: false, reason: 'send_error', error: err?.message ?? String(err) }
