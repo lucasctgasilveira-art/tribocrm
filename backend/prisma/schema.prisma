@@ -158,6 +158,7 @@ enum NotificationType {
   WHATSAPP_FAILED
   GOAL_ALERT
   BIRTHDAY
+  AUTOMATION
 }
 
 enum PopupType {
@@ -339,8 +340,9 @@ model Tenant {
   pipelines      Pipeline[]
   leads          Lead[]
   charges        Charge[]
-  automations    Automation[]
-  captureForms   CaptureForm[]
+  automations      Automation[]
+  automationEvents AutomationEvent[]
+  captureForms     CaptureForm[]
   products       Product[]
   goals          Goal[]
   notes          TenantNote[]
@@ -542,7 +544,8 @@ model Lead {
   tasks          Task[]
   leadProducts   LeadProduct[]
   emailTracking  EmailTracking[]
-  scheduledMessages ScheduledMessage[]
+  scheduledMessages  ScheduledMessage[]
+  automationEvents   AutomationEvent[]
   @@map("leads")
 }
 
@@ -746,6 +749,19 @@ model AutomationLog {
   executedAt   DateTime            @default(now()) @map("executed_at")
   automation   Automation          @relation(fields: [automationId], references: [id])
   @@map("automation_logs")
+}
+
+model AutomationEvent {
+  id          String            @id @default(uuid()) @db.Uuid
+  tenantId    String            @map("tenant_id") @db.Uuid
+  triggerType AutomationTrigger @map("trigger_type")
+  leadId      String            @map("lead_id") @db.Uuid
+  payload     Json              @default("{}")
+  processedAt DateTime?         @map("processed_at")
+  createdAt   DateTime          @default(now()) @map("created_at")
+  tenant      Tenant            @relation(fields: [tenantId], references: [id])
+  lead        Lead              @relation(fields: [leadId], references: [id])
+  @@map("automation_events")
 }
 
 model CaptureForm {
