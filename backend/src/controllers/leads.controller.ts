@@ -343,6 +343,11 @@ export async function createLead(req: Request, res: Response): Promise<void> {
     })
 
     res.status(201).json({ success: true, data: result })
+
+    // Fire automation event (non-blocking)
+    prisma.automationEvent.create({
+      data: { tenantId, triggerType: 'LEAD_CREATED', leadId: result.id, payload: {} },
+    }).catch(e => console.error('[Leads] automation event error:', e?.message))
   } catch (error: any) {
     if (error?.message === 'PIPELINE_NOT_FOUND') {
       res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Pipeline não encontrado' } })
@@ -412,6 +417,13 @@ export async function updateLead(req: Request, res: Response): Promise<void> {
         responsible: { select: { id: true, name: true } },
       },
     })
+
+    // Fire STAGE_CHANGED automation event (non-blocking)
+    if (stageId !== undefined && stageId !== existing.stageId) {
+      prisma.automationEvent.create({
+        data: { tenantId, triggerType: 'STAGE_CHANGED', leadId: id, payload: { stageId, previousStageId: existing.stageId } },
+      }).catch(e => console.error('[Leads] automation event error:', e?.message))
+    }
 
     // Detect repeat purchase: if the lead is being moved to WON and
     // it had a previous wonAt (meaning it was won before), this is a
@@ -549,6 +561,13 @@ export async function bulkUpdateLeads(req: Request, res: Response): Promise<void
       }
       const result = await prisma.lead.updateMany({ where: whereIds, data: { stageId: newStageId } })
       res.json({ success: true, data: { updated: result.count } })
+
+      // Fire STAGE_CHANGED events for each lead (non-blocking)
+      for (const lid of leadIds) {
+        prisma.automationEvent.create({
+          data: { tenantId, triggerType: 'STAGE_CHANGED', leadId: lid, payload: { stageId: newStageId } },
+        }).catch(() => {})
+      }
       return
     }
 
