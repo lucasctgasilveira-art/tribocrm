@@ -40,6 +40,9 @@ function getTransporter(): Transporter | null {
     secure,
     auth: { user, pass },
     tls: { rejectUnauthorized: false },
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 15_000,
   })
   return transporter
 }
