@@ -573,20 +573,42 @@ export default function TasksView({ menuItems, managerialOnly = false }: TasksVi
   }
 
   const calendarEvents = useMemo<TaskCalendarEvent[]>(() => {
-    if (category === 'leads') {
-      return tasks
-        .filter(t => !!t.dueDate)
-        .map<TaskCalendarEvent>(t => {
-          const d = new Date(t.dueDate as string)
-          return { id: t.id, title: t.title, start: d, end: d, kind: 'lead', resource: t }
-        })
+    // react-big-calendar requires:
+    //  - start / end as real Date instances (not ISO strings)
+    //  - end > start (zero-duration events are silently dropped in Month
+    //    view and collapse to invisible slivers in Week/Day view)
+    //  - valid Dates (new Date("") / new Date("garbage") return Invalid
+    //    Date which rbc also drops)
+    // We give every task a synthetic 30-minute duration for display only;
+    // the underlying dueDate in the DB is untouched.
+    function toEvent(raw: string, base: { id: string; title: string }): { start: Date; end: Date } | null {
+      const start = new Date(raw)
+      if (Number.isNaN(start.getTime())) {
+        console.warn('[TasksView] skipping invalid dueDate on task', base)
+        return null
+      }
+      const end = new Date(start.getTime() + 30 * 60 * 1000)
+      return { start, end }
     }
-    return mTasks
-      .filter(t => !!t.dueDate)
-      .map<TaskCalendarEvent>(t => {
-        const d = new Date(t.dueDate as string)
-        return { id: t.id, title: t.title, start: d, end: d, kind: 'managerial', resource: t }
-      })
+
+    const out: TaskCalendarEvent[] = []
+    if (category === 'leads') {
+      for (const t of tasks) {
+        if (!t.dueDate) continue
+        const times = toEvent(t.dueDate, { id: t.id, title: t.title })
+        if (!times) continue
+        out.push({ id: t.id, title: t.title, start: times.start, end: times.end, kind: 'lead', resource: t })
+      }
+    } else {
+      for (const t of mTasks) {
+        if (!t.dueDate) continue
+        const times = toEvent(t.dueDate, { id: t.id, title: t.title })
+        if (!times) continue
+        out.push({ id: t.id, title: t.title, start: times.start, end: times.end, kind: 'managerial', resource: t })
+      }
+    }
+    console.log('[TasksView] calendarEvents mapped:', out.length, out.slice(0, 3))
+    return out
   }, [category, tasks, mTasks])
 
   function calendarEventColor(event: TaskCalendarEvent): string {
