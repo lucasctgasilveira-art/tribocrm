@@ -357,6 +357,21 @@ export default function TasksView({ menuItems, managerialOnly = false }: TasksVi
   // value turns the right-side content into a react-big-calendar view.
   const [viewMode, setViewMode] = useState<'list' | View>('list')
   const [calendarDate, setCalendarDate] = useState<Date>(new Date())
+
+  // Switching into a calendar view auto-snaps the period filter to
+  // "Todas" (the calendar already expresses a period visually — having
+  // the backend filter clipped to "today" would hide every event in the
+  // Month grid). Returning to "Lista" restores the default "Hoje".
+  // Centralised here so the view toggle, the rbc toolbar's onView, and
+  // any future entry point all stay in sync.
+  function changeView(next: 'list' | View) {
+    if (next === 'list' && viewMode !== 'list') {
+      setPeriodFilter('today')
+    } else if (next !== 'list' && viewMode === 'list') {
+      setPeriodFilter('all')
+    }
+    setViewMode(next)
+  }
   const [toast, setToast] = useState('')
   const [newTaskModal, setNewTaskModal] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
@@ -648,7 +663,15 @@ export default function TasksView({ menuItems, managerialOnly = false }: TasksVi
           {/* Header + period pills + button in one line */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
             <span style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', flexShrink: 0 }}>Tarefas</span>
-            <div style={{ display: 'flex', gap: 5, flex: 1, flexWrap: 'wrap' }}>
+            <div
+              title={viewMode !== 'list' ? 'Filtros de período não se aplicam às visualizações de calendário' : undefined}
+              style={{
+                display: 'flex', gap: 5, flex: 1, flexWrap: 'wrap',
+                opacity: viewMode !== 'list' ? 0.4 : 1,
+                pointerEvents: viewMode !== 'list' ? 'none' : 'auto',
+                transition: 'opacity 0.15s',
+              }}
+            >
               {periodFilters.map((pf) => {
                 const active = periodFilter === pf.key
                 return (
@@ -686,7 +709,7 @@ export default function TasksView({ menuItems, managerialOnly = false }: TasksVi
             ]).map(v => {
               const active = viewMode === v.key
               return (
-                <button key={v.key as string} onClick={() => setViewMode(v.key)} style={{
+                <button key={v.key as string} onClick={() => changeView(v.key)} style={{
                   padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: 'pointer',
                   border: `1px solid ${active ? '#f97316' : 'var(--border)'}`,
                   background: active ? 'rgba(249,115,22,0.12)' : 'var(--bg-card)',
@@ -766,7 +789,7 @@ export default function TasksView({ menuItems, managerialOnly = false }: TasksVi
                 culture="pt-BR"
                 events={calendarEvents}
                 view={viewMode as View}
-                onView={(v) => setViewMode(v)}
+                onView={(v) => changeView(v)}
                 date={calendarDate}
                 onNavigate={(d) => setCalendarDate(d)}
                 onSelectEvent={(ev) => handleCalendarSelectEvent(ev as TaskCalendarEvent)}
