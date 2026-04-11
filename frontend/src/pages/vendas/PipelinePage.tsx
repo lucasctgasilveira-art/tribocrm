@@ -17,6 +17,7 @@ interface Lead {
   id: string; name: string; company: string; value: number; stage: string
   temperature: Temperature; lastContact: string | null; phone: string; email: string
   status: LeadStatus
+  wonAt: string | null
 }
 
 interface StageConfig { id: string; name: string; color: string; type: string }
@@ -24,7 +25,7 @@ interface StageConfig { id: string; name: string; color: string; type: string }
 interface ApiLead {
   id: string; name: string; company: string | null; phone: string | null; whatsapp: string | null; email: string | null
   expectedValue: string | number | null; closedValue: string | number | null; temperature: Temperature; stageId: string; lastActivityAt: string | null
-  responsible: { id: string; name: string }; status?: LeadStatus
+  responsible: { id: string; name: string }; status?: LeadStatus; wonAt?: string | null
 }
 
 interface KanbanStage {
@@ -57,7 +58,16 @@ function mapApiLead(l: ApiLead, stageName: string): Lead {
     id: l.id, name: l.name, company: l.company ?? '', value: Number(l.closedValue) || Number(l.expectedValue) || 0,
     stage: stageName, temperature: l.temperature, lastContact: formatTimeAgo(l.lastActivityAt),
     phone: l.phone ?? l.whatsapp ?? '—', email: l.email ?? '—', status: l.status ?? 'ACTIVE',
+    wonAt: l.wonAt ?? null,
   }
+}
+
+// Short DD/MM/AA formatter used by the WON card marker.
+function formatWonAt(iso: string | null): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })
 }
 
 const CSS = `
@@ -275,13 +285,26 @@ export default function VendasPipelinePage() {
                     <div style={{ border: '1px dashed var(--border)', borderRadius: 8, padding: 20, textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>Sem leads</div>
                   ) : sl.map(lead => {
                     const temp = tempConfig[lead.temperature]
+                    const isWon = lead.status === 'WON'
+                    const wonAtLabel = isWon ? formatWonAt(lead.wonAt) : ''
                     return (
                       <div key={lead.id} draggable onDragStart={(e) => onDragStart(e, lead.id)} onDragEnd={onDragEnd} onClick={() => setSelectedLead(lead)}
                         onMouseEnter={() => setHoveredCard(lead.id)} onMouseLeave={() => setHoveredCard(null)}
-                        style={{ background: hoveredCard === lead.id ? 'var(--bg-elevated)' : 'var(--bg-card)', border: `1px solid ${hoveredCard === lead.id ? 'var(--border)' : 'var(--border)'}`, borderRadius: 10, padding: 14, marginBottom: 8, cursor: 'grab', transition: 'all 0.2s', opacity: draggedId === lead.id ? 0.5 : 1 }}>
+                        style={{
+                          background: hoveredCard === lead.id ? 'var(--bg-elevated)' : 'var(--bg-card)',
+                          border: isWon ? '1px solid rgba(34,197,94,0.3)' : '1px solid var(--border)',
+                          borderLeft: isWon ? '3px solid #22c55e' : '1px solid var(--border)',
+                          borderRadius: 10, padding: 14, marginBottom: 8, cursor: 'grab', transition: 'all 0.2s', opacity: draggedId === lead.id ? 0.5 : 1,
+                        }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                           <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{lead.name}</span>
-                          <span style={{ background: temp.bg, color: temp.color, borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 500, whiteSpace: 'nowrap', flexShrink: 0 }}>{temp.label}</span>
+                          {isWon ? (
+                            <span style={{ color: '#22c55e', fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                              ✓ Fechado{wonAtLabel ? ` · ${wonAtLabel}` : ''}
+                            </span>
+                          ) : (
+                            <span style={{ background: temp.bg, color: temp.color, borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 500, whiteSpace: 'nowrap', flexShrink: 0 }}>{temp.label}</span>
+                          )}
                         </div>
                         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{lead.company}</div>
                         {lead.value > 0 && <div style={{ fontSize: 13, color: '#22c55e', fontWeight: 700, marginTop: 6 }}>{formatCurrency(lead.value)}</div>}
