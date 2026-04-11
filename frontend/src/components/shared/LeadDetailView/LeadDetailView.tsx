@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
-  MessageCircle, Mail, Phone, Calendar, FileText, MoreHorizontal,
-  UserPlus, Video, Check, Package, ChevronLeft, Loader2,
+  MessageCircle, Mail, Phone, Calendar, FileText,
+  UserPlus, Video, Check, Package, ChevronLeft, Loader2, X,
 } from 'lucide-react'
 import type { SidebarEntry } from '../Sidebar/Sidebar'
 import AppLayout from '../AppLayout/AppLayout'
@@ -55,15 +55,23 @@ export default function LeadDetailView({ menuItems, instance }: LeadDetailViewPr
   const [lead, setLead] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [rightTab, setRightTab] = useState<'tasks' | 'products' | 'notes'>('tasks')
+  const [editOpen, setEditOpen] = useState(false)
+  const [lostOpen, setLostOpen] = useState(false)
+  const [noteOpen, setNoteOpen] = useState(false)
+  const [emailOpen, setEmailOpen] = useState(false)
+  const [emailNeedsConnect, setEmailNeedsConnect] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
+
+  function reload() { setReloadKey(k => k + 1) }
 
   useEffect(() => {
     if (!id) return
     setLoading(true)
     getLead(id)
-      .then(d => { console.log('[LeadDetail] loaded:', d); setLead(d) })
+      .then(d => { setLead(d) })
       .catch(err => { console.error('[LeadDetail] Error loading lead:', err); setLead(null) })
       .finally(() => setLoading(false))
-  }, [id])
+  }, [id, reloadKey])
 
   if (loading) {
     return (
@@ -111,8 +119,18 @@ export default function LeadDetailView({ menuItems, instance }: LeadDetailViewPr
     }
   }
 
-  function openEmail() {
-    if (lead.email) window.open(`mailto:${lead.email}`)
+  async function openEmail() {
+    if (!lead.email) { return }
+    try {
+      const { data } = await api.get('/oauth/google/status')
+      if (data?.data?.connected) {
+        setEmailOpen(true)
+      } else {
+        setEmailNeedsConnect(true)
+      }
+    } catch {
+      setEmailNeedsConnect(true)
+    }
   }
 
   const ghost: React.CSSProperties = { background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }
@@ -131,8 +149,8 @@ export default function LeadDetailView({ menuItems, instance }: LeadDetailViewPr
           <span style={{ fontSize: 12, color: 'var(--text-primary)' }}>{lead.name}</span>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
-          <button style={ghost}>Editar</button>
-          <button style={{ ...ghost, color: '#ef4444', borderColor: 'rgba(239,68,68,0.3)' }}>Mover para Perdido</button>
+          <button onClick={() => setEditOpen(true)} style={ghost}>Editar</button>
+          <button onClick={() => setLostOpen(true)} style={{ ...ghost, color: '#ef4444', borderColor: 'rgba(239,68,68,0.3)' }}>Mover para Perdido</button>
           <button style={{ background: '#22c55e', border: 'none', borderRadius: 6, padding: '6px 14px', fontSize: 12, fontWeight: 600, color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
             <Check size={14} strokeWidth={2} /> Venda Realizada
           </button>
@@ -166,9 +184,6 @@ export default function LeadDetailView({ menuItems, instance }: LeadDetailViewPr
         <ActBtn icon={<Phone size={16} strokeWidth={1.5} />} label="Ligar" color="#f97316" border="rgba(249,115,22,0.3)" onClick={openPhone} />
         <ActBtn icon={<Calendar size={16} strokeWidth={1.5} />} label="Agendar" color="var(--text-secondary)" border="var(--border)" />
         <ActBtn icon={<FileText size={16} strokeWidth={1.5} />} label="Proposta" color="var(--text-secondary)" border="var(--border)" />
-        <button style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>
-          <MoreHorizontal size={16} strokeWidth={1.5} />
-        </button>
       </div>
 
       {/* Two-column layout */}
@@ -247,9 +262,15 @@ export default function LeadDetailView({ menuItems, instance }: LeadDetailViewPr
             </div>
           )}
           {rightTab === 'products' && <EmptyState icon={<Package size={32} color="var(--text-muted)" strokeWidth={1.5} />} text="Nenhum produto vinculado" btnLabel="+ Vincular produto" />}
-          {rightTab === 'notes' && <EmptyState icon={<FileText size={32} color="var(--text-muted)" strokeWidth={1.5} />} text="Nenhuma nota ainda" btnLabel="+ Adicionar nota" />}
+          {rightTab === 'notes' && <EmptyState icon={<FileText size={32} color="var(--text-muted)" strokeWidth={1.5} />} text="Nenhuma nota ainda" btnLabel="+ Adicionar nota" onClick={() => setNoteOpen(true)} />}
         </div>
       </div>
+
+      {editOpen && <EditLeadModal lead={lead} onClose={() => setEditOpen(false)} onSaved={() => { setEditOpen(false); reload() }} />}
+      {lostOpen && <MoveToLostModal lead={lead} onClose={() => setLostOpen(false)} onSaved={() => { setLostOpen(false); reload() }} />}
+      {noteOpen && <AddNoteModal leadId={lead.id} onClose={() => setNoteOpen(false)} onSaved={() => { setNoteOpen(false); reload() }} />}
+      {emailOpen && <SendEmailModal lead={lead} onClose={() => setEmailOpen(false)} onSaved={() => { setEmailOpen(false); reload() }} />}
+      {emailNeedsConnect && <ConnectGmailModal onClose={() => setEmailNeedsConnect(false)} onNavigate={() => { setEmailNeedsConnect(false); navigate(`/${instance}/configuracoes?tab=integracoes`) }} />}
     </AppLayout>
   )
 }
@@ -288,12 +309,301 @@ function ActBtn({ icon, label, color, border, onClick }: { icon: React.ReactNode
   )
 }
 
-function EmptyState({ icon, text, btnLabel }: { icon: React.ReactNode; text: string; btnLabel: string }) {
+function EmptyState({ icon, text, btnLabel, onClick }: { icon: React.ReactNode; text: string; btnLabel: string; onClick?: () => void }) {
   return (
     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 40, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
       {icon}
       <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{text}</span>
-      <button style={{ background: 'transparent', border: '1px solid rgba(249,115,22,0.3)', color: '#f97316', borderRadius: 6, padding: '6px 14px', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>{btnLabel}</button>
+      <button onClick={onClick} style={{ background: 'transparent', border: '1px solid rgba(249,115,22,0.3)', color: '#f97316', borderRadius: 6, padding: '6px 14px', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>{btnLabel}</button>
     </div>
+  )
+}
+
+// ── Modal primitives ──
+
+const modalOverlay: React.CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 60 }
+const modalBox: React.CSSProperties = { position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 480, maxWidth: '92vw', maxHeight: '92vh', overflowY: 'auto', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 61 }
+const inputS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
+const labelS: React.CSSProperties = { fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }
+
+function ModalShell({ title, onClose, children, footer }: { title: string; onClose: () => void; children: React.ReactNode; footer: React.ReactNode }) {
+  return (
+    <>
+      <div onClick={onClose} style={modalOverlay} />
+      <div style={modalBox}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{title}</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+        </div>
+        <div style={{ padding: 24 }}>{children}</div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', gap: 12 }}>{footer}</div>
+      </div>
+    </>
+  )
+}
+
+// ── Edit Lead Modal ──
+
+function EditLeadModal({ lead, onClose, onSaved }: { lead: any; onClose: () => void; onSaved: () => void }) {
+  const [name, setName] = useState(lead.name ?? '')
+  const [company, setCompany] = useState(lead.company ?? '')
+  const [email, setEmail] = useState(lead.email ?? '')
+  const [phone, setPhone] = useState(lead.phone ?? '')
+  const [whatsapp, setWhatsapp] = useState(lead.whatsapp ?? '')
+  const [expectedValue, setExpectedValue] = useState(lead.expectedValue ? String(lead.expectedValue) : '')
+  const [temperature, setTemperature] = useState(lead.temperature ?? 'WARM')
+  const [source, setSource] = useState(lead.source ?? '')
+  const [position, setPosition] = useState(lead.position ?? '')
+  const [notes, setNotes] = useState(lead.notes ?? '')
+  const [saving, setSaving] = useState(false)
+
+  async function handleSave() {
+    if (!name.trim()) return
+    setSaving(true)
+    try {
+      await api.patch(`/leads/${lead.id}`, {
+        name: name.trim(),
+        company: company || null,
+        email: email || null,
+        phone: phone || null,
+        whatsapp: whatsapp || null,
+        expectedValue: expectedValue ? Number(expectedValue) : null,
+        temperature,
+        source: source || null,
+        position: position || null,
+        notes: notes || null,
+      })
+      onSaved()
+    } catch {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <ModalShell title="Editar lead" onClose={onClose} footer={
+      <>
+        <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
+        <button onClick={handleSave} disabled={saving || !name.trim()} style={{ background: saving || !name.trim() ? 'var(--border)' : '#f97316', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: '#fff', cursor: saving || !name.trim() ? 'not-allowed' : 'pointer' }}>{saving ? 'Salvando...' : 'Salvar'}</button>
+      </>
+    }>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div style={{ gridColumn: '1 / -1' }}><label style={labelS}>Nome *</label><input value={name} onChange={e => setName(e.target.value)} style={inputS} /></div>
+        <div><label style={labelS}>Empresa</label><input value={company} onChange={e => setCompany(e.target.value)} style={inputS} /></div>
+        <div><label style={labelS}>Cargo</label><input value={position} onChange={e => setPosition(e.target.value)} style={inputS} /></div>
+        <div><label style={labelS}>E-mail</label><input value={email} onChange={e => setEmail(e.target.value)} style={inputS} /></div>
+        <div><label style={labelS}>Telefone</label><input value={phone} onChange={e => setPhone(e.target.value)} style={inputS} /></div>
+        <div><label style={labelS}>WhatsApp</label><input value={whatsapp} onChange={e => setWhatsapp(e.target.value)} style={inputS} /></div>
+        <div><label style={labelS}>Valor estimado</label><input value={expectedValue} onChange={e => setExpectedValue(e.target.value.replace(/[^0-9.]/g, ''))} style={inputS} placeholder="0" /></div>
+        <div><label style={labelS}>Temperatura</label>
+          <select value={temperature} onChange={e => setTemperature(e.target.value)} style={{ ...inputS, cursor: 'pointer' }}>
+            <option value="HOT">Quente</option>
+            <option value="WARM">Morno</option>
+            <option value="COLD">Frio</option>
+          </select>
+        </div>
+        <div><label style={labelS}>Fonte</label><input value={source} onChange={e => setSource(e.target.value)} style={inputS} /></div>
+        <div style={{ gridColumn: '1 / -1' }}><label style={labelS}>Anotações</label><textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3} style={{ ...inputS, resize: 'vertical' }} /></div>
+      </div>
+    </ModalShell>
+  )
+}
+
+// ── Move to Lost Modal ──
+
+function MoveToLostModal({ lead, onClose, onSaved }: { lead: any; onClose: () => void; onSaved: () => void }) {
+  const [reasons, setReasons] = useState<{ id: string; name: string }[]>([])
+  const [lossReasonId, setLossReasonId] = useState('')
+  const [lostStageId, setLostStageId] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const [reasonsRes, kanbanRes] = await Promise.all([
+          api.get('/leads/loss-reasons'),
+          api.get(`/pipelines/${lead.pipelineId}/kanban`),
+        ])
+        setReasons(reasonsRes.data.data ?? [])
+        const stages = kanbanRes.data?.data?.stages ?? []
+        const lost = stages.find((s: any) => s.type === 'LOST')
+        setLostStageId(lost?.id ?? null)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [lead.pipelineId])
+
+  async function handleSave() {
+    if (!lossReasonId || !lostStageId) return
+    setSaving(true)
+    try {
+      await api.patch(`/leads/${lead.id}`, {
+        status: 'LOST',
+        lossReasonId,
+        stageId: lostStageId,
+        lostAt: new Date().toISOString(),
+      })
+      onSaved()
+    } catch {
+      setSaving(false)
+    }
+  }
+
+  const canSave = !!lossReasonId && !!lostStageId && !saving
+
+  return (
+    <ModalShell title="Mover para Perdido" onClose={onClose} footer={
+      <>
+        <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
+        <button onClick={handleSave} disabled={!canSave} style={{ background: canSave ? '#ef4444' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: '#fff', cursor: canSave ? 'pointer' : 'not-allowed' }}>{saving ? 'Salvando...' : 'Confirmar'}</button>
+      </>
+    }>
+      {loading ? (
+        <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)' }}>Carregando...</div>
+      ) : !lostStageId ? (
+        <div style={{ padding: 12, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, color: '#ef4444', fontSize: 13 }}>
+          Este pipeline não tem uma etapa de tipo "Perdido". Configure o pipeline primeiro.
+        </div>
+      ) : (
+        <div>
+          <label style={labelS}>Motivo da perda *</label>
+          <select value={lossReasonId} onChange={e => setLossReasonId(e.target.value)} style={{ ...inputS, cursor: 'pointer' }}>
+            <option value="">Selecione um motivo</option>
+            {reasons.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+          </select>
+          {reasons.length === 0 && (
+            <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text-muted)' }}>Nenhum motivo cadastrado. Cadastre em Configurações.</div>
+          )}
+        </div>
+      )}
+    </ModalShell>
+  )
+}
+
+// ── Add Note Modal ──
+
+function AddNoteModal({ leadId, onClose, onSaved }: { leadId: string; onClose: () => void; onSaved: () => void }) {
+  const [content, setContent] = useState('')
+  const [saving, setSaving] = useState(false)
+  const canSave = content.trim().length > 0 && !saving
+
+  async function handleSave() {
+    if (!canSave) return
+    setSaving(true)
+    try {
+      await api.post(`/leads/${leadId}/interactions`, { type: 'NOTE', content })
+      onSaved()
+    } catch {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <ModalShell title="Adicionar nota" onClose={onClose} footer={
+      <>
+        <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
+        <button onClick={handleSave} disabled={!canSave} style={{ background: canSave ? '#f97316' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: '#fff', cursor: canSave ? 'pointer' : 'not-allowed' }}>{saving ? 'Salvando...' : 'Salvar'}</button>
+      </>
+    }>
+      <label style={labelS}>Nota *</label>
+      <textarea value={content} onChange={e => setContent(e.target.value)} rows={5} placeholder="Escreva sua nota..." style={{ ...inputS, resize: 'vertical' }} autoFocus />
+    </ModalShell>
+  )
+}
+
+// ── Send Email Modal ──
+
+interface EmailTemplate { id: string; name: string; subject: string; body: string }
+
+function SendEmailModal({ lead, onClose, onSaved }: { lead: any; onClose: () => void; onSaved: () => void }) {
+  const [to, setTo] = useState(lead.email ?? '')
+  const [subject, setSubject] = useState('')
+  const [body, setBody] = useState('')
+  const [templates, setTemplates] = useState<EmailTemplate[]>([])
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    api.get('/templates/email').then(r => setTemplates(r.data?.data ?? [])).catch(() => {})
+  }, [])
+
+  function applyTemplate(id: string) {
+    const t = templates.find(x => x.id === id)
+    if (!t) return
+    const replace = (s: string) => s
+      .replace(/\{\{\s*nome\s*\}\}/gi, lead.name ?? '')
+      .replace(/\{\{\s*empresa\s*\}\}/gi, lead.company ?? '')
+      .replace(/\{\{\s*name\s*\}\}/gi, lead.name ?? '')
+      .replace(/\{\{\s*company\s*\}\}/gi, lead.company ?? '')
+    setSubject(replace(t.subject))
+    setBody(replace(t.body))
+  }
+
+  const canSave = !!to && !!subject && !!body && !saving
+
+  async function handleSend() {
+    if (!canSave) return
+    setSaving(true)
+    setError('')
+    try {
+      await api.post('/email/send', { leadId: lead.id, to, subject, body })
+      onSaved()
+    } catch (e: any) {
+      setSaving(false)
+      setError(e?.response?.data?.error?.message ?? 'Erro ao enviar')
+    }
+  }
+
+  return (
+    <ModalShell title="Enviar e-mail" onClose={onClose} footer={
+      <>
+        <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
+        <button onClick={handleSend} disabled={!canSave} style={{ background: canSave ? '#3b82f6' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: '#fff', cursor: canSave ? 'pointer' : 'not-allowed' }}>{saving ? 'Enviando...' : 'Enviar'}</button>
+      </>
+    }>
+      {templates.length > 0 && (
+        <div style={{ marginBottom: 14 }}>
+          <label style={labelS}>Template</label>
+          <select onChange={e => applyTemplate(e.target.value)} defaultValue="" style={{ ...inputS, cursor: 'pointer' }}>
+            <option value="">Nenhum</option>
+            {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+        </div>
+      )}
+      <div style={{ marginBottom: 14 }}>
+        <label style={labelS}>Para</label>
+        <input value={to} onChange={e => setTo(e.target.value)} style={inputS} />
+      </div>
+      <div style={{ marginBottom: 14 }}>
+        <label style={labelS}>Assunto</label>
+        <input value={subject} onChange={e => setSubject(e.target.value)} style={inputS} />
+      </div>
+      <div>
+        <label style={labelS}>Corpo</label>
+        <textarea value={body} onChange={e => setBody(e.target.value)} rows={8} style={{ ...inputS, resize: 'vertical' }} />
+      </div>
+      {error && <div style={{ marginTop: 10, padding: 10, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, color: '#ef4444', fontSize: 12 }}>{error}</div>}
+    </ModalShell>
+  )
+}
+
+// ── Connect Gmail Prompt ──
+
+function ConnectGmailModal({ onClose, onNavigate }: { onClose: () => void; onNavigate: () => void }) {
+  return (
+    <ModalShell title="Gmail não conectado" onClose={onClose} footer={
+      <>
+        <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Fechar</button>
+        <button onClick={onNavigate} style={{ background: '#3b82f6', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer' }}>Ir para Integrações</button>
+      </>
+    }>
+      <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+        Para enviar e-mails pelo TriboCRM, conecte sua conta Gmail em{' '}
+        <strong style={{ color: 'var(--text-primary)' }}>Configurações → Integrações</strong>.
+        Assim os e-mails são enviados do seu próprio endereço e as aberturas são rastreadas.
+      </div>
+    </ModalShell>
   )
 }

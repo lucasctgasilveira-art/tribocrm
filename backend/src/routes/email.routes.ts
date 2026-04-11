@@ -1,7 +1,52 @@
 import { Router, Request, Response } from 'express'
+import { randomUUID } from 'crypto'
 import { prisma } from '../lib/prisma'
+import { authMiddleware } from '../middleware/auth.middleware'
+import { sendEmail } from '../services/gmail.service'
 
 const router = Router()
+
+router.post('/send', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.userId
+    const tenantId = req.user!.tenantId
+    const { leadId, to, subject, body } = req.body as { leadId?: string; to?: string; subject?: string; body?: string }
+
+    if (!to || !subject || !body) {
+      res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'to, subject e body são obrigatórios' } })
+      return
+    }
+
+    let trackingPixelId: string | undefined
+    if (leadId) {
+      const lead = await prisma.lead.findFirst({ where: { id: leadId, tenantId, deletedAt: null } })
+      if (!lead) {
+        res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Lead não encontrado' } })
+        return
+      }
+      trackingPixelId = randomUUID()
+      await prisma.emailTracking.create({
+        data: { tenantId, leadId, userId, trackingPixelId },
+      })
+    }
+
+    const result = await sendEmail(userId, tenantId, to, subject, body, trackingPixelId)
+
+    if (leadId) {
+      await prisma.interaction.create({
+        data: { tenantId, leadId, userId, type: 'EMAIL', content: `Assunto: ${subject}\n\n${body}`, isAuto: false },
+      })
+      await prisma.lead.update({ where: { id: leadId }, data: { lastActivityAt: new Date() } })
+    }
+
+    res.json({ success: true, data: result })
+  } catch (error: any) {
+    console.error('[Email] send error:', error)
+    const msg = String(error?.message ?? 'Erro ao enviar e-mail')
+    const code = msg.includes('Gmail not connected') ? 'GMAIL_NOT_CONNECTED' : 'EMAIL_SEND_ERROR'
+    res.status(400).json({ success: false, error: { code, message: msg } })
+  }
+})
 
 // 1x1 transparent GIF — returned on every pixel request regardless of tracking status
 const TRANSPARENT_GIF = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64')
