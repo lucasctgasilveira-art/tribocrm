@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  X, MessageCircle, Mail, Phone, Calendar, UserPlus, Video,
-  Check, ExternalLink,
+  X, MessageCircle, Mail, Phone, Calendar, UserPlus,
+  Check, ExternalLink, Loader2,
 } from 'lucide-react'
+import api from '../../../services/api'
 
 // ── Types ──
 
@@ -27,6 +28,24 @@ interface LeadDrawerProps {
   instance?: 'gestao' | 'vendas'
 }
 
+interface Interaction {
+  id: string
+  type: string
+  content: string
+  createdAt: string
+  isAuto: boolean
+  user?: { id: string; name: string }
+}
+
+interface Task {
+  id: string
+  type: string
+  title: string
+  dueDate: string | null
+  isDone: boolean
+  doneAt: string | null
+}
+
 // ── Config ──
 
 const tempConfig: Record<string, { label: string; color: string; bg: string }> = {
@@ -35,8 +54,29 @@ const tempConfig: Record<string, { label: string; color: string; bg: string }> =
   COLD: { label: '❄️ Frio', color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
 }
 
+const typeIcons: Record<string, { color: string }> = {
+  CALL: { color: '#f97316' },
+  EMAIL: { color: '#3b82f6' },
+  WHATSAPP: { color: '#25d166' },
+  MEETING: { color: '#a855f7' },
+  VISIT: { color: '#ec4899' },
+  NOTE: { color: 'var(--text-muted)' },
+  SYSTEM: { color: 'var(--text-muted)' },
+  PROPOSAL: { color: '#f59e0b' },
+}
+
 function formatCurrency(v: number): string {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })
+}
+
+function formatDate(iso: string): string {
+  const d = new Date(iso)
+  const now = new Date()
+  const diff = now.getTime() - d.getTime()
+  const days = Math.floor(diff / 86400000)
+  if (days === 0) return `Hoje · ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+  if (days === 1) return `Ontem · ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+  return d.toLocaleDateString('pt-BR') + ' · ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 }
 
 type Tab = 'history' | 'tasks' | 'info'
@@ -56,13 +96,14 @@ export default function LeadDrawer({ lead, onClose, stageColor, instance = 'gest
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<Tab>('history')
   const [toast, setToast] = useState('')
+  const [interactionModal, setInteractionModal] = useState(false)
+  const [taskModal, setTaskModal] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
   const temp = tempConfig[lead.temperature] ?? tempConfig.COLD!
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 3000) }
 
-  function cleanPhone(raw: string): string {
-    return raw.replace(/\D/g, '')
-  }
+  function cleanPhone(raw: string): string { return raw.replace(/\D/g, '') }
 
   function handleWhatsApp() {
     const num = cleanPhone(lead.phone)
@@ -83,8 +124,7 @@ export default function LeadDrawer({ lead, onClose, stageColor, instance = 'gest
   }
 
   function handleSchedule() {
-    onClose()
-    navigate(`/${instance}/leads/${lead.id}?tab=tasks`)
+    setTaskModal(true)
   }
 
   const tabs: { key: Tab; label: string }[] = [
@@ -96,18 +136,10 @@ export default function LeadDrawer({ lead, onClose, stageColor, instance = 'gest
   return (
     <>
       <style>{CSS}</style>
-      {/* Overlay */}
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 50, animation: 'drawerFadeIn 0.2s ease-out' }} />
+      <div style={{ position: 'fixed', right: 0, top: 0, width: 420, height: '100vh', background: 'var(--bg-card)', borderLeft: '1px solid var(--border)', zIndex: 51, display: 'flex', flexDirection: 'column', animation: 'drawerSlideIn 0.25s ease-out' }}>
 
-      {/* Panel */}
-      <div style={{
-        position: 'fixed', right: 0, top: 0, width: 420, height: '100vh',
-        background: 'var(--bg-card)', borderLeft: '1px solid var(--border)', zIndex: 51,
-        display: 'flex', flexDirection: 'column',
-        animation: 'drawerSlideIn 0.25s ease-out',
-      }}>
-
-        {/* S1 — Header */}
+        {/* Header */}
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
           <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>Pipeline → {lead.stage}</div>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
@@ -116,140 +148,96 @@ export default function LeadDrawer({ lead, onClose, stageColor, instance = 'gest
               <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>{lead.company}</p>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-              <button
-                onClick={() => { onClose(); navigate(`/${instance}/leads/${lead.id}`) }}
-                style={{ background: 'transparent', color: '#f97316', fontSize: 12, border: '1px solid rgba(249,115,22,0.3)', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}
-              >
+              <button onClick={() => { onClose(); navigate(`/${instance}/leads/${lead.id}`) }} style={{ background: 'transparent', color: '#f97316', fontSize: 12, border: '1px solid rgba(249,115,22,0.3)', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
                 Ver detalhes <ExternalLink size={11} strokeWidth={1.5} />
               </button>
-              <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}>
-                <X size={20} strokeWidth={1.5} />
-              </button>
+              <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={20} strokeWidth={1.5} /></button>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
             <Badge bg={temp.bg} color={temp.color}>{temp.label}</Badge>
             <Badge bg={`${stageColor}1F`} color={stageColor}>{lead.stage}</Badge>
-            <Badge bg="rgba(34,197,94,0.12)" color="#22c55e">Score 88</Badge>
           </div>
         </div>
 
-        {/* S2 — Value + quick info */}
+        {/* Value */}
         <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Valor estimado</div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Valor</div>
           <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', marginTop: 2 }}>{formatCurrency(lead.value)}</div>
           <div style={{ display: 'flex', gap: 20, marginTop: 10, fontSize: 12 }}>
-            <div>
-              <span style={{ color: 'var(--text-muted)' }}>Responsável </span>
-              <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{lead.responsible}</span>
-            </div>
-            <div>
-              <span style={{ color: 'var(--text-muted)' }}>Fonte </span>
-              <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>Instagram</span>
-            </div>
-            <div>
-              <span style={{ color: 'var(--text-muted)' }}>Criado </span>
-              <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>12/01/2026</span>
-            </div>
+            <div><span style={{ color: 'var(--text-muted)' }}>Responsável </span><span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{lead.responsible}</span></div>
           </div>
         </div>
 
-        {/* S3 — Action buttons */}
+        {/* Action buttons */}
         <div style={{ display: 'flex', gap: 8, padding: '14px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-          <ActionBtn icon={<MessageCircle size={18} strokeWidth={1.5} />} label="WhatsApp" color="#25d166" border="rgba(37,209,102,0.3)" onClick={handleWhatsApp} />
-          <ActionBtn icon={<Mail size={18} strokeWidth={1.5} />} label="E-mail" color="#3b82f6" border="rgba(59,130,246,0.3)" onClick={handleEmail} />
-          <ActionBtn icon={<Phone size={18} strokeWidth={1.5} />} label="Ligar" color="#f97316" border="rgba(249,115,22,0.3)" onClick={handleCall} />
-          <ActionBtn icon={<Calendar size={18} strokeWidth={1.5} />} label="Agendar" color="#a855f7" border="rgba(168,85,247,0.3)" onClick={handleSchedule} />
+          <DrawerActionBtn icon={<MessageCircle size={18} strokeWidth={1.5} />} label="WhatsApp" color="#25d166" border="rgba(37,209,102,0.3)" onClick={handleWhatsApp} />
+          <DrawerActionBtn icon={<Mail size={18} strokeWidth={1.5} />} label="E-mail" color="#3b82f6" border="rgba(59,130,246,0.3)" onClick={handleEmail} />
+          <DrawerActionBtn icon={<Phone size={18} strokeWidth={1.5} />} label="Ligar" color="#f97316" border="rgba(249,115,22,0.3)" onClick={handleCall} />
+          <DrawerActionBtn icon={<Calendar size={18} strokeWidth={1.5} />} label="Agendar" color="#a855f7" border="rgba(168,85,247,0.3)" onClick={handleSchedule} />
         </div>
 
-        {/* S4 — Tabs */}
+        {/* Tabs */}
         <div style={{ display: 'flex', padding: '0 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
           {tabs.map((tab) => {
             const isActive = activeTab === tab.key
             return (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                style={{
-                  background: 'transparent', border: 'none', cursor: 'pointer',
-                  padding: '12px 16px', fontSize: 13,
-                  color: isActive ? '#f97316' : 'var(--text-muted)',
-                  fontWeight: isActive ? 500 : 400,
-                  borderBottom: isActive ? '2px solid #f97316' : '2px solid transparent',
-                  marginBottom: -1,
-                  transition: 'all 0.15s',
-                }}
-              >
+              <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '12px 16px', fontSize: 13, color: isActive ? '#f97316' : 'var(--text-muted)', fontWeight: isActive ? 500 : 400, borderBottom: isActive ? '2px solid #f97316' : '2px solid transparent', marginBottom: -1, transition: 'all 0.15s' }}>
                 {tab.label}
               </button>
             )
           })}
         </div>
 
-        {/* Tab content — scrollable */}
+        {/* Tab content */}
         <div className="drawer-body" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
-          {activeTab === 'history' && <HistoryTab />}
-          {activeTab === 'tasks' && <TasksTab />}
+          {activeTab === 'history' && <HistoryTab leadId={lead.id} reloadKey={reloadKey} onAdd={() => setInteractionModal(true)} />}
+          {activeTab === 'tasks' && <TasksTab leadId={lead.id} reloadKey={reloadKey} onAdd={() => setTaskModal(true)} />}
           {activeTab === 'info' && <InfoTab lead={lead} />}
         </div>
 
         {/* Toast */}
         {toast && <div style={{ position: 'absolute', bottom: 16, left: 16, right: 16, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: 'var(--text-primary)', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>{toast}</div>}
       </div>
+
+      {/* Modals */}
+      {interactionModal && <NewInteractionModal leadId={lead.id} onClose={() => setInteractionModal(false)} onSaved={() => { setInteractionModal(false); setReloadKey(k => k + 1); showToast('Interação registrada') }} />}
+      {taskModal && <NewTaskModal leadId={lead.id} onClose={() => setTaskModal(false)} onSaved={() => { setTaskModal(false); setReloadKey(k => k + 1); showToast('Tarefa criada'); setActiveTab('tasks') }} />}
     </>
   )
 }
 
-// ── Tabs ──
+// ── HistoryTab (real data) ──
 
-function HistoryTab() {
-  const items = [
-    {
-      icon: Mail, iconColor: '#3b82f6', type: 'E-mail enviado',
-      title: 'Proposta comercial enviada',
-      badges: [{ text: 'Aberto 3x', bg: 'rgba(34,197,94,0.12)', color: '#22c55e' }, { text: 'Clicou na proposta', bg: 'rgba(59,130,246,0.12)', color: '#3b82f6' }],
-      date: 'Hoje · 09:15 · Ana Souza',
-    },
-    {
-      icon: Phone, iconColor: '#f97316', type: 'Ligação realizada',
-      note: 'Cliente demonstrou interesse alto. Pediu proposta para fechar no plano anual.',
-      date: 'Ontem · 14:30 · Ana Souza',
-    },
-    {
-      icon: MessageCircle, iconColor: '#25d166', type: 'WhatsApp',
-      note: 'Primeiro contato — cliente respondeu e demonstrou interesse.',
-      date: '12/01/2026 · 10:00 · Ana Souza',
-    },
-    {
-      icon: UserPlus, iconColor: 'var(--text-muted)', type: 'Lead criado',
-      note: 'Lead captado via Instagram · atribuído via round-robin',
-      date: '12/01/2026 · 09:00 · Sistema',
-    },
-  ]
+function HistoryTab({ leadId, reloadKey, onAdd }: { leadId: string; reloadKey: number; onAdd: () => void }) {
+  const [items, setItems] = useState<Interaction[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    setLoading(true)
+    api.get(`/leads/${leadId}/interactions`).then(r => setItems(r.data.data ?? [])).catch(() => setItems([])).finally(() => setLoading(false))
+  }, [leadId, reloadKey])
+
+  if (loading) return <div style={{ padding: 40, textAlign: 'center' }}><Loader2 size={20} color="#f97316" className="animate-spin" /></div>
 
   return (
     <div style={{ padding: '12px 20px' }}>
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
-        <SmallBtn label="+ Registrar" />
+        <SmallBtn label="+ Registrar" onClick={onAdd} />
       </div>
-      {items.map((item, i) => {
-        const Icon = item.icon
+      {items.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)', fontSize: 13 }}>Nenhuma interação registrada</div>
+      ) : items.map((item) => {
+        const tc = typeIcons[item.type] ?? typeIcons.NOTE!
         return (
-          <div key={i} style={{ display: 'flex', gap: 12, padding: '12px 0', borderBottom: i < items.length - 1 ? '1px solid var(--border)' : 'none' }}>
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: `${item.iconColor}1F`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Icon size={16} color={item.iconColor} strokeWidth={1.5} />
+          <div key={item.id} style={{ display: 'flex', gap: 12, padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: `${tc.color}1F`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <TypeIcon type={item.type} color={tc.color} />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{item.title ?? item.type}</div>
-              {item.badges && (
-                <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
-                  {item.badges.map((b) => (
-                    <span key={b.text} style={{ fontSize: 10, padding: '2px 6px', borderRadius: 999, background: b.bg, color: b.color, fontWeight: 500 }}>{b.text}</span>
-                  ))}
-                </div>
-              )}
-              {item.note && <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{item.note}</div>}
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{item.date}</div>
+              <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{item.type}{item.isAuto ? ' (auto)' : ''}</div>
+              {item.content && <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{item.content}</div>}
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{formatDate(item.createdAt)}{item.user ? ` · ${item.user.name}` : ''}</div>
             </div>
           </div>
         )
@@ -258,41 +246,54 @@ function HistoryTab() {
   )
 }
 
-function TasksTab() {
-  const tasks = [
-    { icon: Phone, iconColor: '#f97316', title: 'Follow-up sobre desconto', due: 'Vence hoje · 14:00', dueColor: '#f59e0b', done: false },
-    { icon: Video, iconColor: '#a855f7', title: 'Demo ao vivo para o time', due: '25/03/2026 · 10:00', dueColor: 'var(--text-secondary)', done: false, badge: 'Google Calendar' },
-    { icon: Mail, iconColor: '#3b82f6', title: 'Enviar material de apresentação', due: 'Concluída · 13/03', dueColor: '#22c55e', done: true },
-  ]
+function TypeIcon({ type, color }: { type: string; color: string }) {
+  const size = 16; const sw = 1.5
+  switch (type) {
+    case 'CALL': return <Phone size={size} color={color} strokeWidth={sw} />
+    case 'EMAIL': return <Mail size={size} color={color} strokeWidth={sw} />
+    case 'WHATSAPP': return <MessageCircle size={size} color={color} strokeWidth={sw} />
+    case 'MEETING': return <Calendar size={size} color={color} strokeWidth={sw} />
+    default: return <UserPlus size={size} color={color} strokeWidth={sw} />
+  }
+}
+
+// ── TasksTab (real data) ──
+
+function TasksTab({ leadId, reloadKey, onAdd }: { leadId: string; reloadKey: number; onAdd: () => void }) {
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    setLoading(true)
+    api.get('/tasks', { params: { leadId, perPage: 20 } }).then(r => setTasks(r.data.data ?? [])).catch(() => setTasks([])).finally(() => setLoading(false))
+  }, [leadId, reloadKey])
+
+  async function toggleDone(id: string) {
+    try {
+      await api.patch(`/tasks/${id}/complete`)
+      setTasks(prev => prev.map(t => t.id === id ? { ...t, isDone: true, doneAt: new Date().toISOString() } : t))
+    } catch { /* ignore */ }
+  }
+
+  if (loading) return <div style={{ padding: 40, textAlign: 'center' }}><Loader2 size={20} color="#f97316" className="animate-spin" /></div>
 
   return (
     <div style={{ padding: '12px 20px' }}>
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
-        <SmallBtn label="+ Adicionar tarefa" />
+        <SmallBtn label="+ Adicionar tarefa" onClick={onAdd} />
       </div>
-      {tasks.map((task, i) => {
-        const Icon = task.icon
+      {tasks.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)', fontSize: 13 }}>Nenhuma tarefa</div>
+      ) : tasks.map((task) => {
         return (
-          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: i < tasks.length - 1 ? '1px solid var(--border)' : 'none', opacity: task.done ? 0.5 : 1 }}>
-            {/* Checkbox */}
-            <div style={{
-              width: 18, height: 18, borderRadius: 4, flexShrink: 0,
-              border: task.done ? 'none' : '1px solid var(--border)',
-              background: task.done ? '#22c55e' : 'transparent',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              {task.done && <Check size={12} color="#fff" strokeWidth={2.5} />}
+          <div key={task.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: '1px solid var(--border)', opacity: task.isDone ? 0.5 : 1 }}>
+            <div onClick={() => { if (!task.isDone) toggleDone(task.id) }} style={{ width: 18, height: 18, borderRadius: 4, flexShrink: 0, border: task.isDone ? 'none' : '1px solid var(--border)', background: task.isDone ? '#22c55e' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: task.isDone ? 'default' : 'pointer' }}>
+              {task.isDone && <Check size={12} color="#fff" strokeWidth={2.5} />}
             </div>
-            {/* Icon */}
-            <div style={{ width: 28, height: 28, borderRadius: 6, background: `${task.iconColor}1F`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Icon size={14} color={task.iconColor} strokeWidth={1.5} />
-            </div>
-            {/* Content */}
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', textDecoration: task.done ? 'line-through' : 'none' }}>{task.title}</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                <span style={{ fontSize: 11, color: task.dueColor }}>{task.due}</span>
-                {task.badge && <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, background: 'rgba(59,130,246,0.12)', color: '#3b82f6' }}>{task.badge}</span>}
+              <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', textDecoration: task.isDone ? 'line-through' : 'none' }}>{task.title}</div>
+              <div style={{ fontSize: 11, color: task.isDone ? '#22c55e' : 'var(--text-muted)', marginTop: 2 }}>
+                {task.isDone ? 'Concluída' : task.dueDate ? formatDate(task.dueDate) : 'Sem prazo'}
               </div>
             </div>
           </div>
@@ -302,16 +303,14 @@ function TasksTab() {
   )
 }
 
+// ── InfoTab ──
+
 function InfoTab({ lead }: { lead: LeadData }) {
   const fields = [
     { label: 'E-mail', value: lead.email },
-    { label: 'Telefone / WhatsApp', value: lead.phone },
-    { label: 'CPF', value: '***.456.789-**' },
-    { label: 'Fonte do lead', value: 'Instagram' },
+    { label: 'Telefone', value: lead.phone },
     { label: 'Responsável', value: lead.responsible },
-    { label: 'Data de criação', value: '12/01/2026' },
   ]
-
   return (
     <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
       {fields.map((f) => (
@@ -324,42 +323,138 @@ function InfoTab({ lead }: { lead: LeadData }) {
   )
 }
 
-// ── Sub-components ──
+// ── New Interaction Modal ──
 
-function Badge({ children, bg, color }: { children: React.ReactNode; bg: string; color: string }) {
+function NewInteractionModal({ leadId, onClose, onSaved }: { leadId: string; onClose: () => void; onSaved: () => void }) {
+  const [type, setType] = useState('CALL')
+  const [content, setContent] = useState('')
+  const [saving, setSaving] = useState(false)
+  const canSave = content.trim().length > 0 && !saving
+  const inputS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
+
+  async function handleSave() {
+    if (!canSave) return
+    setSaving(true)
+    try {
+      await api.post(`/leads/${leadId}/interactions`, { type, content })
+      onSaved()
+    } catch { setSaving(false) }
+  }
+
   return (
-    <span style={{ background: bg, color, borderRadius: 999, padding: '3px 10px', fontSize: 11, fontWeight: 500 }}>
-      {children}
-    </span>
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 60 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 420, maxWidth: '90vw', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 61 }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Registrar interação</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+        </div>
+        <div style={{ padding: 24 }}>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Tipo</label>
+            <select value={type} onChange={e => setType(e.target.value)} style={{ ...inputS, appearance: 'none' as const, cursor: 'pointer' }}>
+              <option value="CALL">Ligação</option>
+              <option value="WHATSAPP">WhatsApp</option>
+              <option value="EMAIL">E-mail</option>
+              <option value="MEETING">Reunião</option>
+              <option value="VISIT">Visita</option>
+              <option value="NOTE">Nota</option>
+            </select>
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Descrição *</label>
+            <textarea value={content} onChange={e => setContent(e.target.value)} rows={3} placeholder="Descreva a interação..." style={{ ...inputS, resize: 'vertical' }} />
+          </div>
+        </div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
+          <button onClick={handleSave} disabled={!canSave} style={{ background: canSave ? 'var(--accent)' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: canSave ? '#fff' : 'var(--text-muted)', cursor: canSave ? 'pointer' : 'not-allowed' }}>{saving ? 'Salvando...' : 'Registrar'}</button>
+        </div>
+      </div>
+    </>
   )
 }
 
-function ActionBtn({ icon, label, color, border, onClick }: { icon: React.ReactNode; label: string; color: string; border: string; onClick?: () => void }) {
+// ── New Task Modal ──
+
+function NewTaskModal({ leadId, onClose, onSaved }: { leadId: string; onClose: () => void; onSaved: () => void }) {
+  const [title, setTitle] = useState('')
+  const [type, setType] = useState('CALL')
+  const [dueDate, setDueDate] = useState(new Date().toISOString().slice(0, 10))
+  const [saving, setSaving] = useState(false)
+  const canSave = title.trim().length > 0 && dueDate && !saving
+  const inputS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
+
+  async function handleSave() {
+    if (!canSave) return
+    setSaving(true)
+    try {
+      await api.post('/tasks', { leadId, title, type, dueDate })
+      onSaved()
+    } catch { setSaving(false) }
+  }
+
   return (
-    <button onClick={onClick} style={{
-      flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-      padding: 8, borderRadius: 8, border: `1px solid ${border}`,
-      background: 'transparent', color, cursor: 'pointer', transition: 'background 0.15s',
-    }}
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 60 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 420, maxWidth: '90vw', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 61 }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Nova tarefa</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+        </div>
+        <div style={{ padding: 24 }}>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Título *</label>
+            <input autoFocus value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: Ligar para follow-up" style={inputS} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Tipo</label>
+              <select value={type} onChange={e => setType(e.target.value)} style={{ ...inputS, appearance: 'none' as const, cursor: 'pointer' }}>
+                <option value="CALL">Ligação</option>
+                <option value="WHATSAPP">WhatsApp</option>
+                <option value="EMAIL">E-mail</option>
+                <option value="MEETING">Reunião</option>
+                <option value="VISIT">Visita</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Vencimento *</label>
+              <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} style={inputS} />
+            </div>
+          </div>
+        </div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
+          <button onClick={handleSave} disabled={!canSave} style={{ background: canSave ? 'var(--accent)' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: canSave ? '#fff' : 'var(--text-muted)', cursor: canSave ? 'pointer' : 'not-allowed' }}>{saving ? 'Salvando...' : 'Criar tarefa'}</button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ── Sub-components ──
+
+function Badge({ children, bg, color }: { children: React.ReactNode; bg: string; color: string }) {
+  return <span style={{ background: bg, color, borderRadius: 999, padding: '3px 10px', fontSize: 11, fontWeight: 500 }}>{children}</span>
+}
+
+function DrawerActionBtn({ icon, label, color, border, onClick }: { icon: React.ReactNode; label: string; color: string; border: string; onClick?: () => void }) {
+  return (
+    <button onClick={onClick} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: 8, borderRadius: 8, border: `1px solid ${border}`, background: 'transparent', color, cursor: 'pointer', transition: 'background 0.15s' }}
       onMouseEnter={(e) => { e.currentTarget.style.background = `${color}0D` }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
-    >
+      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}>
       {icon}
       <span style={{ fontSize: 11 }}>{label}</span>
     </button>
   )
 }
 
-function SmallBtn({ label }: { label: string }) {
+function SmallBtn({ label, onClick }: { label: string; onClick?: () => void }) {
   return (
-    <button style={{
-      background: '#f97316', color: '#fff', border: 'none', borderRadius: 6,
-      padding: '5px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-      transition: 'background 0.15s',
-    }}
+    <button onClick={onClick} style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 6, padding: '5px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'background 0.15s' }}
       onMouseEnter={(e) => { e.currentTarget.style.background = '#fb923c' }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = '#f97316' }}
-    >
+      onMouseLeave={(e) => { e.currentTarget.style.background = '#f97316' }}>
       {label}
     </button>
   )

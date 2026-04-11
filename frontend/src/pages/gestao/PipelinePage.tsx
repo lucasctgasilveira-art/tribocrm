@@ -489,9 +489,9 @@ export default function PipelinePage() {
                             {lead.lastContact && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{lead.lastContact}</span>}
                           </div>
                           <div style={{ display: 'flex', gap: 2 }}>
-                            <ActionBtn color="#25d166"><MessageCircle size={14} strokeWidth={1.5} /></ActionBtn>
-                            <ActionBtn color="#3b82f6"><Mail size={14} strokeWidth={1.5} /></ActionBtn>
-                            <ActionBtn color="#f97316"><Phone size={14} strokeWidth={1.5} /></ActionBtn>
+                            <ActionBtn color="#25d166" onClick={() => { const p = lead.phone.replace(/\D/g, ''); if (p) window.open(`https://wa.me/${p.length <= 11 ? '55' + p : p}`, '_blank') }}><MessageCircle size={14} strokeWidth={1.5} /></ActionBtn>
+                            <ActionBtn color="#3b82f6" onClick={() => { if (lead.email && lead.email !== '—') window.open(`mailto:${lead.email}`) }}><Mail size={14} strokeWidth={1.5} /></ActionBtn>
+                            <ActionBtn color="#f97316" onClick={() => { const p = lead.phone.replace(/\D/g, ''); if (p) window.open(`tel:${p}`) }}><Phone size={14} strokeWidth={1.5} /></ActionBtn>
                           </div>
                         </div>
                       </div>
@@ -548,11 +548,11 @@ function AddBtn({ onClick }: { onClick?: () => void }) {
   )
 }
 
-function ActionBtn({ children, color }: { children: React.ReactNode; color: string }) {
+function ActionBtn({ children, color, onClick }: { children: React.ReactNode; color: string; onClick?: () => void }) {
   const [h, setH] = useState(false)
   return (
     <button type="button" onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
-      onClick={(e) => e.stopPropagation()}
+      onClick={(e) => { e.stopPropagation(); onClick?.() }}
       style={{ background: h ? 'var(--border)' : 'transparent', border: 'none', borderRadius: 6, padding: 4, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color, transition: 'background 0.15s' }}>
       {children}
     </button>
