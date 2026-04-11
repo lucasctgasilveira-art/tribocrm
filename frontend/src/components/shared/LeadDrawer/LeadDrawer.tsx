@@ -154,6 +154,12 @@ export default function LeadDrawer({ lead, onClose, stageColor, instance = 'gest
     if (!num) { showToast('Lead sem WhatsApp cadastrado'); return }
     const full = num.length <= 11 ? `55${num}` : num
     window.open(`https://wa.me/${full}`, '_blank')
+    // Fire-and-forget interaction log. Failures are swallowed so a flaky
+    // network never blocks or surfaces on the contact flow.
+    api.post(`/leads/${lead.id}/interactions`, {
+      type: 'WHATSAPP',
+      notes: 'Contato iniciado pelo CRM',
+    }).catch(() => {})
   }
 
   async function handleEmail() {
@@ -174,6 +180,10 @@ export default function LeadDrawer({ lead, onClose, stageColor, instance = 'gest
     const num = cleanPhone(lead.phone)
     if (!num) { showToast('Lead sem telefone cadastrado'); return }
     window.open(`tel:${num}`)
+    api.post(`/leads/${lead.id}/interactions`, {
+      type: 'CALL',
+      notes: 'Contato iniciado pelo CRM',
+    }).catch(() => {})
   }
 
   function handleSchedule() {

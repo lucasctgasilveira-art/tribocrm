@@ -5,6 +5,7 @@ import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
 import LeadDrawer from '../../components/shared/LeadDrawer/LeadDrawer'
 import NewLeadModal, { type NewLeadData } from '../../components/shared/NewLeadModal/NewLeadModal'
+import { SendEmailModal, ConnectGmailModal } from '../../components/shared/EmailModal/EmailModal'
 import { getPipelines, getKanban } from '../../services/pipeline.service'
 import api from '../../services/api'
 
@@ -163,6 +164,21 @@ export default function PipelinePage() {
   const boardRef = useRef<HTMLDivElement>(null)
   const [wonLostDrop, setWonLostDrop] = useState<{ leadId: string; stageName: string; stageId: string; type: 'WON' | 'LOST' } | null>(null)
   const [lossReasons, setLossReasons] = useState<{ id: string; name: string }[]>([])
+  // Email composer state for the kanban card e-mail icon. Lifted to the
+  // page level so the modal lives outside the individual card loop.
+  const [emailLead, setEmailLead] = useState<Lead | null>(null)
+  const [emailNeedsConnect, setEmailNeedsConnect] = useState(false)
+
+  async function openEmailForLead(lead: Lead) {
+    if (!lead.email || lead.email === '—') return
+    try {
+      const { data } = await api.get('/oauth/google/status')
+      if (data?.data?.connected) setEmailLead(lead)
+      else setEmailNeedsConnect(true)
+    } catch {
+      setEmailNeedsConnect(true)
+    }
+  }
 
   useEffect(() => {
     api.get('/leads/loss-reasons').then(r => setLossReasons(r.data.data ?? [])).catch(() => {})
@@ -525,9 +541,19 @@ export default function PipelinePage() {
                             {lead.lastContact && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{lead.lastContact}</span>}
                           </div>
                           <div style={{ display: 'flex', gap: 2 }}>
-                            <ActionBtn color="#25d166" onClick={() => { const p = lead.phone.replace(/\D/g, ''); if (p) window.open(`https://wa.me/${p.length <= 11 ? '55' + p : p}`, '_blank') }}><MessageCircle size={14} strokeWidth={1.5} /></ActionBtn>
-                            <ActionBtn color="#3b82f6" onClick={() => { if (lead.email && lead.email !== '—') window.open(`mailto:${lead.email}`) }}><Mail size={14} strokeWidth={1.5} /></ActionBtn>
-                            <ActionBtn color="#f97316" onClick={() => { const p = lead.phone.replace(/\D/g, ''); if (p) window.open(`tel:${p}`) }}><Phone size={14} strokeWidth={1.5} /></ActionBtn>
+                            <ActionBtn color="#25d166" onClick={() => {
+                              const p = lead.phone.replace(/\D/g, '')
+                              if (!p) return
+                              window.open(`https://wa.me/${p.length <= 11 ? '55' + p : p}`, '_blank')
+                              api.post(`/leads/${lead.id}/interactions`, { type: 'WHATSAPP', notes: 'Contato iniciado pelo CRM' }).catch(() => {})
+                            }}><MessageCircle size={14} strokeWidth={1.5} /></ActionBtn>
+                            <ActionBtn color="#3b82f6" onClick={() => { openEmailForLead(lead) }}><Mail size={14} strokeWidth={1.5} /></ActionBtn>
+                            <ActionBtn color="#f97316" onClick={() => {
+                              const p = lead.phone.replace(/\D/g, '')
+                              if (!p) return
+                              window.open(`tel:${p}`)
+                              api.post(`/leads/${lead.id}/interactions`, { type: 'CALL', notes: 'Contato iniciado pelo CRM' }).catch(() => {})
+                            }}><Phone size={14} strokeWidth={1.5} /></ActionBtn>
                           </div>
                         </div>
                       </div>
@@ -562,6 +588,19 @@ export default function PipelinePage() {
           .catch((err) => { console.error('[Pipeline] WonLost error:', err); showToast('Erro ao mover lead') })
           .finally(() => setWonLostDrop(null))
       }} />}
+      {emailLead && (
+        <SendEmailModal
+          lead={{ id: emailLead.id, name: emailLead.name, company: emailLead.company, email: emailLead.email }}
+          onClose={() => setEmailLead(null)}
+          onSaved={() => { setEmailLead(null); showToast('E-mail enviado') }}
+        />
+      )}
+      {emailNeedsConnect && (
+        <ConnectGmailModal
+          onClose={() => setEmailNeedsConnect(false)}
+          onNavigate={() => { setEmailNeedsConnect(false); nav('/gestao/configuracoes?tab=integracoes') }}
+        />
+      )}
       {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: `4px solid ${toast.startsWith('Erro') ? '#ef4444' : '#22c55e'}`, borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 60, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>{toast}</div>}
     </AppLayout>
   )
