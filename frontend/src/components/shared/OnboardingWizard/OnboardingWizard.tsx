@@ -208,14 +208,26 @@ function StepPipeline() {
       .finally(() => setLoading(false))
   }, [])
 
+  // Name-based exclusion keeps the filter robust against legacy tenants
+  // whose stage rows may have stale `type`/`isFixed` values (seeded
+  // before those fields existed, or imported from older dumps). The
+  // three names below are the only platform-fixed stages — everything
+  // else is user-editable by design.
+  const FIXED_STAGE_NAMES = new Set(['Venda Realizada', 'Perdido', 'Repescagem'])
+
   const editableStages = useMemo(() => {
     if (!pipeline) return []
-    // Only NORMAL stages are user-facing for rename; WON / LOST /
-    // REACTIVATION are platform-fixed.
     return pipeline.stages
-      .filter(s => !s.isFixed && s.type === 'NORMAL')
+      .filter(s => !FIXED_STAGE_NAMES.has(s.name))
       .sort((a, b) => a.sortOrder - b.sortOrder)
   }, [pipeline])
+
+  // Fallback list for brand-new tenants that haven't created a pipeline
+  // yet (so getPipelines() comes back empty) OR for any tenant whose
+  // filtered set is empty for whatever reason. Shown as non-editable
+  // pills + a pointer to Configurações → Pipeline.
+  const FALLBACK_STAGES = ['Sem Contato', 'Em Contato', 'Negociando', 'Proposta Enviada']
+  const showFallback = !loading && editableStages.length === 0
 
   async function saveRename() {
     if (!pipeline || !editingId || !draft.trim()) { setEditingId(null); return }
@@ -248,10 +260,30 @@ function StepPipeline() {
           <Loader2 size={20} color="#f97316" strokeWidth={1.5} className="animate-spin" />
           <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Carregando pipeline...</span>
         </div>
-      ) : editableStages.length === 0 ? (
-        <div style={{ padding: 20, background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, color: 'var(--text-muted)' }}>
-          Nenhuma etapa editável encontrada. Você poderá criar etapas depois em Configurações.
-        </div>
+      ) : showFallback ? (
+        <>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+            {FALLBACK_STAGES.map(name => (
+              <span
+                key={name}
+                style={{
+                  background: 'rgba(249,115,22,0.08)',
+                  border: '1px solid rgba(249,115,22,0.25)',
+                  borderRadius: 999,
+                  padding: '7px 14px',
+                  fontSize: 13,
+                  fontWeight: 500,
+                  color: '#f97316',
+                }}
+              >
+                {name}
+              </span>
+            ))}
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+            Estas são suas etapas padrão. Você pode personalizá-las depois em <strong style={{ color: 'var(--text-secondary)' }}>Configurações → Pipeline</strong>.
+          </div>
+        </>
       ) : (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {editableStages.map(stage => {
@@ -401,27 +433,28 @@ function StepTeam() {
         </button>
       ) : (
         <div style={{ padding: 16, background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 10 }}>
-          <div style={{ marginBottom: 12 }}>
-            <label style={LABEL}>Nome <span style={{ color: '#f97316' }}>*</span></label>
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="Nome completo" style={INPUT} autoFocus />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+            <div>
+              <label style={LABEL}>Nome completo <span style={{ color: '#f97316' }}>*</span></label>
+              <input value={name} onChange={e => setName(e.target.value)} placeholder="Nome completo" style={INPUT} autoFocus />
+            </div>
+            <div>
+              <label style={LABEL}>E-mail <span style={{ color: '#f97316' }}>*</span></label>
+              <input value={email} onChange={e => setEmail(e.target.value)} type="email" placeholder="email@empresa.com" style={INPUT} />
+            </div>
           </div>
           <div style={{ marginBottom: 12 }}>
-            <label style={LABEL}>E-mail <span style={{ color: '#f97316' }}>*</span></label>
-            <input value={email} onChange={e => setEmail(e.target.value)} type="email" placeholder="email@empresa.com" style={INPUT} />
-          </div>
-          <div style={{ marginBottom: 12 }}>
-            <label style={LABEL}>Cargo</label>
+            <label style={LABEL}>Perfil</label>
             <select value={role} onChange={e => setRole(e.target.value)} style={{ ...INPUT, appearance: 'none', cursor: 'pointer' }}>
               <option value="SELLER">Vendedor</option>
               <option value="TEAM_LEADER">Líder</option>
-              <option value="MANAGER">Gestor</option>
             </select>
           </div>
           {error && <div style={{ fontSize: 12, color: '#ef4444', marginBottom: 10 }}>{error}</div>}
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <button onClick={() => { setFormOpen(false); setError('') }} style={GHOST_BTN}>Cancelar</button>
+            <button onClick={() => { setFormOpen(false); setError(''); setName(''); setEmail(''); setRole('SELLER') }} style={GHOST_BTN}>Cancelar</button>
             <button onClick={handleSave} disabled={!canSave} style={{ ...PRIMARY_BTN, background: canSave ? '#f97316' : 'var(--border)', color: canSave ? '#fff' : 'var(--text-muted)', cursor: canSave ? 'pointer' : 'not-allowed' }}>
-              {saving ? 'Enviando...' : 'Enviar convite'}
+              {saving ? 'Adicionando...' : 'Adicionar →'}
             </button>
           </div>
         </div>
