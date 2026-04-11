@@ -11,9 +11,12 @@ import { getPipelines, getKanban } from '../../services/pipeline.service'
 
 type Temperature = 'HOT' | 'WARM' | 'COLD'
 
+type LeadStatus = 'ACTIVE' | 'WON' | 'LOST' | 'ARCHIVED'
+
 interface Lead {
   id: string; name: string; company: string; value: number; stage: string
   temperature: Temperature; lastContact: string | null; phone: string; email: string
+  status: LeadStatus
 }
 
 interface StageConfig { id: string; name: string; color: string; type: string }
@@ -21,7 +24,7 @@ interface StageConfig { id: string; name: string; color: string; type: string }
 interface ApiLead {
   id: string; name: string; company: string | null; phone: string | null; whatsapp: string | null; email: string | null
   expectedValue: string | number | null; closedValue: string | number | null; temperature: Temperature; stageId: string; lastActivityAt: string | null
-  responsible: { id: string; name: string }
+  responsible: { id: string; name: string }; status?: LeadStatus
 }
 
 interface KanbanStage {
@@ -53,7 +56,7 @@ function mapApiLead(l: ApiLead, stageName: string): Lead {
   return {
     id: l.id, name: l.name, company: l.company ?? '', value: Number(l.closedValue) || Number(l.expectedValue) || 0,
     stage: stageName, temperature: l.temperature, lastContact: formatTimeAgo(l.lastActivityAt),
-    phone: l.phone ?? l.whatsapp ?? '—', email: l.email ?? '—',
+    phone: l.phone ?? l.whatsapp ?? '—', email: l.email ?? '—', status: l.status ?? 'ACTIVE',
   }
 }
 
@@ -148,15 +151,21 @@ export default function VendasPipelinePage() {
     // Find the lead's current stage for rollback
     const prevLead = leads.find(l => l.id === leadId)
     const prevStage = prevLead?.stage
+    const prevStatus = prevLead?.status ?? 'ACTIVE'
+
+    // Reactivate leads moving from WON/LOST back into a NORMAL stage
+    const reactivating = prevStatus === 'WON' || prevStatus === 'LOST'
+    const payload: Record<string, unknown> = { stageId: stageObj.id }
+    if (reactivating) payload.status = 'ACTIVE'
 
     // Optimistic update
-    setLeads(p => p.map(l => l.id === leadId ? { ...l, stage: targetStageName } : l))
+    setLeads(p => p.map(l => l.id === leadId ? { ...l, stage: targetStageName, status: reactivating ? 'ACTIVE' : l.status } : l))
 
     // Persist to backend
-    api.patch(`/leads/${leadId}`, { stageId: stageObj.id })
+    api.patch(`/leads/${leadId}`, payload)
       .then(() => showToast(`Lead movido para ${targetStageName}`))
       .catch(() => {
-        if (prevStage) setLeads(p => p.map(l => l.id === leadId ? { ...l, stage: prevStage } : l))
+        if (prevStage) setLeads(p => p.map(l => l.id === leadId ? { ...l, stage: prevStage, status: prevStatus } : l))
         showToast('Erro ao mover lead')
       })
   }, [stages, leads])

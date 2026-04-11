@@ -12,6 +12,8 @@ import api from '../../services/api'
 
 type Temperature = 'HOT' | 'WARM' | 'COLD'
 
+type LeadStatus = 'ACTIVE' | 'WON' | 'LOST' | 'ARCHIVED'
+
 interface Lead {
   id: string
   name: string
@@ -23,6 +25,7 @@ interface Lead {
   lastContact: string | null
   phone: string
   email: string
+  status: LeadStatus
 }
 
 interface StageConfig { id: string; name: string; color: string; position: number; type: string }
@@ -40,6 +43,7 @@ interface ApiLead {
   stageId: string
   lastActivityAt: string | null
   responsible: { id: string; name: string }
+  status?: LeadStatus
 }
 
 interface KanbanStage {
@@ -100,6 +104,7 @@ function mapApiLeadToLead(apiLead: ApiLead, stageName: string): Lead {
     lastContact: formatTimeAgo(apiLead.lastActivityAt),
     phone: apiLead.phone ?? apiLead.whatsapp ?? '—',
     email: apiLead.email ?? '—',
+    status: apiLead.status ?? 'ACTIVE',
   }
 }
 
@@ -281,15 +286,21 @@ export default function PipelinePage() {
     // Find previous stage for rollback
     const prevLead = leads.find(l => l.id === leadId)
     const prevStage = prevLead?.stage
+    const prevStatus = prevLead?.status ?? 'ACTIVE'
+
+    // Reactivate leads moving from WON/LOST back into a NORMAL stage
+    const reactivating = prevStatus === 'WON' || prevStatus === 'LOST'
+    const payload: Record<string, unknown> = { stageId: stageObj.id }
+    if (reactivating) payload.status = 'ACTIVE'
 
     // Optimistic update
-    setLeads((prev) => prev.map((l) => l.id === leadId ? { ...l, stage: stageName } : l))
+    setLeads((prev) => prev.map((l) => l.id === leadId ? { ...l, stage: stageName, status: reactivating ? 'ACTIVE' : l.status } : l))
 
     // Persist to backend
-    api.patch(`/leads/${leadId}`, { stageId: stageObj.id })
+    api.patch(`/leads/${leadId}`, payload)
       .then(() => showToast(`Lead movido para ${stageName}`))
       .catch(() => {
-        if (prevStage) setLeads((prev) => prev.map((l) => l.id === leadId ? { ...l, stage: prevStage } : l))
+        if (prevStage) setLeads((prev) => prev.map((l) => l.id === leadId ? { ...l, stage: prevStage, status: prevStatus } : l))
         showToast('Erro ao mover lead')
       })
   }, [stages, leads])
