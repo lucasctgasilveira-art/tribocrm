@@ -213,7 +213,15 @@ export default function AutomationsPage() {
         ))}
       </div>
 
-      {tab === 'templates' && templates.map(section => (
+      {tab === 'templates' && templates
+        // System templates (PLAN_EXPIRING / USER_CREATED / USER_LIMIT_REACHED)
+        // are platform-level automations owned by the Super Admin instance
+        // per doc section 10.6. The tenant-facing gestor view must not show
+        // or document them. Drop any system-flagged item, then drop sections
+        // that end up empty (which hides the "Sistema" header too).
+        .map(section => ({ ...section, items: section.items.filter(t => !t.system) }))
+        .filter(section => section.items.length > 0)
+        .map(section => (
         <div key={section.section} style={{ marginBottom: 24 }}>
           <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1.5px', fontWeight: 600, marginBottom: 12 }}>{section.section}</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
