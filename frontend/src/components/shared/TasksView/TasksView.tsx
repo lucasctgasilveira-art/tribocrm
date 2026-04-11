@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import {
   Mail, MessageCircle, Phone, Video, FileText, Handshake, ShieldCheck,
   Check, Plus, ChevronRight, Users, BarChart2, BookOpen, Loader2, X,
@@ -9,6 +10,7 @@ import type { SidebarEntry } from '../Sidebar/Sidebar'
 import TaskDrawer from '../TaskDrawer/TaskDrawer'
 import {
   getTasks, completeTask as completeTaskApi, createTask as createLeadTask,
+  updateTask as updateTaskApi, deleteTask as deleteTaskApi,
   getManagerialTasks, completeManagerialTask as completeManagerialApi,
   createManagerialTask,
 } from '../../../services/tasks.service'
@@ -50,13 +52,17 @@ interface ApiManagerialTask {
 interface DisplayTask {
   id: string
   type: TaskType
+  apiType: string
   title: string
+  description: string
+  leadId: string
   leadInitials: string
   leadName: string
   leadCompany: string
   stageBadge: string
   stageColor: string
   time: string
+  dueDate: string | null
   overdue: boolean
   done: boolean
   calendarBadge?: boolean
@@ -162,13 +168,17 @@ function mapApiTask(t: ApiTask): DisplayTask {
   return {
     id: t.id,
     type: mapApiType(t.type),
+    apiType: t.type,
     title: t.title,
+    description: t.description ?? '',
+    leadId: t.lead.id,
     leadInitials: getInitials(t.lead.name),
     leadName: t.lead.name,
     leadCompany: t.lead.company ?? '',
     stageBadge: '',
     stageColor: 'var(--text-muted)',
     time: t.isDone ? '' : formatTime(t.dueDate),
+    dueDate: t.dueDate,
     overdue: isOverdue(t.dueDate, t.isDone),
     done: t.isDone,
     doneDate: t.doneAt ? new Date(t.doneAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : undefined,
@@ -211,6 +221,9 @@ interface TasksViewProps {
 }
 
 export default function TasksView({ menuItems }: TasksViewProps) {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const instancePrefix = location.pathname.startsWith('/vendas') ? '/vendas' : location.pathname.startsWith('/admin') ? '/admin' : '/gestao'
   const [category, setCategory] = useState<TaskCategory>('leads')
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('today')
   const [typeFilter, setTypeFilter] = useState<TaskType | null>(null)
@@ -312,6 +325,47 @@ export default function TasksView({ menuItems }: TasksViewProps) {
   function handleDrawerComplete(id: string) {
     handleToggleDone(id)
     setSelectedTask(null)
+  }
+
+  async function handleReschedule(id: string, newDueDate: string) {
+    try {
+      await updateTaskApi(id, { dueDate: newDueDate })
+      setReloadKey(k => k + 1)
+      setToast('Tarefa remarcada')
+      setTimeout(() => setToast(''), 3000)
+    } catch {
+      setToast('Erro ao remarcar')
+      setTimeout(() => setToast(''), 3000)
+    }
+  }
+
+  async function handleEditTask(id: string, payload: { title: string; type: string; description?: string; dueDate?: string }) {
+    try {
+      await updateTaskApi(id, payload)
+      setReloadKey(k => k + 1)
+      setToast('Tarefa atualizada')
+      setTimeout(() => setToast(''), 3000)
+    } catch {
+      setToast('Erro ao atualizar')
+      setTimeout(() => setToast(''), 3000)
+    }
+  }
+
+  async function handleDeleteTask(id: string) {
+    try {
+      await deleteTaskApi(id)
+      setTasks(prev => prev.filter(t => t.id !== id))
+      setToast('Tarefa excluída')
+      setTimeout(() => setToast(''), 3000)
+      loadCounts()
+    } catch {
+      setToast('Erro ao excluir')
+      setTimeout(() => setToast(''), 3000)
+    }
+  }
+
+  function handleViewLead(leadId: string) {
+    navigate(`${instancePrefix}/leads/${leadId}`)
   }
 
   async function handleCreateTask(payload: { title: string; typeId: string; description?: string; dueDate?: string; participantIds?: string[]; responsibleId?: string; dueTime?: string; reminderMinutes?: number; taskMode?: string; leadId?: string }) {
@@ -561,7 +615,17 @@ export default function TasksView({ menuItems }: TasksViewProps) {
         </div>
       </div>
       {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: '4px solid #22c55e', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 60, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>{toast}</div>}
-      {selectedTask && <TaskDrawer task={selectedTask} onClose={() => setSelectedTask(null)} onComplete={handleDrawerComplete} />}
+      {selectedTask && (
+        <TaskDrawer
+          task={selectedTask}
+          onClose={() => setSelectedTask(null)}
+          onComplete={handleDrawerComplete}
+          onReschedule={handleReschedule}
+          onEdit={handleEditTask}
+          onDelete={handleDeleteTask}
+          onViewLead={handleViewLead}
+        />
+      )}
       {newTaskModal && <NewManagerialTaskModal users={availableUsers} onClose={() => setNewTaskModal(false)} onSave={handleCreateTask} />}
     </AppLayout>
   )

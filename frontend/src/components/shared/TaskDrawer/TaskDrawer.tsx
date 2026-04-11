@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import {
   X, Clock, Mail, MessageCircle, Phone, Video, FileText,
-  Handshake, ShieldCheck, Loader2, AlertCircle,
+  Handshake, ShieldCheck, Loader2, AlertCircle, ExternalLink, Pencil, Trash2,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -10,10 +10,11 @@ import {
 type TaskType = 'call' | 'email' | 'whatsapp' | 'meeting' | 'visit' | 'proposal' | 'approve'
 
 export interface TaskDrawerData {
-  id: string; type: TaskType; title: string
+  id: string; type: TaskType; apiType?: string; title: string; description?: string
+  leadId?: string
   leadInitials: string; leadName: string; leadCompany: string
   stageBadge: string; stageColor: string
-  time: string; overdue: boolean; done: boolean
+  time: string; dueDate?: string | null; overdue: boolean; done: boolean
   calendarBadge?: boolean; doneDate?: string; detail?: string
 }
 
@@ -21,6 +22,10 @@ interface Props {
   task: TaskDrawerData
   onClose: () => void
   onComplete: (id: string) => void
+  onReschedule?: (id: string, newDueDate: string) => Promise<void> | void
+  onEdit?: (id: string, payload: { title: string; type: string; description?: string; dueDate?: string }) => Promise<void> | void
+  onDelete?: (id: string) => Promise<void> | void
+  onViewLead?: (leadId: string) => void
 }
 
 const typeConfig: Record<TaskType, { icon: LucideIcon; color: string; label: string }> = {
@@ -41,9 +46,12 @@ const CSS = `
   .td-body{scrollbar-width:thin;scrollbar-color:var(--border) transparent}
 `
 
-export default function TaskDrawer({ task, onClose, onComplete }: Props) {
+export default function TaskDrawer({ task, onClose, onComplete, onReschedule, onEdit, onDelete, onViewLead }: Props) {
   const tc = typeConfig[task.type]
   const Icon = tc.icon
+  const [rescheduleOpen, setRescheduleOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   return (
     <>
@@ -74,9 +82,23 @@ export default function TaskDrawer({ task, onClose, onComplete }: Props) {
                 </div>
               </div>
             </div>
-            <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4, flexShrink: 0 }}>
-              <X size={18} strokeWidth={1.5} />
-            </button>
+            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+              {onEdit && task.type !== 'approve' && (
+                <button onClick={() => setEditOpen(true)} title="Editar"
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 6, borderRadius: 6 }}>
+                  <Pencil size={16} strokeWidth={1.5} />
+                </button>
+              )}
+              {onDelete && (
+                <button onClick={() => setConfirmDelete(true)} title="Excluir"
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 6, borderRadius: 6 }}>
+                  <Trash2 size={16} strokeWidth={1.5} />
+                </button>
+              )}
+              <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4, flexShrink: 0 }}>
+                <X size={18} strokeWidth={1.5} />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -85,17 +107,38 @@ export default function TaskDrawer({ task, onClose, onComplete }: Props) {
           {task.type === 'approve' ? (
             <ApproveContent task={task} onClose={onClose} onComplete={onComplete} />
           ) : (
-            <CommonContent task={task} onClose={onClose} onComplete={onComplete} />
+            <CommonContent task={task} onClose={onClose} onComplete={onComplete} onReschedule={() => setRescheduleOpen(true)} onViewLead={onViewLead} />
           )}
         </div>
       </div>
+      {rescheduleOpen && onReschedule && (
+        <RescheduleModal task={task} onClose={() => setRescheduleOpen(false)} onSave={async (dt) => {
+          await onReschedule(task.id, dt)
+          setRescheduleOpen(false)
+          onClose()
+        }} />
+      )}
+      {editOpen && onEdit && (
+        <EditTaskModal task={task} onClose={() => setEditOpen(false)} onSave={async (p) => {
+          await onEdit(task.id, p)
+          setEditOpen(false)
+          onClose()
+        }} />
+      )}
+      {confirmDelete && onDelete && (
+        <ConfirmDeleteModal taskTitle={task.title} onClose={() => setConfirmDelete(false)} onConfirm={async () => {
+          await onDelete(task.id)
+          setConfirmDelete(false)
+          onClose()
+        }} />
+      )}
     </>
   )
 }
 
 // ── Common task content ──
 
-function CommonContent({ task, onClose, onComplete }: { task: TaskDrawerData; onClose: () => void; onComplete: (id: string) => void }) {
+function CommonContent({ task, onClose, onComplete, onReschedule, onViewLead }: { task: TaskDrawerData; onClose: () => void; onComplete: (id: string) => void; onReschedule?: () => void; onViewLead?: (leadId: string) => void }) {
   const [notes, setNotes] = useState('')
   const [error, setError] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -118,7 +161,15 @@ function CommonContent({ task, onClose, onComplete }: { task: TaskDrawerData; on
             <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{task.leadName}</div>
             <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{task.leadCompany}</div>
           </div>
-          <span style={{ background: `${task.stageColor}1F`, color: task.stageColor, borderRadius: 999, padding: '2px 8px', fontSize: 10, fontWeight: 500 }}>{task.stageBadge}</span>
+          {task.stageBadge && (
+            <span style={{ background: `${task.stageColor}1F`, color: task.stageColor, borderRadius: 999, padding: '2px 8px', fontSize: 10, fontWeight: 500 }}>{task.stageBadge}</span>
+          )}
+          {onViewLead && task.leadId && (
+            <button onClick={() => onViewLead(task.leadId!)} title="Ver lead"
+              style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 8px', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
+              <ExternalLink size={12} strokeWidth={1.5} /> Ver
+            </button>
+          )}
         </div>
       </div>
 
@@ -168,15 +219,138 @@ function CommonContent({ task, onClose, onComplete }: { task: TaskDrawerData; on
       </div>
 
       {/* Footer */}
-      <div style={{ padding: '16px 20px', display: 'flex', gap: 8, flexShrink: 0 }}>
-        <button style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 16px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Remarcar</button>
-        <button onClick={handleComplete} disabled={saving} style={{
-          flex: 1, background: '#f97316', border: 'none', borderRadius: 8, padding: '9px 0',
-          fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-        }}>
-          {saving ? <><Loader2 size={14} className="animate-spin" /> Concluindo...</> : 'Concluir tarefa ✓'}
-        </button>
+      {!task.done && (
+        <div style={{ padding: '16px 20px', display: 'flex', gap: 8, flexShrink: 0 }}>
+          <button onClick={onReschedule} disabled={!onReschedule} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 16px', fontSize: 13, color: 'var(--text-secondary)', cursor: onReschedule ? 'pointer' : 'not-allowed' }}>Remarcar</button>
+          <button onClick={handleComplete} disabled={saving} style={{
+            flex: 1, background: '#f97316', border: 'none', borderRadius: 8, padding: '9px 0',
+            fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          }}>
+            {saving ? <><Loader2 size={14} className="animate-spin" /> Concluindo...</> : 'Concluir tarefa ✓'}
+          </button>
+        </div>
+      )}
+    </>
+  )
+}
+
+// ── Reschedule / Edit / Delete Modals ──
+
+const tdOverlay: React.CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 70 }
+const tdBox: React.CSSProperties = { position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 420, maxWidth: '92vw', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 71 }
+const tdInput: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
+const tdLabel: React.CSSProperties = { fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }
+
+function RescheduleModal({ task, onClose, onSave }: { task: TaskDrawerData; onClose: () => void; onSave: (dueDate: string) => Promise<void> }) {
+  const initial = task.dueDate ? task.dueDate.slice(0, 10) : new Date().toISOString().slice(0, 10)
+  const [dueDate, setDueDate] = useState(initial)
+  const [saving, setSaving] = useState(false)
+
+  async function handleSave() {
+    setSaving(true)
+    try { await onSave(dueDate) } catch { setSaving(false) }
+  }
+
+  return (
+    <>
+      <div onClick={onClose} style={tdOverlay} />
+      <div style={tdBox}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Remarcar tarefa</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+        </div>
+        <div style={{ padding: 24 }}>
+          <label style={tdLabel}>Nova data</label>
+          <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} style={tdInput} />
+        </div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
+          <button onClick={handleSave} disabled={saving} style={{ background: saving ? 'var(--border)' : '#f97316', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: '#fff', cursor: saving ? 'not-allowed' : 'pointer' }}>{saving ? 'Salvando...' : 'Salvar'}</button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+function EditTaskModal({ task, onClose, onSave }: { task: TaskDrawerData; onClose: () => void; onSave: (p: { title: string; type: string; description?: string; dueDate?: string }) => Promise<void> }) {
+  const [title, setTitle] = useState(task.title)
+  const [type, setType] = useState(task.apiType ?? 'CALL')
+  const [description, setDescription] = useState(task.description ?? '')
+  const [dueDate, setDueDate] = useState(task.dueDate ? task.dueDate.slice(0, 10) : '')
+  const [saving, setSaving] = useState(false)
+  const canSave = title.trim().length > 0 && !saving
+
+  async function handleSave() {
+    if (!canSave) return
+    setSaving(true)
+    try {
+      await onSave({ title: title.trim(), type, description: description || undefined, dueDate: dueDate || undefined })
+    } catch { setSaving(false) }
+  }
+
+  return (
+    <>
+      <div onClick={onClose} style={tdOverlay} />
+      <div style={tdBox}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Editar tarefa</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+        </div>
+        <div style={{ padding: 24 }}>
+          <div style={{ marginBottom: 14 }}>
+            <label style={tdLabel}>Título *</label>
+            <input value={title} onChange={e => setTitle(e.target.value)} style={tdInput} />
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <label style={tdLabel}>Tipo</label>
+            <select value={type} onChange={e => setType(e.target.value)} style={{ ...tdInput, cursor: 'pointer' }}>
+              <option value="CALL">Ligação</option>
+              <option value="EMAIL">E-mail</option>
+              <option value="WHATSAPP">WhatsApp</option>
+              <option value="MEETING">Reunião</option>
+              <option value="VISIT">Visita</option>
+            </select>
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <label style={tdLabel}>Data</label>
+            <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} style={tdInput} />
+          </div>
+          <div>
+            <label style={tdLabel}>Descrição</label>
+            <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} style={{ ...tdInput, resize: 'vertical' }} />
+          </div>
+        </div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
+          <button onClick={handleSave} disabled={!canSave} style={{ background: canSave ? '#f97316' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: '#fff', cursor: canSave ? 'pointer' : 'not-allowed' }}>{saving ? 'Salvando...' : 'Salvar'}</button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+function ConfirmDeleteModal({ taskTitle, onClose, onConfirm }: { taskTitle: string; onClose: () => void; onConfirm: () => Promise<void> }) {
+  const [saving, setSaving] = useState(false)
+  async function handleConfirm() {
+    setSaving(true)
+    try { await onConfirm() } catch { setSaving(false) }
+  }
+  return (
+    <>
+      <div onClick={onClose} style={tdOverlay} />
+      <div style={tdBox}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Excluir tarefa</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+        </div>
+        <div style={{ padding: 24, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+          Tem certeza que deseja excluir a tarefa <strong style={{ color: 'var(--text-primary)' }}>"{taskTitle}"</strong>? Esta ação não pode ser desfeita.
+        </div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
+          <button onClick={handleConfirm} disabled={saving} style={{ background: saving ? 'var(--border)' : '#ef4444', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: '#fff', cursor: saving ? 'not-allowed' : 'pointer' }}>{saving ? 'Excluindo...' : 'Excluir'}</button>
+        </div>
       </div>
     </>
   )
