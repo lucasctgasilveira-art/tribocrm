@@ -21,6 +21,7 @@ import oauthRoutes from './routes/oauth.routes'
 import paymentsRoutes from './routes/payments.routes'
 import webhooksRoutes from './routes/webhooks.routes'
 import emailRoutes from './routes/email.routes'
+import tenantsRoutes from './routes/tenants.routes'
 
 const app = express()
 
@@ -83,6 +84,7 @@ app.use('/email', emailRoutes)
 app.use('/oauth', oauthRoutes)
 app.use('/auth', authRoutes)
 app.use('/pipelines', pipelineRoutes)
+app.use('/tenants', tenantsRoutes)
 app.use('/leads', leadsRoutes)
 app.use('/tasks', tasksRoutes)
 app.use('/reports', reportsRoutes)

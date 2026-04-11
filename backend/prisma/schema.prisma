@@ -332,6 +332,11 @@ model Tenant {
   addressCity         String?  @map("address_city") @db.VarChar(150)
   addressState        String?  @map("address_state") @db.VarChar(2)
   addressZip          String?  @map("address_zip") @db.VarChar(10)
+  // First-access onboarding wizard state — surfaced to the gestor via
+  // PATCH /tenants/onboarding and read on login. Only used by the
+  // MANAGER/OWNER-facing OnboardingWizard overlay.
+  onboardingCompleted Boolean  @default(false) @map("onboarding_completed")
+  onboardingStep      Int      @default(0) @map("onboarding_step")
   createdAt      DateTime     @default(now()) @map("created_at")
   updatedAt      DateTime     @updatedAt @map("updated_at")
   plan           Plan         @relation(fields: [planId], references: [id])

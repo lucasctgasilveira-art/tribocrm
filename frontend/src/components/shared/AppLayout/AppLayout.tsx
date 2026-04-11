@@ -4,6 +4,7 @@ import Topbar from '../Topbar/Topbar'
 import Sidebar, { type SidebarEntry, SIDEBAR_EXPANDED_W, SIDEBAR_COLLAPSED_W } from '../Sidebar/Sidebar'
 import PopupManager, { type PopupData } from '../PopupManager/PopupManager'
 import GlobalSearch from '../GlobalSearch/GlobalSearch'
+import OnboardingWizard from '../OnboardingWizard/OnboardingWizard'
 
 interface AppLayoutProps {
   menuItems: SidebarEntry[]
@@ -71,17 +72,17 @@ export default function AppLayout({ menuItems, children }: AppLayoutProps) {
     localStorage.getItem('tribocrm_sidebar_collapsed') === 'true' ? SIDEBAR_COLLAPSED_W : SIDEBAR_EXPANDED_W
   )
 
-  /* ─── onboarding redirect ─── */
+  /* ─── onboarding redirect (vendedor only) ─────────────────
+   * Gestor onboarding is now handled by the OnboardingWizard
+   * overlay below, gated by tenant.onboardingCompleted instead
+   * of the legacy localStorage flag. The vendedor flow still
+   * uses the old full-page redirect until it gets the same
+   * treatment. */
   useEffect(() => {
     const skip = new URLSearchParams(location.search).get('skip') === 'true'
     if (skip) return
 
     const path = location.pathname
-    if (path.startsWith('/gestao') && !path.includes('/onboarding')) {
-      if (!localStorage.getItem('tribocrm_onboarding_done')) {
-        navigate('/gestao/onboarding', { replace: true })
-      }
-    }
     if (path.startsWith('/vendas') && !path.includes('/onboarding')) {
       if (!localStorage.getItem('tribocrm_vendedor_onboarding_done')) {
         navigate('/vendas/onboarding', { replace: true })
@@ -109,6 +110,10 @@ export default function AppLayout({ menuItems, children }: AppLayoutProps) {
       </main>
       {!isSuperAdmin && <PopupManager popups={mockPopups} />}
       <GlobalSearch open={searchOpen} onClose={closeSearch} />
+      {/* Gestor first-access wizard. Self-gates on role (MANAGER/OWNER)
+          and tenant.onboardingCompleted === false — renders null for
+          everyone else, so mounting it unconditionally here is safe. */}
+      <OnboardingWizard />
     </div>
   )
 }
