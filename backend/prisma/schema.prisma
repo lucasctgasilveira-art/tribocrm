@@ -433,6 +433,19 @@ model User {
   oauthTokens     OAuthToken[]
   interactions    Interaction[]
   tasks           Task[]          @relation("TaskResponsible")
+  // Tarefas criadas por este usuário. Backed by a real DB FK
+  // (see migration add_created_by_relations) so every Task row
+  // in the tenant is guaranteed to resolve to a real User.
+  tasksCreated    Task[]          @relation("TaskCreatedBy")
+  // Tarefas gerenciais criadas por este usuário. **Logical
+  // relation only** — the `managerial_tasks.created_by` column
+  // has no DB FK because SUPER_ADMIN writes an AdminUser id
+  // (which lives in `admin_users`, not `users`). Prisma joins
+  // still work for regular-tenant rows; SUPER_ADMIN rows resolve
+  // createdByUser to null. Don't let `prisma migrate dev` turn
+  // this into a real FK — that would break super-admin task
+  // creation. Keep it logical.
+  managerialTasksCreated ManagerialTask[] @relation("ManagerialTaskCreatedBy")
   notifications   Notification[]
   @@unique([tenantId, email])
   @@map("users")
@@ -610,6 +623,10 @@ model Task {
   updatedAt     DateTime  @updatedAt @map("updated_at")
   lead          Lead      @relation(fields: [leadId], references: [id])
   responsible   User      @relation("TaskResponsible", fields: [responsibleId], references: [id])
+  // Real DB FK — all Task.createdBy values come from
+  // req.user.userId (regular users) or lead.responsibleId
+  // (automation), both guaranteed to exist in users.
+  createdByUser User      @relation("TaskCreatedBy", fields: [createdBy], references: [id])
   @@map("tasks")
 }
 
@@ -641,6 +658,13 @@ model ManagerialTask {
   createdAt          DateTime                    @default(now()) @map("created_at")
   taskType           ManagerialTaskType          @relation(fields: [typeId], references: [id])
   participants       ManagerialTaskParticipant[]
+  // **Logical relation only** — no DB FK. SUPER_ADMIN writes
+  // an AdminUser id into `created_by`, which doesn't exist in
+  // users, so a real FK would break that path. Prisma joins
+  // still work: regular-tenant rows resolve the creator, super
+  // admin rows return null for createdByUser. See the matching
+  // migration note and keep it this way.
+  createdByUser      User                        @relation("ManagerialTaskCreatedBy", fields: [createdBy], references: [id])
   @@map("managerial_tasks")
 }
 

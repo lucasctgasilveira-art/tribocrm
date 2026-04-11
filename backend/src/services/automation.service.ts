@@ -103,7 +103,12 @@ async function handleCreateTask(
   const config = automation.actionConfig as { title?: string; taskType?: string; daysFromNow?: number }
   if (!config.title || !config.taskType) return 'FAILED'
 
-  const title = await replaceVars(config.title, lead, tx)
+  const rawTitle = await replaceVars(config.title, lead, tx)
+  // Mirrors the `[Automação] ` prefix pattern already used on every
+  // interaction.create call in this file, so automation-owned tasks
+  // are immediately distinguishable in the list view. Guard against
+  // double-prefixing if the automation author already typed it.
+  const title = rawTitle.startsWith('[Automação]') ? rawTitle : `[Automação] ${rawTitle}`
   const dueDate = config.daysFromNow != null
     ? new Date(Date.now() + config.daysFromNow * 86_400_000)
     : null

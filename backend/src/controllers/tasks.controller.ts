@@ -61,6 +61,7 @@ export async function getTasks(req: Request, res: Response): Promise<void> {
         include: {
           lead: { select: { id: true, name: true, company: true } },
           responsible: { select: { id: true, name: true } },
+          createdByUser: { select: { id: true, name: true } },
         },
         orderBy: { dueDate: 'asc' },
         skip: (pageNum - 1) * perPageNum,
@@ -129,6 +130,7 @@ export async function createTask(req: Request, res: Response): Promise<void> {
       include: {
         lead: { select: { id: true, name: true, company: true } },
         responsible: { select: { id: true, name: true } },
+        createdByUser: { select: { id: true, name: true } },
       },
     })
 
@@ -163,6 +165,7 @@ export async function completeTask(req: Request, res: Response): Promise<void> {
       include: {
         lead: { select: { id: true, name: true, company: true } },
         responsible: { select: { id: true, name: true } },
+        createdByUser: { select: { id: true, name: true } },
       },
     })
 
@@ -206,6 +209,7 @@ export async function updateTask(req: Request, res: Response): Promise<void> {
       include: {
         lead: { select: { id: true, name: true, company: true } },
         responsible: { select: { id: true, name: true } },
+        createdByUser: { select: { id: true, name: true } },
       },
     })
 
@@ -269,6 +273,9 @@ export async function getManagerialTasks(req: Request, res: Response): Promise<v
               userId: true,
             },
           },
+          // Logical relation — null for SUPER_ADMIN-created rows
+          // (see schema.prisma ManagerialTask note).
+          createdByUser: { select: { id: true, name: true } },
         },
         orderBy: { dueDate: 'asc' },
         skip: (pageNum - 1) * perPageNum,
@@ -347,6 +354,7 @@ export async function createManagerialTask(req: Request, res: Response): Promise
         participants: {
           select: { id: true, userId: true },
         },
+        createdByUser: { select: { id: true, name: true } },
       },
     })
 
@@ -387,6 +395,7 @@ export async function updateManagerialTask(req: Request, res: Response): Promise
       include: {
         taskType: { select: { id: true, name: true } },
         participants: { select: { id: true, userId: true } },
+        createdByUser: { select: { id: true, name: true } },
       },
     })
 
@@ -423,6 +432,7 @@ export async function completeManagerialTask(req: Request, res: Response): Promi
         participants: {
           select: { id: true, userId: true },
         },
+        createdByUser: { select: { id: true, name: true } },
       },
     })
 
