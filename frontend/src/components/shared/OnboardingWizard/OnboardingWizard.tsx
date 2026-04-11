@@ -252,7 +252,7 @@ function StepPipeline() {
     <>
       <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 6px' }}>Configure seu pipeline</h2>
       <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 20px', lineHeight: 1.5 }}>
-        Seu pipeline já foi criado com as etapas padrão. Você pode renomeá-las clicando em cada uma. As etapas fixas do sistema (Venda Realizada, Repescagem, Perdido) não aparecem aqui.
+        Seu pipeline já foi criado com as etapas padrão. As etapas fixas do sistema (Venda Realizada, Repescagem, Perdido) não aparecem aqui.
       </p>
 
       {loading ? (
