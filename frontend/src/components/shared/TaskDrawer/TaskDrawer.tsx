@@ -180,7 +180,7 @@ function CommonContent({ task, onClose, onComplete, onReschedule, onViewLead }: 
         <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 10 }}>Detalhes</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, fontSize: 13, color: 'var(--text-primary)' }}>
           <Clock size={14} color="var(--text-muted)" strokeWidth={1.5} />
-          <span>Hoje · {task.time || '—'}</span>
+          <span>{task.time || '—'}</span>
           {task.calendarBadge && <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, background: 'rgba(59,130,246,0.12)', color: '#3b82f6' }}>Google Calendar</span>}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-primary)' }}>

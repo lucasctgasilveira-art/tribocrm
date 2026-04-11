@@ -81,6 +81,7 @@ interface DisplayManagerialTask {
   dueDate: string | null
   recurrence: string
   deadline: string
+  dateTimeLabel: string
   overdue: boolean
   participants: string[]
 }
@@ -124,6 +125,24 @@ function formatTime(dateStr: string | null): string {
   if (!dateStr) return ''
   const d = new Date(dateStr)
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+// "Hoje · HH:MM" / "Amanhã · HH:MM" / "DD/MM/AAAA · HH:MM" — used everywhere
+// we need to surface a task's due date to the user (list rows and drawer).
+function formatDateTime(dateStr: string | null): string {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  const time = formatTime(dateStr)
+  const startOfDay = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate())
+  const todayStart = startOfDay(new Date())
+  const dueStart = startOfDay(d)
+  const diffDays = Math.round((dueStart.getTime() - todayStart.getTime()) / (1000 * 60 * 60 * 24))
+  if (diffDays === 0) return `Hoje · ${time}`
+  if (diffDays === 1) return `Amanhã · ${time}`
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const yyyy = d.getFullYear()
+  return `${dd}/${mm}/${yyyy} · ${time}`
 }
 
 function formatDeadline(dateStr: string | null): string {
@@ -180,7 +199,7 @@ function mapApiTask(t: ApiTask): DisplayTask {
     leadCompany: t.lead.company ?? '',
     stageBadge: '',
     stageColor: 'var(--text-muted)',
-    time: t.isDone ? '' : formatTime(t.dueDate),
+    time: t.isDone ? '' : formatDateTime(t.dueDate),
     dueDate: t.dueDate,
     overdue: isOverdue(t.dueDate, t.isDone),
     done: t.isDone,
@@ -203,6 +222,7 @@ function mapManagerialTask(t: ApiManagerialTask): DisplayManagerialTask {
     dueDate: t.dueDate,
     recurrence: t.isRecurring && t.recurrence ? t.recurrence : 'Única',
     deadline: formatDeadline(t.dueDate),
+    dateTimeLabel: formatDateTime(t.dueDate),
     overdue: isOverdue(t.dueDate, t.isDone),
     participants: t.participants.map((_, i) => `P${i + 1}`),
   }
@@ -358,7 +378,7 @@ export default function TasksView({ menuItems, managerialOnly = false }: TasksVi
       setReloadKey(k => k + 1)
       // Update the open drawer so the displayed prazo reflects the new date
       // immediately without forcing the user to close and re-open.
-      setSelectedTask(prev => prev && prev.id === id ? { ...prev, dueDate: newDueDate, time: formatTime(newDueDate) } : prev)
+      setSelectedTask(prev => prev && prev.id === id ? { ...prev, dueDate: newDueDate, time: formatDateTime(newDueDate) } : prev)
       setToast('✅ Tarefa remarcada')
       setTimeout(() => setToast(''), 3000)
     } catch {
@@ -375,6 +395,7 @@ export default function TasksView({ menuItems, managerialOnly = false }: TasksVi
         ...prev,
         dueDate: newDueDate,
         deadline: formatDeadline(newDueDate),
+        dateTimeLabel: formatDateTime(newDueDate),
         overdue: isOverdue(newDueDate, false),
       } : prev)
       setToast('✅ Tarefa remarcada')
@@ -605,7 +626,7 @@ export default function TasksView({ menuItems, managerialOnly = false }: TasksVi
                               {mt.recurrence}
                             </span>
                             <span style={{ fontSize: 11, color: mt.overdue ? '#ef4444' : 'var(--text-secondary)', fontWeight: mt.overdue ? 600 : 400 }}>
-                              {mt.deadline}
+                              {mt.dateTimeLabel || mt.deadline}
                             </span>
                           </div>
                         </div>
@@ -683,7 +704,7 @@ export default function TasksView({ menuItems, managerialOnly = false }: TasksVi
             leadCompany: '',
             stageBadge: selectedManagerial.recurrence,
             stageColor: 'var(--text-muted)',
-            time: selectedManagerial.deadline,
+            time: selectedManagerial.dateTimeLabel || selectedManagerial.deadline,
             dueDate: selectedManagerial.dueDate,
             overdue: selectedManagerial.overdue,
             done: false,
