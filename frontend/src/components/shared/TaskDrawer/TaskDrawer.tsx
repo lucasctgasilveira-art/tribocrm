@@ -4,10 +4,22 @@ import {
   Handshake, ShieldCheck, Loader2, ExternalLink, Pencil, Trash2,
   type LucideIcon,
 } from 'lucide-react'
+import api from '../../../services/api'
 
 // ── Types ──
 
 type TaskType = 'call' | 'email' | 'whatsapp' | 'meeting' | 'visit' | 'proposal' | 'approve'
+
+function taskTypeToInteractionType(t: TaskType): string {
+  switch (t) {
+    case 'call': return 'CALL'
+    case 'email': return 'EMAIL'
+    case 'whatsapp': return 'WHATSAPP'
+    case 'meeting': return 'MEETING'
+    case 'visit': return 'VISIT'
+    default: return 'NOTE'
+  }
+}
 
 export interface TaskDrawerData {
   id: string; type: TaskType; apiType?: string; title: string; description?: string
@@ -143,12 +155,38 @@ function CommonContent({ task, onClose, onComplete, onReschedule, onViewLead }: 
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
 
-  function handleComplete() {
-    // Notes are optional. If the user typed a result, it's forwarded to the
-    // parent so an EMAIL/CALL/etc. interaction can be created on the lead.
+  // IMPORTANT: the interaction POST runs here (not in the parent) so it
+  // can use the fresh `task.leadId` prop and the fresh local `notes`
+  // state. A previous attempt delegated this to TasksView.handleDrawerComplete
+  // via a callback, which ran after setTimeout/setSelectedTask(null) — by
+  // the time the async handler read the parent's `tasks` array, the task
+  // had already been mutated and the POST was silently skipped.
+  async function handleComplete() {
     const trimmed = notes.trim()
+    console.log('[TaskDrawer.handleComplete] taskId=%s leadId=%s type=%s notesLen=%d', task.id, task.leadId, task.type, trimmed.length)
     setSaving(true)
-    setTimeout(() => { onComplete(task.id, trimmed || undefined); onClose() }, 800)
+
+    if (trimmed && task.leadId) {
+      const body = {
+        type: taskTypeToInteractionType(task.type),
+        content: trimmed,
+        description: trimmed,
+      }
+      console.log('[TaskDrawer] POST /leads/%s/interactions body=%o', task.leadId, body)
+      try {
+        const res = await api.post(`/leads/${task.leadId}/interactions`, body)
+        console.log('[TaskDrawer] interaction saved:', res.data)
+      } catch (err: any) {
+        // Do not block completion — log and continue.
+        console.error('[TaskDrawer] failed to register result:', err?.response?.data ?? err)
+      }
+    }
+
+    try {
+      await Promise.resolve(onComplete(task.id, trimmed || undefined))
+    } finally {
+      onClose()
+    }
   }
 
   return (
