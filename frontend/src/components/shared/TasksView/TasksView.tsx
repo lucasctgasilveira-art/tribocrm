@@ -1,10 +1,14 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
   Mail, MessageCircle, Phone, Video, FileText, Handshake, ShieldCheck,
   Check, Plus, ChevronRight, Users, BarChart2, BookOpen, Loader2, X,
   type LucideIcon,
 } from 'lucide-react'
+import { Calendar, dateFnsLocalizer, Views, type View } from 'react-big-calendar'
+import { format, parse, startOfWeek, getDay } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+import 'react-big-calendar/lib/css/react-big-calendar.css'
 import AppLayout from '../AppLayout/AppLayout'
 import type { SidebarEntry } from '../Sidebar/Sidebar'
 import TaskDrawer from '../TaskDrawer/TaskDrawer'
@@ -16,6 +20,76 @@ import {
 } from '../../../services/tasks.service'
 import { getUsers, getAdminTeam } from '../../../services/users.service'
 import api from '../../../services/api'
+
+// ── Calendar setup (react-big-calendar + date-fns pt-BR) ──
+
+const calendarLocales = { 'pt-BR': ptBR }
+const calendarLocalizer = dateFnsLocalizer({
+  format,
+  parse,
+  startOfWeek: (date: Date) => startOfWeek(date, { locale: ptBR }),
+  getDay,
+  locales: calendarLocales,
+})
+
+const calendarMessages = {
+  allDay: 'Dia inteiro',
+  previous: 'Anterior',
+  next: 'Próximo',
+  today: 'Hoje',
+  month: 'Mês',
+  week: 'Semana',
+  day: 'Dia',
+  agenda: 'Agenda',
+  date: 'Data',
+  time: 'Horário',
+  event: 'Tarefa',
+  noEventsInRange: 'Nenhuma tarefa neste período',
+  showMore: (total: number) => `+${total} mais`,
+}
+
+// Dark-theme overrides for react-big-calendar. Injected via <style>
+// in the calendar container so they don't leak to other pages.
+const CALENDAR_DARK_CSS = `
+.tribocrm-calendar .rbc-calendar { background: transparent; color: var(--text-primary); font-family: inherit; }
+.tribocrm-calendar .rbc-toolbar { color: var(--text-primary); margin-bottom: 12px; gap: 8px; flex-wrap: wrap; }
+.tribocrm-calendar .rbc-toolbar button { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-secondary); border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 500; }
+.tribocrm-calendar .rbc-toolbar button:hover { background: var(--bg-elevated); color: var(--text-primary); }
+.tribocrm-calendar .rbc-toolbar button.rbc-active,
+.tribocrm-calendar .rbc-toolbar button.rbc-active:hover { background: rgba(249,115,22,0.12); border-color: #f97316; color: #f97316; box-shadow: none; }
+.tribocrm-calendar .rbc-toolbar-label { font-size: 14px; font-weight: 600; color: var(--text-primary); text-transform: capitalize; }
+.tribocrm-calendar .rbc-month-view,
+.tribocrm-calendar .rbc-time-view,
+.tribocrm-calendar .rbc-time-header,
+.tribocrm-calendar .rbc-time-content { border-color: var(--border); }
+.tribocrm-calendar .rbc-month-row + .rbc-month-row,
+.tribocrm-calendar .rbc-day-bg + .rbc-day-bg,
+.tribocrm-calendar .rbc-header + .rbc-header,
+.tribocrm-calendar .rbc-time-header-content,
+.tribocrm-calendar .rbc-time-header.rbc-overflowing,
+.tribocrm-calendar .rbc-timeslot-group,
+.tribocrm-calendar .rbc-time-slot { border-color: var(--border); }
+.tribocrm-calendar .rbc-header { background: var(--bg-card); color: var(--text-muted); border-bottom: 1px solid var(--border); padding: 8px 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+.tribocrm-calendar .rbc-month-row { background: transparent; }
+.tribocrm-calendar .rbc-day-bg { background: var(--bg); }
+.tribocrm-calendar .rbc-off-range-bg { background: var(--bg-card); }
+.tribocrm-calendar .rbc-today { background: rgba(249,115,22,0.06); }
+.tribocrm-calendar .rbc-date-cell { color: var(--text-secondary); padding: 4px 6px; font-size: 12px; }
+.tribocrm-calendar .rbc-date-cell.rbc-now { color: #f97316; font-weight: 700; }
+.tribocrm-calendar .rbc-button-link { color: inherit; }
+.tribocrm-calendar .rbc-show-more { color: #f97316; background: transparent; font-weight: 500; }
+.tribocrm-calendar .rbc-event { border: none; box-shadow: none; padding: 2px 6px; font-size: 11px; }
+.tribocrm-calendar .rbc-event-label { font-size: 10px; opacity: 0.9; }
+.tribocrm-calendar .rbc-event.rbc-selected { box-shadow: 0 0 0 2px rgba(255,255,255,0.3); }
+.tribocrm-calendar .rbc-time-gutter,
+.tribocrm-calendar .rbc-time-column { background: var(--bg); }
+.tribocrm-calendar .rbc-time-header-gutter,
+.tribocrm-calendar .rbc-label { color: var(--text-muted); font-size: 11px; }
+.tribocrm-calendar .rbc-current-time-indicator { background-color: #f97316; height: 2px; }
+.tribocrm-calendar .rbc-agenda-view table { background: transparent; color: var(--text-primary); }
+.tribocrm-calendar .rbc-agenda-view table thead > tr > th { background: var(--bg-card); color: var(--text-muted); border-color: var(--border); }
+.tribocrm-calendar .rbc-agenda-view table tbody > tr > td { border-color: var(--border); }
+`
 
 // ── Types ──
 
@@ -279,6 +353,10 @@ export default function TasksView({ menuItems, managerialOnly = false }: TasksVi
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   const [selectedTask, setSelectedTask] = useState<DisplayTask | null>(null)
   const [selectedManagerial, setSelectedManagerial] = useState<DisplayManagerialTask | null>(null)
+  // Calendar view state — 'list' keeps the original table, any other
+  // value turns the right-side content into a react-big-calendar view.
+  const [viewMode, setViewMode] = useState<'list' | View>('list')
+  const [calendarDate, setCalendarDate] = useState<Date>(new Date())
   const [toast, setToast] = useState('')
   const [newTaskModal, setNewTaskModal] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
@@ -482,6 +560,55 @@ export default function TasksView({ menuItems, managerialOnly = false }: TasksVi
   const tomorrowTasks = tasks.filter(t => t.group === 'tomorrow' && !t.done)
   const doneTasks = tasks.filter(t => t.done)
 
+  // Derive calendar events from whichever list the user is looking at.
+  // The calendar is a *view*, not a separate data source — we reuse the
+  // same tasks/mTasks that already power the list.
+  type TaskCalendarEvent = {
+    id: string
+    title: string
+    start: Date
+    end: Date
+    kind: 'lead' | 'managerial'
+    resource: DisplayTask | DisplayManagerialTask
+  }
+
+  const calendarEvents = useMemo<TaskCalendarEvent[]>(() => {
+    if (category === 'leads') {
+      return tasks
+        .filter(t => !!t.dueDate)
+        .map<TaskCalendarEvent>(t => {
+          const d = new Date(t.dueDate as string)
+          return { id: t.id, title: t.title, start: d, end: d, kind: 'lead', resource: t }
+        })
+    }
+    return mTasks
+      .filter(t => !!t.dueDate)
+      .map<TaskCalendarEvent>(t => {
+        const d = new Date(t.dueDate as string)
+        return { id: t.id, title: t.title, start: d, end: d, kind: 'managerial', resource: t }
+      })
+  }, [category, tasks, mTasks])
+
+  function calendarEventColor(event: TaskCalendarEvent): string {
+    if (event.kind === 'lead') {
+      const t = (event.resource as DisplayTask).apiType
+      const map: Record<string, string> = { CALL: '#f97316', EMAIL: '#3b82f6', WHATSAPP: '#25d166', MEETING: '#a855f7', VISIT: '#f59e0b' }
+      return map[t] ?? '#6b7280'
+    }
+    const name = (event.resource as DisplayManagerialTask).typeName.toLowerCase()
+    if (name.includes('ligaç') || name.includes('call')) return '#f97316'
+    if (name.includes('mail')) return '#3b82f6'
+    if (name.includes('whats')) return '#25d166'
+    if (name.includes('reuni') || name.includes('meeting')) return '#a855f7'
+    if (name.includes('visit')) return '#f59e0b'
+    return '#6b7280'
+  }
+
+  function handleCalendarSelectEvent(event: TaskCalendarEvent) {
+    if (event.kind === 'lead') setSelectedTask(event.resource as DisplayTask)
+    else setSelectedManagerial(event.resource as DisplayManagerialTask)
+  }
+
   const periodFilters: { key: PeriodFilter; label: string; count: number; badgeColor?: string }[] = [
     { key: 'overdue', label: 'Atrasadas', count: taskCounts.overdue, badgeColor: '#ef4444' },
     { key: 'today', label: 'Hoje', count: taskCounts.today, badgeColor: '#f97316' },
@@ -525,6 +652,29 @@ export default function TasksView({ menuItems, managerialOnly = false }: TasksVi
               onMouseLeave={(e) => { e.currentTarget.style.background = '#f97316' }}>
               <Plus size={15} strokeWidth={2} /> Nova Tarefa
             </button>
+          </div>
+
+          {/* View toggle — Lista / Mês / Semana / Dia */}
+          <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+            {([
+              { key: 'list' as const, label: 'Lista' },
+              { key: Views.MONTH as View, label: 'Mês' },
+              { key: Views.WEEK as View, label: 'Semana' },
+              { key: Views.DAY as View, label: 'Dia' },
+            ]).map(v => {
+              const active = viewMode === v.key
+              return (
+                <button key={v.key as string} onClick={() => setViewMode(v.key)} style={{
+                  padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: 'pointer',
+                  border: `1px solid ${active ? '#f97316' : 'var(--border)'}`,
+                  background: active ? 'rgba(249,115,22,0.12)' : 'var(--bg-card)',
+                  color: active ? '#f97316' : 'var(--text-muted)',
+                  transition: 'all 0.15s',
+                }}>
+                  {v.label}
+                </button>
+              )
+            })}
           </div>
 
           {/* Type filters */}
@@ -578,6 +728,35 @@ export default function TasksView({ menuItems, managerialOnly = false }: TasksVi
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 60, gap: 10 }}>
               <Loader2 size={22} color="#f97316" strokeWidth={1.5} className="animate-spin" />
               <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>Carregando tarefas...</span>
+            </div>
+          ) : viewMode !== 'list' ? (
+            <div className="tribocrm-calendar" style={{ height: 'calc(100vh - 320px)', minHeight: 480, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 16 }}>
+              <style>{CALENDAR_DARK_CSS}</style>
+              <Calendar
+                localizer={calendarLocalizer}
+                culture="pt-BR"
+                events={calendarEvents}
+                view={viewMode as View}
+                onView={(v) => setViewMode(v)}
+                date={calendarDate}
+                onNavigate={(d) => setCalendarDate(d)}
+                onSelectEvent={(ev) => handleCalendarSelectEvent(ev as TaskCalendarEvent)}
+                eventPropGetter={(ev) => ({
+                  style: {
+                    backgroundColor: calendarEventColor(ev as TaskCalendarEvent),
+                    borderColor: calendarEventColor(ev as TaskCalendarEvent),
+                    color: '#fff',
+                    borderRadius: 4,
+                    border: 'none',
+                  },
+                })}
+                messages={calendarMessages}
+                startAccessor="start"
+                endAccessor="end"
+                views={[Views.MONTH, Views.WEEK, Views.DAY]}
+                popup
+                style={{ height: '100%' }}
+              />
             </div>
           ) : (
             <>
