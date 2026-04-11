@@ -217,7 +217,7 @@ export default function LeadDetailView({ menuItems, instance }: LeadDetailViewPr
                       </div>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{item.type}</div>
-                        {item.notes && <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>{item.notes}</div>}
+                        {item.content && <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4, whiteSpace: 'pre-wrap' }}>{item.content}</div>}
                         <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{formatDateTime(item.createdAt)}</div>
                       </div>
                     </div>

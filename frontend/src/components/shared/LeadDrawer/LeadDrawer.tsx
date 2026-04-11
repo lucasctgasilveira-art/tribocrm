@@ -457,6 +457,7 @@ function NewTaskModal({ leadId, onClose, onSaved }: { leadId: string; onClose: (
   const [title, setTitle] = useState('')
   const [type, setType] = useState('CALL')
   const [dueDate, setDueDate] = useState(new Date().toISOString().slice(0, 10))
+  const [description, setDescription] = useState('')
   const [saving, setSaving] = useState(false)
   const canSave = title.trim().length > 0 && dueDate && !saving
   const inputS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
@@ -465,7 +466,7 @@ function NewTaskModal({ leadId, onClose, onSaved }: { leadId: string; onClose: (
     if (!canSave) return
     setSaving(true)
     try {
-      await api.post('/tasks', { leadId, title, type, dueDate })
+      await api.post('/tasks', { leadId, title, type, dueDate, description: description.trim() || undefined })
       onSaved()
     } catch { setSaving(false) }
   }
@@ -498,6 +499,10 @@ function NewTaskModal({ leadId, onClose, onSaved }: { leadId: string; onClose: (
               <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Vencimento *</label>
               <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} style={inputS} />
             </div>
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Descrição</label>
+            <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="Detalhes da tarefa..." style={{ ...inputS, resize: 'vertical' }} />
           </div>
         </div>
         <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>

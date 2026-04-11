@@ -191,6 +191,14 @@ function CommonContent({ task, onClose, onComplete, onReschedule, onViewLead }: 
         </div>
       </div>
 
+      {/* Description — rendered only when the task has one saved */}
+      {task.description && task.description.trim() && (
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8 }}>Descrição</div>
+          <div style={{ fontSize: 13, color: 'var(--text-primary)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{task.description}</div>
+        </div>
+      )}
+
       {/* Action */}
       <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
         <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8 }}>Registrar resultado</div>
