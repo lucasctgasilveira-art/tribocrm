@@ -730,8 +730,15 @@ export default function TasksView({ menuItems, managerialOnly = false }: TasksVi
               <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>Carregando tarefas...</span>
             </div>
           ) : viewMode !== 'list' ? (
-            <div className="tribocrm-calendar" style={{ height: 'calc(100vh - 320px)', minHeight: 480, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 16 }}>
+            <div className="tribocrm-calendar" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 16 }}>
               <style>{CALENDAR_DARK_CSS}</style>
+              {/* IMPORTANT: react-big-calendar requires an explicit pixel
+                  height on the Calendar component itself. Earlier attempt
+                  used the wrapper `height: calc(100vh - 320px)` + child
+                  `height: 100%`, which resolved to 0 inside the padded
+                  wrapper because `.rbc-calendar` is a flex column and
+                  percentage heights collapse without min-height:0. A
+                  hardcoded 680px always works. */}
               <Calendar
                 localizer={calendarLocalizer}
                 culture="pt-BR"
@@ -755,7 +762,7 @@ export default function TasksView({ menuItems, managerialOnly = false }: TasksVi
                 endAccessor="end"
                 views={[Views.MONTH, Views.WEEK, Views.DAY]}
                 popup
-                style={{ height: '100%' }}
+                style={{ height: 680 }}
               />
             </div>
           ) : (
