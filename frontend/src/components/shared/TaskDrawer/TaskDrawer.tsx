@@ -142,7 +142,6 @@ function CommonContent({ task, onClose, onComplete, onReschedule, onViewLead }: 
   const [notes, setNotes] = useState('')
   const [error, setError] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [createNext, setCreateNext] = useState(false)
 
   function handleComplete() {
     if (!notes.trim()) { setError(true); return }
@@ -152,7 +151,8 @@ function CommonContent({ task, onClose, onComplete, onReschedule, onViewLead }: 
 
   return (
     <>
-      {/* Lead */}
+      {/* Lead — hidden for managerial tasks (no linked lead) */}
+      {task.leadId && (
       <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
         <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8 }}>Lead vinculado</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -172,6 +172,7 @@ function CommonContent({ task, onClose, onComplete, onReschedule, onViewLead }: 
           )}
         </div>
       </div>
+      )}
 
       {/* Details */}
       <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
@@ -182,7 +183,9 @@ function CommonContent({ task, onClose, onComplete, onReschedule, onViewLead }: 
           {task.calendarBadge && <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, background: 'rgba(59,130,246,0.12)', color: '#3b82f6' }}>Google Calendar</span>}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-primary)' }}>
-          <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'rgba(249,115,22,0.2)', color: '#f97316', fontSize: 8, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{task.leadInitials.slice(0, 2)}</div>
+          {task.leadInitials && (
+            <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'rgba(249,115,22,0.2)', color: '#f97316', fontSize: 8, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{task.leadInitials.slice(0, 2)}</div>
+          )}
           <span style={{ color: 'var(--text-secondary)' }}>Responsável: você</span>
         </div>
       </div>
@@ -199,21 +202,6 @@ function CommonContent({ task, onClose, onComplete, onReschedule, onViewLead }: 
         {error && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4, fontSize: 11, color: '#ef4444' }}>
             <AlertCircle size={12} strokeWidth={1.5} /> Registre o resultado antes de concluir
-          </div>
-        )}
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)' }}>
-            <input type="checkbox" checked={createNext} onChange={e => setCreateNext(e.target.checked)} style={{ accentColor: '#f97316' }} />
-            Criar próxima tarefa automaticamente?
-          </label>
-        </div>
-        {createNext && (
-          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-            <select style={{ flex: 1, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: 'var(--text-primary)', outline: 'none' }}>
-              <option>Ligação</option><option>E-mail</option><option>Reunião</option><option>WhatsApp</option>
-            </select>
-            <input type="date" style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: 'var(--text-primary)', outline: 'none' }} />
           </div>
         )}
       </div>

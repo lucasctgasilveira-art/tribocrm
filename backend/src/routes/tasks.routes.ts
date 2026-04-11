@@ -32,7 +32,16 @@ router.get('/managerial-types', async (req: Request, res: Response) => {
     const filtered = userRole === 'SUPER_ADMIN' || !queryRole
       ? types
       : types.filter(t => t.visibleFor.includes(queryRole))
-    res.json({ success: true, data: filtered })
+    // Dedupe by name — pre-existing DB duplicates (from legacy concurrent
+    // seeding before the in-memory guard) would otherwise repeat in the
+    // dropdown. Keep the lowest sortOrder / oldest record.
+    const seen = new Set<string>()
+    const deduped = filtered.filter(t => {
+      if (seen.has(t.name)) return false
+      seen.add(t.name)
+      return true
+    })
+    res.json({ success: true, data: deduped })
   } catch (error: any) {
     console.error('[Tasks] getManagerialTypes error:', error.message)
     res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } })

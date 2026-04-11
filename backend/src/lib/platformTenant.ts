@@ -14,27 +14,44 @@ const DEFAULT_MANAGERIAL_TYPES = [
 const DEFAULT_VISIBLE_FOR = ['SELLER', 'TEAM_LEADER', 'MANAGER', 'OWNER', 'SUPER_ADMIN']
 
 let cached: string | null = null
+// Per-process flag so the default-type seed body runs at most once per tenant.
+// Without this flag, concurrent SUPER_ADMIN requests can all see an empty
+// findMany and race to insert duplicate rows since ManagerialTaskType has no
+// (tenantId, name) unique constraint.
+const seededTenants = new Set<string>()
 
 /**
  * Idempotently ensure the five default managerial task types exist for the
  * given tenant so the Nova Tarefa modal's "Categoria" dropdown is never empty.
  * Visible-for always includes SUPER_ADMIN so the filtered endpoint returns
- * results when called with that role.
+ * results when called with that role. Only runs once per process lifetime
+ * per tenant to prevent concurrent-request duplicate inserts.
  */
 async function seedDefaultManagerialTypes(tenantId: string): Promise<void> {
-  const existing = await prisma.managerialTaskType.findMany({
-    where: { tenantId },
-    select: { name: true },
-  })
-  const existingNames = new Set(existing.map(t => t.name))
+  if (seededTenants.has(tenantId)) return
+  // Claim the flag before awaiting anything so a second concurrent call
+  // returns immediately instead of racing the findMany/create pair.
+  seededTenants.add(tenantId)
 
-  let sortOrder = existing.length
-  for (const name of DEFAULT_MANAGERIAL_TYPES) {
-    if (existingNames.has(name)) continue
-    sortOrder += 1
-    await prisma.managerialTaskType.create({
-      data: { tenantId, name, visibleFor: DEFAULT_VISIBLE_FOR, sortOrder },
+  try {
+    const existing = await prisma.managerialTaskType.findMany({
+      where: { tenantId },
+      select: { name: true },
     })
+    const existingNames = new Set(existing.map(t => t.name))
+
+    let sortOrder = existing.length
+    for (const name of DEFAULT_MANAGERIAL_TYPES) {
+      if (existingNames.has(name)) continue
+      sortOrder += 1
+      await prisma.managerialTaskType.create({
+        data: { tenantId, name, visibleFor: DEFAULT_VISIBLE_FOR, sortOrder },
+      })
+    }
+  } catch (err) {
+    // If the seed fails, release the flag so a later call can retry.
+    seededTenants.delete(tenantId)
+    throw err
   }
 }
 
@@ -46,8 +63,6 @@ async function seedDefaultManagerialTypes(tenantId: string): Promise<void> {
  */
 export async function getPlatformTenantId(): Promise<string> {
   if (cached) {
-    // Still ensure the default types exist in case they were deleted or the
-    // cache survived a schema reset — cheap and idempotent.
     await seedDefaultManagerialTypes(cached)
     return cached
   }

@@ -76,6 +76,9 @@ interface DisplayManagerialTask {
   icon: LucideIcon
   iconColor: string
   title: string
+  description: string
+  typeName: string
+  dueDate: string | null
   recurrence: string
   deadline: string
   overdue: boolean
@@ -187,18 +190,34 @@ function mapApiTask(t: ApiTask): DisplayTask {
 }
 
 function mapManagerialTask(t: ApiManagerialTask): DisplayManagerialTask {
-  const typeName = t.taskType?.name?.toLowerCase() ?? 'default'
-  const iconConfig = managerialIconMap[typeName] ?? managerialIconMap.default!
+  const rawTypeName = t.taskType?.name ?? 'Tarefa'
+  const typeKey = rawTypeName.toLowerCase()
+  const iconConfig = managerialIconMap[typeKey] ?? managerialIconMap.default!
   return {
     id: t.id,
     icon: iconConfig!.icon,
     iconColor: iconConfig!.color,
     title: t.title,
+    description: t.description ?? '',
+    typeName: rawTypeName,
+    dueDate: t.dueDate,
     recurrence: t.isRecurring && t.recurrence ? t.recurrence : 'Única',
     deadline: formatDeadline(t.dueDate),
     overdue: isOverdue(t.dueDate, t.isDone),
     participants: t.participants.map((_, i) => `P${i + 1}`),
   }
+}
+
+// Map a managerial type name (e.g. "Ligação") to the drawer's TaskType enum
+// so the header icon matches the type. Falls back to a neutral icon.
+function managerialTypeToTaskType(name: string): TaskType {
+  const k = name.toLowerCase()
+  if (k.includes('ligaç') || k.includes('call')) return 'call'
+  if (k.includes('mail')) return 'email'
+  if (k.includes('whats')) return 'whatsapp'
+  if (k.includes('reuni') || k.includes('meeting')) return 'meeting'
+  if (k.includes('visit')) return 'visit'
+  return 'proposal'
 }
 
 function periodToDueDateParam(period: PeriodFilter): string | undefined {
@@ -239,6 +258,7 @@ export default function TasksView({ menuItems, managerialOnly = false }: TasksVi
 
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   const [selectedTask, setSelectedTask] = useState<DisplayTask | null>(null)
+  const [selectedManagerial, setSelectedManagerial] = useState<DisplayManagerialTask | null>(null)
   const [toast, setToast] = useState('')
   const [newTaskModal, setNewTaskModal] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
@@ -534,15 +554,21 @@ export default function TasksView({ menuItems, managerialOnly = false }: TasksVi
                     <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)', fontSize: 13 }}>Nenhuma tarefa gerencial encontrada.</div>
                   ) : mTasks.map((mt) => {
                     const Icon = mt.icon
+                    const isSelected = selectedManagerial?.id === mt.id
                     return (
                       <div
                         key={mt.id}
+                        onClick={() => setSelectedManagerial(mt)}
                         style={{
-                          background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10,
+                          background: isSelected ? 'rgba(249,115,22,0.06)' : 'var(--bg-card)',
+                          border: '1px solid var(--border)',
+                          borderLeft: isSelected ? '2px solid #f97316' : '1px solid var(--border)',
+                          borderRadius: 10,
                           padding: 14, marginBottom: 8, display: 'flex', gap: 12, alignItems: 'center',
+                          cursor: 'pointer',
                         }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-elevated)'; e.currentTarget.style.borderColor = 'var(--border)' }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--bg-card)'; e.currentTarget.style.borderColor = 'var(--border)' }}
+                        onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = 'var(--bg-elevated)' }}
+                        onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = 'var(--bg-card)' }}
                       >
                         <div style={{
                           width: 34, height: 34, borderRadius: 8, flexShrink: 0,
@@ -573,16 +599,6 @@ export default function TasksView({ menuItems, managerialOnly = false }: TasksVi
                             }}>{p}</div>
                           ))}
                         </div>
-                        <button
-                          onClick={() => handleManagerialComplete(mt.id)}
-                          style={{
-                            background: 'transparent', border: '1px solid var(--border)',
-                            borderRadius: 6, padding: '5px 10px', fontSize: 12,
-                            color: 'var(--text-secondary)', cursor: 'pointer',
-                            display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0,
-                          }}>
-                          Concluir <Check size={14} strokeWidth={1.5} />
-                        </button>
                       </div>
                     )
                   })}
@@ -631,6 +647,28 @@ export default function TasksView({ menuItems, managerialOnly = false }: TasksVi
           onEdit={handleEditTask}
           onDelete={handleDeleteTask}
           onViewLead={handleViewLead}
+        />
+      )}
+      {selectedManagerial && (
+        <TaskDrawer
+          task={{
+            id: selectedManagerial.id,
+            type: managerialTypeToTaskType(selectedManagerial.typeName),
+            title: selectedManagerial.title,
+            description: selectedManagerial.description,
+            // No leadId — the drawer hides the "Lead vinculado" section
+            leadInitials: '',
+            leadName: '',
+            leadCompany: '',
+            stageBadge: selectedManagerial.recurrence,
+            stageColor: 'var(--text-muted)',
+            time: selectedManagerial.deadline,
+            dueDate: selectedManagerial.dueDate,
+            overdue: selectedManagerial.overdue,
+            done: false,
+          }}
+          onClose={() => setSelectedManagerial(null)}
+          onComplete={(id) => { handleManagerialComplete(id); setSelectedManagerial(null) }}
         />
       )}
       {newTaskModal && <NewManagerialTaskModal users={availableUsers} onClose={() => setNewTaskModal(false)} onSave={handleCreateTask} managerialOnly={managerialOnly} />}
