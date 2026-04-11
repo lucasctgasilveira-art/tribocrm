@@ -115,7 +115,8 @@ export default function TaskDrawer({ task, onClose, onComplete, onReschedule, on
         <RescheduleModal task={task} onClose={() => setRescheduleOpen(false)} onSave={async (dt) => {
           await onReschedule(task.id, dt)
           setRescheduleOpen(false)
-          onClose()
+          // Keep the drawer open — parent updates the task's dueDate so the
+          // prazo re-renders with the new date/time.
         }} />
       )}
       {editOpen && onEdit && (
@@ -230,14 +231,33 @@ const tdBox: React.CSSProperties = { position: 'fixed', top: '50%', left: '50%',
 const tdInput: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
 const tdLabel: React.CSSProperties = { fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }
 
+function extractLocalDateTime(iso: string | null | undefined): { date: string; time: string } {
+  const d = iso ? new Date(iso) : new Date()
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  const hh = String(d.getHours()).padStart(2, '0')
+  const min = String(d.getMinutes()).padStart(2, '0')
+  return { date: `${yyyy}-${mm}-${dd}`, time: `${hh}:${min}` }
+}
+
 function RescheduleModal({ task, onClose, onSave }: { task: TaskDrawerData; onClose: () => void; onSave: (dueDate: string) => Promise<void> }) {
-  const initial = task.dueDate ? task.dueDate.slice(0, 10) : new Date().toISOString().slice(0, 10)
-  const [dueDate, setDueDate] = useState(initial)
+  const initial = extractLocalDateTime(task.dueDate)
+  const [date, setDate] = useState(initial.date)
+  const [time, setTime] = useState(initial.time)
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
 
   async function handleSave() {
+    if (!date || !time) { setError('Informe data e horário'); return }
+    // Build a local-time Date then serialize to UTC ISO. `new Date("YYYY-MM-DDTHH:mm:ss")`
+    // with no Z suffix is interpreted in the browser's local timezone.
+    const localIso = `${date}T${time}:00`
+    const parsed = new Date(localIso)
+    if (Number.isNaN(parsed.getTime())) { setError('Data/horário inválidos'); return }
     setSaving(true)
-    try { await onSave(dueDate) } catch { setSaving(false) }
+    setError('')
+    try { await onSave(parsed.toISOString()) } catch { setSaving(false); setError('Erro ao salvar') }
   }
 
   return (
@@ -248,10 +268,19 @@ function RescheduleModal({ task, onClose, onSave }: { task: TaskDrawerData; onCl
           <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Remarcar tarefa</h2>
           <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
         </div>
-        <div style={{ padding: 24 }}>
-          <label style={tdLabel}>Nova data</label>
-          <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} style={tdInput} />
+        <div style={{ padding: 24, display: 'flex', gap: 12 }}>
+          <div style={{ flex: 1 }}>
+            <label style={tdLabel}>Nova data</label>
+            <input type="date" value={date} onChange={e => setDate(e.target.value)} style={tdInput} />
+          </div>
+          <div style={{ width: 130 }}>
+            <label style={tdLabel}>Horário</label>
+            <input type="time" value={time} onChange={e => setTime(e.target.value)} style={tdInput} />
+          </div>
         </div>
+        {error && (
+          <div style={{ padding: '0 24px 12px', fontSize: 12, color: '#ef4444' }}>{error}</div>
+        )}
         <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
           <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
           <button onClick={handleSave} disabled={saving} style={{ background: saving ? 'var(--border)' : '#f97316', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: '#fff', cursor: saving ? 'not-allowed' : 'pointer' }}>{saving ? 'Salvando...' : 'Salvar'}</button>

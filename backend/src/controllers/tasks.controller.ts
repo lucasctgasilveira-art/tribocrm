@@ -360,6 +360,46 @@ export async function createManagerialTask(req: Request, res: Response): Promise
   }
 }
 
+export async function updateManagerialTask(req: Request, res: Response): Promise<void> {
+  try {
+    const id = req.params.id as string
+    const tenantId = await resolveTenantId(req.user!.tenantId)
+
+    const existing = await prisma.managerialTask.findFirst({ where: { id, tenantId } })
+    if (!existing) {
+      res.status(404).json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Tarefa gerencial não encontrada' },
+      })
+      return
+    }
+
+    const { title, description, dueDate } = req.body as { title?: string; description?: string | null; dueDate?: string | null }
+
+    const data: Prisma.ManagerialTaskUpdateInput = {}
+    if (title !== undefined) data.title = title
+    if (description !== undefined) data.description = description ?? null
+    if (dueDate !== undefined) data.dueDate = dueDate ? new Date(dueDate) : null
+
+    const task = await prisma.managerialTask.update({
+      where: { id },
+      data,
+      include: {
+        taskType: { select: { id: true, name: true } },
+        participants: { select: { id: true, userId: true } },
+      },
+    })
+
+    res.json({ success: true, data: task })
+  } catch (error) {
+    console.error('[Tasks] updateManagerialTask error:', error)
+    res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Erro interno do servidor' },
+    })
+  }
+}
+
 export async function completeManagerialTask(req: Request, res: Response): Promise<void> {
   try {
     const id = req.params.id as string

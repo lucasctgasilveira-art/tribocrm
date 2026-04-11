@@ -66,7 +66,12 @@ export async function completeManagerialTask(id: string) {
   return response.data.data
 }
 
+export async function updateManagerialTask(id: string, payload: { title?: string; description?: string | null; dueDate?: string | null }) {
+  const response = await api.patch(`/tasks/managerial/${id}`, payload)
+  return response.data.data
+}
+
 export default {
   getTasks, createTask, completeTask, updateTask, deleteTask,
-  getManagerialTasks, createManagerialTask, completeManagerialTask,
+  getManagerialTasks, createManagerialTask, updateManagerialTask, completeManagerialTask,
 }

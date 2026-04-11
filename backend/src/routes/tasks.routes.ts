@@ -10,6 +10,7 @@ import {
   deleteTask,
   getManagerialTasks,
   createManagerialTask,
+  updateManagerialTask,
   completeManagerialTask,
 } from '../controllers/tasks.controller'
 
@@ -106,6 +107,7 @@ router.patch('/managerial-types/:id', async (req: Request, res: Response) => {
 router.get('/managerial', getManagerialTasks)
 router.post('/managerial', createManagerialTask)
 router.patch('/managerial/:id/complete', completeManagerialTask)
+router.patch('/managerial/:id', updateManagerialTask)
 
 // ── Lead tasks ──
 

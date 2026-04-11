@@ -12,7 +12,7 @@ import {
   getTasks, completeTask as completeTaskApi, createTask as createLeadTask,
   updateTask as updateTaskApi, deleteTask as deleteTaskApi,
   getManagerialTasks, completeManagerialTask as completeManagerialApi,
-  createManagerialTask,
+  createManagerialTask, updateManagerialTask as updateManagerialApi,
 } from '../../../services/tasks.service'
 import { getUsers, getAdminTeam } from '../../../services/users.service'
 import api from '../../../services/api'
@@ -356,7 +356,28 @@ export default function TasksView({ menuItems, managerialOnly = false }: TasksVi
     try {
       await updateTaskApi(id, { dueDate: newDueDate })
       setReloadKey(k => k + 1)
-      setToast('Tarefa remarcada')
+      // Update the open drawer so the displayed prazo reflects the new date
+      // immediately without forcing the user to close and re-open.
+      setSelectedTask(prev => prev && prev.id === id ? { ...prev, dueDate: newDueDate, time: formatTime(newDueDate) } : prev)
+      setToast('✅ Tarefa remarcada')
+      setTimeout(() => setToast(''), 3000)
+    } catch {
+      setToast('Erro ao remarcar')
+      setTimeout(() => setToast(''), 3000)
+    }
+  }
+
+  async function handleManagerialReschedule(id: string, newDueDate: string) {
+    try {
+      await updateManagerialApi(id, { dueDate: newDueDate })
+      setReloadKey(k => k + 1)
+      setSelectedManagerial(prev => prev && prev.id === id ? {
+        ...prev,
+        dueDate: newDueDate,
+        deadline: formatDeadline(newDueDate),
+        overdue: isOverdue(newDueDate, false),
+      } : prev)
+      setToast('✅ Tarefa remarcada')
       setTimeout(() => setToast(''), 3000)
     } catch {
       setToast('Erro ao remarcar')
@@ -669,6 +690,7 @@ export default function TasksView({ menuItems, managerialOnly = false }: TasksVi
           }}
           onClose={() => setSelectedManagerial(null)}
           onComplete={(id) => { handleManagerialComplete(id); setSelectedManagerial(null) }}
+          onReschedule={handleManagerialReschedule}
         />
       )}
       {newTaskModal && <NewManagerialTaskModal users={availableUsers} onClose={() => setNewTaskModal(false)} onSave={handleCreateTask} managerialOnly={managerialOnly} />}
