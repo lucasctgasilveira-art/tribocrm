@@ -39,6 +39,11 @@ export async function getUsers(params?: UsersParams) {
   return response.data.data
 }
 
+export async function getAdminTeam(): Promise<{ id: string; name: string }[]> {
+  const response = await api.get('/admin/team')
+  return (response.data?.data ?? []).map((u: { id: string; name: string }) => ({ id: u.id, name: u.name }))
+}
+
 export async function createUser(payload: CreateUserPayload): Promise<CreateUserResult> {
   const response = await api.post('/users', payload)
   return response.data.data

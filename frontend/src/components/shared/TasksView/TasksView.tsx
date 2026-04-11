@@ -14,7 +14,7 @@ import {
   getManagerialTasks, completeManagerialTask as completeManagerialApi,
   createManagerialTask,
 } from '../../../services/tasks.service'
-import { getUsers } from '../../../services/users.service'
+import { getUsers, getAdminTeam } from '../../../services/users.service'
 import api from '../../../services/api'
 
 // ── Types ──
@@ -245,7 +245,11 @@ export default function TasksView({ menuItems, managerialOnly = false }: TasksVi
   const [availableUsers, setAvailableUsers] = useState<{ id: string; name: string }[]>([])
 
   useEffect(() => {
-    getUsers().then((data: { id: string; name: string }[]) => setAvailableUsers(data)).catch(() => {})
+    const stored = JSON.parse(localStorage.getItem('user') ?? '{}') as { role?: string }
+    const fetcher = stored.role === 'SUPER_ADMIN'
+      ? getAdminTeam()
+      : getUsers().then((data: { id: string; name: string }[]) => data)
+    fetcher.then(data => setAvailableUsers(data ?? [])).catch(() => {})
   }, [])
 
   // Load counts for period pills

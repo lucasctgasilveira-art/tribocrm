@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   X, MessageCircle, Mail, Phone, Calendar, UserPlus,
-  Check, ExternalLink, Loader2,
+  Check, ExternalLink, Loader2, Pencil,
 } from 'lucide-react'
 import api from '../../../services/api'
 
@@ -99,7 +99,32 @@ export default function LeadDrawer({ lead, onClose, stageColor, instance = 'gest
   const [interactionModal, setInteractionModal] = useState(false)
   const [taskModal, setTaskModal] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
+  const [currentValue, setCurrentValue] = useState<number>(lead.value)
+  const [editingValue, setEditingValue] = useState(false)
+  const [valueDraft, setValueDraft] = useState<string>(String(lead.value ?? 0))
+  const [savingValue, setSavingValue] = useState(false)
   const temp = tempConfig[lead.temperature] ?? tempConfig.COLD!
+
+  useEffect(() => {
+    setCurrentValue(lead.value)
+    setValueDraft(String(lead.value ?? 0))
+  }, [lead.id, lead.value])
+
+  async function handleSaveValue() {
+    const parsed = Number(valueDraft.replace(',', '.'))
+    if (!Number.isFinite(parsed) || parsed < 0) { showToast('Valor inválido'); return }
+    setSavingValue(true)
+    try {
+      await api.patch(`/leads/${lead.id}`, { expectedValue: parsed })
+      setCurrentValue(parsed)
+      setEditingValue(false)
+      showToast('✅ Valor atualizado')
+    } catch {
+      showToast('Erro ao atualizar valor')
+    } finally {
+      setSavingValue(false)
+    }
+  }
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 3000) }
 
@@ -163,7 +188,42 @@ export default function LeadDrawer({ lead, onClose, stageColor, instance = 'gest
         {/* Value */}
         <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
           <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Valor</div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', marginTop: 2 }}>{formatCurrency(lead.value)}</div>
+          {editingValue ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+              <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-muted)' }}>R$</span>
+              <input
+                autoFocus
+                type="number"
+                min="0"
+                step="0.01"
+                value={valueDraft}
+                onChange={e => setValueDraft(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') { e.preventDefault(); handleSaveValue() }
+                  if (e.key === 'Escape') { setEditingValue(false); setValueDraft(String(currentValue)) }
+                }}
+                disabled={savingValue}
+                style={{ flex: 1, background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', outline: 'none', minWidth: 0 }}
+              />
+              <button onClick={handleSaveValue} disabled={savingValue}
+                style={{ background: '#22c55e', border: 'none', borderRadius: 6, padding: '6px 10px', cursor: savingValue ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center' }}>
+                {savingValue ? <Loader2 size={14} color="#fff" className="animate-spin" /> : <Check size={14} color="#fff" strokeWidth={2} />}
+              </button>
+              <button onClick={() => { setEditingValue(false); setValueDraft(String(currentValue)) }} disabled={savingValue}
+                style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', cursor: savingValue ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-muted)' }}>
+                <X size={14} strokeWidth={2} />
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
+              <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)' }}>{formatCurrency(currentValue)}</div>
+              <button onClick={() => { setValueDraft(String(currentValue)); setEditingValue(true) }}
+                title="Editar valor"
+                style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: 5, cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
+                <Pencil size={12} strokeWidth={1.5} />
+              </button>
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 20, marginTop: 10, fontSize: 12 }}>
             <div><span style={{ color: 'var(--text-muted)' }}>Responsável </span><span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{lead.responsible}</span></div>
           </div>
