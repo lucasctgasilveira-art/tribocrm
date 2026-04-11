@@ -186,6 +186,20 @@ function mapApiType(apiType: string): TaskType {
   return map[apiType] ?? 'call'
 }
 
+// Task API type → Interaction API type. Non-contactable task types
+// (APPROVE, PROPOSAL) fall back to NOTE so the text is still preserved
+// on the lead timeline.
+function taskTypeToInteractionType(apiType: string): string {
+  const map: Record<string, string> = {
+    CALL: 'CALL',
+    EMAIL: 'EMAIL',
+    WHATSAPP: 'WHATSAPP',
+    MEETING: 'MEETING',
+    VISIT: 'VISIT',
+  }
+  return map[apiType] ?? 'NOTE'
+}
+
 function mapApiTask(t: ApiTask): DisplayTask {
   return {
     id: t.id,
@@ -367,8 +381,23 @@ export default function TasksView({ menuItems, managerialOnly = false }: TasksVi
     } catch { /* ignore */ }
   }
 
-  function handleDrawerComplete(id: string) {
-    handleToggleDone(id)
+  async function handleDrawerComplete(id: string, notes?: string) {
+    const task = tasks.find(t => t.id === id) ?? selectedTask
+    await handleToggleDone(id)
+    // If the user typed a result AND the task is attached to a lead,
+    // record it as an interaction on that lead's timeline. Failure here
+    // must not surface — the task is already marked complete.
+    if (notes && task && task.leadId) {
+      try {
+        await api.post(`/leads/${task.leadId}/interactions`, {
+          type: taskTypeToInteractionType(task.apiType),
+          content: notes,
+          description: notes,
+        })
+      } catch (err) {
+        console.error('[TasksView] failed to record completion interaction', err)
+      }
+    }
     setSelectedTask(null)
   }
 

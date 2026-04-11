@@ -185,7 +185,14 @@ export async function getLead(req: Request, res: Response): Promise<void> {
       return
     }
 
-    res.json({ success: true, data: lead })
+    // Mirror interaction.content → description so clients reading either
+    // key (the UI reads content; API inspectors sometimes look for
+    // description) see the same value.
+    const enriched = {
+      ...lead,
+      interactions: (lead.interactions as Array<Record<string, unknown>>).map(i => ({ ...i, description: i.content })),
+    }
+    res.json({ success: true, data: enriched })
   } catch (error) {
     console.error('[Leads] getLead error:', error)
     res.status(500).json({

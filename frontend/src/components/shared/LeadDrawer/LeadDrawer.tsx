@@ -412,7 +412,7 @@ function NewInteractionModal({ leadId, onClose, onSaved }: { leadId: string; onC
     if (!canSave) return
     setSaving(true)
     try {
-      await api.post(`/leads/${leadId}/interactions`, { type, content })
+      await api.post(`/leads/${leadId}/interactions`, { type, content, description: content })
       onSaved()
     } catch { setSaving(false) }
   }

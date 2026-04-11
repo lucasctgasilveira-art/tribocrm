@@ -494,7 +494,7 @@ function AddNoteModal({ leadId, onClose, onSaved }: { leadId: string; onClose: (
     if (!canSave) return
     setSaving(true)
     try {
-      await api.post(`/leads/${leadId}/interactions`, { type: 'NOTE', content })
+      await api.post(`/leads/${leadId}/interactions`, { type: 'NOTE', content, description: content })
       onSaved()
     } catch {
       setSaving(false)

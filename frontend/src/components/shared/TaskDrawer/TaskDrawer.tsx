@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import {
   X, Clock, Mail, MessageCircle, Phone, Video, FileText,
-  Handshake, ShieldCheck, Loader2, AlertCircle, ExternalLink, Pencil, Trash2,
+  Handshake, ShieldCheck, Loader2, ExternalLink, Pencil, Trash2,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -21,7 +21,7 @@ export interface TaskDrawerData {
 interface Props {
   task: TaskDrawerData
   onClose: () => void
-  onComplete: (id: string) => void
+  onComplete: (id: string, notes?: string) => void
   onReschedule?: (id: string, newDueDate: string) => Promise<void> | void
   onEdit?: (id: string, payload: { title: string; type: string; description?: string; dueDate?: string }) => Promise<void> | void
   onDelete?: (id: string) => Promise<void> | void
@@ -139,15 +139,16 @@ export default function TaskDrawer({ task, onClose, onComplete, onReschedule, on
 
 // ── Common task content ──
 
-function CommonContent({ task, onClose, onComplete, onReschedule, onViewLead }: { task: TaskDrawerData; onClose: () => void; onComplete: (id: string) => void; onReschedule?: () => void; onViewLead?: (leadId: string) => void }) {
+function CommonContent({ task, onClose, onComplete, onReschedule, onViewLead }: { task: TaskDrawerData; onClose: () => void; onComplete: (id: string, notes?: string) => void; onReschedule?: () => void; onViewLead?: (leadId: string) => void }) {
   const [notes, setNotes] = useState('')
-  const [error, setError] = useState(false)
   const [saving, setSaving] = useState(false)
 
   function handleComplete() {
-    if (!notes.trim()) { setError(true); return }
+    // Notes are optional. If the user typed a result, it's forwarded to the
+    // parent so an EMAIL/CALL/etc. interaction can be created on the lead.
+    const trimmed = notes.trim()
     setSaving(true)
-    setTimeout(() => { onComplete(task.id); onClose() }, 800)
+    setTimeout(() => { onComplete(task.id, trimmed || undefined); onClose() }, 800)
   }
 
   return (
@@ -199,21 +200,19 @@ function CommonContent({ task, onClose, onComplete, onReschedule, onViewLead }: 
         </div>
       )}
 
-      {/* Action */}
-      <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
-        <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8 }}>Registrar resultado</div>
-        <textarea rows={3} value={notes} onChange={e => { setNotes(e.target.value); setError(false) }}
-          placeholder="O que aconteceu nessa interação?"
-          style={{
-            width: '100%', background: 'var(--bg)', borderRadius: 8, padding: 10, fontSize: 13, color: 'var(--text-primary)', outline: 'none', resize: 'none', boxSizing: 'border-box',
-            border: `1px solid ${error ? '#ef4444' : 'var(--border)'}`,
-          }} />
-        {error && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4, fontSize: 11, color: '#ef4444' }}>
-            <AlertCircle size={12} strokeWidth={1.5} /> Registre o resultado antes de concluir
-          </div>
-        )}
-      </div>
+      {/* Registrar resultado — only for lead-linked tasks. A managerial
+          task has no lead, so there's nowhere to attach the interaction. */}
+      {task.leadId && (
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8 }}>Registrar resultado</div>
+          <textarea rows={3} value={notes} onChange={e => setNotes(e.target.value)}
+            placeholder="O que aconteceu nessa interação? (opcional)"
+            style={{
+              width: '100%', background: 'var(--bg)', borderRadius: 8, padding: 10, fontSize: 13, color: 'var(--text-primary)', outline: 'none', resize: 'none', boxSizing: 'border-box',
+              border: '1px solid var(--border)',
+            }} />
+        </div>
+      )}
 
       {/* Footer */}
       {!task.done && (

@@ -52,7 +52,10 @@ router.get('/:id/interactions', async (req, res) => {
       take: 30,
       include: { user: { select: { id: true, name: true } } },
     })
-    res.json({ success: true, data: interactions })
+    // Mirror `content` → `description` so clients can read either key.
+    // The DB column is `content`; `description` is an API-level alias.
+    const data = interactions.map(i => ({ ...i, description: i.content }))
+    res.json({ success: true, data })
   } catch (error: any) {
     res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } })
   }
@@ -64,15 +67,18 @@ router.post('/:id/interactions', async (req, res) => {
     const leadId = req.params.id as string
     const tenantId = req.user!.tenantId
     const userId = req.user!.userId
-    const { type, content, notes } = req.body
-    const body = content || notes || ''
+    const { type, content, notes, description } = req.body
+    // Accept content/description/notes in any combination — single source of
+    // truth is the `content` column, but clients that write `description`
+    // (or legacy `notes`) keep working.
+    const body = content || description || notes || ''
     if (!type) { res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'type é obrigatório' } }); return }
     const interaction = await prisma.interaction.create({
       data: { tenantId, leadId, userId, type, content: body, isAuto: false },
     })
     // Update lastActivityAt on the lead
     await prisma.lead.update({ where: { id: leadId }, data: { lastActivityAt: new Date() } })
-    res.status(201).json({ success: true, data: interaction })
+    res.status(201).json({ success: true, data: { ...interaction, description: interaction.content } })
   } catch (error: any) {
     res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } })
   }
