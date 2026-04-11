@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, Building2, DollarSign, Megaphone, LayoutGrid,
-  Users, CreditCard, ScrollText, Settings, Tag, CheckSquare,
+  Users, CreditCard, ScrollText, Settings, Tag, CheckSquare, Zap,
 } from 'lucide-react'
 import type { SidebarEntry } from '../components/shared/Sidebar/Sidebar'
 
@@ -17,6 +17,7 @@ export const adminMenuItems: SidebarEntry[] = [
     { label: 'Membros', path: '/admin/equipe' },
     { label: 'Permissões', path: '/admin/equipe/permissoes' },
   ] },
+  { label: 'Automações', icon: Zap, path: '/admin/automacoes' },
   { label: 'Planos', icon: CreditCard, path: '/admin/planos' },
   { label: 'Cupons', icon: Tag, path: '/admin/cupons' },
   { label: 'Logs do Sistema', icon: ScrollText, path: '/admin/logs' },
