@@ -1083,11 +1083,17 @@ function SummaryCard({ label, value, color }: { label: string; value: string; co
 
 // ── New Task Modal ──
 
-function NewManagerialTaskModal({ users, onClose, onSave, managerialOnly = false }: {
+export function NewManagerialTaskModal({ users, onClose, onSave, managerialOnly = false, lockedLead }: {
   users: { id: string; name: string }[]
   onClose: () => void
   onSave: (p: { title: string; typeId: string; description?: string; dueDate?: string; participantIds?: string[]; responsibleId?: string; dueTime?: string; reminderMinutes?: number; taskMode?: string; leadId?: string }) => Promise<void> | void
   managerialOnly?: boolean
+  // When set, the modal opens pre-scoped to this lead: mode toggle is
+  // hidden, the lead picker is replaced by a read-only pill, and the
+  // initial taskMode is forced to 'lead'. Used by LeadDrawer's Agendar
+  // button so the drawer gets feature-parity with the full Nova Tarefa
+  // form without duplicating it.
+  lockedLead?: { id: string; name: string; company?: string | null }
 }) {
   const stored = JSON.parse(localStorage.getItem('user') ?? '{}') as { id?: string; role?: string }
   const userRole = stored.role ?? 'SELLER'
@@ -1095,7 +1101,7 @@ function NewManagerialTaskModal({ users, onClose, onSave, managerialOnly = false
   const isSeller = userRole === 'SELLER'
   const showResponsible = !isSeller
 
-  const [taskMode, setTaskMode] = useState<'lead' | 'gerencial'>('gerencial')
+  const [taskMode, setTaskMode] = useState<'lead' | 'gerencial'>(lockedLead ? 'lead' : 'gerencial')
   const [title, setTitle] = useState('')
   const [typeId, setTypeId] = useState('')
   const [managerialTypeId, setManagerialTypeId] = useState('')
@@ -1115,8 +1121,10 @@ function NewManagerialTaskModal({ users, onClose, onSave, managerialOnly = false
   const [managerialTypes, setManagerialTypes] = useState<{ id: string; name: string }[]>([])
   const [leadSearch, setLeadSearch] = useState('')
   const [leadOptions, setLeadOptions] = useState<{ id: string; name: string; company: string | null; responsible?: { id: string; name: string } }[]>([])
-  const [selectedLeadId, setSelectedLeadId] = useState('')
-  const [selectedLeadData, setSelectedLeadData] = useState<{ id: string; name: string; company: string | null; responsible?: { id: string; name: string } } | null>(null)
+  const [selectedLeadId, setSelectedLeadId] = useState(lockedLead?.id ?? '')
+  const [selectedLeadData, setSelectedLeadData] = useState<{ id: string; name: string; company: string | null; responsible?: { id: string; name: string } } | null>(
+    lockedLead ? { id: lockedLead.id, name: lockedLead.name, company: lockedLead.company ?? null } : null,
+  )
 
   // Load leads when searching (for lead task mode)
   useEffect(() => {
@@ -1179,7 +1187,10 @@ function NewManagerialTaskModal({ users, onClose, onSave, managerialOnly = false
   const inputS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
 
   const effectiveTypeId = taskMode === 'gerencial' ? managerialTypeId : typeId
-  const canSave = title.trim().length > 0 && effectiveTypeId.length > 0 && !saving && (taskMode !== 'lead' || !!selectedLeadId)
+  // When a date is set, time is now mandatory (and vice-versa). Users can
+  // still save a task without any deadline by leaving both blank.
+  const dueDateTimeValid = (!dueDate && !dueTime) || (!!dueDate && !!dueTime)
+  const canSave = title.trim().length > 0 && effectiveTypeId.length > 0 && !saving && (taskMode !== 'lead' || !!selectedLeadId) && dueDateTimeValid
 
   function toggleParticipant(id: string) {
     setParticipantIds(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id])
@@ -1189,7 +1200,14 @@ function NewManagerialTaskModal({ users, onClose, onSave, managerialOnly = false
     if (!canSave) return
     setSaving(true)
     setError('')
-    const fullDueDate = dueDate && dueTime ? `${dueDate}T${dueTime}:00` : dueDate || undefined
+    // Compose date + local time into a UTC ISO string. new Date(...) with
+    // no Z/offset is parsed in the browser's local timezone; .toISOString()
+    // converts to UTC so the backend stores the right instant.
+    let fullDueDate: string | undefined
+    if (dueDate && dueTime) {
+      const parsed = new Date(`${dueDate}T${dueTime}:00`)
+      fullDueDate = Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString()
+    }
     try {
       await onSave({
         title,
@@ -1229,7 +1247,7 @@ function NewManagerialTaskModal({ users, onClose, onSave, managerialOnly = false
         </div>
         <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
           {/* Task mode toggle */}
-          {!managerialOnly && (
+          {!managerialOnly && !lockedLead && (
             <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
               {modeBtn('lead', 'Tarefa de Lead')}
               {modeBtn('gerencial', 'Tarefa Gerencial')}
@@ -1242,8 +1260,10 @@ function NewManagerialTaskModal({ users, onClose, onSave, managerialOnly = false
               {selectedLeadId && selectedLeadData ? (
                 <div style={{ padding: '8px 12px', background: 'rgba(249,115,22,0.06)', border: '1px solid rgba(249,115,22,0.3)', borderRadius: 8 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ flex: 1, fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{selectedLeadData.name}</span>
-                    <button onClick={() => { setSelectedLeadId(''); setSelectedLeadData(null); setLeadSearch('') }} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 2 }}><X size={14} /></button>
+                    <span style={{ flex: 1, fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{selectedLeadData.name}{selectedLeadData.company ? ` · ${selectedLeadData.company}` : ''}</span>
+                    {!lockedLead && (
+                      <button onClick={() => { setSelectedLeadId(''); setSelectedLeadData(null); setLeadSearch('') }} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 2 }}><X size={14} /></button>
+                    )}
                   </div>
                   {selectedLeadData.responsible && (
                     <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Responsável: {selectedLeadData.responsible.name}</div>
@@ -1335,17 +1355,15 @@ function NewManagerialTaskModal({ users, onClose, onSave, managerialOnly = false
             <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Descrição</label>
             <textarea rows={3} value={description} onChange={e => setDescription(e.target.value)} placeholder="Detalhes da tarefa..." style={{ ...inputS, resize: 'none' } as React.CSSProperties} />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: dueDate ? '1fr 1fr 1fr' : '1fr 1fr', gap: 12, marginBottom: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
             <div>
-              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Quando</label>
-              <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} style={inputS} />
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Quando{dueTime ? ' *' : ''}</label>
+              <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} style={{ ...inputS, borderColor: (dueTime && !dueDate) ? '#ef4444' : 'var(--border)' }} />
             </div>
-            {dueDate && (
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Horário</label>
-                <input type="time" value={dueTime} onChange={e => setDueTime(e.target.value)} style={inputS} />
-              </div>
-            )}
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Horário{dueDate ? ' *' : ''}</label>
+              <input type="time" value={dueTime} onChange={e => setDueTime(e.target.value)} placeholder="00:00" style={{ ...inputS, borderColor: (dueDate && !dueTime) ? '#ef4444' : 'var(--border)' }} />
+            </div>
             <div>
               <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Recorrência</label>
               <select value={recurrence} onChange={e => setRecurrence(e.target.value)} style={{ ...inputS, appearance: 'none' as const, cursor: 'pointer' }}>

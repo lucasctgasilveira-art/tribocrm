@@ -6,6 +6,8 @@ import {
 } from 'lucide-react'
 import api from '../../../services/api'
 import { SendEmailModal, ConnectGmailModal } from '../EmailModal/EmailModal'
+import { NewManagerialTaskModal } from '../TasksView/TasksView'
+import { getUsers, getAdminTeam } from '../../../services/users.service'
 
 // ── Types ──
 
@@ -107,7 +109,19 @@ export default function LeadDrawer({ lead, onClose, stageColor, instance = 'gest
   const [savingValue, setSavingValue] = useState(false)
   const [emailOpen, setEmailOpen] = useState(false)
   const [emailNeedsConnect, setEmailNeedsConnect] = useState(false)
+  // Users list needed by the shared NewManagerialTaskModal (for the
+  // Responsável dropdown when the current user is not a SELLER).
+  // Fetched once per drawer mount, mirroring TasksView's branching.
+  const [availableUsers, setAvailableUsers] = useState<{ id: string; name: string }[]>([])
   const temp = tempConfig[lead.temperature] ?? tempConfig.COLD!
+
+  useEffect(() => {
+    const stored = JSON.parse(localStorage.getItem('user') ?? '{}') as { role?: string }
+    const fetcher = stored.role === 'SUPER_ADMIN'
+      ? getAdminTeam()
+      : getUsers().then((data: { id: string; name: string }[]) => data)
+    fetcher.then(data => setAvailableUsers(data ?? [])).catch(() => {})
+  }, [])
 
   useEffect(() => {
     setCurrentValue(lead.value)
@@ -276,7 +290,33 @@ export default function LeadDrawer({ lead, onClose, stageColor, instance = 'gest
 
       {/* Modals */}
       {interactionModal && <NewInteractionModal leadId={lead.id} onClose={() => setInteractionModal(false)} onSaved={() => { setInteractionModal(false); setReloadKey(k => k + 1); showToast('Interação registrada') }} />}
-      {taskModal && <NewTaskModal leadId={lead.id} onClose={() => setTaskModal(false)} onSaved={() => { setTaskModal(false); setReloadKey(k => k + 1); showToast('Tarefa criada'); setActiveTab('tasks') }} />}
+      {taskModal && (
+        <NewManagerialTaskModal
+          users={availableUsers}
+          onClose={() => setTaskModal(false)}
+          lockedLead={{ id: lead.id, name: lead.name, company: lead.company }}
+          onSave={async (p) => {
+            // lockedLead guarantees taskMode='lead' and leadId=lead.id,
+            // so we only need to forward the lead-task fields. Recurrence
+            // and reminder fields are collected by the shared modal but
+            // aren't part of POST /tasks today — matches the existing
+            // Nova Tarefa behaviour on the tasks page (parity is the
+            // whole point of this reuse).
+            await api.post('/tasks', {
+              leadId: lead.id,
+              title: p.title,
+              type: p.typeId,
+              description: p.description,
+              dueDate: p.dueDate,
+              responsibleId: p.responsibleId,
+            })
+            setTaskModal(false)
+            setReloadKey(k => k + 1)
+            showToast('Tarefa criada')
+            setActiveTab('tasks')
+          }}
+        />
+      )}
       {emailOpen && <SendEmailModal lead={{ id: lead.id, name: lead.name, company: lead.company, email: lead.email }} onClose={() => setEmailOpen(false)} onSaved={() => { setEmailOpen(false); setReloadKey(k => k + 1); showToast('E-mail enviado') }} />}
       {emailNeedsConnect && <ConnectGmailModal onClose={() => setEmailNeedsConnect(false)} onNavigate={() => { setEmailNeedsConnect(false); onClose(); navigate(`/${instance}/configuracoes?tab=integracoes`) }} />}
     </>
@@ -452,67 +492,6 @@ function NewInteractionModal({ leadId, onClose, onSaved }: { leadId: string; onC
 }
 
 // ── New Task Modal ──
-
-function NewTaskModal({ leadId, onClose, onSaved }: { leadId: string; onClose: () => void; onSaved: () => void }) {
-  const [title, setTitle] = useState('')
-  const [type, setType] = useState('CALL')
-  const [dueDate, setDueDate] = useState(new Date().toISOString().slice(0, 10))
-  const [description, setDescription] = useState('')
-  const [saving, setSaving] = useState(false)
-  const canSave = title.trim().length > 0 && dueDate && !saving
-  const inputS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
-
-  async function handleSave() {
-    if (!canSave) return
-    setSaving(true)
-    try {
-      await api.post('/tasks', { leadId, title, type, dueDate, description: description.trim() || undefined })
-      onSaved()
-    } catch { setSaving(false) }
-  }
-
-  return (
-    <>
-      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 60 }} />
-      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 420, maxWidth: '90vw', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 61 }}>
-        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
-          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Nova tarefa</h2>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
-        </div>
-        <div style={{ padding: 24 }}>
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Título *</label>
-            <input autoFocus value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: Ligar para follow-up" style={inputS} />
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Tipo</label>
-              <select value={type} onChange={e => setType(e.target.value)} style={{ ...inputS, appearance: 'none' as const, cursor: 'pointer' }}>
-                <option value="CALL">Ligação</option>
-                <option value="WHATSAPP">WhatsApp</option>
-                <option value="EMAIL">E-mail</option>
-                <option value="MEETING">Reunião</option>
-                <option value="VISIT">Visita</option>
-              </select>
-            </div>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Vencimento *</label>
-              <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} style={inputS} />
-            </div>
-          </div>
-          <div style={{ marginTop: 12 }}>
-            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Descrição</label>
-            <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="Detalhes da tarefa..." style={{ ...inputS, resize: 'vertical' }} />
-          </div>
-        </div>
-        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
-          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
-          <button onClick={handleSave} disabled={!canSave} style={{ background: canSave ? 'var(--accent)' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: canSave ? '#fff' : 'var(--text-muted)', cursor: canSave ? 'pointer' : 'not-allowed' }}>{saving ? 'Salvando...' : 'Criar tarefa'}</button>
-        </div>
-      </div>
-    </>
-  )
-}
 
 // ── Sub-components ──
 
