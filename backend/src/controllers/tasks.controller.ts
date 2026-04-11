@@ -7,7 +7,7 @@ import { resolveTenantId } from '../lib/platformTenant'
 
 export async function getTasks(req: Request, res: Response): Promise<void> {
   try {
-    const tenantId = req.user!.tenantId
+    const tenantId = await resolveTenantId(req.user!.tenantId)
     const role = req.user!.role
     const userId = req.user!.userId
 
@@ -90,7 +90,7 @@ export async function getTasks(req: Request, res: Response): Promise<void> {
 
 export async function createTask(req: Request, res: Response): Promise<void> {
   try {
-    const tenantId = req.user!.tenantId
+    const tenantId = await resolveTenantId(req.user!.tenantId)
     const userId = req.user!.userId
 
     const { leadId, type, title, description, dueDate, responsibleId } = req.body
@@ -145,7 +145,7 @@ export async function createTask(req: Request, res: Response): Promise<void> {
 export async function completeTask(req: Request, res: Response): Promise<void> {
   try {
     const id = req.params.id as string
-    const tenantId = req.user!.tenantId
+    const tenantId = await resolveTenantId(req.user!.tenantId)
 
     const existing = await prisma.task.findFirst({ where: { id, tenantId } })
 
@@ -179,7 +179,7 @@ export async function completeTask(req: Request, res: Response): Promise<void> {
 export async function updateTask(req: Request, res: Response): Promise<void> {
   try {
     const id = req.params.id as string
-    const tenantId = req.user!.tenantId
+    const tenantId = await resolveTenantId(req.user!.tenantId)
 
     const existing = await prisma.task.findFirst({ where: { id, tenantId } })
 
@@ -222,7 +222,7 @@ export async function updateTask(req: Request, res: Response): Promise<void> {
 export async function deleteTask(req: Request, res: Response): Promise<void> {
   try {
     const id = req.params.id as string
-    const tenantId = req.user!.tenantId
+    const tenantId = await resolveTenantId(req.user!.tenantId)
 
     const existing = await prisma.task.findFirst({ where: { id, tenantId } })
 

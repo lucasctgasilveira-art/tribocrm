@@ -22,12 +22,16 @@ router.use(authMiddleware)
 router.get('/managerial-types', async (req: Request, res: Response) => {
   try {
     const tenantId = await resolveTenantId(req.user!.tenantId)
-    const role = req.query.role as string | undefined
+    const userRole = req.user!.role
+    const queryRole = req.query.role as string | undefined
     const types = await prisma.managerialTaskType.findMany({
       where: { tenantId, isActive: true },
       orderBy: { sortOrder: 'asc' },
     })
-    const filtered = role ? types.filter(t => t.visibleFor.includes(role)) : types
+    // SUPER_ADMIN sees every type regardless of visibleFor (platform-level view)
+    const filtered = userRole === 'SUPER_ADMIN' || !queryRole
+      ? types
+      : types.filter(t => t.visibleFor.includes(queryRole))
     res.json({ success: true, data: filtered })
   } catch (error: any) {
     console.error('[Tasks] getManagerialTypes error:', error.message)

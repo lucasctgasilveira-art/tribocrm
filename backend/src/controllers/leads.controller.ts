@@ -2,6 +2,7 @@ import { Request, Response } from 'express'
 import ExcelJS from 'exceljs'
 import { prisma } from '../lib/prisma'
 import { Prisma } from '@prisma/client'
+import { resolveTenantId } from '../lib/platformTenant'
 
 // ── Helpers for import ──
 
@@ -79,7 +80,7 @@ export async function getLossReasons(req: Request, res: Response): Promise<void>
 
 export async function getLeads(req: Request, res: Response): Promise<void> {
   try {
-    const tenantId = req.user!.tenantId
+    const tenantId = await resolveTenantId(req.user!.tenantId)
     const role = req.user!.role
     const userId = req.user!.userId
 

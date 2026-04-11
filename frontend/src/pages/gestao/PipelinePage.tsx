@@ -288,18 +288,23 @@ export default function PipelinePage() {
     const prevStage = prevLead?.stage
     const prevStatus = prevLead?.status ?? 'ACTIVE'
 
-    // Reactivate leads moving from WON/LOST back into a NORMAL stage
-    const reactivating = prevStatus === 'WON' || prevStatus === 'LOST'
-    const payload: Record<string, unknown> = { stageId: stageObj.id }
-    if (reactivating) payload.status = 'ACTIVE'
+    // Dropping into a NORMAL stage always means the lead is active.
+    // We force status:'ACTIVE' unconditionally (idempotent for already-active
+    // leads, authoritative for WON/LOST leads being reactivated) — without
+    // this, a WON/LOST lead moved to a NORMAL column keeps status=WON/LOST
+    // and disappears on reload because the kanban filters NORMAL stages by
+    // status=ACTIVE.
+    const payload: Record<string, unknown> = { stageId: stageObj.id, status: 'ACTIVE' }
+    console.log('[Pipeline] onDrop → NORMAL, PATCH /leads/%s payload=%o prevStatus=%s', leadId, payload, prevStatus)
 
     // Optimistic update
-    setLeads((prev) => prev.map((l) => l.id === leadId ? { ...l, stage: stageName, status: reactivating ? 'ACTIVE' : l.status } : l))
+    setLeads((prev) => prev.map((l) => l.id === leadId ? { ...l, stage: stageName, status: 'ACTIVE' } : l))
 
     // Persist to backend
     api.patch(`/leads/${leadId}`, payload)
       .then(() => showToast(`Lead movido para ${stageName}`))
-      .catch(() => {
+      .catch((err) => {
+        console.error('[Pipeline] onDrop PATCH failed:', err?.response?.data ?? err)
         if (prevStage) setLeads((prev) => prev.map((l) => l.id === leadId ? { ...l, stage: prevStage, status: prevStatus } : l))
         showToast('Erro ao mover lead')
       })
