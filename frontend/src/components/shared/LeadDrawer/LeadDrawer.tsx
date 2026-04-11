@@ -5,6 +5,7 @@ import {
   Check, ExternalLink, Loader2, Pencil,
 } from 'lucide-react'
 import api from '../../../services/api'
+import { SendEmailModal, ConnectGmailModal } from '../EmailModal/EmailModal'
 
 // ── Types ──
 
@@ -26,6 +27,7 @@ interface LeadDrawerProps {
   onClose: () => void
   stageColor: string
   instance?: 'gestao' | 'vendas'
+  onUpdate?: (leadId: string, changes: Partial<LeadData>) => void
 }
 
 interface Interaction {
@@ -92,7 +94,7 @@ const CSS = `
 
 // ── Component ──
 
-export default function LeadDrawer({ lead, onClose, stageColor, instance = 'gestao' }: LeadDrawerProps) {
+export default function LeadDrawer({ lead, onClose, stageColor, instance = 'gestao', onUpdate }: LeadDrawerProps) {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<Tab>('history')
   const [toast, setToast] = useState('')
@@ -103,6 +105,8 @@ export default function LeadDrawer({ lead, onClose, stageColor, instance = 'gest
   const [editingValue, setEditingValue] = useState(false)
   const [valueDraft, setValueDraft] = useState<string>(String(lead.value ?? 0))
   const [savingValue, setSavingValue] = useState(false)
+  const [emailOpen, setEmailOpen] = useState(false)
+  const [emailNeedsConnect, setEmailNeedsConnect] = useState(false)
   const temp = tempConfig[lead.temperature] ?? tempConfig.COLD!
 
   useEffect(() => {
@@ -118,6 +122,7 @@ export default function LeadDrawer({ lead, onClose, stageColor, instance = 'gest
       await api.patch(`/leads/${lead.id}`, { expectedValue: parsed })
       setCurrentValue(parsed)
       setEditingValue(false)
+      onUpdate?.(lead.id, { value: parsed })
       showToast('✅ Valor atualizado')
     } catch {
       showToast('Erro ao atualizar valor')
@@ -137,9 +142,18 @@ export default function LeadDrawer({ lead, onClose, stageColor, instance = 'gest
     window.open(`https://wa.me/${full}`, '_blank')
   }
 
-  function handleEmail() {
+  async function handleEmail() {
     if (!lead.email || lead.email === '—') { showToast('Lead sem e-mail cadastrado'); return }
-    window.open(`mailto:${lead.email}`)
+    try {
+      const { data } = await api.get('/oauth/google/status')
+      if (data?.data?.connected) {
+        setEmailOpen(true)
+      } else {
+        setEmailNeedsConnect(true)
+      }
+    } catch {
+      setEmailNeedsConnect(true)
+    }
   }
 
   function handleCall() {
@@ -263,6 +277,8 @@ export default function LeadDrawer({ lead, onClose, stageColor, instance = 'gest
       {/* Modals */}
       {interactionModal && <NewInteractionModal leadId={lead.id} onClose={() => setInteractionModal(false)} onSaved={() => { setInteractionModal(false); setReloadKey(k => k + 1); showToast('Interação registrada') }} />}
       {taskModal && <NewTaskModal leadId={lead.id} onClose={() => setTaskModal(false)} onSaved={() => { setTaskModal(false); setReloadKey(k => k + 1); showToast('Tarefa criada'); setActiveTab('tasks') }} />}
+      {emailOpen && <SendEmailModal lead={{ id: lead.id, name: lead.name, company: lead.company, email: lead.email }} onClose={() => setEmailOpen(false)} onSaved={() => { setEmailOpen(false); setReloadKey(k => k + 1); showToast('E-mail enviado') }} />}
+      {emailNeedsConnect && <ConnectGmailModal onClose={() => setEmailNeedsConnect(false)} onNavigate={() => { setEmailNeedsConnect(false); onClose(); navigate(`/${instance}/configuracoes?tab=integracoes`) }} />}
     </>
   )
 }

@@ -523,7 +523,10 @@ export default function PipelinePage() {
       </div>{/* end outer flex container */}
 
       {/* Drawer */}
-      {selectedLead && <LeadDrawer lead={selectedLead} onClose={() => setSelectedLead(null)} stageColor={stages.find((s) => s.name === selectedLead.stage)?.color ?? 'var(--text-muted)'} instance="gestao" />}
+      {selectedLead && <LeadDrawer lead={selectedLead} onClose={() => setSelectedLead(null)} stageColor={stages.find((s) => s.name === selectedLead.stage)?.color ?? 'var(--text-muted)'} instance="gestao" onUpdate={(leadId, changes) => {
+        setLeads(prev => prev.map(l => l.id === leadId ? { ...l, ...changes } : l))
+        setSelectedLead(prev => prev && prev.id === leadId ? { ...prev, ...changes } : prev)
+      }} />}
       <NewLeadModal open={modalOpen} onClose={() => setModalOpen(false)} onSubmit={handleNewLead} defaultStage={modalStage} />
       {wonLostDrop && <WonLostConfirm drop={wonLostDrop} lossReasons={lossReasons} onClose={() => setWonLostDrop(null)} onDone={(leadId, stageId, stageName, type, patchPayload) => {
         const body = { stageId, ...patchPayload }

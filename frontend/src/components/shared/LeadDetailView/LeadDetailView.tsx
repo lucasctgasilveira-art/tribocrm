@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import type { SidebarEntry } from '../Sidebar/Sidebar'
 import AppLayout from '../AppLayout/AppLayout'
+import { SendEmailModal, ConnectGmailModal } from '../EmailModal/EmailModal'
 import { getLead } from '../../../services/leads.service'
 import api from '../../../services/api'
 
@@ -513,97 +514,3 @@ function AddNoteModal({ leadId, onClose, onSaved }: { leadId: string; onClose: (
   )
 }
 
-// ── Send Email Modal ──
-
-interface EmailTemplate { id: string; name: string; subject: string; body: string }
-
-function SendEmailModal({ lead, onClose, onSaved }: { lead: any; onClose: () => void; onSaved: () => void }) {
-  const [to, setTo] = useState(lead.email ?? '')
-  const [subject, setSubject] = useState('')
-  const [body, setBody] = useState('')
-  const [templates, setTemplates] = useState<EmailTemplate[]>([])
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
-
-  useEffect(() => {
-    api.get('/templates/email').then(r => setTemplates(r.data?.data ?? [])).catch(() => {})
-  }, [])
-
-  function applyTemplate(id: string) {
-    const t = templates.find(x => x.id === id)
-    if (!t) return
-    const replace = (s: string) => s
-      .replace(/\{\{\s*nome\s*\}\}/gi, lead.name ?? '')
-      .replace(/\{\{\s*empresa\s*\}\}/gi, lead.company ?? '')
-      .replace(/\{\{\s*name\s*\}\}/gi, lead.name ?? '')
-      .replace(/\{\{\s*company\s*\}\}/gi, lead.company ?? '')
-    setSubject(replace(t.subject))
-    setBody(replace(t.body))
-  }
-
-  const canSave = !!to && !!subject && !!body && !saving
-
-  async function handleSend() {
-    if (!canSave) return
-    setSaving(true)
-    setError('')
-    try {
-      await api.post('/email/send', { leadId: lead.id, to, subject, body })
-      onSaved()
-    } catch (e: any) {
-      setSaving(false)
-      setError(e?.response?.data?.error?.message ?? 'Erro ao enviar')
-    }
-  }
-
-  return (
-    <ModalShell title="Enviar e-mail" onClose={onClose} footer={
-      <>
-        <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
-        <button onClick={handleSend} disabled={!canSave} style={{ background: canSave ? '#3b82f6' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: '#fff', cursor: canSave ? 'pointer' : 'not-allowed' }}>{saving ? 'Enviando...' : 'Enviar'}</button>
-      </>
-    }>
-      {templates.length > 0 && (
-        <div style={{ marginBottom: 14 }}>
-          <label style={labelS}>Template</label>
-          <select onChange={e => applyTemplate(e.target.value)} defaultValue="" style={{ ...inputS, cursor: 'pointer' }}>
-            <option value="">Nenhum</option>
-            {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-          </select>
-        </div>
-      )}
-      <div style={{ marginBottom: 14 }}>
-        <label style={labelS}>Para</label>
-        <input value={to} onChange={e => setTo(e.target.value)} style={inputS} />
-      </div>
-      <div style={{ marginBottom: 14 }}>
-        <label style={labelS}>Assunto</label>
-        <input value={subject} onChange={e => setSubject(e.target.value)} style={inputS} />
-      </div>
-      <div>
-        <label style={labelS}>Corpo</label>
-        <textarea value={body} onChange={e => setBody(e.target.value)} rows={8} style={{ ...inputS, resize: 'vertical' }} />
-      </div>
-      {error && <div style={{ marginTop: 10, padding: 10, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, color: '#ef4444', fontSize: 12 }}>{error}</div>}
-    </ModalShell>
-  )
-}
-
-// ── Connect Gmail Prompt ──
-
-function ConnectGmailModal({ onClose, onNavigate }: { onClose: () => void; onNavigate: () => void }) {
-  return (
-    <ModalShell title="Gmail não conectado" onClose={onClose} footer={
-      <>
-        <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Fechar</button>
-        <button onClick={onNavigate} style={{ background: '#3b82f6', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer' }}>Ir para Integrações</button>
-      </>
-    }>
-      <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-        Para enviar e-mails pelo TriboCRM, conecte sua conta Gmail em{' '}
-        <strong style={{ color: 'var(--text-primary)' }}>Configurações → Integrações</strong>.
-        Assim os e-mails são enviados do seu próprio endereço e as aberturas são rastreadas.
-      </div>
-    </ModalShell>
-  )
-}
