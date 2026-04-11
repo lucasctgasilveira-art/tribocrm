@@ -218,13 +218,14 @@ function periodToStatusParam(period: PeriodFilter): string | undefined {
 
 interface TasksViewProps {
   menuItems: SidebarEntry[]
+  managerialOnly?: boolean
 }
 
-export default function TasksView({ menuItems }: TasksViewProps) {
+export default function TasksView({ menuItems, managerialOnly = false }: TasksViewProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const instancePrefix = location.pathname.startsWith('/vendas') ? '/vendas' : location.pathname.startsWith('/admin') ? '/admin' : '/gestao'
-  const [category, setCategory] = useState<TaskCategory>('leads')
+  const [category, setCategory] = useState<TaskCategory>(managerialOnly ? 'gerenciais' : 'leads')
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('today')
   const [typeFilter, setTypeFilter] = useState<TaskType | null>(null)
   const [loading, setLoading] = useState(true)
@@ -470,6 +471,7 @@ export default function TasksView({ menuItems }: TasksViewProps) {
           </div>
 
           {/* Category toggle */}
+          {!managerialOnly && (
           <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
             {([
               { key: 'leads' as const, label: 'Tarefas de leads' },
@@ -493,6 +495,7 @@ export default function TasksView({ menuItems }: TasksViewProps) {
               )
             })}
           </div>
+          )}
 
           {/* Loading */}
           {loading ? (
@@ -626,7 +629,7 @@ export default function TasksView({ menuItems }: TasksViewProps) {
           onViewLead={handleViewLead}
         />
       )}
-      {newTaskModal && <NewManagerialTaskModal users={availableUsers} onClose={() => setNewTaskModal(false)} onSave={handleCreateTask} />}
+      {newTaskModal && <NewManagerialTaskModal users={availableUsers} onClose={() => setNewTaskModal(false)} onSave={handleCreateTask} managerialOnly={managerialOnly} />}
     </AppLayout>
   )
 }
@@ -754,10 +757,11 @@ function SummaryCard({ label, value, color }: { label: string; value: string; co
 
 // ── New Task Modal ──
 
-function NewManagerialTaskModal({ users, onClose, onSave }: {
+function NewManagerialTaskModal({ users, onClose, onSave, managerialOnly = false }: {
   users: { id: string; name: string }[]
   onClose: () => void
   onSave: (p: { title: string; typeId: string; description?: string; dueDate?: string; participantIds?: string[]; responsibleId?: string; dueTime?: string; reminderMinutes?: number; taskMode?: string; leadId?: string }) => Promise<void> | void
+  managerialOnly?: boolean
 }) {
   const stored = JSON.parse(localStorage.getItem('user') ?? '{}') as { id?: string; role?: string }
   const userRole = stored.role ?? 'SELLER'
@@ -899,10 +903,12 @@ function NewManagerialTaskModal({ users, onClose, onSave }: {
         </div>
         <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
           {/* Task mode toggle */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-            {modeBtn('lead', 'Tarefa de Lead')}
-            {modeBtn('gerencial', 'Tarefa Gerencial')}
-          </div>
+          {!managerialOnly && (
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+              {modeBtn('lead', 'Tarefa de Lead')}
+              {modeBtn('gerencial', 'Tarefa Gerencial')}
+            </div>
+          )}
 
           {taskMode === 'lead' && (
             <div style={{ marginBottom: 16 }}>

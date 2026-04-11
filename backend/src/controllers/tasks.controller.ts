@@ -1,6 +1,7 @@
 import { Request, Response } from 'express'
 import { prisma } from '../lib/prisma'
 import { Prisma } from '@prisma/client'
+import { resolveTenantId } from '../lib/platformTenant'
 
 // ── Lead Tasks ──
 
@@ -249,7 +250,7 @@ export async function deleteTask(req: Request, res: Response): Promise<void> {
 
 export async function getManagerialTasks(req: Request, res: Response): Promise<void> {
   try {
-    const tenantId = req.user!.tenantId
+    const tenantId = await resolveTenantId(req.user!.tenantId)
 
     const { page = '1', perPage = '20' } = req.query as Record<string, string | undefined>
     const pageNum = Math.max(1, parseInt(page ?? '1'))
@@ -297,7 +298,7 @@ export async function getManagerialTasks(req: Request, res: Response): Promise<v
 
 export async function createManagerialTask(req: Request, res: Response): Promise<void> {
   try {
-    const tenantId = req.user!.tenantId
+    const tenantId = await resolveTenantId(req.user!.tenantId)
     const userId = req.user!.userId
 
     const { title, typeId, description, dueDate, participantIds } = req.body
@@ -362,7 +363,7 @@ export async function createManagerialTask(req: Request, res: Response): Promise
 export async function completeManagerialTask(req: Request, res: Response): Promise<void> {
   try {
     const id = req.params.id as string
-    const tenantId = req.user!.tenantId
+    const tenantId = await resolveTenantId(req.user!.tenantId)
 
     const existing = await prisma.managerialTask.findFirst({ where: { id, tenantId } })
 

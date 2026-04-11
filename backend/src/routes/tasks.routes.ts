@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express'
 import { authMiddleware } from '../middleware/auth.middleware'
 import { prisma } from '../lib/prisma'
+import { resolveTenantId } from '../lib/platformTenant'
 import {
   getTasks,
   createTask,
@@ -20,7 +21,7 @@ router.use(authMiddleware)
 
 router.get('/managerial-types', async (req: Request, res: Response) => {
   try {
-    const tenantId = req.user!.tenantId
+    const tenantId = await resolveTenantId(req.user!.tenantId)
     const role = req.query.role as string | undefined
     const types = await prisma.managerialTaskType.findMany({
       where: { tenantId, isActive: true },
@@ -37,7 +38,7 @@ router.get('/managerial-types', async (req: Request, res: Response) => {
 router.post('/managerial-types', async (req: Request, res: Response) => {
   try {
     console.log('[MANAGERIAL_TYPE_CREATE] body:', JSON.stringify(req.body), 'user:', JSON.stringify(req.user))
-    const tenantId = req.user!.tenantId
+    const tenantId = await resolveTenantId(req.user!.tenantId)
     const { name, visibleFor } = req.body
     if (!name) { res.status(400).json({ success: false, error: { code: 'VALIDATION', message: 'name é obrigatório' } }); return }
     const maxOrder = await prisma.managerialTaskType.aggregate({ where: { tenantId }, _max: { sortOrder: true } })
