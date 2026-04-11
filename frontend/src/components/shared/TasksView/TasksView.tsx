@@ -369,12 +369,16 @@ export default function TasksView({ menuItems, managerialOnly = false }: TasksVi
 
   // TaskDrawer posts the "Registrar resultado" interaction itself (fresh
   // task.leadId prop, fresh local notes state) before calling this handler.
-  // Our job here is just to toggle the task as done and close the drawer.
-  // The notes parameter is accepted for API symmetry but no longer used
-  // on the parent side.
-  async function handleDrawerComplete(id: string, _notes?: string) {
-    console.log('[TasksView.handleDrawerComplete] id=%s notesLen=%d', id, (_notes ?? '').length)
+  // Our job here is to toggle the task as done, surface a toast that
+  // acknowledges whether an interaction was also registered, and close
+  // the drawer.
+  async function handleDrawerComplete(id: string, notes?: string) {
+    console.log('[TasksView.handleDrawerComplete] id=%s notesLen=%d', id, (notes ?? '').length)
     await handleToggleDone(id)
+    if (notes && notes.trim()) {
+      setToast('✅ Tarefa concluída e interação registrada no lead')
+      setTimeout(() => setToast(''), 3000)
+    }
     setSelectedTask(null)
   }
 
