@@ -28,6 +28,12 @@ export interface TaskDrawerData {
   stageBadge: string; stageColor: string
   time: string; dueDate?: string | null; overdue: boolean; done: boolean
   calendarBadge?: boolean; doneDate?: string; detail?: string
+  // Real responsible / creator names for the Detalhes block. Optional
+  // so adapters (e.g. the managerial branch in TasksView) that don't
+  // have this info can simply omit them — the drawer falls back to
+  // `você` when responsibleName is missing.
+  responsibleName?: string
+  createdByName?: string | null
 }
 
 interface Props {
@@ -226,8 +232,13 @@ function CommonContent({ task, onClose, onComplete, onReschedule, onViewLead }: 
           {task.leadInitials && (
             <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'rgba(249,115,22,0.2)', color: '#f97316', fontSize: 8, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{task.leadInitials.slice(0, 2)}</div>
           )}
-          <span style={{ color: 'var(--text-secondary)' }}>Responsável: você</span>
+          <span style={{ color: 'var(--text-secondary)' }}>Responsável: {task.responsibleName ?? 'você'}</span>
         </div>
+        {task.createdByName && task.createdByName !== task.responsibleName && (
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4, marginLeft: task.leadInitials ? 28 : 0 }}>
+            Agendada por: {task.createdByName}
+          </div>
+        )}
       </div>
 
       {/* Description — rendered only when the task has one saved */}

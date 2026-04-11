@@ -108,6 +108,10 @@ interface ApiTask {
   createdAt: string
   lead: { id: string; name: string; company: string | null }
   responsible: { id: string; name: string }
+  // Real creator relation added to the backend Task schema via the
+  // new `createdByUser` relation. Null for very old rows or when the
+  // include is somehow skipped upstream — both treated as "unknown".
+  createdByUser?: { id: string; name: string } | null
 }
 
 interface ApiManagerialTask {
@@ -143,6 +147,11 @@ interface DisplayTask {
   doneDate?: string
   detail?: string
   group: 'today' | 'tomorrow' | 'done'
+  // Plumbed through from ApiTask → TaskCard → TaskDrawer. When the
+  // creator is the same person as the responsible, the drawer
+  // collapses them into a single "Responsável" line; see TaskDrawer.
+  responsibleName?: string
+  createdByName?: string | null
 }
 
 interface DisplayManagerialTask {
@@ -279,6 +288,8 @@ function mapApiTask(t: ApiTask): DisplayTask {
     done: t.isDone,
     doneDate: t.doneAt ? new Date(t.doneAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : undefined,
     group: getTaskGroup(t.dueDate, t.isDone),
+    responsibleName: t.responsible?.name,
+    createdByName: t.createdByUser?.name ?? null,
   }
 }
 
@@ -1051,6 +1062,27 @@ function TaskCard({ task, hovered, selected, onHover, toggleDone, onSelect }: {
             <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{task.time}</span>
           ) : null}
         </div>
+        {task.responsibleName && (
+          <div
+            title={task.createdByName && task.createdByName !== task.responsibleName ? `Criada por ${task.createdByName}` : undefined}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}
+          >
+            <div style={{
+              width: 18, height: 18, borderRadius: '50%',
+              background: 'rgba(168,85,247,0.18)', color: '#a855f7',
+              fontSize: 8, fontWeight: 700,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>
+              {getInitials(task.responsibleName)}
+            </div>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+              {task.responsibleName}
+              {task.createdByName && task.createdByName !== task.responsibleName && (
+                <span style={{ color: 'var(--text-muted)' }}> · criada por {task.createdByName}</span>
+              )}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Details button */}

@@ -363,7 +363,15 @@ function HistoryTab({ leadId, reloadKey, onAdd }: { leadId: string; reloadKey: n
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{item.type}{item.isAuto ? ' (auto)' : ''}</div>
               {item.content && <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{item.content}</div>}
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{formatDate(item.createdAt)}{item.user ? ` · ${item.user.name}` : ''}</div>
+              {/* Author attribution line. `isAuto` interactions come from
+                  the automation engine and never have a meaningful human
+                  author — we render "• Sistema" for them instead of the
+                  lead's responsible user that the backend stamps into
+                  `userId` just to satisfy the FK. */}
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                {item.isAuto ? '• Sistema' : (item.user ? `por ${item.user.name}` : '')}
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{formatDate(item.createdAt)}</div>
             </div>
           </div>
         )
