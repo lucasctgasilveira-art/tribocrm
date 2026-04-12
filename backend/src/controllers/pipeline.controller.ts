@@ -1,4 +1,5 @@
 import { Request, Response } from 'express'
+import { Prisma } from '@prisma/client'
 import { prisma } from '../lib/prisma'
 
 export async function getPipelines(req: Request, res: Response): Promise<void> {
@@ -21,6 +22,12 @@ export async function getPipelines(req: Request, res: Response): Promise<void> {
 export async function getKanban(req: Request, res: Response): Promise<void> {
   try {
     const id = req.params.id as string
+    // Monthly wonCardsArchiver job flips closed leads WON→ARCHIVED at
+    // the start of each month. By default the kanban still hides them
+    // (current behaviour preserved). Clients that want to see archived
+    // rows in the "Venda Realizada" column pass ?includeArchived=true —
+    // used by the PipelinePage "Mostrar arquivados" checkbox.
+    const includeArchived = req.query.includeArchived === 'true'
 
     const pipeline = await prisma.pipeline.findFirst({
       where: { id, tenantId: req.user!.tenantId, isActive: true },
@@ -37,8 +44,13 @@ export async function getKanban(req: Request, res: Response): Promise<void> {
 
     const stagesWithLeads = await Promise.all(
       pipeline.stages.map(async (stage: typeof pipeline.stages[number]) => {
-        // WON/LOST stages show their respective status; NORMAL stages show ACTIVE
-        const statusFilter = stage.type === 'WON' ? 'WON' : stage.type === 'LOST' ? 'LOST' : 'ACTIVE'
+        // WON/LOST stages show their respective status; NORMAL stages show ACTIVE.
+        // When includeArchived is set AND this is the WON stage, the filter
+        // widens to include ARCHIVED so historical sales resurface without
+        // disturbing any other column.
+        const statusFilter: Prisma.LeadWhereInput['status'] = stage.type === 'WON'
+          ? (includeArchived ? { in: ['WON', 'ARCHIVED'] } : 'WON')
+          : stage.type === 'LOST' ? 'LOST' : 'ACTIVE'
         const leads = await prisma.lead.findMany({
           where: { stageId: stage.id, tenantId: req.user!.tenantId, status: statusFilter, deletedAt: null },
           orderBy: { updatedAt: 'desc' },

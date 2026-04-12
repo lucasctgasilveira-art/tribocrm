@@ -5,17 +5,20 @@ import { runInactiveLeadsJob } from './inactive-leads.job'
 import { runGoalCheckJob } from './goal-check.job'
 import { runAutomationJob } from './automation.job'
 import { runExpiryAlertJob } from './expiry-alert.job'
+import { runWonCardsArchiverJob } from './wonCardsArchiver.job'
 
 /**
  * Initializes all scheduled jobs.
  * Cron expressions use the America/Sao_Paulo timezone.
  *
  * Schedule:
- *   - Birthday          : 08:00 daily
- *   - Overdue charges   : 09:00 daily
- *   - Goal check        : 10:00 daily
- *   - Inactive leads    : every 2 hours
- *   - Automation engine : every 5 minutes
+ *   - Birthday             : 08:00 daily
+ *   - Overdue charges      : 09:00 daily
+ *   - Goal check           : 10:00 daily
+ *   - Inactive leads       : every 2 hours
+ *   - Automation engine    : every 5 minutes
+ *   - Expiry alert         : 11:00 daily
+ *   - WON cards archiver   : 00:00 on day 1 of every month
  */
 export function initJobs(): void {
   const tz = { timezone: 'America/Sao_Paulo' }
@@ -37,6 +40,9 @@ export function initJobs(): void {
 
   cron.schedule('*/5 * * * *', () => { runAutomationJob().catch(e => console.error('[Job:automation] uncaught:', e)) }, tz)
   console.log('[Jobs] automation job scheduled — every 5 minutes')
+
+  cron.schedule('0 0 1 * *', () => { runWonCardsArchiverJob().catch(e => console.error('[Job:wonCardsArchiver] uncaught:', e)) }, tz)
+  console.log('[Jobs] wonCardsArchiver job scheduled — 00:00 day 1 of every month')
 
   console.log('[Jobs] all scheduled jobs initialized')
 }

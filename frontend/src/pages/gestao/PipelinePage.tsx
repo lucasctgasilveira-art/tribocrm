@@ -168,6 +168,11 @@ export default function PipelinePage() {
   // page level so the modal lives outside the individual card loop.
   const [emailLead, setEmailLead] = useState<Lead | null>(null)
   const [emailNeedsConnect, setEmailNeedsConnect] = useState(false)
+  // Toggle surfaced by the "Mostrar arquivados" checkbox. Drives the
+  // `includeArchived` query param on getKanban and re-fetches the
+  // board whenever it flips, so archived leads (from the monthly
+  // wonCardsArchiver cron) reappear in the Venda Realizada column.
+  const [showArchived, setShowArchived] = useState(false)
 
   async function openEmailForLead(lead: Lead) {
     if (!lead.email || lead.email === '—') return
@@ -198,7 +203,7 @@ export default function PipelinePage() {
         if (pipelinesData.length > 0) {
           const pid = selectedPipelineId ?? pipelinesData[0].id
           setSelectedPipelineId(pid)
-          const kanban: KanbanData = await getKanban(pid)
+          const kanban: KanbanData = await getKanban(pid, { includeArchived: showArchived })
           setStages(kanban.stages.map((s: KanbanStage) => ({ id: s.id, name: s.name, color: s.color, position: s.position, type: s.type ?? 'NORMAL' })))
           const allLeads: Lead[] = []
           kanban.stages.forEach((s: KanbanStage) => {
@@ -213,14 +218,14 @@ export default function PipelinePage() {
       }
     }
     load()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [showArchived]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Switch pipeline
   async function handlePipelineChange(pipelineId: string) {
     try {
       setLoading(true)
       setSelectedPipelineId(pipelineId)
-      const kanban: KanbanData = await getKanban(pipelineId)
+      const kanban: KanbanData = await getKanban(pipelineId, { includeArchived: showArchived })
       setStages(kanban.stages.map((s: KanbanStage) => ({ id: s.id, name: s.name, color: s.color, position: s.position, type: s.type ?? 'NORMAL' })))
       const allLeads: Lead[] = []
       kanban.stages.forEach((s: KanbanStage) => {
@@ -446,6 +451,18 @@ export default function PipelinePage() {
           })}
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <label
+            title="Inclui cards arquivados pelo job mensal na coluna Venda Realizada"
+            style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer', userSelect: 'none' }}
+          >
+            <input
+              type="checkbox"
+              checked={showArchived}
+              onChange={(e) => setShowArchived(e.target.checked)}
+              style={{ width: 14, height: 14, accentColor: '#f97316', cursor: 'pointer' }}
+            />
+            Mostrar arquivados
+          </label>
           <div style={{ position: 'relative' }}>
             <Search size={15} color="var(--text-muted)" strokeWidth={1.5} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }} />
             <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar lead ou empresa..."

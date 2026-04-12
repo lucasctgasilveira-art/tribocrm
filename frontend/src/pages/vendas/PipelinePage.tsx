@@ -99,6 +99,10 @@ export default function VendasPipelinePage() {
   // page level so the modal lives outside the individual card loop.
   const [emailLead, setEmailLead] = useState<Lead | null>(null)
   const [emailNeedsConnect, setEmailNeedsConnect] = useState(false)
+  // Drives the "Mostrar arquivados" checkbox. When true, getKanban
+  // passes ?includeArchived=true so leads ARCHIVED by the monthly
+  // cron job reappear in the Venda Realizada column.
+  const [showArchived, setShowArchived] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -125,7 +129,7 @@ export default function VendasPipelinePage() {
         if (pipelinesData.length > 0) {
           const pid = pipelineId || pipelinesData[0].id
           setPipelineId(pid)
-          const kanban = await getKanban(pid)
+          const kanban = await getKanban(pid, { includeArchived: showArchived })
           setStages(kanban.stages.map((s: KanbanStage) => ({ id: s.id, name: s.name, color: s.color, type: s.type ?? 'NORMAL' })))
           const allLeads: Lead[] = []
           kanban.stages.forEach((s: KanbanStage) => {
@@ -137,7 +141,7 @@ export default function VendasPipelinePage() {
       finally { setLoading(false) }
     }
     load()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [showArchived]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const filtered = leads.filter(l => {
     if (!search) return true
@@ -271,11 +275,25 @@ export default function VendasPipelinePage() {
         </button>
       </div>
 
-      {/* Search */}
-      <div style={{ marginBottom: 12, position: 'relative', maxWidth: 240, flexShrink: 0 }}>
-        <Search size={15} color="var(--text-muted)" strokeWidth={1.5} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }} />
-        <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar lead..."
-          style={{ width: '100%', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 12px 6px 32px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }} />
+      {/* Search + archived toggle */}
+      <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 16, flexShrink: 0 }}>
+        <div style={{ position: 'relative', maxWidth: 240, flex: '0 1 240px' }}>
+          <Search size={15} color="var(--text-muted)" strokeWidth={1.5} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }} />
+          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar lead..."
+            style={{ width: '100%', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 12px 6px 32px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }} />
+        </div>
+        <label
+          title="Inclui cards arquivados pelo job mensal na coluna Venda Realizada"
+          style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer', userSelect: 'none' }}
+        >
+          <input
+            type="checkbox"
+            checked={showArchived}
+            onChange={(e) => setShowArchived(e.target.checked)}
+            style={{ width: 14, height: 14, accentColor: '#f97316', cursor: 'pointer' }}
+          />
+          Mostrar arquivados
+        </label>
       </div>
 
       {/* Board */}

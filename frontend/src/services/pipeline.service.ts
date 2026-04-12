@@ -14,8 +14,14 @@ export async function getPipelines() {
   return response.data.data
 }
 
-export async function getKanban(pipelineId: string) {
-  const response = await api.get(`/pipelines/${pipelineId}/kanban`)
+export async function getKanban(pipelineId: string, opts?: { includeArchived?: boolean }) {
+  // `includeArchived` widens the WON-stage filter server-side so
+  // historical sales flipped to ARCHIVED by the monthly cron job
+  // reappear in the kanban. Defaults to false to preserve the
+  // existing behaviour when callers don't pass anything.
+  const response = await api.get(`/pipelines/${pipelineId}/kanban`, {
+    params: opts?.includeArchived ? { includeArchived: 'true' } : undefined,
+  })
   return response.data.data
 }
 
