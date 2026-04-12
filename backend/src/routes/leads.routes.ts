@@ -84,4 +84,50 @@ router.post('/:id/interactions', async (req, res) => {
   }
 })
 
+// ── Purchase history ──
+//
+// Returns every LeadPurchase row for this lead, ordered oldest-first,
+// plus two aggregate helpers the drawer renders in its header:
+//   total         → sum of all closedValue
+//   clienteSince  → wonAt of the earliest purchase (null if none)
+// Hidden by the caller when the purchases list is empty.
+router.get('/:id/purchases', async (req, res) => {
+  try {
+    const { prisma } = await import('../lib/prisma')
+    const leadId = req.params.id as string
+    const tenantId = req.user!.tenantId
+    const purchases = await prisma.leadPurchase.findMany({
+      where: { leadId, tenantId },
+      orderBy: { wonAt: 'asc' },
+      select: {
+        id: true,
+        closedValue: true,
+        wonAt: true,
+        productName: true,
+        closedBy: true,
+      },
+    })
+
+    const total = purchases.reduce((sum, p) => sum + Number(p.closedValue), 0)
+    const clienteSince = purchases.length > 0 ? purchases[0]!.wonAt : null
+
+    res.json({
+      success: true,
+      data: {
+        purchases: purchases.map(p => ({
+          id: p.id,
+          closedValue: Number(p.closedValue),
+          wonAt: p.wonAt,
+          productName: p.productName,
+          closedBy: p.closedBy,
+        })),
+        total,
+        clienteSince,
+      },
+    })
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } })
+  }
+})
+
 export default router

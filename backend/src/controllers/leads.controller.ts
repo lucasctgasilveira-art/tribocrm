@@ -483,6 +483,34 @@ export async function updateLead(req: Request, res: Response): Promise<void> {
       }
     }
 
+    // Append a persistent LeadPurchase row whenever this update is
+    // flipping the lead to WON with a concrete closedValue + wonAt.
+    // The existing lead row still carries the latest sale inline;
+    // this gives the drawer a full history to iterate over without
+    // losing older sales when a lead is re-won.
+    if (status === 'WON' && closedValue != null && wonAt) {
+      try {
+        const parsedValue = new Prisma.Decimal(String(closedValue))
+        const parsedWonAt = new Date(wonAt)
+        if (!Number.isNaN(parsedWonAt.getTime())) {
+          await prisma.leadPurchase.create({
+            data: {
+              tenantId,
+              leadId: id,
+              closedValue: parsedValue,
+              wonAt: parsedWonAt,
+              productName: null,
+              closedBy: req.user!.userId,
+            },
+          })
+        }
+      } catch (purchaseErr) {
+        // Non-fatal — the lead update already succeeded, and the
+        // history row is a nice-to-have for the drawer. Log and move on.
+        console.error('[Leads] leadPurchase create failed:', purchaseErr)
+      }
+    }
+
     res.json({ success: true, data: lead })
   } catch (error) {
     console.error('[Leads] updateLead error:', error)

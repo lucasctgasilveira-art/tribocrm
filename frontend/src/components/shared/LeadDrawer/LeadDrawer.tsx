@@ -83,6 +83,24 @@ function formatDate(iso: string): string {
   return d.toLocaleDateString('pt-BR') + ' · ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 }
 
+// Purchase history dates display as "Jan/26" per spec. Built inline
+// with a small PT-BR month table so we don't have to pull a locale
+// object in just for one format call.
+const PT_MONTHS_SHORT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+function formatMonthYear(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return `${PT_MONTHS_SHORT[d.getMonth()]}/${String(d.getFullYear()).slice(-2)}`
+}
+
+interface LeadPurchaseRow {
+  id: string
+  closedValue: number
+  wonAt: string
+  productName: string | null
+  closedBy: string | null
+}
+
 type Tab = 'history' | 'tasks' | 'info'
 
 const CSS = `
@@ -113,6 +131,12 @@ export default function LeadDrawer({ lead, onClose, stageColor, instance = 'gest
   // Responsável dropdown when the current user is not a SELLER).
   // Fetched once per drawer mount, mirroring TasksView's branching.
   const [availableUsers, setAvailableUsers] = useState<{ id: string; name: string }[]>([])
+  // Purchase history, populated via GET /leads/:id/purchases. The
+  // section renders only when purchases.length > 0 — leads with no
+  // recorded sale are indistinguishable from the previous behaviour.
+  const [purchases, setPurchases] = useState<LeadPurchaseRow[]>([])
+  const [purchasesTotal, setPurchasesTotal] = useState<number>(0)
+  const [clienteSince, setClienteSince] = useState<string | null>(null)
   const temp = tempConfig[lead.temperature] ?? tempConfig.COLD!
 
   useEffect(() => {
@@ -127,6 +151,29 @@ export default function LeadDrawer({ lead, onClose, stageColor, instance = 'gest
     setCurrentValue(lead.value)
     setValueDraft(String(lead.value ?? 0))
   }, [lead.id, lead.value])
+
+  // Fetch purchase history whenever the drawer opens for a lead.
+  // Failure is silently ignored — the section just stays hidden,
+  // which matches the pre-existing drawer behaviour for leads
+  // that never had a sale registered.
+  useEffect(() => {
+    let cancelled = false
+    api.get(`/leads/${lead.id}/purchases`)
+      .then(r => {
+        if (cancelled) return
+        const data = r.data?.data ?? {}
+        setPurchases((data.purchases ?? []) as LeadPurchaseRow[])
+        setPurchasesTotal(Number(data.total ?? 0))
+        setClienteSince(data.clienteSince ?? null)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setPurchases([])
+        setPurchasesTotal(0)
+        setClienteSince(null)
+      })
+    return () => { cancelled = true }
+  }, [lead.id])
 
   async function handleSaveValue() {
     const parsed = Number(valueDraft.replace(',', '.'))
@@ -274,6 +321,28 @@ export default function LeadDrawer({ lead, onClose, stageColor, instance = 'gest
           <DrawerActionBtn icon={<Phone size={18} strokeWidth={1.5} />} label="Ligar" color="#f97316" border="rgba(249,115,22,0.3)" onClick={handleCall} />
           <DrawerActionBtn icon={<Calendar size={18} strokeWidth={1.5} />} label="Agendar" color="#a855f7" border="rgba(168,85,247,0.3)" onClick={handleSchedule} />
         </div>
+
+        {/* Histórico de compras — renders only when the lead has at
+            least one LeadPurchase row. Hidden entirely otherwise so
+            leads without a recorded sale look exactly as before. */}
+        {purchases.length > 0 && (
+          <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+            <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, padding: 14 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>Histórico de compras</div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 10 }}>
+                Total: <span style={{ color: '#22c55e', fontWeight: 600 }}>{formatCurrency(purchasesTotal)}</span>
+                {clienteSince && <> · cliente desde {formatMonthYear(clienteSince)}</>}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {purchases.map(p => (
+                  <div key={p.id} style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                    • {formatMonthYear(p.wonAt)} — {p.productName ?? 'Venda'} — <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{formatCurrency(p.closedValue)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Tabs */}
         <div style={{ display: 'flex', padding: '0 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
