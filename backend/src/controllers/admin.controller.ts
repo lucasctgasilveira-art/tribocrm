@@ -272,7 +272,17 @@ export async function getFinancial(req: Request, res: Response): Promise<void> {
       where.tenantId = tenantId
     } else {
       let dateFrom: Date
-      if (period === 'year') {
+      if (period === 'today') {
+        dateFrom = new Date()
+        dateFrom.setHours(0, 0, 0, 0)
+      } else if (period === 'week') {
+        // Match reports.controller's getDateRange: current week
+        // starting on Sunday (dayOfWeek === 0).
+        const dow = now.getDay()
+        dateFrom = new Date(now)
+        dateFrom.setDate(now.getDate() - dow)
+        dateFrom.setHours(0, 0, 0, 0)
+      } else if (period === 'year') {
         dateFrom = new Date(now.getFullYear(), 0, 1)
       } else if (period === 'quarter') {
         const q = Math.floor(now.getMonth() / 3) * 3
