@@ -50,7 +50,14 @@ export default function LoginPage() {
       if (data.success) {
         localStorage.setItem('accessToken', data.data.accessToken)
         localStorage.setItem('user', JSON.stringify(data.data.user))
-        navigate(redirectByRole(data.data.user.role))
+        // Dual-access super admins land on the "Como deseja entrar?"
+        // selector first. Everyone else falls through to their
+        // role-based default route.
+        if (data.data.user.role === 'SUPER_ADMIN' && data.data.user.isDualAccess === true) {
+          navigate('/admin/select-access')
+        } else {
+          navigate(redirectByRole(data.data.user.role))
+        }
       }
     } catch (err: unknown) {
       if (

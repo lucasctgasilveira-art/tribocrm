@@ -6,7 +6,19 @@ import api from '../../services/api'
 
 interface Member {
   id: string; name: string; email: string; role: string; isActive: boolean
+  isDualAccess?: boolean
   lastLoginAt: string | null; createdAt: string
+}
+
+// Read once at module scope so the CreateMemberModal + EditMemberModal
+// inline components can decide whether to render the dual-access
+// toggle at all. Only callers who themselves have isDualAccess=true
+// may grant/revoke it.
+function callerHasDualAccess(): boolean {
+  try {
+    const u = JSON.parse(localStorage.getItem('user') ?? '{}') as { isDualAccess?: boolean; role?: string }
+    return u.role === 'SUPER_ADMIN' && u.isDualAccess === true
+  } catch { return false }
 }
 
 const ROLES = [
@@ -127,6 +139,7 @@ export default function InternalTeamPage() {
         <CreateMemberModal
           onClose={() => setModal(null)}
           onCreated={m => { setMembers(prev => [m, ...prev]); setModal(null); showToast('Membro criado com sucesso!') }}
+          onDualAccessGranted={() => showToast('Acesso duplo concedido')}
         />
       )}
       {modal === 'edit' && editMember && (
@@ -134,6 +147,7 @@ export default function InternalTeamPage() {
           member={editMember}
           onClose={() => setModal(null)}
           onSaved={m => { setMembers(prev => prev.map(x => x.id === m.id ? m : x)); setModal(null); showToast('Membro atualizado!') }}
+          onDualAccessChanged={(granted) => showToast(granted ? 'Acesso duplo concedido' : 'Acesso duplo revogado')}
         />
       )}
       {modal === 'password' && editMember && (
@@ -148,21 +162,51 @@ export default function InternalTeamPage() {
 }
 
 /* ── Create Modal ── */
-function CreateMemberModal({ onClose, onCreated }: { onClose: () => void; onCreated: (m: Member) => void }) {
+function CreateMemberModal({ onClose, onCreated, onDualAccessGranted }: { onClose: () => void; onCreated: (m: Member) => void; onDualAccessGranted: () => void }) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [role, setRole] = useState('SUPPORT')
   const [password, setPassword] = useState('')
+  const [dualAccess, setDualAccess] = useState(false)
+  const [ownerPassword, setOwnerPassword] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const canSave = name.trim() && email.trim() && password.trim()
+  const canGrant = callerHasDualAccess()
+  const canSave = !!(name.trim() && email.trim() && password.trim() && (!dualAccess || ownerPassword.trim()))
 
   async function handleSave() {
     if (!canSave) return
     setSaving(true); setError('')
     try {
       const { data } = await api.post('/admin/team', { name, email, role, password })
-      if (data.success) onCreated(data.data)
+      if (!data.success) return
+      const created: Member = data.data
+
+      // If the grantor asked for dual access, chain the second call.
+      // If the dual-access endpoint fails (bad password etc) the member
+      // still exists — we surface the error and let them retry via the
+      // edit flow.
+      if (dualAccess) {
+        try {
+          const { data: grantData } = await api.patch(`/admin/users/${created.id}/dual-access`, {
+            isDualAccess: true,
+            ownerPassword,
+          })
+          if (grantData.success) {
+            onCreated(grantData.data as Member)
+            onDualAccessGranted()
+            return
+          }
+        } catch (e: any) {
+          const msg = e.response?.data?.error?.message ?? 'Erro ao conceder acesso duplo'
+          setError(msg)
+          onCreated(created)
+          setSaving(false)
+          return
+        }
+      }
+
+      onCreated(created)
     } catch (e: any) {
       setError(e.response?.data?.error?.message ?? 'Erro ao criar membro')
       setSaving(false)
@@ -179,29 +223,61 @@ function CreateMemberModal({ onClose, onCreated }: { onClose: () => void; onCrea
             {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
           </select>
         </Field>
-        <Field label="Senha temporária" last><input value={password} onChange={e => setPassword(e.target.value)} placeholder="Senha inicial" type="password" style={inputS} /></Field>
+        <Field label="Senha temporária" last={!canGrant}><input value={password} onChange={e => setPassword(e.target.value)} placeholder="Senha inicial" type="password" style={inputS} /></Field>
+        {canGrant && (
+          <DualAccessToggle
+            value={dualAccess}
+            onChange={setDualAccess}
+            ownerPassword={ownerPassword}
+            onOwnerPasswordChange={setOwnerPassword}
+          />
+        )}
         {error && <div style={{ fontSize: 12, color: '#ef4444', marginTop: 12 }}>{error}</div>}
       </div>
-      <ModalFooter onClose={onClose} onSave={handleSave} disabled={!canSave || saving} label={saving ? 'Criando...' : 'Criar membro'} canSave={!!canSave} />
+      <ModalFooter onClose={onClose} onSave={handleSave} disabled={!canSave || saving} label={saving ? 'Criando...' : 'Criar membro'} canSave={canSave} />
     </ModalShell>
   )
 }
 
 /* ── Edit Modal ── */
-function EditMemberModal({ member, onClose, onSaved }: { member: Member; onClose: () => void; onSaved: (m: Member) => void }) {
+function EditMemberModal({ member, onClose, onSaved, onDualAccessChanged }: { member: Member; onClose: () => void; onSaved: (m: Member) => void; onDualAccessChanged: (granted: boolean) => void }) {
   const [name, setName] = useState(member.name)
   const [email, setEmail] = useState(member.email)
   const [role, setRole] = useState(member.role)
+  const [dualAccess, setDualAccess] = useState<boolean>(!!member.isDualAccess)
+  const [ownerPassword, setOwnerPassword] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const canSave = name.trim() && email.trim()
+  const canGrant = callerHasDualAccess()
+  const dualAccessChanged = dualAccess !== !!member.isDualAccess
+  const canSave = !!(name.trim() && email.trim() && (!dualAccessChanged || ownerPassword.trim()))
 
   async function handleSave() {
     if (!canSave) return
     setSaving(true); setError('')
     try {
       const { data } = await api.patch(`/admin/team/${member.id}`, { name, email, role })
-      if (data.success) onSaved(data.data)
+      if (!data.success) return
+      let updated: Member = data.data
+
+      if (dualAccessChanged) {
+        try {
+          const { data: grantData } = await api.patch(`/admin/users/${member.id}/dual-access`, {
+            isDualAccess: dualAccess,
+            ownerPassword,
+          })
+          if (grantData.success) {
+            updated = grantData.data as Member
+            onDualAccessChanged(dualAccess)
+          }
+        } catch (e: any) {
+          setError(e.response?.data?.error?.message ?? 'Erro ao alterar acesso duplo')
+          setSaving(false)
+          return
+        }
+      }
+
+      onSaved(updated)
     } catch (e: any) {
       setError(e.response?.data?.error?.message ?? 'Erro ao atualizar membro')
       setSaving(false)
@@ -213,14 +289,25 @@ function EditMemberModal({ member, onClose, onSaved }: { member: Member; onClose
       <div style={{ padding: 24 }}>
         <Field label="Nome completo"><input value={name} onChange={e => setName(e.target.value)} style={inputS} /></Field>
         <Field label="E-mail"><input value={email} onChange={e => setEmail(e.target.value)} style={inputS} /></Field>
-        <Field label="Cargo" last>
+        <Field label="Cargo" last={!canGrant}>
           <select value={role} onChange={e => setRole(e.target.value)} style={{ ...inputS, appearance: 'none' as const, cursor: 'pointer' }}>
             {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
           </select>
         </Field>
+        {canGrant && (
+          <DualAccessToggle
+            value={dualAccess}
+            onChange={setDualAccess}
+            ownerPassword={ownerPassword}
+            onOwnerPasswordChange={setOwnerPassword}
+            passwordPromptLabel={dualAccess
+              ? 'Confirme sua senha para conceder este acesso'
+              : 'Confirme sua senha para revogar este acesso'}
+          />
+        )}
         {error && <div style={{ fontSize: 12, color: '#ef4444', marginTop: 12 }}>{error}</div>}
       </div>
-      <ModalFooter onClose={onClose} onSave={handleSave} disabled={!canSave || saving} label={saving ? 'Salvando...' : 'Salvar'} canSave={!!canSave} />
+      <ModalFooter onClose={onClose} onSave={handleSave} disabled={!canSave || saving} label={saving ? 'Salvando...' : 'Salvar'} canSave={canSave} />
     </ModalShell>
   )
 }
@@ -286,6 +373,59 @@ function Field({ label, children, last }: { label: string; children: React.React
     <div style={{ marginBottom: last ? 0 : 16 }}>
       <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>{label}</label>
       {children}
+    </div>
+  )
+}
+
+/* ── Dual Access toggle ── */
+// Used by both Create and Edit modals. Only rendered when the caller
+// themselves has isDualAccess=true; gating is the caller's responsibility.
+// When the checkbox flips, an inline password confirmation field expands
+// below so the grantor must re-type their own password before the save
+// button fires the PATCH /admin/users/:id/dual-access call.
+function DualAccessToggle({
+  value,
+  onChange,
+  ownerPassword,
+  onOwnerPasswordChange,
+  passwordPromptLabel = 'Confirme sua senha para conceder este acesso',
+}: {
+  value: boolean
+  onChange: (next: boolean) => void
+  ownerPassword: string
+  onOwnerPasswordChange: (next: string) => void
+  passwordPromptLabel?: string
+}) {
+  return (
+    <div style={{ marginTop: 16, padding: 14, border: '1px solid var(--border)', borderRadius: 10, background: 'var(--bg-surface)' }}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+        <input
+          type="checkbox"
+          checked={value}
+          onChange={(e) => onChange(e.target.checked)}
+          style={{ width: 16, height: 16, accentColor: '#f97316', cursor: 'pointer' }}
+        />
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>
+            Conceder acesso duplo (Super Admin + Gestor)
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+            Permite que este membro escolha entre o painel interno e a instância Gestor ao entrar.
+          </div>
+        </div>
+      </label>
+      {value && (
+        <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
+          <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>{passwordPromptLabel}</label>
+          <input
+            type="password"
+            value={ownerPassword}
+            onChange={(e) => onOwnerPasswordChange(e.target.value)}
+            placeholder="Sua senha"
+            style={inputS}
+          />
+        </div>
+      )}
     </div>
   )
 }

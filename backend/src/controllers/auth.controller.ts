@@ -130,6 +130,9 @@ export async function login(req: Request, res: Response): Promise<void> {
             tenantId: 'platform',
             avatarUrl: null,
             themePreference: 'DARK',
+            // Surfaced for the LoginPage router: when true the client
+            // lands on /admin/select-access instead of /admin/dashboard.
+            isDualAccess: adminUser.isDualAccess,
           },
         },
       })

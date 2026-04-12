@@ -21,6 +21,7 @@ import CouponsPage from './pages/admin/CouponsPage'
 import AdminPermissionsPage from './pages/admin/AdminPermissionsPage'
 import AdminTasksPage from './pages/admin/TasksPage'
 import AdminAutomationsPage from './pages/admin/AutomationsPage'
+import DualAccessSelector from './pages/admin/DualAccessSelector'
 
 // Gestão
 import GestaoDashboardPage from './pages/gestao/DashboardPage'
@@ -83,6 +84,7 @@ export default function App() {
       <Route path="/vendas" element={<Navigate to="/vendas/dashboard" replace />} />
 
       {/* Admin */}
+      <Route path="/admin/select-access" element={<PrivateRoute allowed={['admin']}><DualAccessSelector /></PrivateRoute>} />
       <Route path="/admin/dashboard" element={<PrivateRoute allowed={['admin']}><AdminDashboardPage /></PrivateRoute>} />
       <Route path="/admin/clientes" element={<PrivateRoute allowed={['admin']}><TenantsPage /></PrivateRoute>} />
       <Route path="/admin/clientes/:id" element={<PrivateRoute allowed={['admin']}><TenantDetailPage /></PrivateRoute>} />

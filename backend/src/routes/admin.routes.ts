@@ -469,7 +469,7 @@ router.post('/setup/pix-webhook', async (_req: Request, res: Response) => {
 router.get('/team', async (_req: Request, res: Response) => {
   try {
     const users = await prisma.adminUser.findMany({ orderBy: { createdAt: 'desc' } })
-    res.json({ success: true, data: users.map(u => ({ id: u.id, name: u.name, email: u.email, role: u.role, isActive: u.isActive, lastLoginAt: u.lastLoginAt, createdAt: u.createdAt })) })
+    res.json({ success: true, data: users.map(u => ({ id: u.id, name: u.name, email: u.email, role: u.role, isActive: u.isActive, isDualAccess: u.isDualAccess, lastLoginAt: u.lastLoginAt, createdAt: u.createdAt })) })
   } catch (error: any) { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }) }
 })
 
@@ -482,7 +482,7 @@ router.post('/team', async (req: Request, res: Response) => {
     const bcrypt = await import('bcryptjs')
     const passwordHash = await bcrypt.default.hash(password, 10)
     const user = await prisma.adminUser.create({ data: { name, email, passwordHash, role } })
-    res.json({ success: true, data: { id: user.id, name: user.name, email: user.email, role: user.role, isActive: user.isActive, lastLoginAt: user.lastLoginAt, createdAt: user.createdAt } })
+    res.json({ success: true, data: { id: user.id, name: user.name, email: user.email, role: user.role, isActive: user.isActive, isDualAccess: user.isDualAccess, lastLoginAt: user.lastLoginAt, createdAt: user.createdAt } })
   } catch (error: any) { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }) }
 })
 
@@ -494,7 +494,7 @@ router.patch('/team/:id', async (req: Request, res: Response) => {
     if (email !== undefined) data.email = email
     if (role !== undefined) data.role = role
     const user = await prisma.adminUser.update({ where: { id: req.params.id as string }, data })
-    res.json({ success: true, data: { id: user.id, name: user.name, email: user.email, role: user.role, isActive: user.isActive, lastLoginAt: user.lastLoginAt, createdAt: user.createdAt } })
+    res.json({ success: true, data: { id: user.id, name: user.name, email: user.email, role: user.role, isActive: user.isActive, isDualAccess: user.isDualAccess, lastLoginAt: user.lastLoginAt, createdAt: user.createdAt } })
   } catch (error: any) { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }) }
 })
 
@@ -503,7 +503,7 @@ router.patch('/team/:id/status', async (req: Request, res: Response) => {
     const user = await prisma.adminUser.findUnique({ where: { id: req.params.id as string } })
     if (!user) { res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Membro não encontrado' } }); return }
     const updated = await prisma.adminUser.update({ where: { id: req.params.id as string }, data: { isActive: !user.isActive } })
-    res.json({ success: true, data: { id: updated.id, name: updated.name, email: updated.email, role: updated.role, isActive: updated.isActive, lastLoginAt: updated.lastLoginAt, createdAt: updated.createdAt } })
+    res.json({ success: true, data: { id: updated.id, name: updated.name, email: updated.email, role: updated.role, isActive: updated.isActive, isDualAccess: updated.isDualAccess, lastLoginAt: updated.lastLoginAt, createdAt: updated.createdAt } })
   } catch (error: any) { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }) }
 })
 
@@ -516,6 +516,83 @@ router.patch('/team/:id/password', async (req: Request, res: Response) => {
     await prisma.adminUser.update({ where: { id: req.params.id as string }, data: { passwordHash } })
     res.json({ success: true })
   } catch (error: any) { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }) }
+})
+
+/**
+ * PATCH /admin/users/:id/dual-access
+ *
+ * Grants or revokes the dual-access flag on a target admin user.
+ * Locked down by two independent checks:
+ *
+ *  1. The caller (JWT userId) must themselves have isDualAccess=true.
+ *     Only dual-access admins can hand out (or revoke) dual access.
+ *  2. The caller must re-enter their own password in `ownerPassword`
+ *     and have it verified against their bcrypt hash. This is a
+ *     sensitive privilege — we don't want a hijacked session alone
+ *     to be enough to grant platform-wide gestor access.
+ *
+ * Body: { isDualAccess: boolean, ownerPassword: string }
+ */
+router.patch('/users/:id/dual-access', async (req: Request, res: Response) => {
+  try {
+    const callerId = req.user!.userId
+    const targetId = req.params.id as string
+    const { isDualAccess, ownerPassword } = req.body as { isDualAccess?: boolean; ownerPassword?: string }
+
+    if (typeof isDualAccess !== 'boolean') {
+      res.status(400).json({ success: false, error: { code: 'VALIDATION', message: 'isDualAccess é obrigatório e deve ser boolean' } })
+      return
+    }
+    if (!ownerPassword || typeof ownerPassword !== 'string') {
+      res.status(400).json({ success: false, error: { code: 'VALIDATION', message: 'ownerPassword é obrigatório' } })
+      return
+    }
+
+    const caller = await prisma.adminUser.findUnique({ where: { id: callerId } })
+    if (!caller || !caller.isActive) {
+      res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Sessão inválida' } })
+      return
+    }
+    if (!caller.isDualAccess) {
+      res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Apenas administradores com acesso duplo podem alterar este campo' } })
+      return
+    }
+
+    const bcrypt = await import('bcryptjs')
+    const passwordValid = await bcrypt.default.compare(ownerPassword, caller.passwordHash)
+    if (!passwordValid) {
+      res.status(403).json({ success: false, error: { code: 'INVALID_OWNER_PASSWORD', message: 'Senha incorreta' } })
+      return
+    }
+
+    const target = await prisma.adminUser.findUnique({ where: { id: targetId } })
+    if (!target) {
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Membro não encontrado' } })
+      return
+    }
+
+    const updated = await prisma.adminUser.update({
+      where: { id: targetId },
+      data: { isDualAccess },
+    })
+
+    res.json({
+      success: true,
+      data: {
+        id: updated.id,
+        name: updated.name,
+        email: updated.email,
+        role: updated.role,
+        isActive: updated.isActive,
+        isDualAccess: updated.isDualAccess,
+        lastLoginAt: updated.lastLoginAt,
+        createdAt: updated.createdAt,
+      },
+    })
+  } catch (error: any) {
+    console.error('[Admin] dual-access update error:', error?.message ?? error)
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Erro interno do servidor' } })
+  }
 })
 
 router.get('/team/:id/permissions', async (req: Request, res: Response) => {
