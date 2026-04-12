@@ -3,9 +3,8 @@ import { TrendingUp, Users, Target, DollarSign, Download, Loader2 } from 'lucide
 import * as XLSX from 'xlsx'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
-import { getGestaoReports } from '../../services/reports.service'
-
-type Period = 'month' | 'quarter' | 'year'
+import { getGestaoReports, exportGestaoReport } from '../../services/reports.service'
+import PeriodPicker, { type PeriodValue, type PeriodKey } from '../../components/shared/PeriodPicker/PeriodPicker'
 
 function fmt(v: number) { return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 }) }
 function metaColor(p: number) { return p >= 80 ? '#22c55e' : p >= 50 ? '#f97316' : '#ef4444' }
@@ -14,13 +13,13 @@ const thStyle: React.CSSProperties = { padding: '10px 16px', fontSize: 11, color
 const tdStyle: React.CSSProperties = { padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', borderBottom: '1px solid var(--border)' }
 const card: React.CSSProperties = { background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }
 
-function getFilename(_period: Period) {
+function getFilename(_period: PeriodKey) {
   const now = new Date()
   const m = String(now.getMonth() + 1).padStart(2, '0')
   return `relatorio-${m}-${now.getFullYear()}`
 }
 
-function exportCSV(team: any[], activities: any, period: Period) {
+function exportCSV(team: any[], activities: any, period: PeriodKey) {
   const lines: string[] = []
   lines.push('Vendedor,Leads,Conversao (%),Receita (R$),Meta (%)')
   team.forEach((m: any) => lines.push(`${m.name},${m.leadsCount},${m.conversionRate},${m.revenue},${m.goalPercentage}`))
@@ -38,7 +37,7 @@ function exportCSV(team: any[], activities: any, period: Period) {
   URL.revokeObjectURL(url)
 }
 
-function exportExcel(team: any[], activities: any, period: Period) {
+function exportExcel(team: any[], activities: any, period: PeriodKey) {
   const perfData = team.map((m: any) => ({
     Vendedor: m.name, Leads: m.leadsCount, 'Conversao (%)': m.conversionRate,
     'Receita (R$)': m.revenue, 'Meta (%)': m.goalPercentage,
@@ -57,27 +56,39 @@ function exportExcel(team: any[], activities: any, period: Period) {
 }
 
 export default function ReportsPage() {
-  const [period, setPeriod] = useState<Period>('month')
+  const [periodValue, setPeriodValue] = useState<PeriodValue>({ period: 'month' })
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
     setError(null)
-    getGestaoReports({ period })
+    getGestaoReports({
+      period: periodValue.period,
+      startDate: periodValue.startDate,
+      endDate: periodValue.endDate,
+    })
       .then(d => { if (!cancelled) setData(d) })
       .catch(() => { if (!cancelled) setError('Erro ao carregar relatórios') })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
-  }, [period])
+  }, [periodValue])
 
-  const periods: { key: Period; label: string }[] = [
-    { key: 'month', label: 'Este mês' },
-    { key: 'quarter', label: 'Trimestre' },
-    { key: 'year', label: 'Ano' },
-  ]
+  async function handleExport() {
+    setExporting(true)
+    try {
+      await exportGestaoReport({
+        period: periodValue.period,
+        startDate: periodValue.startDate,
+        endDate: periodValue.endDate,
+      })
+    } finally {
+      setExporting(false)
+    }
+  }
 
   const kpis = data ? [
     { label: 'Receita Fechada', value: fmt(data.kpis.totalRevenue), icon: TrendingUp, iconColor: '#22c55e' },
@@ -96,18 +107,15 @@ export default function ReportsPage() {
   return (
     <AppLayout menuItems={gestaoMenuItems}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Relatórios</h1>
-        <div style={{ display: 'flex', gap: 4 }}>
-          {periods.map(p => (
-            <button key={p.key} onClick={() => setPeriod(p.key)} style={{
-              borderRadius: 999, padding: '6px 14px', fontSize: 12, fontWeight: 500, cursor: 'pointer',
-              background: period === p.key ? 'rgba(249,115,22,0.12)' : 'var(--bg-card)',
-              border: `1px solid ${period === p.key ? '#f97316' : 'var(--border)'}`,
-              color: period === p.key ? '#f97316' : 'var(--text-muted)', transition: 'all 0.15s',
-            }}>{p.label}</button>
-          ))}
-        </div>
+      <div style={{ marginBottom: 20 }}>
+        <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 12px' }}>Relatórios</h1>
+        <PeriodPicker
+          value={periodValue}
+          onChange={setPeriodValue}
+          showExport
+          onExport={handleExport}
+          exportLoading={exporting}
+        />
       </div>
 
       {/* Loading / Error */}
@@ -279,10 +287,10 @@ export default function ReportsPage() {
           <div style={{ ...card, padding: '16px 20px', marginTop: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)' }}>Exportar dados</span>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => exportExcel(team, activities, period)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: '1px solid rgba(249,115,22,0.3)', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 500, color: '#f97316', cursor: 'pointer' }}>
+              <button onClick={() => exportExcel(team, activities, periodValue.period)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: '1px solid rgba(249,115,22,0.3)', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 500, color: '#f97316', cursor: 'pointer' }}>
                 <Download size={14} strokeWidth={1.5} /> Exportar Excel
               </button>
-              <button onClick={() => exportCSV(team, activities, period)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', cursor: 'pointer' }}>
+              <button onClick={() => exportCSV(team, activities, periodValue.period)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', cursor: 'pointer' }}>
                 <Download size={14} strokeWidth={1.5} /> Exportar CSV
               </button>
             </div>

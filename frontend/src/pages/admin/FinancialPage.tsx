@@ -6,10 +6,10 @@ import ChargeNowModal from '../../components/admin/ChargeNowModal'
 import UpdateChargeModal from '../../components/admin/UpdateChargeModal'
 import { adminMenuItems } from '../../config/adminMenu'
 import { getFinancial, getTenants, getTenant, updateCharge } from '../../services/admin.service'
+import { exportAdminFinanceiroReport } from '../../services/reports.service'
+import PeriodPicker, { type PeriodValue } from '../../components/shared/PeriodPicker/PeriodPicker'
 
 // ── Types ──
-
-type Period = 'month' | 'quarter' | 'year'
 
 interface Charge {
   id: string
@@ -77,7 +77,8 @@ export default function FinancialPage() {
 
   const [data, setData] = useState<FinancialData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [period, setPeriod] = useState<Period>('month')
+  const [periodValue, setPeriodValue] = useState<PeriodValue>({ period: 'month' })
+  const [exporting, setExporting] = useState(false)
   const [chargeModal, setChargeModal] = useState<Charge | null>(null)
   const [updateModal, setUpdateModal] = useState<Charge | null>(null)
   const [newChargeModal, setNewChargeModal] = useState(false)
@@ -109,14 +110,32 @@ export default function FinancialPage() {
   const [showResults, setShowResults] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  async function handleExport() {
+    setExporting(true)
+    try {
+      await exportAdminFinanceiroReport({
+        period: periodValue.period,
+        startDate: periodValue.startDate,
+        endDate: periodValue.endDate,
+      })
+    } finally {
+      setExporting(false)
+    }
+  }
+
   // Load financial data — period only matters when no tenant filter
   useEffect(() => {
     async function load() {
       setLoading(true)
       try {
-        const params: { period?: string; tenantId?: string } = {}
-        if (tenantId) params.tenantId = tenantId
-        else params.period = period
+        const params: { period?: string; startDate?: string; endDate?: string; tenantId?: string } = {}
+        if (tenantId) {
+          params.tenantId = tenantId
+        } else {
+          params.period = periodValue.period
+          if (periodValue.startDate) params.startDate = periodValue.startDate
+          if (periodValue.endDate) params.endDate = periodValue.endDate
+        }
         const result = await getFinancial(params)
         setData(result)
       } catch {
@@ -126,7 +145,7 @@ export default function FinancialPage() {
       }
     }
     load()
-  }, [period, tenantId, reloadKey])
+  }, [periodValue, tenantId, reloadKey])
 
   // Load selected tenant info when tenantId is in URL
   useEffect(() => {
@@ -170,8 +189,6 @@ export default function FinancialPage() {
     setSearchParams({})
   }
 
-  const periods: { key: Period; label: string }[] = [{ key: 'month', label: 'Este mês' }, { key: 'quarter', label: 'Trimestre' }, { key: 'year', label: 'Ano' }]
-
   const kpis = data?.kpis ?? { mrr: 0, arr: 0, overdueCount: 0, churnRate: 0, averageTicket: 0 }
   const charges = data?.charges ?? []
 
@@ -185,26 +202,23 @@ export default function FinancialPage() {
 
   return (
     <AppLayout menuItems={adminMenuItems}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Financeiro</h1>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {!tenantId && (
-            <div style={{ display: 'flex', gap: 4 }}>
-              {periods.map(p => (
-                <button key={p.key} onClick={() => setPeriod(p.key)} style={{
-                  borderRadius: 999, padding: '6px 14px', fontSize: 12, fontWeight: 500, cursor: 'pointer',
-                  background: period === p.key ? 'rgba(249,115,22,0.12)' : 'var(--bg-card)',
-                  border: `1px solid ${period === p.key ? '#f97316' : 'var(--border)'}`,
-                  color: period === p.key ? '#f97316' : 'var(--text-muted)',
-                }}>{p.label}</button>
-              ))}
-            </div>
-          )}
-          <button onClick={() => setNewChargeModal(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-            <Plus size={14} strokeWidth={2.2} /> Gerar Nova Cobrança
-          </button>
-        </div>
+        <button onClick={() => setNewChargeModal(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+          <Plus size={14} strokeWidth={2.2} /> Gerar Nova Cobrança
+        </button>
       </div>
+      {!tenantId && (
+        <div style={{ marginBottom: 20 }}>
+          <PeriodPicker
+            value={periodValue}
+            onChange={setPeriodValue}
+            showExport
+            onExport={handleExport}
+            exportLoading={exporting}
+          />
+        </div>
+      )}
 
       {/* KPIs (sempre visíveis — métricas globais) */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16, marginBottom: 20 }}>

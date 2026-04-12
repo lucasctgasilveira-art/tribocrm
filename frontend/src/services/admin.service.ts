@@ -8,8 +8,8 @@ export interface TenantsParams {
   perPage?: number
 }
 
-export async function getAdminDashboard() {
-  const response = await api.get('/admin/dashboard')
+export async function getAdminDashboard(params?: { period?: string; startDate?: string; endDate?: string }) {
+  const response = await api.get('/admin/dashboard', { params })
   return response.data.data
 }
 

@@ -7,6 +7,8 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { adminMenuItems } from '../../config/adminMenu'
 import { getAdminDashboard } from '../../services/admin.service'
+import { exportAdminDashboardReport } from '../../services/reports.service'
+import PeriodPicker, { type PeriodValue } from '../../components/shared/PeriodPicker/PeriodPicker'
 
 // ── Types ──
 
@@ -33,12 +35,18 @@ function formatK(v: number): string {
 export default function AdminDashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [periodValue, setPeriodValue] = useState<PeriodValue>({ period: 'month' })
+  const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
     async function load() {
       setLoading(true)
       try {
-        const result = await getAdminDashboard()
+        const result = await getAdminDashboard({
+          period: periodValue.period,
+          startDate: periodValue.startDate,
+          endDate: periodValue.endDate,
+        })
         setData(result)
       } catch {
         setData(null)
@@ -47,7 +55,20 @@ export default function AdminDashboardPage() {
       }
     }
     load()
-  }, [])
+  }, [periodValue])
+
+  async function handleExport() {
+    setExporting(true)
+    try {
+      await exportAdminDashboardReport({
+        period: periodValue.period,
+        startDate: periodValue.startDate,
+        endDate: periodValue.endDate,
+      })
+    } finally {
+      setExporting(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -86,6 +107,17 @@ export default function AdminDashboardPage() {
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Dashboard</h1>
         <p style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 4 }}>Visão geral da plataforma</p>
+      </div>
+
+      {/* Period filter + Export */}
+      <div style={{ marginBottom: 20 }}>
+        <PeriodPicker
+          value={periodValue}
+          onChange={setPeriodValue}
+          showExport
+          onExport={handleExport}
+          exportLoading={exporting}
+        />
       </div>
 
       {/* KPI Row */}

@@ -5,8 +5,9 @@ import {
 } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { vendasMenuItems } from '../../config/vendasMenu'
-import { getDashboard } from '../../services/reports.service'
+import { getDashboard, exportVendedorReport } from '../../services/reports.service'
 import { getGoalDashboard } from '../../services/goals.service'
+import PeriodPicker, { type PeriodValue } from '../../components/shared/PeriodPicker/PeriodPicker'
 
 // ── Types ──
 
@@ -22,8 +23,6 @@ interface GoalInfo {
   userGoals: GoalUser[]
 }
 
-type Period = 'month' | 'quarter' | 'year'
-
 // ── Helpers ──
 
 function fmt(v: number) { return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 }) }
@@ -38,7 +37,19 @@ function getUserId(): string {
 
 const card: React.CSSProperties = { background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }
 
-const PERIOD_LABELS: Record<Period, string> = { month: 'Este mês', quarter: 'Trimestre', year: 'Ano' }
+// Period-aware goal label. Fixes prior bug where the heading was
+// hardcoded to the current calendar month regardless of which period
+// the user had selected.
+function goalLabel(pv: PeriodValue): string {
+  switch (pv.period) {
+    case 'today': return 'Minha Meta de hoje'
+    case 'week': return 'Minha Meta desta semana'
+    case 'quarter': return 'Minha Meta do trimestre'
+    case 'year': return 'Minha Meta do ano'
+    case 'custom': return 'Minha Meta do período'
+    default: return `Minha Meta de ${new Date().toLocaleString('pt-BR', { month: 'long' }).replace(/^\w/, c => c.toUpperCase())}`
+  }
+}
 
 // ── Component ──
 
@@ -47,14 +58,15 @@ export default function MyResultsPage() {
   const [conversionRate, setConversionRate] = useState(0)
   const [goalInfo, setGoalInfo] = useState<GoalInfo | null>(null)
   const [loading, setLoading] = useState(true)
-  const [period, setPeriod] = useState<Period>('month')
+  const [periodValue, setPeriodValue] = useState<PeriodValue>({ period: 'month' })
+  const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
     async function load() {
       setLoading(true)
       try {
         const [dash, goals] = await Promise.all([
-          getDashboard(period),
+          getDashboard(periodValue.period, periodValue.startDate, periodValue.endDate),
           getGoalDashboard(),
         ])
         setRevenue(dash.kpis.revenueThisMonth)
@@ -64,7 +76,20 @@ export default function MyResultsPage() {
       finally { setLoading(false) }
     }
     load()
-  }, [period])
+  }, [periodValue])
+
+  async function handleExport() {
+    setExporting(true)
+    try {
+      await exportVendedorReport({
+        period: periodValue.period,
+        startDate: periodValue.startDate,
+        endDate: periodValue.endDate,
+      })
+    } finally {
+      setExporting(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -94,18 +119,15 @@ export default function MyResultsPage() {
 
   return (
     <AppLayout menuItems={vendasMenuItems}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Meus Resultados</h1>
-        <div style={{ display: 'flex', gap: 4 }}>
-          {(['month', 'quarter', 'year'] as Period[]).map(p => (
-            <button key={p} onClick={() => setPeriod(p)} style={{
-              background: period === p ? 'rgba(249,115,22,0.12)' : 'transparent',
-              color: period === p ? '#f97316' : 'var(--text-muted)',
-              border: `1px solid ${period === p ? 'rgba(249,115,22,0.3)' : 'var(--border)'}`,
-              borderRadius: 6, padding: '5px 12px', fontSize: 12, cursor: 'pointer', fontWeight: period === p ? 600 : 400,
-            }}>{PERIOD_LABELS[p]}</button>
-          ))}
-        </div>
+      <div style={{ marginBottom: 20 }}>
+        <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 12px' }}>Meus Resultados</h1>
+        <PeriodPicker
+          value={periodValue}
+          onChange={setPeriodValue}
+          showExport
+          onExport={handleExport}
+          exportLoading={exporting}
+        />
       </div>
 
       {/* KPIs */}
@@ -128,7 +150,7 @@ export default function MyResultsPage() {
           <>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
-                Minha Meta de {new Date().toLocaleString('pt-BR', { month: 'long' }).replace(/^\w/, c => c.toUpperCase())}
+                {goalLabel(periodValue)}
               </span>
               <span style={{ fontSize: 13, fontWeight: 600, color: barColor(myGoal.percentage) }}>{myGoal.percentage}% concluído</span>
             </div>

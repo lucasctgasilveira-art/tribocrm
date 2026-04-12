@@ -3,7 +3,8 @@ import { TrendingUp, Target, Clock, CheckCircle, XCircle, Loader2 } from 'lucide
 import { Kanban } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
-import { getDashboard } from '../../services/reports.service'
+import { getDashboard, exportGestaoReport } from '../../services/reports.service'
+import PeriodPicker, { type PeriodValue } from '../../components/shared/PeriodPicker/PeriodPicker'
 
 // ── Types ──
 
@@ -105,13 +106,15 @@ export default function GestaoDashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [periodValue, setPeriodValue] = useState<PeriodValue>({ period: 'month' })
+  const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
     async function load() {
       try {
         setLoading(true)
         setError(null)
-        const result = await getDashboard('month')
+        const result = await getDashboard(periodValue.period, periodValue.startDate, periodValue.endDate)
         setData(result)
       } catch {
         setError('Erro ao carregar dashboard')
@@ -120,7 +123,20 @@ export default function GestaoDashboardPage() {
       }
     }
     load()
-  }, [])
+  }, [periodValue])
+
+  async function handleExport() {
+    setExporting(true)
+    try {
+      await exportGestaoReport({
+        period: periodValue.period,
+        startDate: periodValue.startDate,
+        endDate: periodValue.endDate,
+      })
+    } finally {
+      setExporting(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -163,6 +179,17 @@ export default function GestaoDashboardPage() {
         <p style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 4 }}>
           Aqui está o resumo do seu time hoje.
         </p>
+      </div>
+
+      {/* Period filter + Export */}
+      <div style={{ marginBottom: 20 }}>
+        <PeriodPicker
+          value={periodValue}
+          onChange={setPeriodValue}
+          showExport
+          onExport={handleExport}
+          exportLoading={exporting}
+        />
       </div>
 
       {/* KPI Row */}

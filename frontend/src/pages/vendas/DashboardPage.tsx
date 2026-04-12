@@ -5,9 +5,10 @@ import {
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { vendasMenuItems } from '../../config/vendasMenu'
 import { useNavigate } from 'react-router-dom'
-import { getDashboard } from '../../services/reports.service'
+import { getDashboard, exportVendedorReport } from '../../services/reports.service'
 import { getGoalDashboard } from '../../services/goals.service'
 import { getTasks } from '../../services/tasks.service'
+import PeriodPicker, { type PeriodValue } from '../../components/shared/PeriodPicker/PeriodPicker'
 
 // ── Types ──
 
@@ -69,13 +70,15 @@ export default function VendasDashboardPage() {
   const [goalInfo, setGoalInfo] = useState<GoalInfo | null>(null)
   const [pendingTasks, setPendingTasks] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [periodValue, setPeriodValue] = useState<PeriodValue>({ period: 'month' })
+  const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
     async function load() {
       setLoading(true)
       try {
         const [dash, goals, tasks] = await Promise.all([
-          getDashboard('month'),
+          getDashboard(periodValue.period, periodValue.startDate, periodValue.endDate),
           getGoalDashboard(),
           getTasks({ status: 'PENDING', dueDate: 'today', perPage: 1 }),
         ])
@@ -86,7 +89,20 @@ export default function VendasDashboardPage() {
       finally { setLoading(false) }
     }
     load()
-  }, [])
+  }, [periodValue])
+
+  async function handleExport() {
+    setExporting(true)
+    try {
+      await exportVendedorReport({
+        period: periodValue.period,
+        startDate: periodValue.startDate,
+        endDate: periodValue.endDate,
+      })
+    } finally {
+      setExporting(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -122,6 +138,17 @@ export default function VendasDashboardPage() {
           {getGreeting()}, {getUserFirstName()}!
         </h1>
         <p style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 4 }}>Veja como está seu desempenho hoje.</p>
+      </div>
+
+      {/* Period filter + Export */}
+      <div style={{ marginBottom: 20 }}>
+        <PeriodPicker
+          value={periodValue}
+          onChange={setPeriodValue}
+          showExport
+          onExport={handleExport}
+          exportLoading={exporting}
+        />
       </div>
 
       {/* KPI Row */}

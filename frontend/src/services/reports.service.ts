@@ -1,7 +1,15 @@
 import api from './api'
 
-export async function getDashboard(period?: 'month' | 'quarter' | 'year') {
-  const response = await api.get('/reports/dashboard', { params: { period } })
+// Widened from the original 'month' | 'quarter' | 'year' tuple when
+// the PeriodPicker component added 'today', 'week' and 'custom'.
+// Custom range is resolved by the backend via startDate/endDate, so
+// callers using 'custom' must pass those two alongside.
+export async function getDashboard(
+  period?: 'today' | 'week' | 'month' | 'quarter' | 'year' | 'custom',
+  startDate?: string,
+  endDate?: string,
+) {
+  const response = await api.get('/reports/dashboard', { params: { period, startDate, endDate } })
   return response.data.data
 }
 
