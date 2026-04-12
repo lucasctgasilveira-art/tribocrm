@@ -23,11 +23,23 @@ function getRefreshSecret(): string {
   return secret
 }
 
-function generateAccessToken(payload: { userId: string; tenantId: string; role: string }): string {
+// linkedTenantId is an optional payload field used exclusively by
+// dual-access super admins. When present, the auth middleware swaps
+// req.user.tenantId with it on every non-/admin request so gestor
+// endpoints query the linked tenant's data instead of the platform
+// sentinel. Regular users and single-access admins leave it unset.
+interface TokenPayload {
+  userId: string
+  tenantId: string
+  role: string
+  linkedTenantId?: string | null
+}
+
+function generateAccessToken(payload: TokenPayload): string {
   return jwt.sign(payload, getJwtSecret(), { expiresIn: '8h' })
 }
 
-function generateRefreshToken(payload: { userId: string; tenantId: string; role: string }): string {
+function generateRefreshToken(payload: TokenPayload): string {
   return jwt.sign(payload, getRefreshSecret(), { expiresIn: '30d' })
 }
 
@@ -101,7 +113,15 @@ export async function login(req: Request, res: Response): Promise<void> {
       // Admin login success
       loginAttempts.delete(emailLower)
 
-      const tokenPayload = { userId: adminUser.id, tenantId: 'platform', role: adminUser.role }
+      const tokenPayload: TokenPayload = {
+        userId: adminUser.id,
+        tenantId: 'platform',
+        role: adminUser.role,
+        // Only dual-access admins carry a linked tenant. Embedding
+        // the id in the JWT lets the auth middleware swap tenantId
+        // on every request without an extra DB lookup.
+        linkedTenantId: adminUser.isDualAccess ? (adminUser.linkedTenantId ?? undefined) : undefined,
+      }
       const accessToken = generateAccessToken(tokenPayload)
       const refreshToken = generateRefreshToken(tokenPayload)
 
@@ -133,6 +153,12 @@ export async function login(req: Request, res: Response): Promise<void> {
             // Surfaced for the LoginPage router: when true the client
             // lands on /admin/select-access instead of /admin/dashboard.
             isDualAccess: adminUser.isDualAccess,
+            // Exposed so DualAccessSelector can persist it to
+            // localStorage on the "Gestor" click. Backend queries
+            // still read the value from the JWT payload, not from
+            // this response — the localStorage copy is purely a
+            // frontend tracking hint.
+            linkedTenantId: adminUser.linkedTenantId,
           },
         },
       })
@@ -265,12 +291,16 @@ export async function refresh(req: Request, res: Response): Promise<void> {
       userId: string
       tenantId: string
       role: string
+      linkedTenantId?: string | null
     }
 
-    let tokenPayload: { userId: string; tenantId: string; role: string }
+    let tokenPayload: TokenPayload
 
     if (decoded.tenantId === 'platform') {
-      // Admin user refresh
+      // Admin user refresh — re-fetch so a flag flipped mid-session
+      // (e.g. dual access revoked while the user was logged in) is
+      // reflected in the next access token instead of surviving
+      // until the refresh token expires.
       const adminUser = await prisma.adminUser.findFirst({
         where: { id: decoded.userId, isActive: true },
       })
@@ -281,7 +311,12 @@ export async function refresh(req: Request, res: Response): Promise<void> {
         })
         return
       }
-      tokenPayload = { userId: adminUser.id, tenantId: 'platform', role: adminUser.role }
+      tokenPayload = {
+        userId: adminUser.id,
+        tenantId: 'platform',
+        role: adminUser.role,
+        linkedTenantId: adminUser.isDualAccess ? (adminUser.linkedTenantId ?? undefined) : undefined,
+      }
     } else {
       const user = await prisma.user.findFirst({
         where: { id: decoded.userId, tenantId: decoded.tenantId, isActive: true, deletedAt: null },

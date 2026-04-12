@@ -18,6 +18,7 @@ interface StoredUser {
   role?: string
   name?: string
   isDualAccess?: boolean
+  linkedTenantId?: string | null
 }
 
 function readStoredUser(): StoredUser {
@@ -39,6 +40,28 @@ export default function DualAccessSelector() {
   }, [])
 
   if (user.role !== 'SUPER_ADMIN' || user.isDualAccess !== true) return null
+
+  function goToAdmin() {
+    // Admin panel doesn't need the linkedTenantId hint. Clear any
+    // leftover value so the tracking state never lies when the
+    // admin flips back to the super-admin side.
+    localStorage.removeItem('dualAccessTenantId')
+    navigate('/admin/dashboard', { replace: true })
+  }
+
+  function goToGestor() {
+    // Persist the linked tenant locally so any frontend code that
+    // wants to display "você está em Tribo de Vendas" can read it.
+    // The backend tenant swap is driven entirely by the JWT payload
+    // (auth.middleware rewrites req.user.tenantId on non-/admin
+    // routes) — this localStorage entry is purely a UI hint.
+    if (user.linkedTenantId) {
+      localStorage.setItem('dualAccessTenantId', user.linkedTenantId)
+    } else {
+      localStorage.removeItem('dualAccessTenantId')
+    }
+    navigate('/gestao/dashboard', { replace: true })
+  }
 
   return (
     <div style={{
@@ -64,14 +87,14 @@ export default function DualAccessSelector() {
             title="Super Admin"
             subtitle="Painel interno"
             description="Gerenciar planos, clientes, equipe interna e configurações da plataforma TriboCRM."
-            onClick={() => navigate('/admin/dashboard', { replace: true })}
+            onClick={goToAdmin}
           />
           <AccessCard
             icon={<Briefcase size={28} strokeWidth={1.5} color="#f97316" />}
             title="Gestor"
             subtitle="Tribo de Vendas"
             description="Acessar meu time de vendas — pipeline, leads, tarefas e relatórios do dia a dia."
-            onClick={() => navigate('/gestao/dashboard', { replace: true })}
+            onClick={goToGestor}
           />
         </div>
       </div>

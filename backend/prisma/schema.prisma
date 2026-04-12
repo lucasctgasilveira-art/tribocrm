@@ -249,6 +249,14 @@ model AdminUser {
   // by another admin that already has isDualAccess=true (password
   // confirmation required).
   isDualAccess     Boolean   @default(false) @map("is_dual_access")
+  // Optional tenant this admin is linked to when operating as a
+  // gestor through the dual-access flow. The auth middleware reads
+  // this from the JWT on every non-/admin request and rewrites
+  // req.user.tenantId so downstream controllers query the linked
+  // tenant's data instead of the platform sentinel. Raw UUID with
+  // no @relation — mirrors createdBy on ManagerialTask, which is
+  // intentional (see commit rationale for avoiding a DB FK here).
+  linkedTenantId   String?   @map("linked_tenant_id") @db.Uuid
   permissions      Json?     @db.JsonB
   twoFactorSecret  String?   @map("two_factor_secret") @db.VarChar(100)
   twoFactorEnabled Boolean   @default(false) @map("two_factor_enabled")
