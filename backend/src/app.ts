@@ -1,10 +1,12 @@
 import express from 'express'
+import path from 'path'
 import cors from 'cors'
 import helmet from 'helmet'
 import morgan from 'morgan'
 import cookieParser from 'cookie-parser'
 import rateLimit from 'express-rate-limit'
 import authRoutes from './routes/auth.routes'
+import publicRoutes from './routes/public.routes'
 import pipelineRoutes from './routes/pipeline.routes'
 import leadsRoutes from './routes/leads.routes'
 import tasksRoutes from './routes/tasks.routes'
@@ -32,6 +34,8 @@ app.use(cors({
     const allowed = [
       process.env.FRONTEND_URL || 'http://localhost:3000',
       'https://tribocrm.vercel.app',
+      'https://tribocrm.com.br',
+      'https://www.tribocrm.com.br',
       'http://localhost:3000',
       'http://localhost:3001',
       'http://localhost:3002',
@@ -79,6 +83,17 @@ app.get('/health', (_req, res) => {
 // both middlewares; public routes (like /webhooks/efi, called by Efi to
 // validate our endpoint before registering the PIX webhook) get a 401 and
 // never reach their actual handler. Order matters here.
+
+// Public embed widget — served as a static JS file from backend/src/public.
+// Resolving via __dirname/../src keeps the path stable in both dev
+// (__dirname=src → src/public) and prod (__dirname=dist → dist/../src/public),
+// assuming the Railway/Nixpacks build keeps src/ alongside dist/.
+app.use('/public', express.static(path.join(__dirname, '..', 'src', 'public')))
+
+// Public form endpoints (GET form schema, POST submission). Mounted
+// at /public BEFORE usersRoutes so authMiddleware never intercepts.
+app.use('/public', publicRoutes)
+
 app.use('/webhooks', webhooksRoutes)
 app.use('/email', emailRoutes)
 app.use('/oauth', oauthRoutes)
