@@ -103,12 +103,16 @@ export async function publicSignup(req: Request, res: Response): Promise<void> {
     const trialEndsAt = new Date(now.getTime() + TRIAL_DAYS * 24 * 60 * 60 * 1000)
     const verificationToken = randomUUID().replace(/-/g, '')
 
-    // CNPJ column is NOT NULL + unique on tenants. Public signup
-    // doesn't collect CNPJ yet (UI is out of scope here), so we
-    // synthesize a placeholder unique value that the gestor fills in
-    // later via PATCH /tenants. Kept well outside the valid CNPJ
-    // space so real CNPJs can't collide.
-    const placeholderCnpj = `PENDING-${verificationToken.slice(0, 12)}`
+    // CNPJ column is NOT NULL + UNIQUE on tenants and typed VARCHAR(18).
+    // Public signup doesn't collect a real CNPJ yet — we synthesize a
+    // placeholder the gestor fills in later via PATCH /tenants. Budget
+    // is tight: 1 char prefix + 17 hex from a fresh UUID fits exactly
+    // in 18 chars (2^68 combinations → collisions are astronomically
+    // improbable). Previous version used `PENDING-<12hex>` = 20 chars
+    // and overflowed the column on every signup — do not grow the
+    // prefix back without also widening the column.
+    const placeholderCnpj = `P${randomUUID().replace(/-/g, '').slice(0, 17)}`
+    console.info('[Signup] creating tenant placeholderCnpj=%s length=%d', placeholderCnpj, placeholderCnpj.length)
 
     const created = await prisma.$transaction(async (tx) => {
       const tenant = await tx.tenant.create({
@@ -198,7 +202,20 @@ export async function publicSignup(req: Request, res: Response): Promise<void> {
       },
     })
   } catch (error: any) {
-    console.error('[Signup] publicSignup error:', error?.message ?? error)
+    // Verbose log so the next failure is diagnosable from Railway
+    // alone: Prisma errors carry `code` (e.g. P2002 for unique
+    // violation) and `meta` (e.g. { target: ['cnpj'] }) that the
+    // naked `.message` string hides.
+    const safeBody = (() => {
+      try { return JSON.stringify(req.body).substring(0, 500) } catch { return '[unserializable]' }
+    })()
+    console.error('[Signup] publicSignup error:', {
+      message: error?.message,
+      code: error?.code,
+      meta: error?.meta,
+      stack: error?.stack,
+      body: safeBody,
+    })
     res.status(500).json({
       success: false,
       error: { code: 'INTERNAL_ERROR', message: 'Erro ao criar conta' },
