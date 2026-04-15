@@ -22,6 +22,7 @@ export interface LeadData {
   lastContact: string | null
   phone: string
   email: string
+  createdAt?: string
 }
 
 interface LeadDrawerProps {
@@ -309,8 +310,11 @@ export default function LeadDrawer({ lead, onClose, stageColor, instance = 'gest
               </button>
             </div>
           )}
-          <div style={{ display: 'flex', gap: 20, marginTop: 10, fontSize: 12 }}>
+          <div style={{ display: 'flex', gap: 20, marginTop: 10, fontSize: 12, flexWrap: 'wrap' }}>
             <div><span style={{ color: 'var(--text-muted)' }}>Responsável </span><span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{lead.responsible}</span></div>
+            {lead.createdAt && (
+              <div><span style={{ color: 'var(--text-muted)' }}>Criado em </span><span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{new Date(lead.createdAt).toLocaleDateString('pt-BR')}</span></div>
+            )}
           </div>
         </div>
 
@@ -513,6 +517,7 @@ function InfoTab({ lead }: { lead: LeadData }) {
     { label: 'E-mail', value: lead.email },
     { label: 'Telefone', value: lead.phone },
     { label: 'Responsável', value: lead.responsible },
+    { label: 'Criado em', value: lead.createdAt ? new Date(lead.createdAt).toLocaleDateString('pt-BR') : '—' },
   ]
   return (
     <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>

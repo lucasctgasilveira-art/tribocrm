@@ -28,6 +28,7 @@ interface Lead {
   email: string
   status: LeadStatus
   wonAt: string | null
+  createdAt?: string
 }
 
 interface StageConfig { id: string; name: string; color: string; position: number; type: string }
@@ -47,6 +48,7 @@ interface ApiLead {
   responsible: { id: string; name: string }
   status?: LeadStatus
   wonAt?: string | null
+  createdAt?: string
 }
 
 interface KanbanStage {
@@ -109,6 +111,7 @@ function mapApiLeadToLead(apiLead: ApiLead, stageName: string): Lead {
     email: apiLead.email ?? '—',
     status: apiLead.status ?? 'ACTIVE',
     wonAt: apiLead.wonAt ?? null,
+    createdAt: apiLead.createdAt,
   }
 }
 

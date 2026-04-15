@@ -65,6 +65,7 @@ export async function getKanban(req: Request, res: Response): Promise<void> {
             expectedValue: true,
             closedValue: true,
             wonAt: true,
+            createdAt: true,
             temperature: true,
             status: true,
             stageId: true,
