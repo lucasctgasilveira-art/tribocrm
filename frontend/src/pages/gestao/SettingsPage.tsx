@@ -403,25 +403,40 @@ function DistributionRuleCard({ pipelines }: { pipelines: PipelineSummary[] }) {
   }
 
   async function handleSave() {
-    if (!selectedId) return
+    if (!selectedId) {
+      showToast('Selecione um pipeline antes de salvar a regra', 'err')
+      return
+    }
     if (distType === 'ROUND_ROBIN_TEAM' && !teamId) { showToast('Selecione uma equipe', 'err'); return }
     if (distType === 'SPECIFIC_USER' && !specificUserId) { showToast('Selecione um vendedor', 'err'); return }
     setSaving(true)
+    const payload = {
+      distributionType: distType,
+      teamId: distType === 'ROUND_ROBIN_TEAM' ? teamId : null,
+      specificUserId: distType === 'SPECIFIC_USER' ? specificUserId : null,
+    }
+    console.info('[DistributionRule] PATCH /pipelines/' + selectedId, payload)
     try {
-      const updated = await updatePipeline(selectedId, {
-        distributionType: distType,
-        teamId: distType === 'ROUND_ROBIN_TEAM' ? teamId : null,
-        specificUserId: distType === 'SPECIFIC_USER' ? specificUserId : null,
-      })
+      const updated = await updatePipeline(selectedId, payload)
+      console.info('[DistributionRule] save OK', { id: updated?.id, distributionType: updated?.distributionType, teamId: updated?.teamId, specificUserId: updated?.specificUserId })
       setPipelinesList(prev => prev.map(p => p.id === selectedId
-        ? { ...p, distributionType: updated.distributionType, teamId: updated.teamId, specificUserId: updated.specificUserId }
+        ? { ...p, distributionType: updated.distributionType, teamId: updated.teamId ?? null, specificUserId: updated.specificUserId ?? null }
         : p,
       ))
-      showToast('Regra de distribuição salva')
+      // Mirror the response back into the local form so a stale value
+      // never lingers if the server normalised the payload (e.g. empty
+      // string → null).
+      setDistType(updated.distributionType)
+      setTeamId(updated.teamId ?? '')
+      setSpecificUserId(updated.specificUserId ?? '')
+      showToast('Regra de distribuição salva com sucesso')
     } catch (e: any) {
-      showToast(e?.response?.data?.error?.message ?? 'Erro ao salvar regra', 'err')
+      const apiErr = e?.response?.data?.error
+      console.error('[DistributionRule] save FAILED', { status: e?.response?.status, code: apiErr?.code, message: apiErr?.message, full: e?.response?.data })
+      showToast(apiErr?.message ?? 'Erro ao salvar regra de distribuição', 'err')
+    } finally {
+      setSaving(false)
     }
-    setSaving(false)
   }
 
   const radios: { k: PipelineDistributionType; l: string; d: string }[] = [
@@ -433,6 +448,9 @@ function DistributionRuleCard({ pipelines }: { pipelines: PipelineSummary[] }) {
 
   return (
     <div style={card}>
+      {toast && (
+        <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', borderLeft: `4px solid ${toast.type === 'ok' ? '#22c55e' : '#ef4444'}`, borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 60, boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>{toast.msg}</div>
+      )}
       <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
         <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Regra de distribuição de leads</span>
         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Define como novos leads criados manualmente neste pipeline são atribuídos aos vendedores</div>
@@ -509,12 +527,6 @@ function DistributionRuleCard({ pipelines }: { pipelines: PipelineSummary[] }) {
               {saving ? 'Salvando...' : 'Salvar regra'}
             </button>
           </div>
-
-          {toast && (
-            <div style={{ marginTop: 12, padding: '8px 12px', borderRadius: 8, fontSize: 12, background: toast.type === 'ok' ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)', color: toast.type === 'ok' ? '#22c55e' : '#ef4444', border: `1px solid ${toast.type === 'ok' ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}` }}>
-              {toast.msg}
-            </div>
-          )}
         </div>
       )}
     </div>
