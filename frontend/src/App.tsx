@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from './pages/auth/LoginPage'
 import InstanceSelectorPage from './pages/auth/InstanceSelectorPage'
 import TwoFactorPage from './pages/auth/TwoFactorPage'
+import VerifyEmailPage from './pages/auth/VerifyEmailPage'
 import OnboardingGestorPage from './pages/auth/OnboardingGestorPage'
 import OnboardingVendedorPage from './pages/auth/OnboardingVendedorPage'
 import PrivateRoute from './components/shared/PrivateRoute'
@@ -61,6 +62,7 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/auth/select-instance" element={<InstanceSelectorPage />} />
       <Route path="/auth/2fa" element={<TwoFactorPage />} />
+      <Route path="/auth/verify-email" element={<VerifyEmailPage />} />
 
       {/* Onboarding */}
       <Route path="/gestao/onboarding" element={<OnboardingGestorPage />} />

@@ -7,6 +7,7 @@ import cookieParser from 'cookie-parser'
 import rateLimit from 'express-rate-limit'
 import authRoutes from './routes/auth.routes'
 import publicRoutes from './routes/public.routes'
+import signupRoutes from './routes/signup.routes'
 import pipelineRoutes from './routes/pipeline.routes'
 import leadsRoutes from './routes/leads.routes'
 import tasksRoutes from './routes/tasks.routes'
@@ -93,6 +94,11 @@ app.use('/public', express.static(path.join(__dirname, '..', 'src', 'public')))
 // Public form endpoints (GET form schema, POST submission). Mounted
 // at /public BEFORE usersRoutes so authMiddleware never intercepts.
 app.use('/public', publicRoutes)
+
+// Public signup + email verification (POST /public/signup,
+// GET /public/verify-email). Same /public prefix, mounted before any
+// authenticated router so there's no JWT requirement.
+app.use('/public', signupRoutes)
 
 app.use('/webhooks', webhooksRoutes)
 app.use('/email', emailRoutes)
