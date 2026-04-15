@@ -3,6 +3,8 @@ import LoginPage from './pages/auth/LoginPage'
 import InstanceSelectorPage from './pages/auth/InstanceSelectorPage'
 import TwoFactorPage from './pages/auth/TwoFactorPage'
 import VerifyEmailPage from './pages/auth/VerifyEmailPage'
+import VerifyEmailSentPage from './pages/auth/VerifyEmailSentPage'
+import SignupPage from './pages/auth/SignupPage'
 import OnboardingGestorPage from './pages/auth/OnboardingGestorPage'
 import OnboardingVendedorPage from './pages/auth/OnboardingVendedorPage'
 import PrivateRoute from './components/shared/PrivateRoute'
@@ -63,6 +65,8 @@ export default function App() {
       <Route path="/auth/select-instance" element={<InstanceSelectorPage />} />
       <Route path="/auth/2fa" element={<TwoFactorPage />} />
       <Route path="/auth/verify-email" element={<VerifyEmailPage />} />
+      <Route path="/auth/verify-email-sent" element={<VerifyEmailSentPage />} />
+      <Route path="/signup" element={<SignupPage />} />
 
       {/* Onboarding */}
       <Route path="/gestao/onboarding" element={<OnboardingGestorPage />} />
