@@ -19,12 +19,12 @@ const inputS: React.CSSProperties = { width: '100%', background: 'var(--bg-surfa
 // backend UUID (existing stage) or a transient `temp-…` value created
 // on the client when the gestor clicks "+ Adicionar etapa". The
 // server distinguishes both on the bulk save.
-interface Stage { id: string; name: string; color: string; fixed: boolean; sortOrder: number }
+interface Stage { id: string; name: string; color: string; fixed: boolean; active: boolean; sortOrder: number }
 
 interface PipelineSummary {
   id: string
   name: string
-  stages: { id: string; name: string; color: string; isFixed: boolean; sortOrder: number; type: string }[]
+  stages: { id: string; name: string; color: string; isFixed: boolean; isActive: boolean; sortOrder: number; type: string }[]
 }
 
 const initialReasons = ['Preço alto', 'Sem orçamento no momento', 'Escolheu concorrente', 'Sem interesse', 'Sem retorno', 'Timing errado']
@@ -95,17 +95,31 @@ function PipelineTab() {
   }
 
   // Build the editor model from a backend pipeline. Stages from the
-  // API are the source of truth — fixed flag, sortOrder and color all
-  // come from there.
+  // API are the source of truth — fixed flag, sortOrder, color and
+  // active state all come from there. Older API responses without
+  // `isActive` default to active=true.
   function loadPipelineIntoEditor(p: PipelineSummary | undefined) {
     if (!p) { setStages([]); setPristineKey(''); return }
-    const next: Stage[] = p.stages.map(s => ({ id: s.id, name: s.name, color: s.color, fixed: s.isFixed, sortOrder: s.sortOrder }))
+    const next: Stage[] = p.stages.map(s => ({
+      id: s.id,
+      name: s.name,
+      color: s.color,
+      fixed: s.isFixed,
+      active: s.isActive ?? true,
+      sortOrder: s.sortOrder,
+    }))
     setStages(next)
     setPristineKey(serialize(next))
   }
 
   function serialize(arr: Stage[]): string {
-    return JSON.stringify(arr.map((s, i) => ({ id: s.id.startsWith('temp-') ? '' : s.id, n: s.name, c: s.color, o: i })))
+    return JSON.stringify(arr.map((s, i) => ({
+      id: s.id.startsWith('temp-') ? '' : s.id,
+      n: s.name,
+      c: s.color,
+      a: s.active,
+      o: i,
+    })))
   }
 
   const dirty = serialize(stages) !== pristineKey
@@ -119,7 +133,7 @@ function PipelineTab() {
         const list: PipelineSummary[] = (data ?? []).map((p: any) => ({
           id: p.id,
           name: p.name,
-          stages: (p.stages ?? []).map((s: any) => ({ id: s.id, name: s.name, color: s.color, isFixed: !!s.isFixed, sortOrder: s.sortOrder, type: s.type })),
+          stages: (p.stages ?? []).map((s: any) => ({ id: s.id, name: s.name, color: s.color, isFixed: !!s.isFixed, isActive: s.isActive ?? true, sortOrder: s.sortOrder, type: s.type })),
         }))
         setPipelines(list)
         const first = list[0]
@@ -144,6 +158,11 @@ function PipelineTab() {
 
   function removeStage(id: string) { setStages(prev => prev.filter(s => s.id !== id)) }
   function renameSt(id: string, name: string) { setStages(prev => prev.map(s => s.id === id ? { ...s, name } : s)) }
+  function toggleStage(id: string) {
+    // Fixed stages can never be toggled off — they back the WON/LOST
+    // flows and the kanban depends on them. Quietly no-op the click.
+    setStages(prev => prev.map(s => s.id === id && !s.fixed ? { ...s, active: !s.active } : s))
+  }
   function addStage() {
     setStages(prev => {
       const newStage: Stage = {
@@ -151,6 +170,7 @@ function PipelineTab() {
         name: 'Nova etapa',
         color: '#6b7280',
         fixed: false,
+        active: true,
         sortOrder: prev.length,
       }
       const firstFixedIdx = prev.findIndex(s => s.fixed)
@@ -169,16 +189,30 @@ function PipelineTab() {
         name: s.name.trim(),
         color: s.color,
         sortOrder: i,
+        isActive: s.active,
       }))
       const fresh = await saveStages(activeId, payload)
       // Refresh local pipeline + editor with server-returned ids/order
       setPipelines(prev => prev.map(p => p.id === activeId ? { ...p, stages: fresh } : p))
-      const next: Stage[] = fresh.map((s: any) => ({ id: s.id, name: s.name, color: s.color, fixed: !!s.isFixed, sortOrder: s.sortOrder }))
+      const next: Stage[] = fresh.map((s: any) => ({
+        id: s.id,
+        name: s.name,
+        color: s.color,
+        fixed: !!s.isFixed,
+        active: s.isActive ?? true,
+        sortOrder: s.sortOrder,
+      }))
       setStages(next)
       setPristineKey(serialize(next))
       showToast('Etapas salvas com sucesso')
     } catch (e: any) {
-      showToast(e?.response?.data?.error?.message ?? 'Erro ao salvar etapas', 'err')
+      // Surface the server's diagnostic when present (e.g., the new
+      // STAGE_HAS_LEADS conflict) instead of a generic message.
+      const apiErr = e?.response?.data?.error
+      const code = apiErr?.code
+      const msg = apiErr?.message
+      console.error('[SettingsPage] saveStages failed', { code, msg, status: e?.response?.status, full: e?.response?.data })
+      showToast(msg ?? 'Erro ao salvar etapas', 'err')
     } finally {
       setSavingStages(false)
     }
@@ -191,7 +225,7 @@ function PipelineTab() {
       const summary: PipelineSummary = {
         id: created.id,
         name: created.name,
-        stages: (created.stages ?? []).map((s: any) => ({ id: s.id, name: s.name, color: s.color, isFixed: !!s.isFixed, sortOrder: s.sortOrder, type: s.type })),
+        stages: (created.stages ?? []).map((s: any) => ({ id: s.id, name: s.name, color: s.color, isFixed: !!s.isFixed, isActive: s.isActive ?? true, sortOrder: s.sortOrder, type: s.type })),
       }
       setPipelines(prev => [...prev, summary])
       setActiveId(summary.id)
@@ -257,8 +291,11 @@ function PipelineTab() {
         <div key={s.id} style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12 }}>
           <GripVertical size={16} color="var(--border)" style={{ cursor: 'grab', flexShrink: 0 }} />
           <div style={{ width: 4, height: 20, borderRadius: 2, background: s.color, flexShrink: 0 }} />
-          <input value={s.name} onChange={e => renameSt(s.id, e.target.value)} disabled={s.fixed} style={{ flex: 1, background: 'transparent', border: 'none', fontSize: 14, fontWeight: 500, color: s.fixed ? 'var(--text-muted)' : 'var(--text-primary)', outline: 'none' }} />
+          <input value={s.name} onChange={e => renameSt(s.id, e.target.value)} style={{ flex: 1, background: 'transparent', border: 'none', fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', outline: 'none' }} />
           {s.fixed && <span style={{ background: 'var(--border)', color: 'var(--text-muted)', borderRadius: 4, padding: '2px 8px', fontSize: 10 }}>Fixa</span>}
+          <div onClick={() => toggleStage(s.id)} style={{ width: 36, height: 20, borderRadius: 999, background: s.active ? '#f97316' : 'var(--border)', display: 'flex', alignItems: 'center', padding: '0 2px', justifyContent: s.active ? 'flex-end' : 'flex-start', cursor: s.fixed ? 'not-allowed' : 'pointer', transition: 'all 0.2s', opacity: s.fixed ? 0.5 : 1 }} title={s.fixed ? 'Etapas fixas não podem ser desabilitadas' : (s.active ? 'Desabilitar etapa' : 'Habilitar etapa')}>
+            <div style={{ width: 16, height: 16, borderRadius: '50%', background: s.active ? '#fff' : 'var(--text-muted)', transition: 'all 0.2s' }} />
+          </div>
           {!s.fixed && (
             <button onClick={() => removeStage(s.id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4, transition: 'color 0.15s' }}
               onMouseEnter={e => { e.currentTarget.style.color = '#ef4444' }} onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)' }}>

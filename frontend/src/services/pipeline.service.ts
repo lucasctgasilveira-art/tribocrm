@@ -40,6 +40,7 @@ export interface StageSavePayload {
   name: string
   color: string
   sortOrder: number
+  isActive?: boolean
 }
 
 // Bulk replace of stages for a given pipeline. New rows have no id,

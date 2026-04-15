@@ -33,12 +33,13 @@ router.patch('/:id', updatePipeline)
  * choose not to ship them; the server preserves them either way.
  */
 router.put('/:pipelineId/stages', async (req: Request, res: Response) => {
+  const pipelineId = req.params.pipelineId as string
   try {
     const tenantId = req.user!.tenantId
-    const pipelineId = req.params.pipelineId as string
-    const body = req.body as { stages?: { id?: string; name?: string; color?: string; sortOrder?: number }[] }
+    const body = req.body as { stages?: { id?: string; name?: string; color?: string; sortOrder?: number; isActive?: boolean }[] }
 
     if (!Array.isArray(body?.stages)) {
+      console.warn('[Pipelines] bulk save 400 — stages not array', { tenantId, pipelineId, bodyType: typeof body?.stages })
       res.status(400).json({
         success: false,
         error: { code: 'VALIDATION_ERROR', message: 'stages é obrigatório (array)' },
@@ -51,6 +52,7 @@ router.put('/:pipelineId/stages', async (req: Request, res: Response) => {
       include: { stages: true },
     })
     if (!pipeline) {
+      console.warn('[Pipelines] bulk save 404 — pipeline not found in tenant', { tenantId, pipelineId })
       res.status(404).json({
         success: false,
         error: { code: 'NOT_FOUND', message: 'Pipeline não encontrado' },
@@ -78,7 +80,7 @@ router.put('/:pipelineId/stages', async (req: Request, res: Response) => {
     // payload gets removed, but only when no lead is sitting on it.
     const toDelete = pipeline.stages.filter(s => !s.isFixed && !incomingIds.has(s.id))
     for (const s of toDelete) {
-      const leadCount = await prisma.lead.count({ where: { stageId: s.id, deletedAt: null } })
+      const leadCount = await prisma.lead.count({ where: { stageId: s.id, tenantId, deletedAt: null } })
       if (leadCount > 0) {
         res.status(409).json({
           success: false,
@@ -92,8 +94,8 @@ router.put('/:pipelineId/stages', async (req: Request, res: Response) => {
     }
 
     await prisma.$transaction(async (tx) => {
-      // Delete first so name/sortOrder unique-ish reordering doesn't
-      // race with the updates below.
+      // Delete first so name/sortOrder ordering doesn't race with the
+      // updates below.
       if (toDelete.length > 0) {
         await tx.pipelineStage.deleteMany({ where: { id: { in: toDelete.map(s => s.id) } } })
       }
@@ -106,13 +108,19 @@ router.put('/:pipelineId/stages', async (req: Request, res: Response) => {
 
         if (s.id && existingById.has(s.id)) {
           const existing = existingById.get(s.id)!
+          // Fixed stages: name and color CAN be renamed/recolored by
+          // the gestor (per Configurações spec — Venda Realizada and
+          // Perdido stay fixed in role/position but their label is
+          // editable). isActive is forced to true for fixed stages so
+          // the gestor can never accidentally turn off a terminal
+          // state needed by the kanban / WON/LOST lead flows.
           await tx.pipelineStage.update({
             where: { id: s.id },
             data: {
-              // Fixed stages never get renamed/recolored — preserve.
-              name: existing.isFixed ? existing.name : name,
-              color: existing.isFixed ? existing.color : color,
+              name,
+              color,
               sortOrder: desiredOrder,
+              isActive: existing.isFixed ? true : (typeof s.isActive === 'boolean' ? s.isActive : true),
             },
           })
         } else {
@@ -125,6 +133,7 @@ router.put('/:pipelineId/stages', async (req: Request, res: Response) => {
               type: 'NORMAL',
               sortOrder: desiredOrder,
               isFixed: false,
+              isActive: typeof s.isActive === 'boolean' ? s.isActive : true,
             },
           })
         }
@@ -134,15 +143,29 @@ router.put('/:pipelineId/stages', async (req: Request, res: Response) => {
     const fresh = await prisma.pipelineStage.findMany({
       where: { pipelineId },
       orderBy: { sortOrder: 'asc' },
-      select: { id: true, name: true, color: true, type: true, sortOrder: true, isFixed: true },
+      select: { id: true, name: true, color: true, type: true, sortOrder: true, isFixed: true, isActive: true },
     })
 
     res.json({ success: true, data: fresh })
   } catch (error: any) {
-    console.error('[Pipelines] bulk stages save error:', error?.message ?? error)
+    // Verbose diagnostics: surface Prisma error code, full message,
+    // stack and the offending pipelineId/payload so the next failure
+    // is debuggable from logs alone.
+    const safeBody = (() => {
+      try { return JSON.stringify(req.body).slice(0, 1000) } catch { return '[unserializable]' }
+    })()
+    console.error('[Pipelines] bulk stages save FAILED', {
+      pipelineId,
+      tenantId: req.user?.tenantId,
+      code: error?.code,
+      message: error?.message,
+      meta: error?.meta,
+      body: safeBody,
+      stack: error?.stack,
+    })
     res.status(500).json({
       success: false,
-      error: { code: 'INTERNAL_ERROR', message: 'Erro interno do servidor' },
+      error: { code: error?.code ?? 'INTERNAL_ERROR', message: error?.message ?? 'Erro interno do servidor' },
     })
   }
 })
