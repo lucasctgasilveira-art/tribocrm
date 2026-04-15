@@ -67,7 +67,15 @@ function focusOff(e: React.FocusEvent<HTMLInputElement>) {
 export default function SignupPage() {
   const navigate = useNavigate()
 
-  const [plan, setPlan] = useState<PlanKey>('ESSENCIAL')
+  const [plan, setPlan] = useState<PlanKey>(() => {
+    const params = new URLSearchParams(window.location.search)
+    const planoParam = params.get('plano')?.toLowerCase()
+    if (planoParam === 'solo') return 'SOLO'
+    if (planoParam === 'essencial') return 'ESSENCIAL'
+    if (planoParam === 'pro') return 'PRO'
+    if (planoParam === 'enterprise') return 'ENTERPRISE'
+    return 'ESSENCIAL'
+  })
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
