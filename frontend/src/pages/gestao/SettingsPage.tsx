@@ -86,6 +86,23 @@ function PipelineTab() {
   function toggleStage(id: string) { setStages(p => p.map(s => s.id === id && !s.fixed ? { ...s, active: !s.active } : s)) }
   function removeStage(id: string) { setStages(p => p.filter(s => s.id !== id)) }
   function renameSt(id: string, name: string) { setStages(p => p.map(s => s.id === id ? { ...s, name } : s)) }
+  function addStage() {
+    // Insert before the first fixed stage (Venda Realizada / Perdido)
+    // so the terminal states stay at the bottom. Falls back to append
+    // if no fixed stage exists in the current list.
+    setStages(prev => {
+      const newStage: Stage = {
+        id: `s${Date.now()}`,
+        name: 'Nova etapa',
+        color: 'var(--text-muted)',
+        active: true,
+        fixed: false,
+      }
+      const firstFixedIdx = prev.findIndex(s => s.fixed)
+      if (firstFixedIdx === -1) return [...prev, newStage]
+      return [...prev.slice(0, firstFixedIdx), newStage, ...prev.slice(firstFixedIdx)]
+    })
+  }
 
   function handleCreateFunnel(name: string) {
     setPipelines(p => [...p, name])
@@ -137,7 +154,7 @@ function PipelineTab() {
           )}
         </div>
       ))}
-      <button style={{ width: '100%', padding: 10, background: 'transparent', border: 'none', color: '#f97316', fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+      <button onClick={addStage} style={{ width: '100%', padding: 10, background: 'transparent', border: 'none', color: '#f97316', fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
         <Plus size={14} strokeWidth={1.5} /> Adicionar etapa
       </button>
       <div style={{ padding: '8px 20px 16px', fontSize: 12, color: 'var(--text-muted)' }}>As etapas Venda Realizada e Perdido são fixas e não podem ser removidas.</div>
