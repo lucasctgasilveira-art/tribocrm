@@ -186,12 +186,22 @@ export async function publicSignup(req: Request, res: Response): Promise<void> {
         <a href="${verifyUrl}" style="display:inline-block;background:#f97316;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">Confirmar e-mail</a>
         <p style="font-size:12px;color:#9ca3af;margin-top:24px">Se o botão não funcionar, copie este link: <br/><span style="color:#f97316;word-break:break-all">${verifyUrl}</span></p>
       </div>`
-    sendMail({
-      to: emailNorm,
-      subject: 'Confirme seu e-mail — TriboCRM',
-      text: `Olá! Confirme seu cadastro no TriboCRM acessando: ${verifyUrl}`,
-      html,
-    }).catch((e) => console.error('[Signup] verification email send error:', e?.message ?? e))
+    // Awaited so the log captures the actual Brevo status for this
+    // request. Wrapped in try/catch so a mailer failure never turns
+    // a successful signup into a 500 — the user's row is already
+    // committed; they just won't get the email until a resend.
+    console.info('[Signup] sending verification email to:', emailNorm)
+    try {
+      const mailResult = await sendMail({
+        to: emailNorm,
+        subject: 'Confirme seu e-mail — TriboCRM',
+        text: `Olá! Confirme seu cadastro no TriboCRM acessando: ${verifyUrl}`,
+        html,
+      })
+      console.info('[Signup] email result:', JSON.stringify(mailResult))
+    } catch (mailErr: any) {
+      console.error('[Signup] verification email send error:', mailErr?.message ?? mailErr)
+    }
 
     res.status(201).json({
       success: true,
