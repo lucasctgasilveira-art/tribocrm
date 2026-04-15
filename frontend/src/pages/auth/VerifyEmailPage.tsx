@@ -48,7 +48,10 @@ export default function VerifyEmailPage() {
 
   useEffect(() => {
     if (status !== 'success') return
-    const t = setTimeout(() => navigate('/login', { replace: true }), 3000)
+    // Post-verification the user's tenant is in TRIAL status and still
+    // needs to pick a payment method. Send them to the checkout flow
+    // instead of straight to /login.
+    const t = setTimeout(() => navigate('/checkout', { replace: true }), 3000)
     return () => clearTimeout(t)
   }, [status, navigate])
 
