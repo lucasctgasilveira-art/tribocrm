@@ -35,4 +35,19 @@ export async function updatePipeline(id: string, payload: UpdatePipelinePayload)
   return response.data.data
 }
 
-export default { getPipelines, getKanban, createPipeline, updatePipeline }
+export interface StageSavePayload {
+  id?: string
+  name: string
+  color: string
+  sortOrder: number
+}
+
+// Bulk replace of stages for a given pipeline. New rows have no id,
+// existing ones keep theirs; missing existing rows get deleted on the
+// server (only when no leads sit on them — otherwise 409).
+export async function saveStages(pipelineId: string, stages: StageSavePayload[]) {
+  const response = await api.put(`/pipelines/${pipelineId}/stages`, { stages })
+  return response.data.data
+}
+
+export default { getPipelines, getKanban, createPipeline, updatePipeline, saveStages }

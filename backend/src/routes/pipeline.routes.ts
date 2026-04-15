@@ -13,6 +13,141 @@ router.post('/', createPipeline)
 router.patch('/:id', updatePipeline)
 
 /**
+ * PUT /pipelines/:pipelineId/stages
+ *
+ * Bulk replace of the pipeline's stages, used by the gestor's
+ * Configurações → Pipeline screen "Salvar etapas" button.
+ *
+ * Body: { stages: [{ id?, name, color, sortOrder }] }
+ *
+ * Semantics:
+ *   - Stage with id matching an existing row → name/color/sortOrder updated
+ *   - Stage with no id → new row created (NORMAL type, isFixed=false)
+ *   - Existing rows missing from the payload → DELETED (only when not
+ *     fixed AND not referenced by any lead). Refusal returns 409 with
+ *     the offending stage so the UI can surface it instead of silently
+ *     keeping the row.
+ *
+ * Fixed stages (Venda Realizada, Perdido) are never touched by the
+ * delete pass even if absent from the payload — the frontend may
+ * choose not to ship them; the server preserves them either way.
+ */
+router.put('/:pipelineId/stages', async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user!.tenantId
+    const pipelineId = req.params.pipelineId as string
+    const body = req.body as { stages?: { id?: string; name?: string; color?: string; sortOrder?: number }[] }
+
+    if (!Array.isArray(body?.stages)) {
+      res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'stages é obrigatório (array)' },
+      })
+      return
+    }
+
+    const pipeline = await prisma.pipeline.findFirst({
+      where: { id: pipelineId, tenantId },
+      include: { stages: true },
+    })
+    if (!pipeline) {
+      res.status(404).json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Pipeline não encontrado' },
+      })
+      return
+    }
+
+    const existingById = new Map(pipeline.stages.map(s => [s.id, s]))
+    const incoming = body.stages
+
+    // Normalize each incoming entry; reject empty names early
+    for (const s of incoming) {
+      if (!s.name || typeof s.name !== 'string' || !s.name.trim()) {
+        res.status(400).json({
+          success: false,
+          error: { code: 'VALIDATION_ERROR', message: 'Toda etapa precisa de um nome' },
+        })
+        return
+      }
+    }
+
+    const incomingIds = new Set(incoming.map(s => s.id).filter((x): x is string => typeof x === 'string'))
+
+    // Delete pass: any non-fixed existing stage missing from the
+    // payload gets removed, but only when no lead is sitting on it.
+    const toDelete = pipeline.stages.filter(s => !s.isFixed && !incomingIds.has(s.id))
+    for (const s of toDelete) {
+      const leadCount = await prisma.lead.count({ where: { stageId: s.id, deletedAt: null } })
+      if (leadCount > 0) {
+        res.status(409).json({
+          success: false,
+          error: {
+            code: 'STAGE_HAS_LEADS',
+            message: `A etapa "${s.name}" tem ${leadCount} lead(s) e não pode ser removida. Mova-os antes.`,
+          },
+        })
+        return
+      }
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // Delete first so name/sortOrder unique-ish reordering doesn't
+      // race with the updates below.
+      if (toDelete.length > 0) {
+        await tx.pipelineStage.deleteMany({ where: { id: { in: toDelete.map(s => s.id) } } })
+      }
+
+      for (let i = 0; i < incoming.length; i++) {
+        const s = incoming[i]!
+        const desiredOrder = typeof s.sortOrder === 'number' ? s.sortOrder : i
+        const color = (typeof s.color === 'string' && /^#([0-9a-f]{3}){1,2}$/i.test(s.color)) ? s.color : '#6b7280'
+        const name = s.name!.trim().slice(0, 100)
+
+        if (s.id && existingById.has(s.id)) {
+          const existing = existingById.get(s.id)!
+          await tx.pipelineStage.update({
+            where: { id: s.id },
+            data: {
+              // Fixed stages never get renamed/recolored — preserve.
+              name: existing.isFixed ? existing.name : name,
+              color: existing.isFixed ? existing.color : color,
+              sortOrder: desiredOrder,
+            },
+          })
+        } else {
+          await tx.pipelineStage.create({
+            data: {
+              tenantId,
+              pipelineId,
+              name,
+              color,
+              type: 'NORMAL',
+              sortOrder: desiredOrder,
+              isFixed: false,
+            },
+          })
+        }
+      }
+    })
+
+    const fresh = await prisma.pipelineStage.findMany({
+      where: { pipelineId },
+      orderBy: { sortOrder: 'asc' },
+      select: { id: true, name: true, color: true, type: true, sortOrder: true, isFixed: true },
+    })
+
+    res.json({ success: true, data: fresh })
+  } catch (error: any) {
+    console.error('[Pipelines] bulk stages save error:', error?.message ?? error)
+    res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Erro interno do servidor' },
+    })
+  }
+})
+
+/**
  * PATCH /pipelines/:pipelineId/stages/:stageId { name }
  *
  * Renames a non-fixed pipeline stage. Fixed stages (Venda Realizada,
