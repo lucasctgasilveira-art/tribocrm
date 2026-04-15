@@ -25,6 +25,7 @@ interface Lead {
   status: string
   lastActivityAt: string | null
   updatedAt: string
+  createdAt: string
   stage: { id: string; name: string; color: string }
   responsible: { id: string; name: string }
 }
@@ -538,6 +539,7 @@ export default function GestaoLeadsPage() {
             responsible: ini(drawerLead.responsible.name),
             lastContact: formatTimeAgo(drawerLead.lastActivityAt),
             phone: drawerLead.phone ?? drawerLead.whatsapp ?? '—', email: drawerLead.email ?? '—',
+            createdAt: drawerLead.createdAt,
           }}
           onClose={() => setDrawerLead(null)}
           stageColor={drawerLead.stage.color}

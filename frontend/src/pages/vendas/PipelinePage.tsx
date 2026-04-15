@@ -20,6 +20,7 @@ interface Lead {
   temperature: Temperature; lastContact: string | null; phone: string; email: string
   status: LeadStatus
   wonAt: string | null
+  createdAt?: string
 }
 
 interface StageConfig { id: string; name: string; color: string; type: string }
@@ -27,7 +28,7 @@ interface StageConfig { id: string; name: string; color: string; type: string }
 interface ApiLead {
   id: string; name: string; company: string | null; phone: string | null; whatsapp: string | null; email: string | null
   expectedValue: string | number | null; closedValue: string | number | null; temperature: Temperature; stageId: string; lastActivityAt: string | null
-  responsible: { id: string; name: string }; status?: LeadStatus; wonAt?: string | null
+  responsible: { id: string; name: string }; status?: LeadStatus; wonAt?: string | null; createdAt?: string
 }
 
 interface KanbanStage {
@@ -61,6 +62,7 @@ function mapApiLead(l: ApiLead, stageName: string): Lead {
     stage: stageName, temperature: l.temperature, lastContact: formatTimeAgo(l.lastActivityAt),
     phone: l.phone ?? l.whatsapp ?? '—', email: l.email ?? '—', status: l.status ?? 'ACTIVE',
     wonAt: l.wonAt ?? null,
+    createdAt: l.createdAt,
   }
 }
 
