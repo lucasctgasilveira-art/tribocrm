@@ -342,7 +342,14 @@ function DistributionRuleCard({ pipelines }: { pipelines: PipelineSummary[] }) {
   const [pipelinesList, setPipelinesList] = useState<PipelineLite[]>([])
   const [users, setUsers] = useState<UserLite[]>([])
   const [teams, setTeams] = useState<TeamLite[]>([])
-  const [selectedId, setSelectedId] = useState('')
+  // Seed selectedId from the parent's already-loaded pipelines (when
+  // available) so the <select> has a valid bound value from the very
+  // first render. If the parent is still loading (pipelines === []),
+  // falls back to '' and the useEffect below fills it in once the
+  // inner fetch resolves. Prevents the class of bug where the native
+  // <select> renders the first <option> visually but the state says
+  // '', tripping the "Selecione um pipeline" guard on save.
+  const [selectedId, setSelectedId] = useState<string>(pipelines[0]?.id ?? '')
   const [distType, setDistType] = useState<PipelineDistributionType>('MANUAL')
   const [teamId, setTeamId] = useState('')
   const [specificUserId, setSpecificUserId] = useState('')
@@ -365,21 +372,20 @@ function DistributionRuleCard({ pipelines }: { pipelines: PipelineSummary[] }) {
         setPipelinesList(list)
         setUsers((us ?? []).map((u: any) => ({ id: u.id, name: u.name })))
         setTeams((ts ?? []).map((t: any) => ({ id: t.id, name: t.name })))
-        // Preserve the user's current selection across reloads so a
-        // new funnel appearing in the list doesn't yank them off the
-        // pipeline they were configuring. Falls back to the first
-        // pipeline only when nothing was selected.
-        setSelectedId(prev => {
-          const keep = prev && list.find(p => p.id === prev)
-          const target = keep ?? list[0]
-          if (target) {
-            setDistType(target.distributionType)
-            setTeamId(target.teamId ?? '')
-            setSpecificUserId(target.specificUserId ?? '')
-            return target.id
-          }
-          return ''
-        })
+        // Preserve selection across reloads when possible; otherwise
+        // seed with the first pipeline's REAL id. All setters are
+        // plain calls (no nested setState) so React 18 batches them
+        // into a single render and no stale value leaks through.
+        const keep = selectedId && list.find(p => p.id === selectedId)
+        const target = keep ?? list[0]
+        if (target) {
+          setSelectedId(target.id)
+          setDistType(target.distributionType)
+          setTeamId(target.teamId ?? '')
+          setSpecificUserId(target.specificUserId ?? '')
+        } else {
+          setSelectedId('')
+        }
       })
       .catch(() => { /* keep empty */ })
       .finally(() => { if (mounted) setLoading(false) })
