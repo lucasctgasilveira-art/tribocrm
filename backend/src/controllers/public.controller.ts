@@ -149,6 +149,60 @@ export async function submitPublicForm(req: Request, res: Response): Promise<voi
     const stageId = form.destinationStageId
 
     const result = await prisma.$transaction(async (tx) => {
+      // Deduplication: if the visitor already exists as an ACTIVE lead
+      // under this tenant (same email), append an interaction to the
+      // existing lead instead of creating a second card. WON/LOST leads
+      // represent finished deals — a new submission from that email
+      // is treated as a fresh opportunity and gets a new card.
+      if (email) {
+        const existing = await tx.lead.findFirst({
+          where: {
+            tenantId,
+            email,
+            status: 'ACTIVE',
+            deletedAt: null,
+          },
+          select: { id: true, responsibleId: true },
+        })
+
+        if (existing) {
+          const now = new Date()
+          const timestamp = now.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+
+          // Timeline note. userId is required by the FK, so we stamp
+          // the lead's current responsible and mark isAuto=true so the
+          // drawer renders "• Sistema" instead of the person's name.
+          await tx.interaction.create({
+            data: {
+              tenantId,
+              leadId: existing.id,
+              userId: existing.responsibleId,
+              type: 'SYSTEM',
+              content: `Lead resubmeteu o formulário de captação em ${timestamp}`,
+              isAuto: true,
+            },
+          })
+
+          await tx.lead.update({
+            where: { id: existing.id },
+            data: { lastActivityAt: now },
+          })
+
+          await tx.formSubmission.create({
+            data: {
+              tenantId,
+              formId: form.id,
+              leadId: existing.id,
+              rawData: body as Prisma.InputJsonValue,
+              status: 'PROCESSED',
+              ipAddress: (req.ip ?? req.socket.remoteAddress ?? '').slice(0, 50) || null,
+            },
+          })
+
+          return { leadId: existing.id, dedup: true as const }
+        }
+      }
+
       const pipeline = await tx.pipeline.findFirst({
         where: { id: pipelineId, tenantId },
         select: { id: true, lastAssignedUserId: true },
@@ -195,22 +249,26 @@ export async function submitPublicForm(req: Request, res: Response): Promise<voi
         },
       })
 
-      return { leadId: lead.id }
+      return { leadId: lead.id, dedup: false as const }
     })
 
     // Fire LEAD_CREATED automation event (non-blocking). Separate from
     // the form-level automationId: the latter targets a specific
-    // workflow wired to THIS form, handled below.
-    prisma.automationEvent
-      .create({
-        data: {
-          tenantId,
-          triggerType: 'LEAD_CREATED',
-          leadId: result.leadId,
-          payload: { source: 'FORM_EMBED', formId: form.id },
-        },
-      })
-      .catch((e) => console.error('[Public] LEAD_CREATED event error:', e?.message))
+    // workflow wired to THIS form, handled below. Skipped when the
+    // submission was deduplicated into an existing lead — that lead
+    // already fired LEAD_CREATED on its original creation.
+    if (!result.dedup) {
+      prisma.automationEvent
+        .create({
+          data: {
+            tenantId,
+            triggerType: 'LEAD_CREATED',
+            leadId: result.leadId,
+            payload: { source: 'FORM_EMBED', formId: form.id },
+          },
+        })
+        .catch((e) => console.error('[Public] LEAD_CREATED event error:', e?.message))
+    }
 
     // Fire FORM_SUBMITTED targeted at the form's linked automation, if
     // any. The automation worker reads both event type and payload.
