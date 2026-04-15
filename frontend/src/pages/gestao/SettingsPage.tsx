@@ -3,7 +3,7 @@ import { GripVertical, Plus, X, CheckSquare, Mail, Calendar, Globe, MoreHorizont
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
 import api from '../../services/api'
-import { getPipelines, updatePipeline, type PipelineDistributionType } from '../../services/pipeline.service'
+import { getPipelines, updatePipeline, createPipeline, saveStages, type PipelineDistributionType } from '../../services/pipeline.service'
 import { getUsers, getTeams } from '../../services/users.service'
 
 type Tab = 'pipeline' | 'loss' | 'tasks' | 'integrations'
@@ -15,16 +15,17 @@ const inputS: React.CSSProperties = { width: '100%', background: 'var(--bg-surfa
 
 // ── Data ──
 
-interface Stage { id: string; name: string; color: string; active: boolean; fixed: boolean }
-const initialStages: Stage[] = [
-  { id: 's1', name: 'Sem Contato', color: 'var(--text-muted)', active: true, fixed: false },
-  { id: 's2', name: 'Em Contato', color: '#3b82f6', active: true, fixed: false },
-  { id: 's3', name: 'Negociando', color: '#f59e0b', active: true, fixed: false },
-  { id: 's4', name: 'Proposta Enviada', color: '#a855f7', active: true, fixed: false },
-  { id: 's5', name: 'Venda Realizada', color: '#22c55e', active: true, fixed: true },
-  { id: 's6', name: 'Repescagem', color: '#f97316', active: true, fixed: false },
-  { id: 's7', name: 'Perdido', color: '#ef4444', active: true, fixed: true },
-]
+// Stage rendered in the Pipeline tab editor. `id` is either the real
+// backend UUID (existing stage) or a transient `temp-…` value created
+// on the client when the gestor clicks "+ Adicionar etapa". The
+// server distinguishes both on the bulk save.
+interface Stage { id: string; name: string; color: string; fixed: boolean; sortOrder: number }
+
+interface PipelineSummary {
+  id: string
+  name: string
+  stages: { id: string; name: string; color: string; isFixed: boolean; sortOrder: number; type: string }[]
+}
 
 const initialReasons = ['Preço alto', 'Sem orçamento no momento', 'Escolheu concorrente', 'Sem interesse', 'Sem retorno', 'Timing errado']
 
@@ -78,25 +79,79 @@ export default function SettingsPage() {
 // ── Pipeline Tab ──
 
 function PipelineTab() {
-  const [stages, setStages] = useState(initialStages)
-  const [pipelines, setPipelines] = useState(['Pipeline Principal', 'Pós-Venda'])
-  const [activePipeline, setActivePipeline] = useState('Pipeline Principal')
+  const [pipelines, setPipelines] = useState<PipelineSummary[]>([])
+  const [activeId, setActiveId] = useState<string>('')
+  const [stages, setStages] = useState<Stage[]>([])
+  const [pristineKey, setPristineKey] = useState<string>('') // serialized snapshot to detect dirty
+  const [loading, setLoading] = useState(true)
+  const [savingStages, setSavingStages] = useState(false)
   const [newFunnelModal, setNewFunnelModal] = useState(false)
+  const [creating, setCreating] = useState(false)
+  const [toast, setToast] = useState<{ msg: string; type: 'ok' | 'err' } | null>(null)
 
-  function toggleStage(id: string) { setStages(p => p.map(s => s.id === id && !s.fixed ? { ...s, active: !s.active } : s)) }
-  function removeStage(id: string) { setStages(p => p.filter(s => s.id !== id)) }
-  function renameSt(id: string, name: string) { setStages(p => p.map(s => s.id === id ? { ...s, name } : s)) }
+  function showToast(msg: string, type: 'ok' | 'err' = 'ok') {
+    setToast({ msg, type })
+    setTimeout(() => setToast(null), 3500)
+  }
+
+  // Build the editor model from a backend pipeline. Stages from the
+  // API are the source of truth — fixed flag, sortOrder and color all
+  // come from there.
+  function loadPipelineIntoEditor(p: PipelineSummary | undefined) {
+    if (!p) { setStages([]); setPristineKey(''); return }
+    const next: Stage[] = p.stages.map(s => ({ id: s.id, name: s.name, color: s.color, fixed: s.isFixed, sortOrder: s.sortOrder }))
+    setStages(next)
+    setPristineKey(serialize(next))
+  }
+
+  function serialize(arr: Stage[]): string {
+    return JSON.stringify(arr.map((s, i) => ({ id: s.id.startsWith('temp-') ? '' : s.id, n: s.name, c: s.color, o: i })))
+  }
+
+  const dirty = serialize(stages) !== pristineKey
+
+  useEffect(() => {
+    let mounted = true
+    setLoading(true)
+    getPipelines()
+      .then((data: any[]) => {
+        if (!mounted) return
+        const list: PipelineSummary[] = (data ?? []).map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          stages: (p.stages ?? []).map((s: any) => ({ id: s.id, name: s.name, color: s.color, isFixed: !!s.isFixed, sortOrder: s.sortOrder, type: s.type })),
+        }))
+        setPipelines(list)
+        const first = list[0]
+        if (first) {
+          setActiveId(first.id)
+          loadPipelineIntoEditor(first)
+        }
+      })
+      .catch(() => { /* keep empty */ })
+      .finally(() => { if (mounted) setLoading(false) })
+    return () => { mounted = false }
+  }, [])
+
+  function selectPipeline(id: string) {
+    if (dirty) {
+      const ok = window.confirm('Você tem alterações de etapas não salvas. Trocar de pipeline vai descartá-las. Continuar?')
+      if (!ok) return
+    }
+    setActiveId(id)
+    loadPipelineIntoEditor(pipelines.find(p => p.id === id))
+  }
+
+  function removeStage(id: string) { setStages(prev => prev.filter(s => s.id !== id)) }
+  function renameSt(id: string, name: string) { setStages(prev => prev.map(s => s.id === id ? { ...s, name } : s)) }
   function addStage() {
-    // Insert before the first fixed stage (Venda Realizada / Perdido)
-    // so the terminal states stay at the bottom. Falls back to append
-    // if no fixed stage exists in the current list.
     setStages(prev => {
       const newStage: Stage = {
-        id: `s${Date.now()}`,
+        id: `temp-${Date.now()}`,
         name: 'Nova etapa',
-        color: 'var(--text-muted)',
-        active: true,
+        color: '#6b7280',
         fixed: false,
+        sortOrder: prev.length,
       }
       const firstFixedIdx = prev.findIndex(s => s.fixed)
       if (firstFixedIdx === -1) return [...prev, newStage]
@@ -104,24 +159,68 @@ function PipelineTab() {
     })
   }
 
-  function handleCreateFunnel(name: string) {
-    setPipelines(p => [...p, name])
-    setActivePipeline(name)
-    setNewFunnelModal(false)
+  async function handleSaveStages() {
+    if (!activeId) return
+    if (stages.some(s => !s.name.trim())) { showToast('Toda etapa precisa de um nome', 'err'); return }
+    setSavingStages(true)
+    try {
+      const payload = stages.map((s, i) => ({
+        id: s.id.startsWith('temp-') ? undefined : s.id,
+        name: s.name.trim(),
+        color: s.color,
+        sortOrder: i,
+      }))
+      const fresh = await saveStages(activeId, payload)
+      // Refresh local pipeline + editor with server-returned ids/order
+      setPipelines(prev => prev.map(p => p.id === activeId ? { ...p, stages: fresh } : p))
+      const next: Stage[] = fresh.map((s: any) => ({ id: s.id, name: s.name, color: s.color, fixed: !!s.isFixed, sortOrder: s.sortOrder }))
+      setStages(next)
+      setPristineKey(serialize(next))
+      showToast('Etapas salvas com sucesso')
+    } catch (e: any) {
+      showToast(e?.response?.data?.error?.message ?? 'Erro ao salvar etapas', 'err')
+    } finally {
+      setSavingStages(false)
+    }
+  }
+
+  async function handleCreateFunnel(name: string) {
+    setCreating(true)
+    try {
+      const created = await createPipeline(name)
+      const summary: PipelineSummary = {
+        id: created.id,
+        name: created.name,
+        stages: (created.stages ?? []).map((s: any) => ({ id: s.id, name: s.name, color: s.color, isFixed: !!s.isFixed, sortOrder: s.sortOrder, type: s.type })),
+      }
+      setPipelines(prev => [...prev, summary])
+      setActiveId(summary.id)
+      loadPipelineIntoEditor(summary)
+      setNewFunnelModal(false)
+      showToast(`Funil "${name}" criado`)
+    } catch (e: any) {
+      showToast(e?.response?.data?.error?.message ?? 'Erro ao criar funil', 'err')
+    } finally {
+      setCreating(false)
+    }
   }
 
   return (
     <>
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+    {toast && (
+      <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', borderLeft: `4px solid ${toast.type === 'ok' ? '#22c55e' : '#ef4444'}`, borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 60, boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>{toast.msg}</div>
+    )}
+
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
       {pipelines.map(p => (
-        <button key={p} onClick={() => setActivePipeline(p)} style={{
+        <button key={p.id} onClick={() => selectPipeline(p.id)} style={{
           borderRadius: 999, padding: '6px 14px', fontSize: 12, fontWeight: 500, cursor: 'pointer',
-          background: activePipeline === p ? 'rgba(249,115,22,0.12)' : 'var(--border)',
-          border: `1px solid ${activePipeline === p ? '#f97316' : 'var(--border)'}`,
-          color: activePipeline === p ? '#f97316' : 'var(--text-muted)', transition: 'all 0.15s',
+          background: activeId === p.id ? 'rgba(249,115,22,0.12)' : 'var(--border)',
+          border: `1px solid ${activeId === p.id ? '#f97316' : 'var(--border)'}`,
+          color: activeId === p.id ? '#f97316' : 'var(--text-muted)', transition: 'all 0.15s',
           display: 'flex', alignItems: 'center', gap: 4,
         }}>
-          {p}{activePipeline === p && ' ✓'}
+          {p.name}{activeId === p.id && ' ✓'}
         </button>
       ))}
       <button onClick={() => setNewFunnelModal(true)} style={{
@@ -133,19 +232,33 @@ function PipelineTab() {
       </button>
     </div>
 
+    {loading ? (
+      <div style={{ padding: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+        <Loader2 size={16} className="animate-spin" color="#f97316" />
+        <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Carregando pipelines...</span>
+      </div>
+    ) : pipelines.length === 0 ? (
+      <div style={card}>
+        <div style={{ padding: 40, textAlign: 'center', fontSize: 13, color: 'var(--text-muted)' }}>Nenhum pipeline cadastrado. Clique em "Novo Funil" para criar o primeiro.</div>
+      </div>
+    ) : (
     <div style={card}>
       <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Etapas — {activePipeline}</span>
+        <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Etapas — {pipelines.find(p => p.id === activeId)?.name ?? ''}</span>
+        {dirty && (
+          <button onClick={handleSaveStages} disabled={savingStages}
+            style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 16px', fontSize: 12, fontWeight: 600, cursor: savingStages ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: savingStages ? 0.7 : 1 }}>
+            {savingStages && <Loader2 size={13} className="animate-spin" />}
+            {savingStages ? 'Salvando...' : 'Salvar etapas'}
+          </button>
+        )}
       </div>
       {stages.map(s => (
         <div key={s.id} style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12 }}>
           <GripVertical size={16} color="var(--border)" style={{ cursor: 'grab', flexShrink: 0 }} />
           <div style={{ width: 4, height: 20, borderRadius: 2, background: s.color, flexShrink: 0 }} />
-          <input value={s.name} onChange={e => renameSt(s.id, e.target.value)} style={{ flex: 1, background: 'transparent', border: 'none', fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', outline: 'none' }} />
+          <input value={s.name} onChange={e => renameSt(s.id, e.target.value)} disabled={s.fixed} style={{ flex: 1, background: 'transparent', border: 'none', fontSize: 14, fontWeight: 500, color: s.fixed ? 'var(--text-muted)' : 'var(--text-primary)', outline: 'none' }} />
           {s.fixed && <span style={{ background: 'var(--border)', color: 'var(--text-muted)', borderRadius: 4, padding: '2px 8px', fontSize: 10 }}>Fixa</span>}
-          <div onClick={() => toggleStage(s.id)} style={{ width: 36, height: 20, borderRadius: 999, background: s.active ? '#f97316' : 'var(--border)', display: 'flex', alignItems: 'center', padding: '0 2px', justifyContent: s.active ? 'flex-end' : 'flex-start', cursor: s.fixed ? 'not-allowed' : 'pointer', transition: 'all 0.2s', opacity: s.fixed ? 0.5 : 1 }}>
-            <div style={{ width: 16, height: 16, borderRadius: '50%', background: s.active ? '#fff' : 'var(--text-muted)', transition: 'all 0.2s' }} />
-          </div>
           {!s.fixed && (
             <button onClick={() => removeStage(s.id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4, transition: 'color 0.15s' }}
               onMouseEnter={e => { e.currentTarget.style.color = '#ef4444' }} onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)' }}>
@@ -159,11 +272,12 @@ function PipelineTab() {
       </button>
       <div style={{ padding: '8px 20px 16px', fontSize: 12, color: 'var(--text-muted)' }}>As etapas Venda Realizada e Perdido são fixas e não podem ser removidas.</div>
     </div>
+    )}
 
-    {newFunnelModal && <NewFunnelModal onClose={() => setNewFunnelModal(false)} onCreate={handleCreateFunnel} currentCount={pipelines.length} />}
+    {newFunnelModal && <NewFunnelModal onClose={() => setNewFunnelModal(false)} onCreate={handleCreateFunnel} currentCount={pipelines.length} creating={creating} />}
 
     <div style={{ marginTop: 20 }}>
-      <DistributionRuleCard />
+      <DistributionRuleCard pipelines={pipelines} />
     </div>
     </>
   )
@@ -182,7 +296,12 @@ interface PipelineLite {
 interface UserLite { id: string; name: string }
 interface TeamLite { id: string; name: string }
 
-function DistributionRuleCard() {
+function DistributionRuleCard({ pipelines }: { pipelines: PipelineSummary[] }) {
+  // Distribution settings live on the Pipeline row but aren't carried
+  // by PipelineSummary (which only ships id/name/stages). We refetch
+  // /pipelines once on mount AND any time the parent's pipeline count
+  // changes — that catches a freshly-created funnel without forcing
+  // a page reload.
   const [pipelinesList, setPipelinesList] = useState<PipelineLite[]>([])
   const [users, setUsers] = useState<UserLite[]>([])
   const [teams, setTeams] = useState<TeamLite[]>([])
@@ -209,17 +328,27 @@ function DistributionRuleCard() {
         setPipelinesList(list)
         setUsers((us ?? []).map((u: any) => ({ id: u.id, name: u.name })))
         setTeams((ts ?? []).map((t: any) => ({ id: t.id, name: t.name })))
-        if (list[0]) {
-          setSelectedId(list[0].id)
-          setDistType(list[0].distributionType)
-          setTeamId(list[0].teamId ?? '')
-          setSpecificUserId(list[0].specificUserId ?? '')
-        }
+        // Preserve the user's current selection across reloads so a
+        // new funnel appearing in the list doesn't yank them off the
+        // pipeline they were configuring. Falls back to the first
+        // pipeline only when nothing was selected.
+        setSelectedId(prev => {
+          const keep = prev && list.find(p => p.id === prev)
+          const target = keep ?? list[0]
+          if (target) {
+            setDistType(target.distributionType)
+            setTeamId(target.teamId ?? '')
+            setSpecificUserId(target.specificUserId ?? '')
+            return target.id
+          }
+          return ''
+        })
       })
       .catch(() => { /* keep empty */ })
       .finally(() => { if (mounted) setLoading(false) })
     return () => { mounted = false }
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pipelines.length])
 
   function handleSelectPipeline(id: string) {
     setSelectedId(id)
@@ -357,7 +486,7 @@ function DistributionRuleCard() {
 
 // ── New Funnel Modal ──
 
-function NewFunnelModal({ onClose, onCreate, currentCount }: { onClose: () => void; onCreate: (name: string) => void; currentCount: number }) {
+function NewFunnelModal({ onClose, onCreate, currentCount, creating = false }: { onClose: () => void; onCreate: (name: string) => void; currentCount: number; creating?: boolean }) {
   const [name, setName] = useState('')
   return (
     <>
@@ -377,7 +506,7 @@ function NewFunnelModal({ onClose, onCreate, currentCount }: { onClose: () => vo
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Seu plano Pro permite até 10 funis. Você está usando {currentCount} de 10.</div>
         </div>
-        <ModalFooter onClose={onClose} onSave={() => { if (name.trim()) onCreate(name.trim()) }} canSave={!!name.trim()} label="Criar funil" />
+        <ModalFooter onClose={onClose} onSave={() => { if (name.trim() && !creating) onCreate(name.trim()) }} canSave={!!name.trim() && !creating} label={creating ? 'Criando...' : 'Criar funil'} />
       </div>
     </>
   )
