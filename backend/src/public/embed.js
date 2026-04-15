@@ -60,15 +60,44 @@
       '<div style="text-align:center;padding:20px;color:#ef4444;font-size:13px">' + esc(msg) + '</div>'
   }
 
-  function setSuccess() {
+  function setSuccess(customMessage) {
+    var msg = (customMessage && String(customMessage).trim())
+      || 'Recebemos seu contato! Nossa equipe entrará em contato em breve.'
     container.innerHTML =
       '<div style="text-align:center;padding:32px 20px">' +
       '<div style="width:56px;height:56px;border-radius:50%;background:rgba(34,197,94,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 16px">' +
       '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>' +
       '</div>' +
-      '<div style="font-size:16px;font-weight:600;color:' + COLORS.text + ';margin-bottom:6px">Recebemos seu contato!</div>' +
-      '<div style="font-size:13px;color:' + COLORS.muted + '">Em breve entraremos em contato.</div>' +
+      '<div style="font-size:14px;color:' + COLORS.text + ';line-height:1.5">' + esc(msg) + '</div>' +
       '</div>'
+  }
+
+  // Brazilian phone mask (00) 00000-0000 / (00) 0000-0000. Applied
+  // via input event so the user sees live formatting as they type.
+  function maskPhoneBR(value) {
+    var digits = String(value || '').replace(/\D/g, '').slice(0, 11)
+    if (digits.length === 0) return ''
+    if (digits.length <= 2) return '(' + digits
+    if (digits.length <= 6) return '(' + digits.slice(0, 2) + ') ' + digits.slice(2)
+    if (digits.length <= 10) return '(' + digits.slice(0, 2) + ') ' + digits.slice(2, 6) + '-' + digits.slice(6)
+    return '(' + digits.slice(0, 2) + ') ' + digits.slice(2, 7) + '-' + digits.slice(7)
+  }
+
+  var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+  // Heuristic: a field is "phone" if its label/name mentions tel/phone/
+  // whatsapp/celular. We use this to attach the BR mask since the
+  // fieldsConfig schema doesn't ship a canonical "phone" field type.
+  function isPhoneField(f) {
+    var s = String((f && (f.name || f.label)) || '').toLowerCase()
+    return s.indexOf('telefone') !== -1 || s.indexOf('phone') !== -1 ||
+      s.indexOf('whatsapp') !== -1 || s.indexOf('celular') !== -1 || s.indexOf('tel') === 0
+  }
+
+  function isEmailField(f) {
+    var s = String((f && (f.name || f.label)) || '').toLowerCase()
+    var t = String((f && f.type) || '').toLowerCase()
+    return t === 'email' || s.indexOf('email') !== -1 || s.indexOf('e-mail') !== -1
   }
 
   function renderForm(formData) {
@@ -84,12 +113,17 @@
       var label = f.label || f.name || 'Campo ' + (i + 1)
       var key = f.name || f.label || ('field_' + i)
       var required = !!f.required
-      var type = f.type === 'email' ? 'email' : f.type === 'tel' || f.type === 'phone' ? 'tel' : 'text'
+      var phone = isPhoneField(f)
+      var email = isEmailField(f)
+      var type = email ? 'email' : phone ? 'tel' : 'text'
+      var ph = phone ? ' placeholder="(00) 00000-0000" inputmode="tel" maxlength="15"' : email ? ' placeholder="seu@email.com" inputmode="email"' : ''
 
       html += '<div style="margin-bottom:12px">'
       html += '<label style="display:block;font-size:12px;font-weight:500;color:' + COLORS.text + ';margin-bottom:6px">' +
         esc(label) + (required ? '<span style="color:' + COLORS.accent + '"> *</span>' : '') + '</label>'
-      html += '<input type="' + type + '" name="' + esc(key) + '"' + (required ? ' required' : '') +
+      html += '<input type="' + type + '" name="' + esc(key) + '"' + (required ? ' required' : '') + ph +
+        (phone ? ' data-tribocrm-mask="phone"' : '') +
+        (email ? ' data-tribocrm-validate="email"' : '') +
         ' style="width:100%;box-sizing:border-box;background:' + COLORS.card + ';border:1px solid ' + COLORS.border +
         ';border-radius:8px;padding:10px 12px;font-size:14px;color:' + COLORS.text +
         ';outline:none;font-family:inherit" />'
@@ -107,9 +141,32 @@
     var btn = container.querySelector('#tribocrm-submit')
     var errBox = container.querySelector('#tribocrm-error')
 
+    // Live phone mask on any field flagged as phone.
+    var maskedInputs = form.querySelectorAll('input[data-tribocrm-mask="phone"]')
+    for (var m = 0; m < maskedInputs.length; m++) {
+      maskedInputs[m].addEventListener('input', function (e) {
+        e.target.value = maskPhoneBR(e.target.value)
+      })
+    }
+
     form.addEventListener('submit', function (evt) {
       evt.preventDefault()
       errBox.style.display = 'none'
+
+      // Client-side email validation. Server also validates required
+      // fields, but this catches typos before the round-trip.
+      var emailInputs = form.querySelectorAll('input[data-tribocrm-validate="email"]')
+      for (var k = 0; k < emailInputs.length; k++) {
+        var v = String(emailInputs[k].value || '').trim()
+        if (!v && !emailInputs[k].required) continue
+        if (!EMAIL_RE.test(v)) {
+          errBox.textContent = 'Informe um e-mail válido.'
+          errBox.style.display = 'block'
+          emailInputs[k].focus()
+          return
+        }
+      }
+
       btn.disabled = true
       btn.style.opacity = '0.6'
       btn.style.cursor = 'not-allowed'
@@ -129,7 +186,14 @@
         .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j } }) })
         .then(function (res) {
           if (res.ok && res.body && res.body.success) {
-            setSuccess()
+            // Prefer redirect if the form was configured with a URL;
+            // fall back to customMessage, then the default.
+            var redirect = formData && formData.successRedirectUrl
+            if (redirect && typeof redirect === 'string' && redirect.trim()) {
+              window.location.href = redirect.trim()
+              return
+            }
+            setSuccess(formData && formData.successMessage)
           } else {
             var msg = (res.body && res.body.error && res.body.error.message) || 'Erro ao enviar. Tente novamente.'
             errBox.textContent = msg

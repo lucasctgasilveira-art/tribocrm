@@ -65,7 +65,7 @@ export async function getForms(req: Request, res: Response): Promise<void> {
 export async function createForm(req: Request, res: Response): Promise<void> {
   try {
     const tenantId = req.user!.tenantId
-    const { name, pipelineId, stageId, distributionType = 'MANUAL', automationId, fieldsConfig } = req.body
+    const { name, pipelineId, stageId, distributionType = 'MANUAL', automationId, fieldsConfig, successRedirectUrl, successMessage } = req.body
 
     if (!name || !pipelineId || !stageId) {
       res.status(400).json({
@@ -91,6 +91,8 @@ export async function createForm(req: Request, res: Response): Promise<void> {
           { label: 'Telefone', type: 'text', required: true },
         ],
         embedToken,
+        successRedirectUrl: typeof successRedirectUrl === 'string' && successRedirectUrl.trim() ? successRedirectUrl.trim().slice(0, 500) : null,
+        successMessage: typeof successMessage === 'string' && successMessage.trim() ? successMessage.trim().slice(0, 300) : null,
       },
     })
 
@@ -118,7 +120,7 @@ export async function updateForm(req: Request, res: Response): Promise<void> {
       return
     }
 
-    const { name, pipelineId, stageId, distributionType, automationId, fieldsConfig, isActive } = req.body
+    const { name, pipelineId, stageId, distributionType, automationId, fieldsConfig, isActive, successRedirectUrl, successMessage } = req.body
 
     const data: Prisma.CaptureFormUpdateInput = {}
     if (name !== undefined) data.name = name
@@ -128,6 +130,16 @@ export async function updateForm(req: Request, res: Response): Promise<void> {
     if (automationId !== undefined) data.automationId = automationId
     if (fieldsConfig !== undefined) data.fieldsConfig = fieldsConfig
     if (isActive !== undefined) data.isActive = isActive
+    if (successRedirectUrl !== undefined) {
+      data.successRedirectUrl = typeof successRedirectUrl === 'string' && successRedirectUrl.trim()
+        ? successRedirectUrl.trim().slice(0, 500)
+        : null
+    }
+    if (successMessage !== undefined) {
+      data.successMessage = typeof successMessage === 'string' && successMessage.trim()
+        ? successMessage.trim().slice(0, 300)
+        : null
+    }
 
     const form = await prisma.captureForm.update({ where: { id }, data })
 

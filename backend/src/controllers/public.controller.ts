@@ -21,7 +21,7 @@ export async function getPublicForm(req: Request, res: Response): Promise<void> 
 
     const form = await prisma.captureForm.findFirst({
       where: { embedToken, isActive: true },
-      select: { id: true, name: true, fieldsConfig: true },
+      select: { id: true, name: true, fieldsConfig: true, successRedirectUrl: true, successMessage: true },
     })
 
     if (!form) {
@@ -38,6 +38,8 @@ export async function getPublicForm(req: Request, res: Response): Promise<void> 
         id: form.id,
         name: form.name,
         fieldsConfig: form.fieldsConfig,
+        successRedirectUrl: form.successRedirectUrl,
+        successMessage: form.successMessage,
       },
     })
   } catch (error) {
