@@ -20,6 +20,8 @@ interface FormItem {
   stage: { id: string; name: string }
   leadsCount: number
   lastSubmission: string | null
+  successRedirectUrl?: string | null
+  successMessage?: string | null
 }
 
 interface Stats {
@@ -108,7 +110,7 @@ export default function FormsPage() {
     } catch { /* ignore */ }
   }
 
-  async function handleSave(payload: { name: string; pipelineId: string; stageId: string; distributionType: string; fieldsConfig: FieldConfig[] }, formId?: string) {
+  async function handleSave(payload: { name: string; pipelineId: string; stageId: string; distributionType: string; fieldsConfig: FieldConfig[]; successRedirectUrl: string | null; successMessage: string | null }, formId?: string) {
     try {
       if (formId) {
         await updateForm(formId, payload)
@@ -269,7 +271,7 @@ function EmbedModal({ form, onClose, onCopy }: { form: FormItem; onClose: () => 
 
 // ── New Form Modal ──
 
-function NewFormModal({ pipelines, editForm, onClose, onSave }: { pipelines: PipelineOption[]; editForm: FormItem | null; onClose: () => void; onSave: (payload: { name: string; pipelineId: string; stageId: string; distributionType: string; fieldsConfig: FieldConfig[] }, formId?: string) => void }) {
+function NewFormModal({ pipelines, editForm, onClose, onSave }: { pipelines: PipelineOption[]; editForm: FormItem | null; onClose: () => void; onSave: (payload: { name: string; pipelineId: string; stageId: string; distributionType: string; fieldsConfig: FieldConfig[]; successRedirectUrl: string | null; successMessage: string | null }, formId?: string) => void }) {
   const isEdit = !!editForm
   const defaultFields: (FieldConfig & { enabled: boolean })[] = [
     { label: 'Nome completo', type: 'text', required: true, enabled: true },
@@ -294,6 +296,8 @@ function NewFormModal({ pipelines, editForm, onClose, onSave }: { pipelines: Pip
   const [stageId, setStageId] = useState(editForm?.stage.id ?? '')
   const [assign, setAssign] = useState(editForm?.distributionType ?? 'ROUND_ROBIN_ALL')
   const [fields, setFields] = useState<(FieldConfig & { enabled: boolean })[]>(editForm ? buildFields(editForm.fieldsConfig) : defaultFields)
+  const [successRedirectUrl, setSuccessRedirectUrl] = useState(editForm?.successRedirectUrl ?? '')
+  const [successMessage, setSuccessMessage] = useState(editForm?.successMessage ?? '')
 
   const selectedPipeline = pipelines.find(p => p.id === pipelineId)
   const stages = selectedPipeline?.stages ?? []
@@ -308,7 +312,11 @@ function NewFormModal({ pipelines, editForm, onClose, onSave }: { pipelines: Pip
 
   function handleSave() {
     const activeFields = fields.filter(f => f.enabled).map(f => ({ label: f.label, type: f.type, required: f.required }))
-    onSave({ name, pipelineId, stageId, distributionType: assign, fieldsConfig: activeFields }, editForm?.id)
+    onSave({
+      name, pipelineId, stageId, distributionType: assign, fieldsConfig: activeFields,
+      successRedirectUrl: successRedirectUrl.trim() || null,
+      successMessage: successMessage.trim() || null,
+    }, editForm?.id)
   }
 
   return (
@@ -368,6 +376,18 @@ function NewFormModal({ pipelines, editForm, onClose, onSave }: { pipelines: Pip
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Após o envio */}
+          <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 10, fontWeight: 600 }}>Após o envio</div>
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Após o envio, redirecionar para</label>
+            <input type="url" value={successRedirectUrl} onChange={e => setSuccessRedirectUrl(e.target.value)} placeholder="https://seusite.com/obrigado (opcional)" style={inputS} />
+          </div>
+          <div style={{ marginBottom: 4 }}>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Mensagem de sucesso</label>
+            <input value={successMessage} onChange={e => setSuccessMessage(e.target.value)} placeholder="Recebemos seu contato! Nossa equipe entrará em contato em breve." maxLength={300} style={inputS} />
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>Exibida no lugar do redirecionamento, se nenhuma URL for informada.</div>
           </div>
         </div>
         <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>

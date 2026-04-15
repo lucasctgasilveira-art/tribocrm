@@ -7,6 +7,8 @@ export interface CreateFormPayload {
   distributionType?: string
   automationId?: string
   fieldsConfig?: { label: string; type: string; required: boolean }[]
+  successRedirectUrl?: string | null
+  successMessage?: string | null
 }
 
 export async function getForms() {

@@ -840,6 +840,8 @@ model CaptureForm {
   automationId          String?          @map("automation_id") @db.Uuid
   embedToken            String           @unique @map("embed_token") @db.VarChar(100)
   isActive              Boolean          @default(true) @map("is_active")
+  successRedirectUrl    String?          @map("success_redirect_url") @db.VarChar(500)
+  successMessage        String?          @map("success_message") @db.VarChar(300)
   createdAt             DateTime         @default(now()) @map("created_at")
   tenant                Tenant           @relation(fields: [tenantId], references: [id])
   submissions           FormSubmission[]
