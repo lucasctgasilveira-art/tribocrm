@@ -282,3 +282,100 @@ export async function verifyEmail(req: Request, res: Response): Promise<void> {
     })
   }
 }
+
+// POST /public/resend-verification { email }
+//
+// Issues a fresh emailVerificationToken for an unverified user and
+// re-sends the confirmation email. Same privacy stance as
+// forgot-password: we never reveal whether the email is registered
+// or already verified — every branch resolves with the same generic
+// message. A malformed email still returns 200 (cheap DoS protection:
+// attackers can't use this to probe the user table).
+export async function resendVerification(req: Request, res: Response): Promise<void> {
+  const genericOk = () => res.json({
+    success: true,
+    message: 'Se este e-mail estiver pendente de verificação, você receberá um novo link.',
+  })
+
+  try {
+    const email = String((req.body ?? {}).email ?? '').trim().toLowerCase()
+    if (!email || !EMAIL_RE.test(email)) {
+      genericOk()
+      return
+    }
+
+    const user = await prisma.user.findFirst({
+      where: { email, emailVerified: false, deletedAt: null },
+      select: { id: true, name: true },
+    })
+
+    if (!user) {
+      console.info('[Signup] resend-verification requested for unknown or already-verified email (silent ok)')
+      genericOk()
+      return
+    }
+
+    const verificationToken = randomUUID().replace(/-/g, '')
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { emailVerificationToken: verificationToken },
+    })
+
+    const verifyUrl = `${process.env.FRONTEND_URL || 'https://app.tribocrm.com.br'}/auth/verify-email?token=${verificationToken}`
+    const firstName = (user.name || '').trim().split(' ')[0] || 'Olá'
+    const html = `
+      <div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;background:#111318;color:#f3f4f6;padding:32px;border-radius:12px;max-width:520px;margin:0 auto">
+        <div style="font-size:20px;font-weight:700;color:#f97316;margin-bottom:8px">TriboCRM</div>
+        <div style="font-size:16px;font-weight:600;margin-bottom:16px">Confirme seu e-mail</div>
+        <p style="font-size:14px;line-height:1.5;color:#d1d5db;margin:0 0 20px">
+          ${firstName}, clique no botão abaixo para ativar seu acesso ao TriboCRM.
+        </p>
+        <a href="${verifyUrl}" style="display:inline-block;background:#f97316;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">Confirmar e-mail</a>
+        <p style="font-size:12px;color:#9ca3af;margin-top:24px">Se o botão não funcionar, copie este link: <br/><span style="color:#f97316;word-break:break-all">${verifyUrl}</span></p>
+      </div>`
+
+    console.info('[Signup] resending verification email to:', email)
+    try {
+      const mailResult = await sendMail({
+        to: email,
+        subject: 'Confirme seu e-mail — TriboCRM',
+        text: `Confirme seu cadastro no TriboCRM: ${verifyUrl}`,
+        html,
+      })
+      console.info('[Signup] resend email result:', JSON.stringify(mailResult))
+    } catch (mailErr: any) {
+      console.error('[Signup] resend email send error:', mailErr?.message ?? mailErr)
+    }
+
+    genericOk()
+  } catch (error: any) {
+    const safeBody = (() => { try { return JSON.stringify(req.body).substring(0, 300) } catch { return '[unserializable]' } })()
+    console.error('[Signup] resendVerification error:', {
+      message: error?.message,
+      code: error?.code,
+      meta: error?.meta,
+      stack: error?.stack,
+      body: safeBody,
+    })
+    // Same generic response on error so attackers can't infer DB issues.
+    res.json({
+      success: true,
+      message: 'Se este e-mail estiver pendente de verificação, você receberá um novo link.',
+    })
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Manual fixes for test users stuck with email_verified=false. Do NOT
+// run automatically — paste into the Supabase SQL editor, replacing
+// the email list with the real addresses you want to unblock:
+//
+//   UPDATE users
+//     SET email_verified = true,
+//         email_verification_token = NULL
+//     WHERE email IN ('lucas@tribodevendas.com.br', 'outro@teste.com');
+//
+// If the user already clicked a stale verification link and hit 404
+// because the token was rotated by another signup attempt, running the
+// above flips their row so login succeeds without needing to re-send.
+// ─────────────────────────────────────────────────────────────────────
