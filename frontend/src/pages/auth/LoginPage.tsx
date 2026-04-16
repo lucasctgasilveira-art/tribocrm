@@ -261,7 +261,8 @@ export default function LoginPage() {
           {/* Forgot password */}
           <div style={{ textAlign: 'right', marginTop: 4, marginBottom: 24 }}>
             <a
-              href="#"
+              href="/auth/forgot-password"
+              onClick={(e) => { e.preventDefault(); navigate('/auth/forgot-password') }}
               style={{
                 fontSize: 13,
                 color: 'var(--text-secondary)',

@@ -6,6 +6,8 @@ import VerifyEmailPage from './pages/auth/VerifyEmailPage'
 import VerifyEmailSentPage from './pages/auth/VerifyEmailSentPage'
 import SignupPage from './pages/auth/SignupPage'
 import CheckoutPage from './pages/auth/CheckoutPage'
+import ForgotPasswordPage from './pages/auth/ForgotPasswordPage'
+import ResetPasswordPage from './pages/auth/ResetPasswordPage'
 import OnboardingGestorPage from './pages/auth/OnboardingGestorPage'
 import OnboardingVendedorPage from './pages/auth/OnboardingVendedorPage'
 import PrivateRoute from './components/shared/PrivateRoute'
@@ -69,6 +71,8 @@ export default function App() {
       <Route path="/auth/verify-email-sent" element={<VerifyEmailSentPage />} />
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/checkout" element={<CheckoutPage />} />
+      <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
 
       {/* Onboarding */}
       <Route path="/gestao/onboarding" element={<OnboardingGestorPage />} />
