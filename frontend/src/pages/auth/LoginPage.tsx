@@ -1,7 +1,10 @@
 import { useState, useEffect, type FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Eye, EyeOff, Loader2, XCircle } from 'lucide-react'
+import { Eye, EyeOff, Loader2, XCircle, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import axios from 'axios'
 import api from '../../services/api'
+
+const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3002'
 
 interface ToastState {
   visible: boolean
@@ -34,6 +37,13 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [toast, setToast] = useState<ToastState>({ visible: false, message: '' })
+  // Unverified-email flow. When the backend replies 403
+  // EMAIL_NOT_VERIFIED we surface the inline panel with a resend
+  // button instead of the generic error toast — the user has no way
+  // to fix this from outside the app.
+  const [unverified, setUnverified] = useState(false)
+  const [resending, setResending] = useState(false)
+  const [resendSuccess, setResendSuccess] = useState(false)
 
   useEffect(() => {
     if (!toast.visible) return
@@ -48,6 +58,8 @@ export default function LoginPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setLoading(true)
+    setUnverified(false)
+    setResendSuccess(false)
 
     try {
       const { data } = await api.post('/auth/login', { email, password })
@@ -64,20 +76,46 @@ export default function LoginPage() {
           navigate(redirectByRole(data.data.user.role))
         }
       }
-    } catch (err: unknown) {
-      if (
-        typeof err === 'object' &&
-        err !== null &&
-        'response' in err &&
-        typeof (err as Record<string, unknown>).response === 'object'
-      ) {
-        const response = (err as { response: { data?: { error?: { message?: string } } } }).response
-        showError(response.data?.error?.message ?? 'E-mail ou senha incorretos.')
+    } catch (err: any) {
+      const response = err?.response
+      const status = response?.status
+      const code = response?.data?.error?.code
+      const message = response?.data?.error?.message
+      // 403 EMAIL_NOT_VERIFIED comes from authMiddleware when the user
+      // hits any authed endpoint before confirming their email. The
+      // /auth/login endpoint itself is public, but once token is
+      // issued the interceptor-less fetch here won't hit that path.
+      // If the backend starts gating login directly with the same
+      // code, we already handle it inline.
+      if (status === 403 && code === 'EMAIL_NOT_VERIFIED') {
+        setUnverified(true)
       } else {
-        showError('Erro de conexão com o servidor.')
+        showError(message ?? 'E-mail ou senha incorretos.')
       }
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleResend() {
+    const trimmed = email.trim().toLowerCase()
+    if (!trimmed) {
+      showError('Informe o e-mail antes de reenviar.')
+      return
+    }
+    setResending(true)
+    try {
+      // Public endpoint — use raw axios to skip the JWT interceptor
+      // and the auto-refresh/redirect-on-401 behavior in `api`.
+      await axios.post(`${baseURL}/public/resend-verification`, { email: trimmed })
+      setResendSuccess(true)
+    } catch {
+      // Backend always responds 200 for this flow; any failure here
+      // is network-level. Still show the success state so we don't
+      // leak signal about whether the email exists.
+      setResendSuccess(true)
+    } finally {
+      setResending(false)
     }
   }
 
@@ -135,6 +173,35 @@ export default function LoginPage() {
         {flashMsg === 'onboarding_done' && (
           <div style={{ background: 'rgba(34,197,94,0.10)', border: '1px solid rgba(34,197,94,0.35)', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#22c55e', marginBottom: 20, textAlign: 'center' }}>
             Conta configurada! Faça login para acessar seu sistema.
+          </div>
+        )}
+
+        {/* Unverified-email panel. Rendered inline above the form so
+            the user sees the explanation + resend action without any
+            page navigation. Two states: initial warning (orange) and
+            post-send confirmation (green). */}
+        {unverified && !resendSuccess && (
+          <div style={{ background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.35)', borderRadius: 8, padding: 14, marginBottom: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
+              <AlertTriangle size={18} color="#f97316" strokeWidth={1.5} style={{ flexShrink: 0, marginTop: 2 }} />
+              <div style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 600 }}>
+                Seu e-mail ainda não foi verificado.
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleResend}
+              disabled={resending}
+              style={{ width: '100%', background: resending ? '#c2590f' : '#f97316', color: '#fff', fontWeight: 600, fontSize: 13, borderRadius: 8, padding: 10, border: 'none', cursor: resending ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontFamily: 'inherit', opacity: resending ? 0.8 : 1 }}
+            >
+              {resending ? <><Loader2 size={14} className="animate-spin" />Enviando...</> : 'Reenviar e-mail de verificação'}
+            </button>
+          </div>
+        )}
+        {unverified && resendSuccess && (
+          <div style={{ background: 'rgba(34,197,94,0.10)', border: '1px solid rgba(34,197,94,0.35)', borderRadius: 8, padding: '10px 14px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <CheckCircle2 size={18} color="#22c55e" strokeWidth={1.5} style={{ flexShrink: 0 }} />
+            <span style={{ fontSize: 13, color: '#22c55e' }}>E-mail de verificação reenviado! Verifique sua caixa de entrada.</span>
           </div>
         )}
 

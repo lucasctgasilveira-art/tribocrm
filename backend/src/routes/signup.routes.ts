@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import cors from 'cors'
-import { publicSignup, verifyEmail } from '../controllers/signup.controller'
+import { publicSignup, verifyEmail, resendVerification } from '../controllers/signup.controller'
 import { forgotPassword, resetPassword } from '../controllers/password.controller'
 
 // Public signup, email verification and password reset. Mounted under
@@ -19,6 +19,7 @@ router.use(
 
 router.post('/signup', publicSignup)
 router.get('/verify-email', verifyEmail)
+router.post('/resend-verification', resendVerification)
 router.post('/forgot-password', forgotPassword)
 router.post('/reset-password', resetPassword)
 
