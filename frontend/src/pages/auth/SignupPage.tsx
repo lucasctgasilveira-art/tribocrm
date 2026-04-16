@@ -67,13 +67,23 @@ function focusOff(e: React.FocusEvent<HTMLInputElement>) {
 export default function SignupPage() {
   const navigate = useNavigate()
 
+  // Read plano + ciclo from URL once on mount and persist to
+  // localStorage. The user is about to leave the app to click the
+  // verification link in their email — neither URL params nor router
+  // state survive that round-trip, so localStorage is the only carrier
+  // that gets us back to /checkout with the right plan + cycle. The
+  // VerifyEmailPage reads (and clears) these on its way to /checkout.
+  const initialParams = new URLSearchParams(window.location.search)
+  const initialPlano = initialParams.get('plano')?.toLowerCase() ?? 'essencial'
+  const initialCiclo = initialParams.get('ciclo')?.toLowerCase() ?? 'mensal'
+  localStorage.setItem('signup_plano', initialPlano)
+  localStorage.setItem('signup_ciclo', initialCiclo === 'anual' ? 'anual' : 'mensal')
+
   const [plan, setPlan] = useState<PlanKey>(() => {
-    const params = new URLSearchParams(window.location.search)
-    const planoParam = params.get('plano')?.toLowerCase()
-    if (planoParam === 'solo') return 'SOLO'
-    if (planoParam === 'essencial') return 'ESSENCIAL'
-    if (planoParam === 'pro') return 'PRO'
-    if (planoParam === 'enterprise') return 'ENTERPRISE'
+    if (initialPlano === 'solo') return 'SOLO'
+    if (initialPlano === 'essencial') return 'ESSENCIAL'
+    if (initialPlano === 'pro') return 'PRO'
+    if (initialPlano === 'enterprise') return 'ENTERPRISE'
     return 'ESSENCIAL'
   })
   const [name, setName] = useState('')
@@ -114,6 +124,10 @@ export default function SignupPage() {
         phone: phone.trim(),
         companyName: companyName.trim(),
         planId: plan,
+        // Cycle flows through to the backend tenant.planCycle so the
+        // PIX/Boleto webhook extends planExpiresAt by the right number
+        // of days (30 for MONTHLY, 365 for YEARLY).
+        planCycle: initialCiclo === 'anual' ? 'YEARLY' : 'MONTHLY',
       })
 
       if (data?.success) {

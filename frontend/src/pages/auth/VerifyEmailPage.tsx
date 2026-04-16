@@ -49,9 +49,18 @@ export default function VerifyEmailPage() {
   useEffect(() => {
     if (status !== 'success') return
     // Post-verification the user's tenant is in TRIAL status and still
-    // needs to pick a payment method. Send them to the checkout flow
-    // instead of straight to /login.
-    const t = setTimeout(() => navigate('/checkout', { replace: true }), 3000)
+    // needs to pick a payment method. Carry the plano + ciclo the
+    // gestor picked at signup (saved to localStorage by SignupPage)
+    // through to /checkout so the right card and price show up. Both
+    // keys are removed on the way out — they exist only to bridge the
+    // user's email-link round-trip.
+    const t = setTimeout(() => {
+      const plano = localStorage.getItem('signup_plano') ?? 'essencial'
+      const ciclo = localStorage.getItem('signup_ciclo') ?? 'mensal'
+      localStorage.removeItem('signup_plano')
+      localStorage.removeItem('signup_ciclo')
+      navigate(`/checkout?plano=${encodeURIComponent(plano)}&ciclo=${encodeURIComponent(ciclo)}`, { replace: true })
+    }, 3000)
     return () => clearTimeout(t)
   }, [status, navigate])
 
