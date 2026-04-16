@@ -80,8 +80,17 @@ export default function SignupPage() {
   const initialParams = new URLSearchParams(window.location.search)
   const initialPlano = initialParams.get('plano')?.toLowerCase() ?? 'essencial'
   const initialCiclo = initialParams.get('ciclo')?.toLowerCase() ?? 'mensal'
+  // Pre-fill personal fields when the landing page pop-up already
+  // collected them. Stored in localStorage alongside plano/ciclo so
+  // the verify-email round-trip can restore context if needed.
+  const nomeParam = initialParams.get('nome') ?? ''
+  const emailParam = initialParams.get('email') ?? ''
+  const telefoneParam = initialParams.get('telefone') ?? ''
   localStorage.setItem('signup_plano', initialPlano)
   localStorage.setItem('signup_ciclo', initialCiclo === 'anual' ? 'anual' : 'mensal')
+  localStorage.setItem('signup_nome', nomeParam)
+  localStorage.setItem('signup_email', emailParam)
+  localStorage.setItem('signup_telefone', telefoneParam)
   // Drives subtitle copy + per-card price/badge below.
   const isAnual = initialCiclo === 'anual'
 
@@ -92,9 +101,9 @@ export default function SignupPage() {
     if (initialPlano === 'enterprise') return 'ENTERPRISE'
     return 'ESSENCIAL'
   })
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
+  const [name, setName] = useState(nomeParam)
+  const [email, setEmail] = useState(emailParam)
+  const [phone, setPhone] = useState(telefoneParam ? maskPhoneBR(telefoneParam) : '')
   const [companyName, setCompanyName] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
