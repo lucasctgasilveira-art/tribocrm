@@ -15,15 +15,19 @@ interface PlanInfo {
   key: PlanKey
   name: string
   priceMonthly: number
+  // Effective monthly price when paid annually (already with 15% off).
+  // Used for display only — the actual single-payment value lives in
+  // CheckoutPage's PLANS map (priceYearly).
+  monthEquivalent: number
   usersLabel: string
   badge?: string
 }
 
 const PLANS: PlanInfo[] = [
-  { key: 'SOLO', name: 'Solo', priceMonthly: 69, usersLabel: '1 usuário' },
-  { key: 'ESSENCIAL', name: 'Essencial', priceMonthly: 197, usersLabel: 'até 3 usuários' },
-  { key: 'PRO', name: 'Pro', priceMonthly: 349, usersLabel: 'até 5 usuários', badge: 'Mais Popular' },
-  { key: 'ENTERPRISE', name: 'Enterprise', priceMonthly: 649, usersLabel: 'até 10 usuários' },
+  { key: 'SOLO',       name: 'Solo',       priceMonthly: 69,  monthEquivalent: 59,  usersLabel: '1 usuário' },
+  { key: 'ESSENCIAL',  name: 'Essencial',  priceMonthly: 197, monthEquivalent: 167, usersLabel: 'até 3 usuários' },
+  { key: 'PRO',        name: 'Pro',        priceMonthly: 349, monthEquivalent: 297, usersLabel: 'até 5 usuários', badge: 'Mais Popular' },
+  { key: 'ENTERPRISE', name: 'Enterprise', priceMonthly: 649, monthEquivalent: 552, usersLabel: 'até 10 usuários' },
 ]
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -78,6 +82,8 @@ export default function SignupPage() {
   const initialCiclo = initialParams.get('ciclo')?.toLowerCase() ?? 'mensal'
   localStorage.setItem('signup_plano', initialPlano)
   localStorage.setItem('signup_ciclo', initialCiclo === 'anual' ? 'anual' : 'mensal')
+  // Drives subtitle copy + per-card price/badge below.
+  const isAnual = initialCiclo === 'anual'
 
   const [plan, setPlan] = useState<PlanKey>(() => {
     if (initialPlano === 'solo') return 'SOLO'
@@ -174,7 +180,9 @@ export default function SignupPage() {
         </p>
 
         <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center', margin: '0 0 4px' }}>Criar sua conta</h2>
-        <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', margin: '0 0 24px' }}>30 dias grátis · Sem cartão de crédito</p>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', margin: '0 0 24px' }}>
+          {isAnual ? 'Plano anual com 15% de desconto · Pagamento único' : '30 dias grátis · Sem cartão de crédito'}
+        </p>
 
         {/* Plan selector */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginBottom: 24 }}>
@@ -208,7 +216,15 @@ export default function SignupPage() {
                     </div>
                   )}
                 </div>
-                <div style={{ fontSize: 13, color: '#f97316', fontWeight: 700 }}>{fmtBRL(p.priceMonthly)}<span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 400 }}>/mês</span></div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  <div style={{ fontSize: 13, color: '#f97316', fontWeight: 700 }}>
+                    {fmtBRL(isAnual ? p.monthEquivalent : p.priceMonthly)}
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 400 }}>/mês</span>
+                  </div>
+                  {isAnual && (
+                    <span style={{ background: 'rgba(34,197,94,0.15)', color: '#22c55e', fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, letterSpacing: '0.05em' }}>15% OFF</span>
+                  )}
+                </div>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{p.usersLabel}</div>
               </button>
             )
