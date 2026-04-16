@@ -6,11 +6,17 @@ import { Loader2, Copy, Check, Zap, FileText, ExternalLink, LogIn } from 'lucide
 const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3002'
 
 type PlanKey = 'SOLO' | 'ESSENCIAL' | 'PRO' | 'ENTERPRISE'
+type Cycle = 'mensal' | 'anual'
 
 interface PlanInfo {
   key: PlanKey
   name: string
   priceMonthly: number
+  // Single-payment annual price (already includes the 15% discount).
+  priceYearly: number
+  // Effective monthly price when paid annually — derived value used
+  // only for display ("Equivale a R$ X/mês").
+  monthEquivalent: number
   usersLabel: string
 }
 
@@ -18,11 +24,18 @@ interface PlanInfo {
 // endpoint is behind the catch-all users router today, so a guest
 // checkout would get 401 — cheaper to hardcode the 4 canonical plans
 // here than to restructure the backend for this one screen.
+//
+// Annual prices match the discount table from the marketing site:
+// monthly × 12 × 0.85 (15% off), rounded for display friendliness.
 const PLANS: Record<PlanKey, PlanInfo> = {
-  SOLO:       { key: 'SOLO',       name: 'Solo',       priceMonthly: 69,  usersLabel: '1 usuário' },
-  ESSENCIAL:  { key: 'ESSENCIAL',  name: 'Essencial',  priceMonthly: 197, usersLabel: 'até 3 usuários' },
-  PRO:        { key: 'PRO',        name: 'Pro',        priceMonthly: 349, usersLabel: 'até 5 usuários' },
-  ENTERPRISE: { key: 'ENTERPRISE', name: 'Enterprise', priceMonthly: 649, usersLabel: 'até 10 usuários' },
+  SOLO:       { key: 'SOLO',       name: 'Solo',       priceMonthly: 69,  priceYearly: 703,  monthEquivalent: 59,  usersLabel: '1 usuário' },
+  ESSENCIAL:  { key: 'ESSENCIAL',  name: 'Essencial',  priceMonthly: 197, priceYearly: 2007, monthEquivalent: 167, usersLabel: 'até 3 usuários' },
+  PRO:        { key: 'PRO',        name: 'Pro',        priceMonthly: 349, priceYearly: 3561, monthEquivalent: 297, usersLabel: 'até 5 usuários' },
+  ENTERPRISE: { key: 'ENTERPRISE', name: 'Enterprise', priceMonthly: 649, priceYearly: 6621, monthEquivalent: 552, usersLabel: 'até 10 usuários' },
+}
+
+function parseCycle(raw: string | null | undefined): Cycle {
+  return raw === 'anual' ? 'anual' : 'mensal'
 }
 
 type Method = 'PIX' | 'BOLETO'
@@ -62,6 +75,14 @@ export default function CheckoutPage() {
   const planKey = parsePlanKey(params.get('plano') ?? navPlan ?? 'ESSENCIAL')
   const plan = PLANS[planKey]
 
+  // Billing cycle from ?ciclo=anual|mensal — drives every downstream
+  // value: charge amount, plan card display, page subtitle, and the
+  // description string sent to Efi.
+  const ciclo: Cycle = parseCycle(params.get('ciclo'))
+  const isAnnual = ciclo === 'anual'
+  const chargeValue = isAnnual ? plan.priceYearly : plan.priceMonthly
+  const cycleLabel = isAnnual ? 'Anual' : 'Mensal'
+
   const [method, setMethod] = useState<Method>('PIX')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -92,11 +113,11 @@ export default function CheckoutPage() {
     setLoading(true)
     try {
       const headers = { Authorization: `Bearer ${token}` }
-      const description = `TriboCRM ${plan.name} — Mensal`
+      const description = `TriboCRM ${plan.name} — ${cycleLabel}`
       if (method === 'PIX') {
         const { data } = await axios.post(
           `${baseURL}/payments/pix`,
-          { value: plan.priceMonthly, description, expiresIn: 1800 },
+          { value: chargeValue, description, expiresIn: 1800 },
           { headers },
         )
         if (data?.success) setPixResult(data.data as PixResult)
@@ -104,7 +125,7 @@ export default function CheckoutPage() {
       } else {
         const { data } = await axios.post(
           `${baseURL}/payments/boleto`,
-          { value: plan.priceMonthly, description, dueDate: todayPlus3BusinessDays() },
+          { value: chargeValue, description, dueDate: todayPlus3BusinessDays() },
           { headers },
         )
         if (data?.success) setBoletoResult(data.data as BoletoResult)
@@ -165,7 +186,9 @@ export default function CheckoutPage() {
 
         <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center', margin: '0 0 4px' }}>Ative sua conta</h2>
         <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', margin: '0 0 22px', lineHeight: 1.5 }}>
-          Seu trial de 30 dias começa agora. O primeiro pagamento só será cobrado após 30 dias.
+          {isAnnual
+            ? 'Pagamento único anual com 15% de desconto. Acesso garantido por 12 meses.'
+            : 'Seu trial de 30 dias começa agora. O primeiro pagamento só será cobrado após 30 dias.'}
         </p>
 
         {/* Plan summary */}
@@ -174,10 +197,19 @@ export default function CheckoutPage() {
             <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Plano escolhido</div>
             <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)' }}>{plan.name}</div>
             <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{plan.usersLabel}</div>
+            {isAnnual && (
+              <div style={{ fontSize: 11, color: '#22c55e', marginTop: 4, fontWeight: 500 }}>
+                Equivale a {fmtBRL(plan.monthEquivalent)}/mês — 15% mais barato
+              </div>
+            )}
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 20, fontWeight: 700, color: '#f97316' }}>{fmtBRL(plan.priceMonthly)}</div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>/mês</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: '#f97316' }}>
+              {isAnnual ? fmtBRL(plan.priceYearly) : fmtBRL(plan.priceMonthly)}
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+              {isAnnual ? '/ano (pagamento único)' : '/mês'}
+            </div>
           </div>
         </div>
 
