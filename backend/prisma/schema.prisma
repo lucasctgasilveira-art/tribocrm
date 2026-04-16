@@ -434,6 +434,8 @@ model User {
   isActive        Boolean         @default(true) @map("is_active")
   emailVerified   Boolean         @default(false) @map("email_verified")
   emailVerificationToken String?  @map("email_verification_token") @db.VarChar(100)
+  passwordResetToken     String?  @map("password_reset_token") @db.VarChar(100)
+  passwordResetExpiresAt DateTime? @map("password_reset_expires_at")
   userStatus      String          @default("ACTIVE") @map("user_status") @db.VarChar(20)
   rampingStartsAt DateTime?       @map("ramping_starts_at") @db.Date
   lastLoginAt     DateTime?       @map("last_login_at")
