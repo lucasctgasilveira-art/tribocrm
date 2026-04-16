@@ -138,9 +138,20 @@ export default function OnboardingGestorPage() {
   }
 
   /* ─── finish ─── */
+  // Fallback for the case the gestor reaches the onboarding without a
+  // valid session (signup → verify-email → skips checkout → lands on
+  // /gestao/onboarding logged out). PrivateRoute on /gestao/dashboard
+  // would silently redirect to /login, making the button feel broken;
+  // instead we send them explicitly with a query flag so LoginPage can
+  // show "Conta configurada! Faça login …".
   function finish() {
     localStorage.setItem('tribocrm_onboarding_done', 'true')
-    navigate('/gestao/dashboard')
+    const token = localStorage.getItem('accessToken')
+    if (!token) {
+      navigate('/login?redirect=/gestao/dashboard&msg=onboarding_done')
+    } else {
+      navigate('/gestao/dashboard')
+    }
   }
 
   /* ─── step content ─── */
