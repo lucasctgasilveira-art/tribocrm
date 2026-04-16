@@ -40,7 +40,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export async function publicSignup(req: Request, res: Response): Promise<void> {
   try {
-    const { name, email, password, phone, companyName, planId } = (req.body ?? {}) as Record<string, unknown>
+    const { name, email, password, phone, companyName, planId, planCycle: rawPlanCycle } = (req.body ?? {}) as Record<string, unknown>
 
     // Required-field validation (mirrors the shape the signup screen
     // will POST). We don't use zod here to keep the file self-contained.
@@ -63,6 +63,10 @@ export async function publicSignup(req: Request, res: Response): Promise<void> {
     const emailNorm = (email as string).trim().toLowerCase()
     const planToken = (planId as string).trim()
     const planSlug = PLAN_SLUG_BY_TOKEN[planToken]
+    // Cycle is optional; default MONTHLY. Anything other than 'YEARLY'
+    // (case-sensitive — Prisma enum) collapses to MONTHLY so a malformed
+    // body never ends up persisting an invalid enum value.
+    const planCycle: 'MONTHLY' | 'YEARLY' = rawPlanCycle === 'YEARLY' ? 'YEARLY' : 'MONTHLY'
 
     if (!planSlug) {
       res.status(400).json({
@@ -122,7 +126,7 @@ export async function publicSignup(req: Request, res: Response): Promise<void> {
           email: emailNorm,
           phone: (phone as string).trim(),
           planId: plan.id,
-          planCycle: 'MONTHLY',
+          planCycle,
           status: 'TRIAL',
           trialEndsAt,
           planStartedAt: now,
