@@ -242,8 +242,8 @@ export default function CheckoutPage() {
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
               <LogIn size={20} color="#f97316" strokeWidth={1.5} style={{ flexShrink: 0, marginTop: 2 }} />
               <div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>Entre para gerar a cobrança</div>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>Faça login com o e-mail e senha que você usou no cadastro para gerar a cobrança do plano selecionado.</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>Clique em Ir para login e conheça o sistema</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>Faça login com o e-mail e senha que você usou no cadastro para iniciar a construção da sua Máquina de Vendas com 30 dias grátis.</div>
               </div>
             </div>
             <button
@@ -325,13 +325,23 @@ export default function CheckoutPage() {
           </div>
         )}
 
-        {/* Skip */}
-        <div style={{ textAlign: 'center', marginTop: 20, fontSize: 13 }}>
-          <a
-            href="/gestao/onboarding"
-            onClick={(e) => { e.preventDefault(); navigate('/gestao/onboarding') }}
-            style={{ color: 'var(--text-muted)', textDecoration: 'none' }}
-          >Pular por agora — usar os 30 dias grátis</a>
+        {/* Annual discount upsell — replaces the previous "Pular por
+            agora" link. Highlighted in green so the offer reads as a
+            distinct opportunity, not a fallback. The button forwards
+            to /login with a redirect param so the user lands on the
+            subscription page right after authenticating. */}
+        <div style={{ marginTop: 20, background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.35)', borderRadius: 10, padding: 18 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#22c55e', marginBottom: 6 }}>Garantir desconto de 15% no plano anual</div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: 12 }}>
+            Pular teste grátis e garantir meu desconto de 15% pagando o valor anual.
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/login?redirect=/gestao/assinatura')}
+            style={{ width: '100%', background: '#22c55e', color: '#fff', fontWeight: 600, fontSize: 14, borderRadius: 8, padding: 10, border: 'none', cursor: 'pointer', fontFamily: 'inherit', transition: 'background 0.2s' }}
+            onMouseEnter={(e) => { (e.target as HTMLButtonElement).style.background = '#16a34a' }}
+            onMouseLeave={(e) => { (e.target as HTMLButtonElement).style.background = '#22c55e' }}
+          >Quero o plano anual com desconto \u2192</button>
         </div>
       </div>
 
