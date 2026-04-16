@@ -341,7 +341,7 @@ export default function CheckoutPage() {
             style={{ width: '100%', background: '#22c55e', color: '#fff', fontWeight: 600, fontSize: 14, borderRadius: 8, padding: 10, border: 'none', cursor: 'pointer', fontFamily: 'inherit', transition: 'background 0.2s' }}
             onMouseEnter={(e) => { (e.target as HTMLButtonElement).style.background = '#16a34a' }}
             onMouseLeave={(e) => { (e.target as HTMLButtonElement).style.background = '#22c55e' }}
-          >Quero o plano anual com desconto \u2192</button>
+          >Quero o plano anual com desconto →</button>
         </div>
       </div>
 
