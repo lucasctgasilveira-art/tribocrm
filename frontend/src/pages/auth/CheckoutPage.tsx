@@ -65,6 +65,36 @@ function todayPlus3BusinessDays(): string {
   return d.toISOString().slice(0, 10)
 }
 
+// Live-mask CPF/CNPJ based on the current digit count. Up to 11
+// digits renders as CPF (000.000.000-00); a 12th+ digit flips to
+// CNPJ formatting (00.000.000/0000-00) and caps at 14. Non-digits
+// are stripped before formatting so users can paste any format.
+function maskDocumentBR(value: string): string {
+  const digits = String(value || '').replace(/\D/g, '').slice(0, 14)
+  if (digits.length <= 11) {
+    const a = digits.slice(0, 3)
+    const b = digits.slice(3, 6)
+    const c = digits.slice(6, 9)
+    const d = digits.slice(9, 11)
+    let out = a
+    if (b) out += '.' + b
+    if (c) out += '.' + c
+    if (d) out += '-' + d
+    return out
+  }
+  const a = digits.slice(0, 2)
+  const b = digits.slice(2, 5)
+  const c = digits.slice(5, 8)
+  const d = digits.slice(8, 12)
+  const e = digits.slice(12, 14)
+  let out = a
+  if (b) out += '.' + b
+  if (c) out += '.' + c
+  if (d) out += '/' + d
+  if (e) out += '-' + e
+  return out
+}
+
 export default function CheckoutPage() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
@@ -90,6 +120,8 @@ export default function CheckoutPage() {
   const [boletoResult, setBoletoResult] = useState<BoletoResult | null>(null)
   const [copied, setCopied] = useState(false)
   const [hasToken, setHasToken] = useState<boolean>(() => !!localStorage.getItem('accessToken'))
+  // CPF/CNPJ for the boleto flow — masked as the user types.
+  const [document, setDocument] = useState('')
 
   // Re-check the token whenever the window regains focus — lets the
   // user log in in another tab and come back to the checkout without
@@ -99,6 +131,26 @@ export default function CheckoutPage() {
     window.addEventListener('focus', onFocus)
     return () => window.removeEventListener('focus', onFocus)
   }, [])
+
+  // Pre-fill CPF/CNPJ from the tenant row on mount (auth required).
+  // If the gestor already saved it on a previous boleto, they don't
+  // need to retype. 401 paths are silently ignored — the unverified
+  // token flow handles login elsewhere.
+  useEffect(() => {
+    if (!hasToken) return
+    let cancelled = false
+    const token = localStorage.getItem('accessToken')
+    if (!token) return
+    axios
+      .get(`${baseURL}/payments/document`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(res => {
+        if (cancelled) return
+        const doc = res?.data?.data?.document
+        if (typeof doc === 'string' && doc.trim()) setDocument(maskDocumentBR(doc))
+      })
+      .catch(() => { /* ignore — user will just type it */ })
+    return () => { cancelled = true }
+  }, [hasToken])
 
   async function generate() {
     setError('')
@@ -123,9 +175,15 @@ export default function CheckoutPage() {
         if (data?.success) setPixResult(data.data as PixResult)
         else setError(data?.error?.message ?? 'Falha ao gerar PIX.')
       } else {
+        const docDigits = document.replace(/\D/g, '')
+        if (docDigits.length !== 11 && docDigits.length !== 14) {
+          setError('Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido para gerar o boleto.')
+          setLoading(false)
+          return
+        }
         const { data } = await axios.post(
           `${baseURL}/payments/boleto`,
-          { value: chargeValue, description, dueDate: todayPlus3BusinessDays() },
+          { value: chargeValue, description, dueDate: todayPlus3BusinessDays(), document: docDigits },
           { headers },
         )
         if (data?.success) setBoletoResult(data.data as BoletoResult)
@@ -237,6 +295,29 @@ export default function CheckoutPage() {
                 </div>
               </button>
             </div>
+
+            {method === 'BOLETO' && (
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 6 }}>
+                  CPF ou CNPJ <span style={{ color: '#f97316' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  value={document}
+                  onChange={(e) => setDocument(maskDocumentBR(e.target.value))}
+                  placeholder="000.000.000-00 ou 00.000.000/0000-00"
+                  inputMode="numeric"
+                  maxLength={18}
+                  required
+                  style={{ width: '100%', boxSizing: 'border-box', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px', fontSize: 14, color: 'var(--text-primary)', outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.2s, box-shadow 0.2s' }}
+                  onFocus={(e) => { e.target.style.borderColor = '#f97316'; e.target.style.boxShadow = '0 0 0 3px rgba(249,115,22,0.10)' }}
+                  onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none' }}
+                />
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
+                  Obrigatório para emissão do boleto. Pessoa física: CPF. Pessoa jurídica: CNPJ.
+                </div>
+              </div>
+            )}
 
             <button
               type="button"

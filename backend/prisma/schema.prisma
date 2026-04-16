@@ -321,6 +321,7 @@ model Tenant {
   name          String       @db.VarChar(150)
   tradeName     String?      @map("trade_name") @db.VarChar(150)
   cnpj          String       @unique @db.VarChar(18)
+  document      String?      @db.VarChar(18)
   email         String       @db.VarChar(255)
   phone         String?      @db.VarChar(20)
   planId        String       @map("plan_id") @db.Uuid
