@@ -86,11 +86,13 @@ export default function SignupPage() {
   const nomeParam = initialParams.get('nome') ?? ''
   const emailParam = initialParams.get('email') ?? ''
   const telefoneParam = initialParams.get('telefone') ?? ''
+  const empresaParam = initialParams.get('empresa') ?? ''
   localStorage.setItem('signup_plano', initialPlano)
   localStorage.setItem('signup_ciclo', initialCiclo === 'anual' ? 'anual' : 'mensal')
   localStorage.setItem('signup_nome', nomeParam)
   localStorage.setItem('signup_email', emailParam)
   localStorage.setItem('signup_telefone', telefoneParam)
+  localStorage.setItem('signup_empresa', empresaParam)
   // Drives subtitle copy + per-card price/badge below.
   const isAnual = initialCiclo === 'anual'
 
@@ -104,7 +106,7 @@ export default function SignupPage() {
   const [name, setName] = useState(nomeParam)
   const [email, setEmail] = useState(emailParam)
   const [phone, setPhone] = useState(telefoneParam ? maskPhoneBR(telefoneParam) : '')
-  const [companyName, setCompanyName] = useState('')
+  const [companyName, setCompanyName] = useState(empresaParam)
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
