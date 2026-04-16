@@ -2,6 +2,7 @@ import { useState, type FormEvent, type CSSProperties } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { Eye, EyeOff, Loader2, XCircle, Check } from 'lucide-react'
+import WhatsAppFAB from '../../components/WhatsAppFAB'
 
 // Public signup screen. Uses the `axios` default (not the shared api
 // instance) because the interceptor on `api` attaches the JWT and
@@ -328,6 +329,12 @@ export default function SignupPage() {
       </div>
 
       <style>{`::placeholder { color: var(--text-muted) !important; }`}</style>
+
+      {/* Floating WhatsApp button — passes current form state down so
+          the popover arrives pre-filled when the gestor has already
+          started typing (or came from a pop-up link with nome/email/
+          telefone in the URL). */}
+      <WhatsAppFAB name={name} email={email} phone={phone} />
     </div>
   )
 }
