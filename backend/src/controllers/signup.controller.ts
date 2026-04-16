@@ -215,6 +215,17 @@ export async function publicSignup(req: Request, res: Response): Promise<void> {
         message: 'Conta criada! Verifique seu e-mail para ativar o acesso.',
       },
     })
+
+    // Post-response: try to move the platform-tenant's lead (if the
+    // email already sits there from a capture form) to the "Pós-venda"
+    // pipeline. Runs after res.json so a slow lookup never delays the
+    // signup confirmation. Wrapped in its own try/catch so any failure
+    // here is purely informational — the gestor's account is already
+    // committed regardless.
+    movePlatformLeadToPosVenda({
+      email: emailNorm,
+      planSlug,
+    }).catch((e) => console.error('[Signup] post-signup lead move failed:', e?.message ?? e))
   } catch (error: any) {
     // Verbose log so the next failure is diagnosable from Railway
     // alone: Prisma errors carry `code` (e.g. P2002 for unique
@@ -235,6 +246,134 @@ export async function publicSignup(req: Request, res: Response): Promise<void> {
       error: { code: 'INTERNAL_ERROR', message: 'Erro ao criar conta' },
     })
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Post-signup lead handoff.
+//
+// When a visitor fills the landing-page capture form, a Lead row is
+// created inside the *Tribo de Vendas* tenant (the platform owner).
+// When that same person later finishes signup and becomes a real
+// tenant, we shuttle their lead into the platform's "Pós-venda"
+// pipeline so the commercial team stops treating them as a prospect.
+//
+// Identification of the platform tenant (in priority order):
+//   1. process.env.PLATFORM_TENANT_ID (explicit override)
+//   2. A SUPER_ADMIN's linkedTenantId (set via dual-access flow)
+//   3. The tenant created by the seed (cnpj '00.000.000/0001-00')
+//
+// All three are best-effort — if none resolves we silently exit. The
+// caller already wraps this in a `.catch()` so any throw is logged
+// but never impacts the signup response.
+// ─────────────────────────────────────────────────────────────────────
+async function movePlatformLeadToPosVenda(args: { email: string; planSlug: string }): Promise<void> {
+  const { email, planSlug } = args
+
+  // 1. Resolve the platform tenant.
+  let platformTenantId: string | null = null
+
+  if (process.env.PLATFORM_TENANT_ID) {
+    platformTenantId = process.env.PLATFORM_TENANT_ID
+  }
+
+  if (!platformTenantId) {
+    const admin = await prisma.adminUser.findFirst({
+      where: { role: 'SUPER_ADMIN', linkedTenantId: { not: null } },
+      select: { linkedTenantId: true },
+    }).catch(() => null)
+    if (admin?.linkedTenantId) platformTenantId = admin.linkedTenantId
+  }
+
+  if (!platformTenantId) {
+    // Fallback to the seed tenant (Tribo de Vendas, cnpj 00.000.000/0001-00).
+    const seedTenant = await prisma.tenant.findUnique({
+      where: { cnpj: '00.000.000/0001-00' },
+      select: { id: true },
+    }).catch(() => null)
+    if (seedTenant?.id) platformTenantId = seedTenant.id
+  }
+
+  if (!platformTenantId) {
+    console.info('[Signup] post-signup lead move skipped — platform tenant not resolved')
+    return
+  }
+
+  // 2. Find the lead on the platform tenant by email. Case-insensitive
+  // match so a lead captured as "João@X.com" still resolves for a
+  // signup email normalised to lowercase.
+  const lead = await prisma.lead.findFirst({
+    where: {
+      tenantId: platformTenantId,
+      email: { equals: email, mode: 'insensitive' },
+      deletedAt: null,
+    },
+    select: { id: true, responsibleId: true, stageId: true },
+  })
+
+  if (!lead) {
+    console.info('[Signup] post-signup lead move skipped — no lead on platform tenant for', email)
+    return
+  }
+
+  // 3. Find the Pós-venda pipeline on the platform tenant. Case- and
+  // accent-tolerant: matches "Pós-venda", "Pos-venda", "POS-VENDA"...
+  const pipelines = await prisma.pipeline.findMany({
+    where: { tenantId: platformTenantId, isActive: true },
+    include: { stages: { orderBy: { sortOrder: 'asc' } } },
+  })
+
+  const posVenda = pipelines.find(p => {
+    const n = (p.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    return n === 'pos-venda' || n === 'pos venda' || n === 'posvenda'
+  })
+
+  if (!posVenda) {
+    console.info('[Signup] post-signup lead move skipped — Pós-venda pipeline not found')
+    return
+  }
+
+  // 4. Pick the first non-fixed, non-terminal stage (lowest sortOrder
+  // that isn't WON/LOST). Falls back to the very first stage if every
+  // stage is terminal — unusual but keeps the move from failing.
+  const firstStage =
+    posVenda.stages.find(s => !s.isFixed && s.type !== 'WON' && s.type !== 'LOST') ??
+    posVenda.stages[0]
+
+  if (!firstStage) {
+    console.info('[Signup] post-signup lead move skipped — Pós-venda has no stages')
+    return
+  }
+
+  if (lead.stageId === firstStage.id) {
+    console.info('[Signup] post-signup lead already on Pós-venda first stage, skipping move')
+    return
+  }
+
+  // 5. Move the lead + append the system interaction. `userId` is
+  // required by the Interaction FK — reuse the lead's current
+  // responsible and mark isAuto=true so the drawer renders "Sistema".
+  await prisma.$transaction([
+    prisma.lead.update({
+      where: { id: lead.id },
+      data: {
+        pipelineId: posVenda.id,
+        stageId: firstStage.id,
+        lastActivityAt: new Date(),
+      },
+    }),
+    prisma.interaction.create({
+      data: {
+        tenantId: platformTenantId,
+        leadId: lead.id,
+        userId: lead.responsibleId,
+        type: 'SYSTEM',
+        content: `Cliente finalizou o cadastro no TriboCRM — Plano ${planSlug.toUpperCase()}`,
+        isAuto: true,
+      },
+    }),
+  ])
+
+  console.info('[Signup] moved platform lead', lead.id, 'to Pós-venda stage', firstStage.id)
 }
 
 export async function verifyEmail(req: Request, res: Response): Promise<void> {
