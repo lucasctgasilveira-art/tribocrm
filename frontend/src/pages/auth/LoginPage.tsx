@@ -1,5 +1,5 @@
 import { useState, useEffect, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Eye, EyeOff, Loader2, XCircle } from 'lucide-react'
 import api from '../../services/api'
 
@@ -24,6 +24,11 @@ function redirectByRole(role: string): string {
 
 export default function LoginPage() {
   const navigate = useNavigate()
+  const [params] = useSearchParams()
+  // Informational banner driven by ?msg= in the URL. For now only
+  // `onboarding_done` is handled — emitted by OnboardingGestorPage
+  // when the gestor finishes the wizard without a valid session.
+  const flashMsg = params.get('msg')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -123,6 +128,16 @@ export default function LoginPage() {
           boxShadow: '0 24px 64px rgba(0,0,0,0.4)',
         }}
       >
+        {/* Flash banner — shown for post-flow handoffs like the gestor
+            finishing the onboarding wizard while logged out. Placed
+            inside the card so it sits above the logo without pushing
+            the main form. */}
+        {flashMsg === 'onboarding_done' && (
+          <div style={{ background: 'rgba(34,197,94,0.10)', border: '1px solid rgba(34,197,94,0.35)', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#22c55e', marginBottom: 20, textAlign: 'center' }}>
+            Conta configurada! Faça login para acessar seu sistema.
+          </div>
+        )}
+
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 8 }}>
           <h1 style={{ fontSize: 28, margin: 0, lineHeight: 1 }}>
