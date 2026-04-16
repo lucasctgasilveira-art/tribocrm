@@ -94,8 +94,29 @@ router.post('/boleto', authMiddleware, async (req: Request, res: Response) => {
       return
     }
 
-    const { value, description, dueDate, debtorStreet, debtorCity, debtorState, debtorZipCode } = req.body
+    const { value, description, dueDate, debtorStreet, debtorCity, debtorState, debtorZipCode, document } = req.body
+
+    // Persist the CPF/CNPJ on the tenant row so subsequent boletos
+    // don't require the gestor to retype it. Only writes when the
+    // caller actually provided a value — empty bodies leave the
+    // existing tenant.document untouched.
+    if (typeof document === 'string' && document.trim()) {
+      await prisma.tenant.update({
+        where: { id: tenantId },
+        data: { document: document.trim().slice(0, 18) },
+      })
+    }
+
+    const [tenant, user] = await Promise.all([
+      prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true, document: true } }),
+      prisma.user.findUnique({ where: { id: userId }, select: { email: true } }),
+    ])
+
     const debtor = await getBoletoDebtorData(userId)
+    // customer* takes precedence inside efi.service when document is
+    // present — send the real tenant name + the gestor's email so the
+    // charge is properly attributed on Efi dashboards.
+    const effectiveDocument = (typeof document === 'string' && document.trim()) ? document.trim() : (tenant?.document ?? '')
 
     const result = await createBoletoCharge(tenantId, {
       value, description, dueDate,
@@ -106,11 +127,32 @@ router.post('/boleto', authMiddleware, async (req: Request, res: Response) => {
       debtorCity: debtorCity ?? 'São Paulo',
       debtorState: debtorState ?? 'SP',
       debtorZipCode: debtorZipCode ?? '01000000',
+      customerName: tenant?.name ?? debtor.debtorName,
+      customerEmail: user?.email ?? debtor.debtorEmail,
+      document: effectiveDocument || undefined,
     })
     res.json({ success: true, data: result })
   } catch (error: any) {
     console.error('[Payments] Boleto error:', error)
     res.status(500).json({ success: false, error: { code: 'PAYMENT_ERROR', message: error.message } })
+  }
+})
+
+// GET /payments/document
+//
+// Returns the currently-saved tenant.document so the checkout screen
+// can pre-fill the CPF/CNPJ field when the gestor comes back to
+// generate another boleto.
+router.get('/document', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: req.user!.tenantId },
+      select: { document: true },
+    })
+    res.json({ success: true, data: { document: tenant?.document ?? null } })
+  } catch (error: any) {
+    console.error('[Payments] get document error:', error)
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } })
   }
 })
 

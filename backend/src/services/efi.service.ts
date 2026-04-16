@@ -127,6 +127,13 @@ interface BoletoChargeData {
   debtorState: string
   debtorZipCode: string
   discountValue?: number // valor absoluto do desconto em R$, para registro
+  // Newer checkout flow prefers these three — when a `document` is
+  // passed, it's split into cpf (11 digits) or cnpj (14 digits) so a
+  // pessoa jurídica can be billed as well. Legacy callers using only
+  // debtorCpf keep working because the fallback below.
+  customerName?: string
+  customerEmail?: string
+  document?: string
 }
 
 interface BoletoChargeResult {
@@ -138,13 +145,23 @@ interface BoletoChargeResult {
 
 export async function createBoletoCharge(tenantId: string, chargeData: BoletoChargeData): Promise<BoletoChargeResult> {
   const efi = getClient()
-  const cpfClean = chargeData.debtorCpf.replace(/\D/g, '')
 
-  // Always use pessoa física (CPF) for boleto — avoids "same CNPJ as receiver" error
+  // Prefer the explicit `document` when provided by the new checkout
+  // flow (can be CPF or CNPJ). Fall back to legacy `debtorCpf` so
+  // existing upgrade/card flows keep working unchanged.
+  const docClean = (chargeData.document ?? chargeData.debtorCpf ?? '').replace(/\D/g, '')
   const customer: any = {
-    name: chargeData.debtorName,
-    email: chargeData.debtorEmail,
-    cpf: cpfClean.slice(0, 11) || '11144477735',
+    name: chargeData.customerName ?? chargeData.debtorName,
+    email: chargeData.customerEmail ?? chargeData.debtorEmail,
+  }
+  if (docClean.length === 14) {
+    customer.cnpj = docClean
+  } else if (docClean.length === 11) {
+    customer.cpf = docClean
+  } else {
+    // Keep Efi happy in dev/sandbox when no document was provided; the
+    // real gestor-entered value only arrives via the checkout field.
+    customer.cpf = docClean.slice(0, 11) || '11144477735'
   }
 
   console.log('[Efi Boleto] Creating charge:', JSON.stringify({ value: chargeData.value, dueDate: chargeData.dueDate, customer }))
