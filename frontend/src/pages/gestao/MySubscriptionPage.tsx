@@ -5,27 +5,87 @@ import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
 import api from '../../services/api'
 
-const payments = [
-  { period: 'Abril/2026', value: 'R$ 349,00', due: '05/04/2026', paid: '05/04/2026', status: 'Pago' as const },
-  { period: 'Março/2026', value: 'R$ 349,00', due: '05/03/2026', paid: '04/03/2026', status: 'Pago' as const },
-  { period: 'Fevereiro/2026', value: 'R$ 349,00', due: '05/02/2026', paid: '05/02/2026', status: 'Pago' as const },
-  { period: 'Janeiro/2026', value: 'R$ 349,00', due: '05/01/2026', paid: '07/01/2026', status: 'Pago' as const },
-  { period: 'Dezembro/2025', value: 'R$ 349,00', due: '05/12/2025', paid: '05/12/2025', status: 'Pago' as const },
-  { period: 'Novembro/2025', value: 'R$ 349,00', due: '05/11/2025', paid: '—', status: 'Vencido' as const },
-]
+// Row shape consumed by the history table. Built on-the-fly from the
+// charges returned by GET /payments/history — no longer hardcoded.
+type PaymentStatus = 'Pago' | 'Vencido' | 'Pendente' | 'Cancelado'
+interface PaymentRow {
+  id: string
+  period: string
+  value: string
+  due: string
+  paid: string
+  status: PaymentStatus
+}
 
-const statusStyle: Record<string, { bg: string; color: string }> = {
+const statusStyle: Record<PaymentStatus, { bg: string; color: string }> = {
   Pago: { bg: 'rgba(34,197,94,0.12)', color: '#22c55e' },
   Vencido: { bg: 'rgba(239,68,68,0.12)', color: '#ef4444' },
   Pendente: { bg: 'rgba(245,158,11,0.12)', color: '#f59e0b' },
+  Cancelado: { bg: 'rgba(107,114,128,0.12)', color: 'var(--text-muted)' },
 }
 
+const tenantStatusStyle: Record<string, { bg: string; color: string; label: string }> = {
+  TRIAL: { bg: 'rgba(59,130,246,0.12)', color: '#3b82f6', label: 'Em trial' },
+  ACTIVE: { bg: 'rgba(34,197,94,0.12)', color: '#22c55e', label: 'Ativo' },
+  SUSPENDED: { bg: 'rgba(245,158,11,0.12)', color: '#f59e0b', label: 'Suspenso' },
+  CANCELLED: { bg: 'rgba(239,68,68,0.12)', color: '#ef4444', label: 'Cancelado' },
+}
+
+// Plan comparison table — no longer carries `current: true`; the
+// current plan is resolved dynamically from /auth/me below.
 const plans = [
-  { name: 'Solo', price: 'R$ 69', users: '1', leads: '1.000', funnels: '1', automations: '0', forms: '0', tracking: false, support: 'E-mail' },
-  { name: 'Essencial', price: 'R$ 197', users: '3', leads: '5.000', funnels: '3', automations: '3', forms: '3', tracking: true, support: 'E-mail + Chat' },
-  { name: 'Pro', price: 'R$ 349', users: '5', leads: '10.000', funnels: '10', automations: '10', forms: '10', tracking: true, support: 'Prioritário', current: true },
-  { name: 'Enterprise', price: 'R$ 649', users: '10', leads: '50.000', funnels: '10', automations: 'Ilimitadas', forms: 'Ilimitados', tracking: true, support: 'Dedicado' },
+  { name: 'Solo', slug: 'solo', price: 'R$ 69', users: '1', leads: '1.000', funnels: '1', automations: '0', forms: '0', tracking: false, support: 'E-mail' },
+  { name: 'Essencial', slug: 'essencial', price: 'R$ 197', users: '3', leads: '5.000', funnels: '3', automations: '3', forms: '3', tracking: true, support: 'E-mail + Chat' },
+  { name: 'Pro', slug: 'pro', price: 'R$ 349', users: '5', leads: '10.000', funnels: '10', automations: '10', forms: '10', tracking: true, support: 'Prioritário' },
+  { name: 'Enterprise', slug: 'enterprise', price: 'R$ 649', users: '10', leads: '50.000', funnels: '10', automations: 'Ilimitadas', forms: 'Ilimitados', tracking: true, support: 'Dedicado' },
 ]
+
+interface MeData {
+  tenant: { id: string; name: string; status: string; planCycle: string; trialEndsAt: string | null; planExpiresAt: string | null; planStartedAt: string | null } | null
+  plan: { id: string; slug: string; name: string; priceMonthly: number; priceYearly: number } | null
+}
+
+interface HistoryCharge {
+  id: string
+  amount: number
+  dueDate: string
+  paidAt: string | null
+  paymentMethod: string
+  status: string
+  referenceMonth: string | null
+  createdAt: string
+}
+
+const MONTH_NAMES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
+
+function fmtBRL(v: number): string {
+  return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
+function fmtDateBR(iso: string | null | undefined): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return '—'
+  return d.toLocaleDateString('pt-BR')
+}
+function periodFromCharge(c: HistoryCharge): string {
+  // Prefer `referenceMonth` (YYYY-MM, authoritative) → fall back to
+  // the dueDate's month/year so legacy rows without the column still
+  // produce a sensible label.
+  if (c.referenceMonth && /^\d{4}-\d{2}$/.test(c.referenceMonth)) {
+    const [y, m] = c.referenceMonth.split('-')
+    const mi = Math.max(0, Math.min(11, parseInt(m!, 10) - 1))
+    return `${MONTH_NAMES[mi]}/${y}`
+  }
+  const d = new Date(c.dueDate)
+  if (Number.isNaN(d.getTime())) return '—'
+  return `${MONTH_NAMES[d.getMonth()]}/${d.getFullYear()}`
+}
+function mapChargeStatus(s: string): PaymentStatus {
+  if (s === 'PAID' || s === 'PAID_MANUAL') return 'Pago'
+  if (s === 'OVERDUE') return 'Vencido'
+  if (s === 'CANCELLED') return 'Cancelado'
+  return 'Pendente'
+}
 
 const features = ['Usuários', 'Leads', 'Funis', 'Automações', 'Formulários', 'Rastreamento e-mail', 'Suporte']
 
@@ -41,6 +101,75 @@ export default function MySubscriptionPage() {
   const [changeMethodModal, setChangeMethodModal] = useState(false)
   const [toast, setToast] = useState('')
 
+  // Dynamic data (replaces the previous hardcoded arrays).
+  const [payments, setPayments] = useState<PaymentRow[]>([])
+  const [loadingPayments, setLoadingPayments] = useState(true)
+  const [meData, setMeData] = useState<MeData>({ tenant: null, plan: null })
+
+  useEffect(() => {
+    let cancelled = false
+
+    api.get('/auth/me')
+      .then(res => {
+        if (cancelled) return
+        const d = res?.data?.data ?? {}
+        setMeData({ tenant: d.tenant ?? null, plan: d.plan ?? null })
+      })
+      .catch(() => { /* keep empty — UI falls back to defaults */ })
+
+    api.get('/payments/history')
+      .then(res => {
+        if (cancelled) return
+        const raw: HistoryCharge[] = res?.data?.data ?? []
+        const rows: PaymentRow[] = raw.map(c => ({
+          id: c.id,
+          period: periodFromCharge(c),
+          value: fmtBRL(Number(c.amount)),
+          due: fmtDateBR(c.dueDate),
+          paid: fmtDateBR(c.paidAt),
+          status: mapChargeStatus(c.status),
+        }))
+        setPayments(rows)
+      })
+      .catch(() => { if (!cancelled) setPayments([]) })
+      .finally(() => { if (!cancelled) setLoadingPayments(false) })
+
+    return () => { cancelled = true }
+  }, [])
+
+  function handleExportCSV() {
+    if (payments.length === 0) {
+      setToast('Nenhuma cobrança para exportar')
+      setTimeout(() => setToast(''), 2500)
+      return
+    }
+    // Minimal CSV with BOM so Excel opens UTF-8 correctly. Values
+    // quoted to survive commas in fmtBRL output.
+    const header = ['Período', 'Valor', 'Vencimento', 'Pagamento', 'Status'].map(h => `"${h}"`).join(',')
+    const rows = payments.map(p => [p.period, p.value, p.due, p.paid, p.status].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
+    const csv = '\uFEFF' + [header, ...rows].join('\r\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `historico-pagamentos-${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  const currentPlanSlug = meData.plan?.slug ?? null
+  const tenantStatus = meData.tenant?.status ?? 'ACTIVE'
+  const statusBadge = tenantStatusStyle[tenantStatus] ?? tenantStatusStyle.ACTIVE!
+  const planCycle = meData.tenant?.planCycle ?? 'MONTHLY'
+  const isAnnualCycle = planCycle === 'YEARLY'
+  const monthlyEq = meData.plan ? (isAnnualCycle ? Number(meData.plan.priceYearly) / 12 : Number(meData.plan.priceMonthly)) : null
+  const priceText = monthlyEq !== null
+    ? fmtBRL(monthlyEq).replace(/\s/g, ' ') // keep default fmt
+    : 'R$ 349'
+  const nextDueDate = meData.tenant?.planExpiresAt ?? meData.tenant?.trialEndsAt ?? null
+
   return (
     <AppLayout menuItems={gestaoMenuItems}>
       <div style={{ marginBottom: 20 }}>
@@ -53,15 +182,25 @@ export default function MySubscriptionPage() {
         {/* Current plan */}
         <div style={{ ...card, padding: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ background: 'rgba(249,115,22,0.12)', color: '#f97316', borderRadius: 999, padding: '4px 12px', fontSize: 12, fontWeight: 600 }}>Plano Pro</span>
-            <span style={{ background: 'rgba(34,197,94,0.12)', color: '#22c55e', borderRadius: 999, padding: '2px 8px', fontSize: 10, fontWeight: 500 }}>Ativo</span>
+            <span style={{ background: 'rgba(249,115,22,0.12)', color: '#f97316', borderRadius: 999, padding: '4px 12px', fontSize: 12, fontWeight: 600 }}>
+              Plano {meData.plan?.name ?? 'Pro'}
+            </span>
+            <span style={{ background: statusBadge.bg, color: statusBadge.color, borderRadius: 999, padding: '2px 8px', fontSize: 10, fontWeight: 500 }}>
+              {statusBadge.label}
+            </span>
           </div>
-          <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--text-primary)', marginTop: 8 }}>R$ 349<span style={{ fontSize: 14, fontWeight: 400, color: 'var(--text-muted)' }}>/mês</span></div>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>ou R$ 297/mês no plano anual (15% de desconto)</div>
+          <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--text-primary)', marginTop: 8 }}>
+            {priceText}<span style={{ fontSize: 14, fontWeight: 400, color: 'var(--text-muted)' }}>/mês</span>
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+            {isAnnualCycle
+              ? `Pagamento anual${meData.plan ? ` — ${fmtBRL(meData.plan.priceYearly)} à vista` : ''}`
+              : (meData.plan ? `ou ${fmtBRL(meData.plan.priceYearly / 12)}/mês no plano anual (15% de desconto)` : 'ou R$ 297/mês no plano anual (15% de desconto)')}
+          </div>
 
           <div style={{ borderTop: '1px solid var(--border)', marginTop: 16, paddingTop: 16, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <InfoItem label="Próximo vencimento" value="05/05/2026" />
-            <InfoItem label="Ciclo" value="Mensal" />
+            <InfoItem label="Próximo vencimento" value={fmtDateBR(nextDueDate)} />
+            <InfoItem label="Ciclo" value={isAnnualCycle ? 'Anual' : 'Mensal'} />
             <InfoItem label="Usuários" value="4 / 5 incluídos" />
             <InfoItem label="Leads ativos" value="847 / 10.000" />
             <InfoItem label="Funis" value="1 / 10" />
@@ -112,10 +251,20 @@ export default function MySubscriptionPage() {
       <div style={{ ...card, overflow: 'hidden', marginBottom: 20 }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Histórico de pagamentos</span>
-          <button style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', fontSize: 11, color: 'var(--text-secondary)', cursor: 'pointer' }}>
+          <button onClick={handleExportCSV} disabled={loadingPayments || payments.length === 0} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', fontSize: 11, color: (loadingPayments || payments.length === 0) ? 'var(--text-muted)' : 'var(--text-secondary)', cursor: (loadingPayments || payments.length === 0) ? 'not-allowed' : 'pointer' }}>
             <Download size={12} strokeWidth={1.5} /> Exportar CSV
           </button>
         </div>
+        {loadingPayments ? (
+          <div style={{ padding: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <Loader2 size={16} className="animate-spin" color="#f97316" />
+            <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Carregando histórico...</span>
+          </div>
+        ) : payments.length === 0 ? (
+          <div style={{ padding: 40, textAlign: 'center', fontSize: 13, color: 'var(--text-muted)' }}>
+            Nenhuma cobrança encontrada. {tenantStatus === 'TRIAL' ? 'Seu trial de 30 dias está ativo.' : ''}
+          </div>
+        ) : (
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead><tr style={{ background: 'var(--bg)' }}>
             {['Período', 'Valor', 'Vencimento', 'Pagamento', 'Status', 'Ações'].map(h => <th key={h} style={thS}>{h}</th>)}
@@ -124,7 +273,7 @@ export default function MySubscriptionPage() {
             {payments.map(p => {
               const s = statusStyle[p.status] ?? statusStyle.Pendente!
               return (
-                <tr key={p.period}>
+                <tr key={p.id}>
                   <td style={tdS}>{p.period}</td>
                   <td style={tdS}>{p.value}</td>
                   <td style={tdS}>{p.due}</td>
@@ -140,6 +289,7 @@ export default function MySubscriptionPage() {
             })}
           </tbody>
         </table>
+        )}
       </div>
 
       {/* Plan comparison */}
@@ -149,12 +299,19 @@ export default function MySubscriptionPage() {
           <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>Faça upgrade para desbloquear mais recursos</p>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
-          {plans.map(p => (
-            <div key={p.name} style={{ background: 'var(--bg)', border: p.current ? '2px solid #f97316' : '1px solid var(--border)', borderRadius: 12, padding: 16, position: 'relative' }}>
-              {p.current && <div style={{ position: 'absolute', top: -1, left: '50%', transform: 'translateX(-50%) translateY(-50%)', background: '#f97316', color: '#fff', borderRadius: 999, padding: '2px 10px', fontSize: 10, fontWeight: 700 }}>Seu plano</div>}
-              <div style={{ textAlign: 'center', marginBottom: 12, paddingTop: p.current ? 8 : 0 }}>
+          {plans.map(p => {
+            // Derive "current" from /auth/me rather than a hardcoded
+            // flag in the array — falls back to `pro` only when the
+            // fetch hasn't resolved yet, matching the legacy behavior.
+            const isCurrent = currentPlanSlug
+              ? p.slug === currentPlanSlug
+              : p.slug === 'pro'
+            return (
+            <div key={p.name} style={{ background: 'var(--bg)', border: isCurrent ? '2px solid #f97316' : '1px solid var(--border)', borderRadius: 12, padding: 16, position: 'relative' }}>
+              {isCurrent && <div style={{ position: 'absolute', top: -1, left: '50%', transform: 'translateX(-50%) translateY(-50%)', background: '#f97316', color: '#fff', borderRadius: 999, padding: '2px 10px', fontSize: 10, fontWeight: 700 }}>Seu plano</div>}
+              <div style={{ textAlign: 'center', marginBottom: 12, paddingTop: isCurrent ? 8 : 0 }}>
                 <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: p.current ? '#f97316' : 'var(--text-primary)', marginTop: 4 }}>{p.price}<span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}>/mês</span></div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: isCurrent ? '#f97316' : 'var(--text-primary)', marginTop: 4 }}>{p.price}<span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}>/mês</span></div>
               </div>
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {features.map((feat, fi) => {
@@ -168,7 +325,7 @@ export default function MySubscriptionPage() {
                 })}
               </div>
               <div style={{ marginTop: 16 }}>
-                {p.current ? (
+                {isCurrent ? (
                   <button disabled style={{ width: '100%', background: 'var(--border)', color: 'var(--text-muted)', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, cursor: 'not-allowed' }}>Plano atual</button>
                 ) : p.name === 'Enterprise' ? (
                   <button onClick={() => setUpgradeModal(true)} style={{ width: '100%', background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Fazer upgrade</button>
@@ -177,7 +334,8 @@ export default function MySubscriptionPage() {
                 )}
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
         <div style={{ textAlign: 'center', marginTop: 16 }}>
           <span style={{ fontSize: 13, color: '#f97316', cursor: 'pointer' }}>Precisa de mais? Fale com nosso time de consultores →</span>
