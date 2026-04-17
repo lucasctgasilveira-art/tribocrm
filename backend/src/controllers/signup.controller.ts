@@ -448,7 +448,7 @@ export async function verifyEmail(req: Request, res: Response): Promise<void> {
         message: 'E-mail confirmado com sucesso',
         accessToken,
         refreshToken,
-        user: { id: user.id, name: user.name, email: user.email, role: user.role, tenantId: user.tenantId },
+        user: { id: user.id, name: user.name, email: user.email, role: user.role, tenantId: user.tenantId, emailVerified: true },
         plano,
         ciclo,
       },
