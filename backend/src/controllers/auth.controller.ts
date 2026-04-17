@@ -251,6 +251,7 @@ export async function login(req: Request, res: Response): Promise<void> {
           avatarUrl: user.avatarUrl,
           themePreference: user.themePreference,
           tenantName: user.tenant.tradeName ?? user.tenant.name,
+          emailVerified: user.emailVerified,
           // Wizard state consumed by the gestor-side OnboardingWizard
           // overlay. Only meaningful for MANAGER/OWNER roles.
           onboardingCompleted: user.tenant.onboardingCompleted,
