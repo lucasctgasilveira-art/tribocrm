@@ -43,12 +43,8 @@ export default function VerifyEmailPage() {
           if (d?.refreshToken) localStorage.setItem('refreshToken', d.refreshToken)
           if (d?.user) localStorage.setItem('user', JSON.stringify(d.user))
 
-          // Store plano/ciclo from the backend response (derived from
-          // the tenant's real planCycle + plan.slug). Falls back to
-          // the localStorage values the SignupPage saved earlier — in
-          // case the user verified from the same browser.
-          const plano = d?.plano ?? localStorage.getItem('signup_plano') ?? 'essencial'
-          const ciclo = d?.ciclo ?? localStorage.getItem('signup_ciclo') ?? 'mensal'
+          // Clean up the signup_plano/ciclo that SignupPage stashed — they
+          // were only consumed by the old /checkout trampoline.
           localStorage.removeItem('signup_plano')
           localStorage.removeItem('signup_ciclo')
 

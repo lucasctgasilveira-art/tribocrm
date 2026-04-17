@@ -31,11 +31,9 @@ export default function AutoLoginPage() {
       localStorage.setItem('refreshToken', urlRefresh)
     }
 
-    // Build the checkout destination with the plan + cycle params the
-    // caller forwarded. Falls back to localStorage values set by the
-    // SignupPage (same-browser path), then to safe defaults.
-    const plano = params.get('plano') ?? localStorage.getItem('signup_plano') ?? 'essencial'
-    const ciclo = params.get('ciclo') ?? localStorage.getItem('signup_ciclo') ?? 'mensal'
+    // Clean up the signup_plano/ciclo that SignupPage stashed — they
+    // were only needed by the old /checkout trampoline and are dead
+    // weight now that we go straight to /gestao/dashboard.
     localStorage.removeItem('signup_plano')
     localStorage.removeItem('signup_ciclo')
 
