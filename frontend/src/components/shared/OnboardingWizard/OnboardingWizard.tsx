@@ -26,6 +26,7 @@ interface StoredUser {
   role?: string
   onboardingCompleted?: boolean
   onboardingStep?: number
+  emailVerified?: boolean
 }
 
 function readStoredUser(): StoredUser {
@@ -85,7 +86,7 @@ export default function OnboardingWizard() {
 
   const role = user.role
   const isGestor = role === 'MANAGER' || role === 'OWNER'
-  const shouldShow = isGestor && user.onboardingCompleted === false
+  const shouldShow = isGestor && user.onboardingCompleted === false && user.emailVerified === true
   const initialStep = Math.max(1, Math.min(3, (user.onboardingStep ?? 0) + 1))
   const [step, setStep] = useState<1 | 2 | 3>(() => (initialStep as 1 | 2 | 3))
 
