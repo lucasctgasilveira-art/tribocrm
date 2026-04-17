@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { Eye, EyeOff, Loader2, XCircle, Check } from 'lucide-react'
 import WhatsAppFAB from '../../components/WhatsAppFAB'
+import DocumentInput from '../../components/ui/DocumentInput/DocumentInput'
+import { validateDocument } from '../../utils/validateDocument'
 
 // Public signup screen. Uses the `axios` default (not the shared api
 // instance) because the interceptor on `api` attaches the JWT and
@@ -108,6 +110,9 @@ export default function SignupPage() {
   const [email, setEmail] = useState(emailParam)
   const [phone, setPhone] = useState(telefoneParam ? maskPhoneBR(telefoneParam) : '')
   const [companyName, setCompanyName] = useState(empresaParam)
+  const [document, setDocument] = useState('')
+  const [documentTouched, setDocumentTouched] = useState(false)
+  const [documentServerError, setDocumentServerError] = useState<string | null>(null)
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -115,12 +120,15 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  const documentResult = validateDocument(document)
+
   function validate(): string | null {
     if (!name.trim()) return 'Informe seu nome completo.'
     if (!EMAIL_RE.test(email.trim())) return 'E-mail inválido.'
     const phoneDigits = phone.replace(/\D/g, '')
     if (phoneDigits.length < 10) return 'Informe um WhatsApp válido.'
     if (!companyName.trim()) return 'Informe o nome da empresa.'
+    if (!documentResult.valid) return documentResult.error ?? 'CPF/CNPJ inválido.'
     if (password.length < 8) return 'A senha deve ter no mínimo 8 caracteres.'
     if (password !== confirmPassword) return 'As senhas não coincidem.'
     return null
@@ -129,6 +137,12 @@ export default function SignupPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError('')
+    setDocumentServerError(null)
+
+    // Force touched-state so a submit attempt with an empty field
+    // surfaces the red border / error message on the input itself,
+    // not just in the top-right toast.
+    setDocumentTouched(true)
 
     const err = validate()
     if (err) { setError(err); return }
@@ -141,6 +155,7 @@ export default function SignupPage() {
         password,
         phone: phone.trim(),
         companyName: companyName.trim(),
+        document: documentResult.formatted,
         planId: plan,
         // Cycle flows through to the backend tenant.planCycle so the
         // PIX/Boleto webhook extends planExpiresAt by the right number
@@ -266,6 +281,13 @@ export default function SignupPage() {
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 6 }}>Nome da empresa</label>
               <input type="text" value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder="Sua empresa Ltda" required autoComplete="organization" style={inputStyle} onFocus={focusOn} onBlur={focusOff} />
             </div>
+
+            <DocumentInput
+              id="signup-document"
+              value={document}
+              onChange={(formatted) => { setDocument(formatted); setDocumentServerError(null) }}
+              forceError={documentTouched && !documentResult.valid && document.length === 0 ? 'CPF/CNPJ é obrigatório.' : documentServerError}
+            />
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
