@@ -28,13 +28,20 @@ export default function VerifyEmailSentPage() {
         </div>
 
         <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 10px' }}>Verifique seu e-mail</h2>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.5, margin: '0 0 28px' }}>
+        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.5, margin: '0 0 20px' }}>
           {email ? (
             <>Enviamos um link de confirmação para <strong style={{ color: 'var(--text-primary)' }}>{email}</strong>. Clique no link para ativar sua conta.</>
           ) : (
             <>Enviamos um link de confirmação para o seu e-mail. Clique no link para ativar sua conta.</>
           )}
         </p>
+
+        <div style={{ background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.35)', borderRadius: 8, padding: '12px 14px', margin: '0 0 24px', display: 'flex', alignItems: 'flex-start', gap: 8, textAlign: 'left' }}>
+          <span style={{ fontSize: 16, lineHeight: 1 }}>⚠️</span>
+          <span style={{ fontSize: 13, color: '#f59e0b', fontWeight: 500, lineHeight: 1.5 }}>
+            Você não conseguirá fazer login até verificar seu e-mail.
+          </span>
+        </div>
 
         <a
           href="/login"

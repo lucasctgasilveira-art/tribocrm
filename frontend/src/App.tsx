@@ -77,7 +77,7 @@ export default function App() {
       <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
 
       {/* Onboarding */}
-      <Route path="/gestao/onboarding" element={<Navigate to="/gestao/dashboard" replace />} />
+      <Route path="/gestao/onboarding" element={<PrivateRoute allowed={['gestao']}><Navigate to="/gestao/dashboard" replace /></PrivateRoute>} />
       <Route path="/vendas/onboarding" element={<OnboardingVendedorPage />} />
 
       {/* Preview (sem proteção — apenas para teste visual) */}
