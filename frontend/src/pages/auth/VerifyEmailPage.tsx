@@ -55,7 +55,7 @@ export default function VerifyEmailPage() {
           // Redirect via a lightweight page that stores the session
           // and hands off to /checkout with the right query params.
           setTimeout(() => {
-            navigate(`/auth/auto-login?plano=${encodeURIComponent(plano)}&ciclo=${encodeURIComponent(ciclo)}`, { replace: true })
+            navigate('/gestao/dashboard', { replace: true })
           }, 2000)
         } else {
           setStatus('error')

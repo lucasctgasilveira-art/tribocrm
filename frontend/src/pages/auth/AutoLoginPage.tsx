@@ -43,7 +43,7 @@ export default function AutoLoginPage() {
     // bounce is instant on fast connections and the spinner prevents the
     // feeling of a blank flash.
     const t = setTimeout(() => {
-      navigate(`/checkout?plano=${encodeURIComponent(plano)}&ciclo=${encodeURIComponent(ciclo)}`, { replace: true })
+      navigate('/gestao/dashboard', { replace: true })
     }, 800)
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
