@@ -148,9 +148,9 @@ export default function OnboardingGestorPage() {
     localStorage.setItem('tribocrm_onboarding_done', 'true')
     const token = localStorage.getItem('accessToken')
     if (!token) {
-      navigate('/login?redirect=/gestao/dashboard&msg=onboarding_done')
+      window.location.href = '/login?redirect=/gestao/dashboard&msg=onboarding_done'
     } else {
-      navigate('/gestao/dashboard')
+      window.location.href = '/gestao/dashboard'
     }
   }
 
