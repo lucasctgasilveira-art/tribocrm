@@ -1,5 +1,4 @@
 import { useState, type ChangeEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { Check, X, Users, Upload, Plus } from 'lucide-react'
 
 /* ─── pipeline stages ─── */
@@ -110,7 +109,6 @@ const btnGhost: React.CSSProperties = {
 
 /* ─── main component ─── */
 export default function OnboardingGestorPage() {
-  const navigate = useNavigate()
   const [step, setStep] = useState(1)
   const [stages, setStages] = useState<Stage[]>(defaultStages)
   const [members, setMembers] = useState<Member[]>([])
