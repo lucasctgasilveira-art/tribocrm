@@ -8,6 +8,7 @@ import SignupPage from './pages/auth/SignupPage'
 import CheckoutPage from './pages/auth/CheckoutPage'
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage'
 import ResetPasswordPage from './pages/auth/ResetPasswordPage'
+import AutoLoginPage from './pages/auth/AutoLoginPage'
 import OnboardingGestorPage from './pages/auth/OnboardingGestorPage'
 import OnboardingVendedorPage from './pages/auth/OnboardingVendedorPage'
 import PrivateRoute from './components/shared/PrivateRoute'
@@ -71,6 +72,7 @@ export default function App() {
       <Route path="/auth/verify-email-sent" element={<VerifyEmailSentPage />} />
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/checkout" element={<CheckoutPage />} />
+      <Route path="/auth/auto-login" element={<AutoLoginPage />} />
       <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
 

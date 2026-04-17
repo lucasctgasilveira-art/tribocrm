@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
 import bcrypt from 'bcryptjs'
+import jwt from 'jsonwebtoken'
 import { randomUUID } from 'crypto'
 import { prisma } from '../lib/prisma'
 import { sendMail } from '../services/mailer.service'
@@ -389,7 +390,7 @@ export async function verifyEmail(req: Request, res: Response): Promise<void> {
 
     const user = await prisma.user.findFirst({
       where: { emailVerificationToken: token, deletedAt: null },
-      select: { id: true, emailVerified: true },
+      select: { id: true, tenantId: true, role: true, emailVerified: true, name: true, email: true },
     })
 
     if (!user) {
@@ -400,19 +401,58 @@ export async function verifyEmail(req: Request, res: Response): Promise<void> {
       return
     }
 
-    // Already-verified short-circuit: still return success so the UI
-    // treats a reclicked link gracefully.
-    if (user.emailVerified) {
-      res.json({ success: true, data: { message: 'E-mail já confirmado' } })
-      return
+    // Already-verified short-circuit. Still issues tokens so a
+    // reclicked link can land the user in the auto-login page.
+    if (!user.emailVerified) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { emailVerified: true, emailVerificationToken: null },
+      })
     }
 
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { emailVerified: true, emailVerificationToken: null },
-    })
+    // Generate a session so the user can land on the checkout (or any
+    // protected page) immediately without typing their password again.
+    // Same structure as auth.controller's generateAccessToken /
+    // generateRefreshToken — reproduced here because those functions
+    // are module-private in auth.controller.
+    const jwtSecret = process.env.JWT_SECRET
+    const jwtRefreshSecret = process.env.JWT_REFRESH_SECRET
+    let accessToken: string | null = null
+    let refreshToken: string | null = null
 
-    res.json({ success: true, data: { message: 'E-mail confirmado com sucesso' } })
+    if (jwtSecret && jwtRefreshSecret) {
+      const payload = { userId: user.id, tenantId: user.tenantId, role: user.role }
+      accessToken = jwt.sign(payload, jwtSecret, { expiresIn: '8h' })
+      refreshToken = jwt.sign(payload, jwtRefreshSecret, { expiresIn: '30d' })
+    }
+
+    // Derive plano + ciclo from the tenant's current state so the
+    // frontend can deep-link to /checkout with the right params
+    // without reading localStorage (which may be on another device).
+    let plano = 'essencial'
+    let ciclo = 'mensal'
+    try {
+      const tenant = await prisma.tenant.findUnique({
+        where: { id: user.tenantId },
+        include: { plan: { select: { slug: true } } },
+      })
+      if (tenant) {
+        plano = tenant.plan.slug ?? 'essencial'
+        ciclo = tenant.planCycle === 'YEARLY' ? 'anual' : 'mensal'
+      }
+    } catch { /* keep defaults */ }
+
+    res.json({
+      success: true,
+      data: {
+        message: 'E-mail confirmado com sucesso',
+        accessToken,
+        refreshToken,
+        user: { id: user.id, name: user.name, email: user.email, role: user.role, tenantId: user.tenantId },
+        plano,
+        ciclo,
+      },
+    })
   } catch (error: any) {
     console.error('[Signup] verifyEmail error:', error?.message ?? error)
     res.status(500).json({
