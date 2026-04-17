@@ -4,7 +4,6 @@ import jwt from 'jsonwebtoken'
 import { randomUUID } from 'crypto'
 import { prisma } from '../lib/prisma'
 import { sendMail } from '../services/mailer.service'
-import { validateDocument } from '../utils/validateDocument'
 
 const BCRYPT_ROUNDS = 12
 const TRIAL_DAYS = 30
@@ -42,7 +41,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export async function publicSignup(req: Request, res: Response): Promise<void> {
   try {
-    const { name, email, password, phone, companyName, document, planId, planCycle: rawPlanCycle } = (req.body ?? {}) as Record<string, unknown>
+    const { name, email, password, phone, companyName, planId, planCycle: rawPlanCycle } = (req.body ?? {}) as Record<string, unknown>
 
     // Required-field validation (mirrors the shape the signup screen
     // will POST). We don't use zod here to keep the file self-contained.
@@ -53,14 +52,6 @@ export async function publicSignup(req: Request, res: Response): Promise<void> {
     if (typeof phone !== 'string' || !phone.trim()) errs.push('phone é obrigatório')
     if (typeof companyName !== 'string' || !companyName.trim()) errs.push('companyName é obrigatório')
     if (typeof planId !== 'string' || !planId.trim()) errs.push('planId é obrigatório')
-
-    // CPF/CNPJ is now mandatory on every signup regardless of plan.
-    // Digit-check validation runs server-side too so a tampered or
-    // older client can't skip it. Formatted value (CPF:
-    // 000.000.000-00 / CNPJ: 00.000.000/0000-00) is what we persist
-    // — single representation downstream simplifies display.
-    const docResult = validateDocument(typeof document === 'string' ? document : '')
-    if (!docResult.valid) errs.push(docResult.error ?? 'document inválido')
 
     if (errs.length > 0) {
       res.status(400).json({
@@ -133,7 +124,6 @@ export async function publicSignup(req: Request, res: Response): Promise<void> {
         data: {
           name: (companyName as string).trim(),
           cnpj: placeholderCnpj,
-          document: docResult.formatted,
           email: emailNorm,
           phone: (phone as string).trim(),
           planId: plan.id,
