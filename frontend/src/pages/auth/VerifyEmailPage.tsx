@@ -29,9 +29,34 @@ export default function VerifyEmailPage() {
       .get(`${baseURL}/public/verify-email`, { params: { token } })
       .then((res) => {
         if (cancelled) return
+        const d = res.data?.data
         if (res.data?.success) {
           setStatus('success')
-          setMessage('E-mail confirmado! Redirecionando...')
+          setMessage('E-mail confirmado! Entrando automaticamente...')
+
+          // The backend now returns accessToken + refreshToken +
+          // user snapshot alongside the verification response. Save
+          // them to localStorage so the auto-login page (and
+          // subsequent protected routes) pick up the session without
+          // the user having to type their password again.
+          if (d?.accessToken) localStorage.setItem('accessToken', d.accessToken)
+          if (d?.refreshToken) localStorage.setItem('refreshToken', d.refreshToken)
+          if (d?.user) localStorage.setItem('user', JSON.stringify(d.user))
+
+          // Store plano/ciclo from the backend response (derived from
+          // the tenant's real planCycle + plan.slug). Falls back to
+          // the localStorage values the SignupPage saved earlier — in
+          // case the user verified from the same browser.
+          const plano = d?.plano ?? localStorage.getItem('signup_plano') ?? 'essencial'
+          const ciclo = d?.ciclo ?? localStorage.getItem('signup_ciclo') ?? 'mensal'
+          localStorage.removeItem('signup_plano')
+          localStorage.removeItem('signup_ciclo')
+
+          // Redirect via a lightweight page that stores the session
+          // and hands off to /checkout with the right query params.
+          setTimeout(() => {
+            navigate(`/auth/auto-login?plano=${encodeURIComponent(plano)}&ciclo=${encodeURIComponent(ciclo)}`, { replace: true })
+          }, 2000)
         } else {
           setStatus('error')
           setMessage(res.data?.error?.message ?? 'Não foi possível confirmar seu e-mail.')
@@ -44,25 +69,7 @@ export default function VerifyEmailPage() {
       })
 
     return () => { cancelled = true }
-  }, [params])
-
-  useEffect(() => {
-    if (status !== 'success') return
-    // Post-verification the user's tenant is in TRIAL status and still
-    // needs to pick a payment method. Carry the plano + ciclo the
-    // gestor picked at signup (saved to localStorage by SignupPage)
-    // through to /checkout so the right card and price show up. Both
-    // keys are removed on the way out — they exist only to bridge the
-    // user's email-link round-trip.
-    const t = setTimeout(() => {
-      const plano = localStorage.getItem('signup_plano') ?? 'essencial'
-      const ciclo = localStorage.getItem('signup_ciclo') ?? 'mensal'
-      localStorage.removeItem('signup_plano')
-      localStorage.removeItem('signup_ciclo')
-      navigate(`/checkout?plano=${encodeURIComponent(plano)}&ciclo=${encodeURIComponent(ciclo)}`, { replace: true })
-    }, 3000)
-    return () => clearTimeout(t)
-  }, [status, navigate])
+  }, [params, navigate])
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#111318', padding: 20 }}>
