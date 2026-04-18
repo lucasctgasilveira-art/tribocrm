@@ -354,6 +354,10 @@ model Tenant {
   addressState        String?  @map("address_state") @db.VarChar(2)
   addressZip          String?  @map("address_zip") @db.VarChar(10)
   preferredPaymentMethod PreferredPaymentMethod? @map("preferred_payment_method")
+  termsAcceptedAt    DateTime? @map("terms_accepted_at")
+  termsVersion       String?   @map("terms_version") @db.VarChar(10)
+  privacyAcceptedAt  DateTime? @map("privacy_accepted_at")
+  privacyVersion     String?   @map("privacy_version") @db.VarChar(10)
   // First-access onboarding wizard state — surfaced to the gestor via
   // PATCH /tenants/onboarding and read on login. Only used by the
   // MANAGER/OWNER-facing OnboardingWizard overlay.
