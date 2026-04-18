@@ -94,8 +94,15 @@ export default function SignupPage() {
   localStorage.setItem('signup_email', emailParam)
   localStorage.setItem('signup_telefone', telefoneParam)
   localStorage.setItem('signup_empresa', empresaParam)
-  // Drives subtitle copy + per-card price/badge below.
-  const isAnual = initialCiclo === 'anual'
+  const [ciclo, setCiclo] = useState<'mensal' | 'anual'>(() => (initialCiclo === 'anual' ? 'anual' : 'mensal'))
+
+  function handleCycleChange(novo: 'mensal' | 'anual') {
+    setCiclo(novo)
+    // Persist so the verify-email round-trip fallback (AutoLoginPage /
+    // VerifyEmailPage reading from localStorage when the user clicks
+    // the verification link in another browser) stays in sync.
+    localStorage.setItem('signup_ciclo', novo)
+  }
 
   const [plan, setPlan] = useState<PlanKey>(() => {
     if (initialPlano === 'solo') return 'SOLO'
@@ -145,7 +152,7 @@ export default function SignupPage() {
         // Cycle flows through to the backend tenant.planCycle so the
         // PIX/Boleto webhook extends planExpiresAt by the right number
         // of days (30 for MONTHLY, 365 for YEARLY).
-        planCycle: initialCiclo === 'anual' ? 'YEARLY' : 'MONTHLY',
+        planCycle: ciclo === 'anual' ? 'YEARLY' : 'MONTHLY',
       })
 
       if (data?.success) {
@@ -193,8 +200,39 @@ export default function SignupPage() {
 
         <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center', margin: '0 0 4px' }}>Criar sua conta</h2>
         <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', margin: '0 0 24px' }}>
-          {isAnual ? 'Plano anual com 15% de desconto · Pagamento único' : '30 dias grátis · Sem cartão de crédito'}
+          {ciclo === 'anual' ? 'Plano anual com 15% de desconto · Pagamento único' : '30 dias grátis · Sem cartão de crédito'}
         </p>
+
+        {/* Cycle toggle — Mensal | [switch] | Anual + 15% OFF badge */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
+          <button
+            type="button"
+            onClick={() => handleCycleChange('mensal')}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit', fontSize: 13, fontWeight: ciclo === 'mensal' ? 600 : 400, color: ciclo === 'mensal' ? 'var(--text-primary)' : 'var(--text-muted)', transition: 'color 0.2s' }}
+          >
+            Mensal
+          </button>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={ciclo === 'anual'}
+            aria-label="Alternar entre cobrança mensal e anual"
+            onClick={() => handleCycleChange(ciclo === 'anual' ? 'mensal' : 'anual')}
+            style={{ position: 'relative', width: 48, height: 24, borderRadius: 999, border: 'none', cursor: 'pointer', padding: 0, background: ciclo === 'anual' ? '#f97316' : 'var(--border)', transition: 'background 0.2s' }}
+          >
+            <span style={{ position: 'absolute', top: 3, left: 3, width: 18, height: 18, borderRadius: '50%', background: '#fff', transform: ciclo === 'anual' ? 'translateX(24px)' : 'translateX(0)', transition: 'transform 0.2s' }} />
+          </button>
+          <button
+            type="button"
+            onClick={() => handleCycleChange('anual')}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit', fontSize: 13, fontWeight: ciclo === 'anual' ? 600 : 400, color: ciclo === 'anual' ? 'var(--text-primary)' : 'var(--text-muted)', transition: 'color 0.2s' }}
+          >
+            Anual
+          </button>
+          <span style={{ background: 'rgba(34,197,94,0.15)', color: '#22c55e', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+            15% OFF
+          </span>
+        </div>
 
         {/* Plan selector */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginBottom: 24 }}>
@@ -228,15 +266,25 @@ export default function SignupPage() {
                     </div>
                   )}
                 </div>
+                {ciclo === 'anual' && (
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', textDecoration: 'line-through' }}>
+                    {fmtBRL(p.priceMonthly)}/mês
+                  </div>
+                )}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                   <div style={{ fontSize: 13, color: '#f97316', fontWeight: 700 }}>
-                    {fmtBRL(isAnual ? p.monthEquivalent : p.priceMonthly)}
+                    {fmtBRL(ciclo === 'anual' ? p.monthEquivalent : p.priceMonthly)}
                     <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 400 }}>/mês</span>
                   </div>
-                  {isAnual && (
+                  {ciclo === 'anual' && (
                     <span style={{ background: 'rgba(34,197,94,0.15)', color: '#22c55e', fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, letterSpacing: '0.05em' }}>15% OFF</span>
                   )}
                 </div>
+                {ciclo === 'anual' && (
+                  <div style={{ fontSize: 10, color: '#22c55e', fontWeight: 600, marginTop: 2 }}>
+                    Economia de {fmtBRL((p.priceMonthly - p.monthEquivalent) * 12)}/ano
+                  </div>
+                )}
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{p.usersLabel}</div>
               </button>
             )
