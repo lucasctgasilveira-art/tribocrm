@@ -41,6 +41,12 @@ enum PaymentMethod {
   MANUAL
 }
 
+enum PreferredPaymentMethod {
+  PIX
+  BOLETO
+  CREDIT_CARD
+}
+
 enum UserRole {
   OWNER
   MANAGER
@@ -347,6 +353,7 @@ model Tenant {
   addressCity         String?  @map("address_city") @db.VarChar(150)
   addressState        String?  @map("address_state") @db.VarChar(2)
   addressZip          String?  @map("address_zip") @db.VarChar(10)
+  preferredPaymentMethod PreferredPaymentMethod? @map("preferred_payment_method")
   // First-access onboarding wizard state — surfaced to the gestor via
   // PATCH /tenants/onboarding and read on login. Only used by the
   // MANAGER/OWNER-facing OnboardingWizard overlay.
