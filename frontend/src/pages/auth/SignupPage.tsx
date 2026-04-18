@@ -1,7 +1,7 @@
 import { useState, useEffect, type FormEvent, type CSSProperties } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import axios from 'axios'
-import { Eye, EyeOff, Loader2, XCircle, Check } from 'lucide-react'
+import { Eye, EyeOff, Loader2, XCircle, Check, Zap, FileText, CreditCard } from 'lucide-react'
 import WhatsAppFAB from '../../components/WhatsAppFAB'
 
 // Public signup screen. Uses the `axios` default (not the shared api
@@ -29,6 +29,17 @@ const PLANS: PlanInfo[] = [
   { key: 'ESSENCIAL',  name: 'Essencial',  priceMonthly: 197, monthEquivalent: 167, usersLabel: 'até 3 usuários' },
   { key: 'PRO',        name: 'Pro',        priceMonthly: 349, monthEquivalent: 297, usersLabel: 'até 5 usuários', badge: 'Mais Popular' },
   { key: 'ENTERPRISE', name: 'Enterprise', priceMonthly: 649, monthEquivalent: 552, usersLabel: 'até 10 usuários' },
+]
+
+type PaymentMethod = 'PIX' | 'BOLETO' | 'CREDIT_CARD'
+
+// Visual config for the 3 payment-method cards. Lucide icons + colors
+// match what CheckoutPage shows in the authenticated billing flow so
+// the user sees the same vocabulary on both screens.
+const PAYMENT_OPTIONS = [
+  { value: 'PIX' as const,         label: 'PIX',     desc: 'Aprovação imediata',     Icon: Zap,        color: '#22c55e' },
+  { value: 'BOLETO' as const,      label: 'Boleto',  desc: 'Vence em 3 dias úteis',  Icon: FileText,   color: '#3b82f6' },
+  { value: 'CREDIT_CARD' as const, label: 'Cartão',  desc: 'Débito automático',      Icon: CreditCard, color: '#a855f7' },
 ]
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -96,6 +107,31 @@ function readStep1Data(): Step1Data | null {
   } catch { return null }
 }
 
+// Step 2 fields land here as the user fills them across sub-etapas
+// 5B-5G. Each field is optional so the partial state mid-flow is
+// representable. Sub-etapa 5G's handleFinishSignup will read this
+// once at submit time.
+interface Step2Data {
+  paymentMethod?: PaymentMethod
+}
+
+const STEP2_STORAGE_KEY = 'signup_step2_data'
+
+function readStep2Data(): Step2Data | null {
+  try {
+    const raw = sessionStorage.getItem(STEP2_STORAGE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Partial<Step2Data>
+    // Validate paymentMethod is one of the known values; if it was
+    // tampered with, return an empty object so future writes start
+    // from a clean slate instead of crashing the radio group.
+    if (parsed?.paymentMethod && parsed.paymentMethod !== 'PIX' && parsed.paymentMethod !== 'BOLETO' && parsed.paymentMethod !== 'CREDIT_CARD') {
+      return {}
+    }
+    return parsed as Step2Data
+  } catch { return null }
+}
+
 export default function SignupPage() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
@@ -152,6 +188,21 @@ export default function SignupPage() {
   const [showConfirm, setShowConfirm] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  // Step 2 — payment method. Hydrated from sessionStorage so it
+  // survives back/forward navigation and refresh on /signup?step=2.
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(() => readStep2Data()?.paymentMethod ?? 'PIX')
+
+  function handlePaymentMethodChange(method: PaymentMethod) {
+    setPaymentMethod(method)
+    try {
+      // Merge instead of overwrite — future sub-etapas will add
+      // document/zipCode/address/terms to the same object.
+      const current = readStep2Data()
+      const next: Step2Data = { ...(current ?? {}), paymentMethod: method }
+      sessionStorage.setItem(STEP2_STORAGE_KEY, JSON.stringify(next))
+    } catch { /* sessionStorage may be disabled (private mode); UI still works */ }
+  }
 
   function validate(): string | null {
     if (!name.trim()) return 'Informe seu nome completo.'
@@ -493,11 +544,77 @@ export default function SignupPage() {
           ))}
         </div>
 
+        {/* Payment method selector — sub-etapa 5B. The choice is
+            persisted to sessionStorage but not yet sent on the POST;
+            sub-etapa 5G's handleFinishSignup will pick it up. */}
+        <div style={{ marginBottom: 20 }}>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 8 }}>
+            Como você prefere pagar após 30 dias?
+          </label>
+          <div role="radiogroup" aria-label="Método de pagamento" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+            {PAYMENT_OPTIONS.map(opt => {
+              const active = paymentMethod === opt.value
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => handlePaymentMethodChange(opt.value)}
+                  onMouseEnter={(e) => {
+                    if (!active) {
+                      e.currentTarget.style.borderColor = 'rgba(249,115,22,0.4)'
+                      e.currentTarget.style.background = 'rgba(249,115,22,0.04)'
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!active) {
+                      e.currentTarget.style.borderColor = 'var(--border)'
+                      e.currentTarget.style.background = 'transparent'
+                    }
+                  }}
+                  style={{
+                    padding: '14px 12px',
+                    borderRadius: 10,
+                    border: active ? '1.5px solid #f97316' : '1px solid var(--border)',
+                    background: active ? 'rgba(249,115,22,0.10)' : 'transparent',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 4,
+                    fontFamily: 'inherit',
+                    color: 'var(--text-primary)',
+                  }}
+                >
+                  <opt.Icon size={22} color={opt.color} strokeWidth={1.8} />
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>{opt.label}</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{opt.desc}</span>
+                </button>
+              )
+            })}
+          </div>
+          {paymentMethod === 'CREDIT_CARD' && (
+            <div style={{
+              marginTop: 12,
+              padding: '10px 14px',
+              background: 'rgba(59,130,246,0.10)',
+              border: '1px solid rgba(59,130,246,0.25)',
+              borderRadius: 8,
+              fontSize: 13,
+              color: 'var(--text-secondary)',
+              lineHeight: 1.5,
+            }}>
+              ℹ️ Enviaremos o link para cadastrar seu cartão 7 dias antes do fim do trial.
+            </div>
+          )}
+        </div>
+
         {/* Under-construction notice for the fields that will land in
-            subsequent sub-etapas (CPF/CNPJ, address, payment method,
-            terms acceptance). */}
+            subsequent sub-etapas (CPF/CNPJ, address, terms acceptance). */}
         <div style={{ background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.30)', borderRadius: 10, padding: '12px 14px', marginBottom: 20, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-          🚧 <strong style={{ color: '#f97316' }}>Em construção</strong> — Os campos de CPF/CNPJ, endereço, método de pagamento e aceite de termos aparecerão aqui nas próximas etapas.
+          🚧 <strong style={{ color: '#f97316' }}>Em construção</strong> — Os campos de CPF/CNPJ, endereço e aceite de termos aparecerão aqui nas próximas etapas.
         </div>
 
         <div style={{ display: 'flex', gap: 12 }}>
