@@ -1,5 +1,5 @@
-import { useState, type FormEvent, type CSSProperties } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect, type FormEvent, type CSSProperties } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import axios from 'axios'
 import { Eye, EyeOff, Loader2, XCircle, Check } from 'lucide-react'
 import WhatsAppFAB from '../../components/WhatsAppFAB'
@@ -69,8 +69,39 @@ function focusOff(e: React.FocusEvent<HTMLInputElement>) {
   e.target.style.boxShadow = 'none'
 }
 
+// Payload persisted to sessionStorage between /signup?step=1 and
+// ?step=2. Password is deliberately NOT stored — if the user refreshes
+// on step 2, the password field is empty on return to step 1 and
+// they must retype it (security-over-convenience).
+interface Step1Data {
+  name: string
+  email: string
+  phone: string
+  companyName: string
+  plan: PlanKey
+  ciclo: 'mensal' | 'anual'
+}
+
+const STEP1_STORAGE_KEY = 'signup_step1_data'
+
+function readStep1Data(): Step1Data | null {
+  try {
+    const raw = sessionStorage.getItem(STEP1_STORAGE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Partial<Step1Data>
+    // Minimal shape check — if it's malformed, treat as absent so the
+    // step 2 guard forces the user back to step 1 instead of crashing.
+    if (typeof parsed?.name !== 'string' || typeof parsed?.email !== 'string') return null
+    return parsed as Step1Data
+  } catch { return null }
+}
+
 export default function SignupPage() {
   const navigate = useNavigate()
+  const [params] = useSearchParams()
+  // Derived from URL — reactive via React Router, so browser back/
+  // forward buttons just work.
+  const step: 1 | 2 = params.get('step') === '2' ? 2 : 1
 
   // Read plano + ciclo from URL once on mount and persist to
   // localStorage. The user is about to leave the app to click the
@@ -133,8 +164,58 @@ export default function SignupPage() {
     return null
   }
 
-  async function handleSubmit(e: FormEvent) {
+  // Hydration: if the user is returning to step 1 from step 2 (or
+  // reopened /signup?step=2 directly), restore their previously typed
+  // data. sessionStorage has precedence over the URL query params so
+  // edits survive the round-trip.
+  useEffect(() => {
+    const stored = readStep1Data()
+    if (!stored) return
+    setName(stored.name)
+    setEmail(stored.email)
+    setPhone(stored.phone)
+    setCompanyName(stored.companyName)
+    setPlan(stored.plan)
+    setCiclo(stored.ciclo)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Guard: direct access to /signup?step=2 without step 1 data bounces
+  // back to step 1. Runs whenever step changes so a user who types the
+  // URL by hand lands in the right place.
+  useEffect(() => {
+    if (step === 2 && !readStep1Data()) {
+      navigate('/signup?step=1', { replace: true })
+    }
+  }, [step, navigate])
+
+  // Advance to step 2 — validates, persists the form snapshot (sans
+  // password) and navigates. Does NOT hit POST /public/signup; that
+  // only happens from step 2's "Finalizar cadastro" button.
+  function handleContinueStep1(e: FormEvent) {
     e.preventDefault()
+    setError('')
+
+    const err = validate()
+    if (err) { setError(err); return }
+
+    const snapshot: Step1Data = {
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      phone: phone.trim(),
+      companyName: companyName.trim(),
+      plan,
+      ciclo,
+    }
+    sessionStorage.setItem(STEP1_STORAGE_KEY, JSON.stringify(snapshot))
+    navigate('/signup?step=2')
+  }
+
+  // Final signup POST — reached from step 2's "Finalizar cadastro"
+  // button. Disabled until the billing fields land in a later
+  // sub-etapa; the handler stays wired so flipping disabled=false
+  // completes the flow.
+  async function handleFinishSignup() {
     setError('')
 
     const err = validate()
@@ -194,10 +275,22 @@ export default function SignupPage() {
             <span style={{ fontWeight: 800, color: '#f97316' }}>CRM</span>
           </h1>
         </div>
-        <p style={{ textAlign: 'center', fontSize: 11, letterSpacing: '0.2em', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 24, marginTop: 8 }}>
+        <p style={{ textAlign: 'center', fontSize: 11, letterSpacing: '0.2em', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 20, marginTop: 8 }}>
           Máquina de Vendas
         </p>
 
+        {/* Progress indicator — "Passo X de 2" */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, marginBottom: 18 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ width: 12, height: 12, borderRadius: '50%', background: step === 1 ? '#f97316' : 'transparent', border: step === 1 ? 'none' : '2px solid var(--border)', boxSizing: 'border-box' }} />
+            <span style={{ width: 40, height: 2, background: 'var(--border)' }} />
+            <span style={{ width: 12, height: 12, borderRadius: '50%', background: step === 2 ? '#f97316' : 'transparent', border: step === 2 ? 'none' : '2px solid var(--border)', boxSizing: 'border-box' }} />
+          </div>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.05em' }}>Passo {step} de 2</span>
+        </div>
+
+        {step === 1 ? (
+        <>
         <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center', margin: '0 0 4px' }}>Criar sua conta</h2>
         <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', margin: '0 0 24px' }}>
           {ciclo === 'anual' ? 'Plano anual com 15% de desconto · Pagamento único' : '30 dias grátis · Sem cartão de crédito'}
@@ -292,7 +385,7 @@ export default function SignupPage() {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleContinueStep1}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 6 }}>Nome completo</label>
@@ -362,7 +455,7 @@ export default function SignupPage() {
             onMouseEnter={(e) => { if (!loading) (e.target as HTMLButtonElement).style.background = '#fb923c' }}
             onMouseLeave={(e) => { if (!loading) (e.target as HTMLButtonElement).style.background = '#f97316' }}
           >
-            {loading ? (<><Loader2 size={18} className="animate-spin" />Criando conta...</>) : 'Criar minha conta grátis \u2192'}
+            {loading ? (<><Loader2 size={18} className="animate-spin" />Criando conta...</>) : 'Continuar \u2192'}
           </button>
         </form>
 
@@ -374,6 +467,59 @@ export default function SignupPage() {
             style={{ color: '#f97316', textDecoration: 'none', fontWeight: 500 }}
           >Entrar</a>
         </div>
+        </>
+        ) : (
+        <>
+        {/* Step 2 — billing placeholder */}
+        <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center', margin: '0 0 4px' }}>Dados de cobrança</h2>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', margin: '0 0 24px' }}>
+          Quase lá! Falta preencher os dados para ativar seu trial.
+        </p>
+
+        {/* Snapshot of the data collected in step 1 — password is
+            deliberately absent. */}
+        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px', marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {[
+            { label: 'Plano', value: `${PLANS.find(p => p.key === plan)?.name ?? plan} (${ciclo === 'anual' ? 'Anual' : 'Mensal'})` },
+            { label: 'Nome', value: name },
+            { label: 'E-mail', value: email },
+            { label: 'WhatsApp', value: phone },
+            { label: 'Empresa', value: companyName },
+          ].map(row => (
+            <div key={row.label} style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', minWidth: 80 }}>{row.label}</span>
+              <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500, wordBreak: 'break-word' }}>{row.value}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Under-construction notice for the fields that will land in
+            subsequent sub-etapas (CPF/CNPJ, address, payment method,
+            terms acceptance). */}
+        <div style={{ background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.30)', borderRadius: 10, padding: '12px 14px', marginBottom: 20, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+          🚧 <strong style={{ color: '#f97316' }}>Em construção</strong> — Os campos de CPF/CNPJ, endereço, método de pagamento e aceite de termos aparecerão aqui nas próximas etapas.
+        </div>
+
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button
+            type="button"
+            onClick={() => navigate('/signup?step=1')}
+            style={{ flex: '0 0 auto', background: 'none', color: 'var(--text-muted)', fontWeight: 500, fontSize: 14, borderRadius: 8, padding: '10px 16px', border: '1px solid var(--border)', cursor: 'pointer', fontFamily: 'inherit' }}
+          >
+            &larr; Voltar
+          </button>
+          <button
+            type="button"
+            disabled
+            title="Em construção"
+            onClick={handleFinishSignup}
+            style={{ flex: 1, background: '#f97316', color: '#fff', fontWeight: 600, fontSize: 15, borderRadius: 8, padding: 12, border: 'none', cursor: 'not-allowed', opacity: 0.5, fontFamily: 'inherit' }}
+          >
+            Finalizar cadastro
+          </button>
+        </div>
+        </>
+        )}
       </div>
 
       <style>{`::placeholder { color: var(--text-muted) !important; }`}</style>
