@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken'
 import { randomUUID } from 'crypto'
 import { prisma } from '../lib/prisma'
 import { sendMail } from '../services/mailer.service'
+import { validateDocument, stripDocument } from '../utils/validateDocument'
 
 const BCRYPT_ROUNDS = 12
 const TRIAL_DAYS = 30
@@ -41,7 +42,16 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export async function publicSignup(req: Request, res: Response): Promise<void> {
   try {
-    const { name, email, password, phone, companyName, planId, planCycle: rawPlanCycle } = (req.body ?? {}) as Record<string, unknown>
+    const {
+      name, email, password, phone, companyName, planId, planCycle: rawPlanCycle,
+      // Step 2 (sub-etapa 5F) — all new billing fields arrive in the
+      // same POST body. Step 1 payload still works with the older
+      // frontend because TypeScript only reads what's listed here.
+      document, zipCode, addressStreet, addressNumber, addressComplement,
+      addressNeighborhood, addressCity, addressState,
+      preferredPaymentMethod,
+      termsAccepted, termsVersion, privacyAccepted, privacyVersion,
+    } = (req.body ?? {}) as Record<string, unknown>
 
     // Required-field validation (mirrors the shape the signup screen
     // will POST). We don't use zod here to keep the file self-contained.
@@ -52,6 +62,42 @@ export async function publicSignup(req: Request, res: Response): Promise<void> {
     if (typeof phone !== 'string' || !phone.trim()) errs.push('phone é obrigatório')
     if (typeof companyName !== 'string' || !companyName.trim()) errs.push('companyName é obrigatório')
     if (typeof planId !== 'string' || !planId.trim()) errs.push('planId é obrigatório')
+
+    // Step 2 validation — CPF/CNPJ digits are re-checked server-side
+    // because the frontend input can be bypassed (curl, Postman).
+    if (typeof document !== 'string' || !document.trim()) {
+      errs.push('document é obrigatório')
+    } else {
+      const digits = stripDocument(document)
+      if (digits.length !== 11 && digits.length !== 14) {
+        errs.push('document deve ser CPF (11 dígitos) ou CNPJ (14 dígitos)')
+      } else if (!validateDocument(digits).valid) {
+        errs.push('document inválido (CPF ou CNPJ com dígitos verificadores incorretos)')
+      }
+    }
+
+    // Address — addressComplement is the only optional one.
+    if (typeof zipCode !== 'string' || !zipCode.trim()) errs.push('zipCode é obrigatório')
+    if (typeof addressStreet !== 'string' || !addressStreet.trim()) errs.push('addressStreet é obrigatório')
+    if (typeof addressNumber !== 'string' || !addressNumber.trim()) errs.push('addressNumber é obrigatório')
+    if (typeof addressNeighborhood !== 'string' || !addressNeighborhood.trim()) errs.push('addressNeighborhood é obrigatório')
+    if (typeof addressCity !== 'string' || !addressCity.trim()) errs.push('addressCity é obrigatório')
+    if (typeof addressState !== 'string' || !addressState.trim()) errs.push('addressState (UF) é obrigatório')
+
+    // Payment method — required in validation but the column is
+    // nullable in DB (schema from Etapa 1) so a future downgrade to
+    // optional is a one-line change.
+    if (typeof preferredPaymentMethod !== 'string' || !['PIX', 'BOLETO', 'CREDIT_CARD'].includes(preferredPaymentMethod)) {
+      errs.push('preferredPaymentMethod deve ser PIX, BOLETO ou CREDIT_CARD')
+    }
+
+    // Legal acceptance — defense in depth against curl/Postman
+    // tampering. Single checkbox in the UI but we track terms and
+    // privacy independently in the DB so versions can drift.
+    if (termsAccepted !== true) errs.push('termsAccepted é obrigatório e deve ser true')
+    if (typeof termsVersion !== 'string' || !termsVersion.trim()) errs.push('termsVersion é obrigatório')
+    if (privacyAccepted !== true) errs.push('privacyAccepted é obrigatório e deve ser true')
+    if (typeof privacyVersion !== 'string' || !privacyVersion.trim()) errs.push('privacyVersion é obrigatório')
 
     if (errs.length > 0) {
       res.status(400).json({
@@ -119,11 +165,24 @@ export async function publicSignup(req: Request, res: Response): Promise<void> {
     const placeholderCnpj = `P${randomUUID().replace(/-/g, '').slice(0, 17)}`
     console.info('[Signup] creating tenant placeholderCnpj=%s length=%d', placeholderCnpj, placeholderCnpj.length)
 
+    // Sanitization — values below are safe for direct Prisma inserts.
+    // Document is stored digits-only (11 or 14 chars) in the new
+    // tenant.document column; the legacy tenant.cnpj keeps its
+    // placeholder (decision X: do not touch the UNIQUE column).
+    const documentDigits = stripDocument(document as string)
+    const zipCodeDigits = (zipCode as string).replace(/\D/g, '')
+    const ufNormalized = (addressState as string).trim().toUpperCase()
+    const complementTrimmed = typeof addressComplement === 'string' && addressComplement.trim()
+      ? addressComplement.trim()
+      : null
+    const documentType: 'CPF' | 'CNPJ' = documentDigits.length === 11 ? 'CPF' : 'CNPJ'
+
     const created = await prisma.$transaction(async (tx) => {
       const tenant = await tx.tenant.create({
         data: {
           name: (companyName as string).trim(),
           cnpj: placeholderCnpj,
+          document: documentDigits,
           email: emailNorm,
           phone: (phone as string).trim(),
           planId: plan.id,
@@ -131,6 +190,18 @@ export async function publicSignup(req: Request, res: Response): Promise<void> {
           status: 'TRIAL',
           trialEndsAt,
           planStartedAt: now,
+          addressZip: zipCodeDigits,
+          addressStreet: (addressStreet as string).trim(),
+          addressNumber: (addressNumber as string).trim(),
+          addressComplement: complementTrimmed,
+          addressNeighborhood: (addressNeighborhood as string).trim(),
+          addressCity: (addressCity as string).trim(),
+          addressState: ufNormalized,
+          preferredPaymentMethod: preferredPaymentMethod as 'PIX' | 'BOLETO' | 'CREDIT_CARD',
+          termsAcceptedAt: now,
+          termsVersion: (termsVersion as string).trim(),
+          privacyAcceptedAt: now,
+          privacyVersion: (privacyVersion as string).trim(),
         },
         select: { id: true },
       })
@@ -174,6 +245,16 @@ export async function publicSignup(req: Request, res: Response): Promise<void> {
       })
 
       return { tenantId: tenant.id, userId: user.id }
+    })
+
+    // Structured audit line — useful when triaging the first billing
+    // deployments. Kept separate from the email log so both show up
+    // with clean payloads in Railway.
+    console.log('[Signup] tenant created with billing data', {
+      tenantId: created.tenantId,
+      preferredPaymentMethod,
+      documentType,
+      termsVersion: (termsVersion as string).trim(),
     })
 
     // Confirmation email — fire-and-await so we can at least log the
