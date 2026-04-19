@@ -1,42 +1,82 @@
 import { Router, Request, Response } from 'express'
+import { timingSafeEqual } from 'crypto'
 import { processWebhookPayment } from '../services/efi.service'
 
 const router = Router()
 
-/**
- * POST /webhooks/efi
- *
- * Receives payment confirmations from Banco Efi for both PIX and Boleto.
- * Always returns 200 OK so Efi does not retry on internal errors.
- *
- * PIX payload (Efi sends an array of paid PIX events):
- * {
- *   "pix": [
- *     { "endToEndId": "E...", "txid": "...", "valor": "97.00",
- *       "horario": "2026-04-07T10:00:00Z", "pagador": {...} }
- *   ]
- * }
- *
- * Boleto/Carnê payload:
- * {
- *   "notification": "<token>",
- *   "charge": { "id": 12345, "status": "paid" }
- * }
- *
- * Security: Efi normally uses mTLS for the webhook endpoint. For now we
- * accept any POST and validate the payload shape. EFI_WEBHOOK_SECRET env
- * var is reserved for a future header-based check.
- */
-// Efi calls GET/HEAD on the webhook URL to verify it is reachable before
-// accepting pixConfigWebhook registration. Both must return 200.
-router.get('/efi', (_req: Request, res: Response) => {
-  res.status(200).send('ok')
-})
-router.head('/efi', (_req: Request, res: Response) => {
-  res.status(200).end()
-})
+// Official Efi egress IPs. Array (not a single string) so contingency /
+// staging IPs can be added without changing the comparison logic.
+const EFI_PROD_IPS = ['34.193.116.226']
 
-router.post('/efi', async (req: Request, res: Response) => {
+// ────────────────────────────────────────────────────────────────────
+// POST /webhooks/efi        — legacy path
+// POST /webhooks/efi/pix    — path Efi hits after registering the URL
+//                             (the platform appends /pix before the query
+//                             string of the URL we registered)
+//
+// Security model:
+//   1. HMAC via query param ?hmac=<EFI_WEBHOOK_HMAC>. Constant-time
+//      compare. Fail-fast if env is missing in production.
+//   2. IP allowlist (only in production) against the published Efi
+//      egress IPs. Read from x-forwarded-for because Railway's reverse
+//      proxy makes req.ip and req.socket.remoteAddress unreliable.
+//   3. GET/HEAD on the same paths stay free of auth — Efi probes
+//      reachability before accepting the webhook registration.
+//
+// Efi sends 2 payload shapes:
+//   PIX:    { "pix": [ { "txid": "...", ... }, ... ] }
+//   Boleto: { "notification": "...", "charge": { "id": ..., "status": "paid" } }
+// ────────────────────────────────────────────────────────────────────
+
+// Extract client IP via the x-forwarded-for chain. Railway puts the real
+// caller first in that list. We intentionally don't rely on req.ip
+// because app.ts doesn't set 'trust proxy' in this phase.
+function extractClientIp(req: Request): string {
+  const fwd = req.headers['x-forwarded-for']
+  const first = Array.isArray(fwd) ? fwd[0] : fwd?.split(',')[0]?.trim()
+  return first || req.socket.remoteAddress || ''
+}
+
+function validHmac(provided: string, expected: string): boolean {
+  if (!provided || !expected || provided.length !== expected.length) return false
+  return timingSafeEqual(Buffer.from(provided), Buffer.from(expected))
+}
+
+async function handleEfiWebhook(req: Request, res: Response): Promise<void> {
+  const expected = process.env.EFI_WEBHOOK_HMAC ?? ''
+  const isProd = process.env.NODE_ENV === 'production'
+
+  // ── 1. Fail-fast on misconfig ──
+  if (isProd && !expected) {
+    console.error('[Webhook:efi] BLOCKED — EFI_WEBHOOK_HMAC not set in production')
+    res.status(500).json({ success: false, error: 'webhook misconfigured' })
+    return
+  }
+
+  // ── 2. HMAC validation ──
+  const provided = String(req.query.hmac ?? '')
+  if (!validHmac(provided, expected)) {
+    console.warn('[Webhook:efi] REJECTED invalid hmac', {
+      ip: extractClientIp(req),
+      hasHmac: provided.length > 0,
+    })
+    res.status(401).json({ success: false, error: 'invalid hmac' })
+    return
+  }
+
+  // ── 3. IP allowlist (prod only) ──
+  const clientIp = extractClientIp(req)
+  if (isProd && !EFI_PROD_IPS.includes(clientIp)) {
+    console.warn('[Webhook:efi] REJECTED invalid IP', {
+      ip: clientIp,
+      expected: EFI_PROD_IPS,
+    })
+    res.status(401).json({ success: false, error: 'invalid origin' })
+    return
+  }
+
+  console.log('[Webhook:efi] accepted hmac+ip valid', { ip: clientIp })
+
   // Always respond 200 immediately so Efi doesn't retry
   // Process asynchronously after responding
   res.status(200).json({ success: true })
@@ -44,14 +84,6 @@ router.post('/efi', async (req: Request, res: Response) => {
   try {
     const body = req.body
     console.log('[Webhook:efi] received:', JSON.stringify(body).slice(0, 500))
-
-    // Optional secret validation (reserved for future header check)
-    const expectedSecret = process.env.EFI_WEBHOOK_SECRET
-    const providedSecret = req.headers['x-efi-secret'] as string | undefined
-    if (expectedSecret && providedSecret !== expectedSecret) {
-      console.warn('[Webhook:efi] invalid secret header — ignoring payload')
-      return
-    }
 
     // ── PIX payload ──
     if (Array.isArray(body?.pix)) {
@@ -93,6 +125,25 @@ router.post('/efi', async (req: Request, res: Response) => {
     // Never throw — Efi already received its 200 OK
     console.error('[Webhook:efi] processing error:', error)
   }
+}
+
+// Efi calls GET/HEAD on the webhook URL to verify it is reachable before
+// accepting pixConfigWebhook registration. Both must return 200 without
+// any auth, on both /efi and /efi/pix since the platform may probe either.
+router.get('/efi', (_req: Request, res: Response) => {
+  res.status(200).send('ok')
 })
+router.head('/efi', (_req: Request, res: Response) => {
+  res.status(200).end()
+})
+router.get('/efi/pix', (_req: Request, res: Response) => {
+  res.status(200).send('ok')
+})
+router.head('/efi/pix', (_req: Request, res: Response) => {
+  res.status(200).end()
+})
+
+router.post('/efi', handleEfiWebhook)
+router.post('/efi/pix', handleEfiWebhook)
 
 export default router
