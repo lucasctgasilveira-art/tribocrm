@@ -1,8 +1,9 @@
-import { useState, useEffect, type FormEvent, type CSSProperties } from 'react'
+import { useState, useEffect, useMemo, type FormEvent, type CSSProperties } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import axios from 'axios'
 import { Eye, EyeOff, Loader2, XCircle, Check, Zap, FileText, CreditCard } from 'lucide-react'
 import WhatsAppFAB from '../../components/WhatsAppFAB'
+import { validateDocument, formatDocument, stripDocument } from '../../utils/validateDocument'
 
 // Public signup screen. Uses the `axios` default (not the shared api
 // instance) because the interceptor on `api` attaches the JWT and
@@ -113,6 +114,10 @@ function readStep1Data(): Step1Data | null {
 // once at submit time.
 interface Step2Data {
   paymentMethod?: PaymentMethod
+  // Persisted formatted (e.g. "123.456.789-09" / "12.345.678/0001-95").
+  // Empty string is never stored — the field is removed from the
+  // object when cleared so readStep2Data stays truthful about state.
+  document?: string
 }
 
 const STEP2_STORAGE_KEY = 'signup_step2_data'
@@ -202,6 +207,45 @@ export default function SignupPage() {
       const next: Step2Data = { ...(current ?? {}), paymentMethod: method }
       sessionStorage.setItem(STEP2_STORAGE_KEY, JSON.stringify(next))
     } catch { /* sessionStorage may be disabled (private mode); UI still works */ }
+  }
+
+  // Step 2 — CPF/CNPJ field. `documentValue` stores the masked string
+  // as the user types; the raw digits are derived on demand via
+  // stripDocument. `documentTouched` gates the error-state styling so
+  // the red border only appears after the first blur.
+  const [documentValue, setDocumentValue] = useState<string>(() => readStep2Data()?.document ?? '')
+  const [documentTouched, setDocumentTouched] = useState<boolean>(false)
+
+  const documentValidation = useMemo(() => {
+    const digits = stripDocument(documentValue)
+    if (digits.length !== 11 && digits.length !== 14) {
+      // Neither a complete CPF nor a complete CNPJ — no red flag yet,
+      // user is still typing.
+      return { valid: false, checked: false }
+    }
+    return { valid: validateDocument(digits).valid, checked: true }
+  }, [documentValue])
+
+  function handleDocumentChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const raw = stripDocument(e.target.value).slice(0, 14)
+    const formatted = formatDocument(raw)
+    setDocumentValue(formatted)
+    try {
+      const current = readStep2Data() ?? {}
+      if (raw.length === 0) {
+        // Drop the key entirely so the object never carries an empty
+        // string — keeps readStep2Data checks honest.
+        const { document: _removed, ...rest } = current
+        sessionStorage.setItem(STEP2_STORAGE_KEY, JSON.stringify(rest))
+      } else {
+        const next: Step2Data = { ...current, document: formatted }
+        sessionStorage.setItem(STEP2_STORAGE_KEY, JSON.stringify(next))
+      }
+    } catch { /* private mode / storage disabled */ }
+  }
+
+  function handleDocumentBlur() {
+    setDocumentTouched(true)
   }
 
   function validate(): string | null {
@@ -611,10 +655,51 @@ export default function SignupPage() {
           )}
         </div>
 
+        {/* CPF/CNPJ field — sub-etapa 5C. Dynamic mask (CPF ≤11
+            digits, CNPJ 12-14). Validated on blur; green border when
+            valid, red when touched-and-invalid. Persisted formatted
+            to sessionStorage via the step2_data key. */}
+        <div style={{ marginTop: 20 }}>
+          <label htmlFor="signup-document" style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 6 }}>
+            CPF ou CNPJ <span style={{ color: '#ef4444' }}>*</span>
+          </label>
+          <input
+            id="signup-document"
+            type="text"
+            inputMode="numeric"
+            autoComplete="off"
+            maxLength={18}
+            value={documentValue}
+            onChange={handleDocumentChange}
+            onBlur={(e) => { focusOff(e); handleDocumentBlur() }}
+            onFocus={focusOn}
+            placeholder={stripDocument(documentValue).length > 11 ? '00.000.000/0000-00' : '000.000.000-00'}
+            aria-invalid={documentTouched && documentValidation.checked && !documentValidation.valid}
+            style={{
+              ...inputStyle,
+              borderColor: (documentTouched && documentValidation.checked && !documentValidation.valid)
+                ? '#ef4444'
+                : (documentValidation.checked && documentValidation.valid)
+                  ? '#22c55e'
+                  : 'var(--border)',
+            }}
+          />
+          {documentTouched && documentValidation.checked && !documentValidation.valid && (
+            <p style={{ marginTop: 6, fontSize: 13, color: '#ef4444' }}>
+              CPF ou CNPJ inválido. Verifique os dígitos.
+            </p>
+          )}
+          {!documentTouched && stripDocument(documentValue).length > 0 && stripDocument(documentValue).length < 11 && (
+            <p style={{ marginTop: 6, fontSize: 12, color: 'var(--text-muted)' }}>
+              Digite seu CPF (11 dígitos) ou CNPJ (14 dígitos)
+            </p>
+          )}
+        </div>
+
         {/* Under-construction notice for the fields that will land in
-            subsequent sub-etapas (CPF/CNPJ, address, terms acceptance). */}
-        <div style={{ background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.30)', borderRadius: 10, padding: '12px 14px', marginBottom: 20, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-          🚧 <strong style={{ color: '#f97316' }}>Em construção</strong> — Os campos de CPF/CNPJ, endereço e aceite de termos aparecerão aqui nas próximas etapas.
+            subsequent sub-etapas (address, terms acceptance). */}
+        <div style={{ background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.30)', borderRadius: 10, padding: '12px 14px', marginTop: 20, marginBottom: 20, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+          🚧 <strong style={{ color: '#f97316' }}>Em construção</strong> — Os campos de endereço e aceite de termos aparecerão aqui nas próximas etapas.
         </div>
 
         <div style={{ display: 'flex', gap: 12 }}>
