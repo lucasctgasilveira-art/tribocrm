@@ -18,6 +18,7 @@ enum AdminRole {
 enum TenantStatus {
   TRIAL
   ACTIVE
+  PAYMENT_OVERDUE
   SUSPENDED
   CANCELLED
 }
@@ -354,6 +355,12 @@ model Tenant {
   addressState        String?  @map("address_state") @db.VarChar(2)
   addressZip          String?  @map("address_zip") @db.VarChar(10)
   preferredPaymentMethod PreferredPaymentMethod? @map("preferred_payment_method")
+  // Billing state machine (sub-etapa 6A). Last known state for
+  // idempotency of the pre-billing / overdue / suspension jobs — each
+  // job checks (lastBillingState, lastBillingStateAt) before acting so
+  // re-runs on the same day become no-ops. Null means "never evaluated".
+  lastBillingState   String?   @map("last_billing_state")
+  lastBillingStateAt DateTime? @map("last_billing_state_at")
   termsAcceptedAt    DateTime? @map("terms_accepted_at")
   termsVersion       String?   @map("terms_version") @db.VarChar(10)
   privacyAcceptedAt  DateTime? @map("privacy_accepted_at")
