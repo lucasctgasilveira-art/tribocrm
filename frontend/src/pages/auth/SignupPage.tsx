@@ -58,6 +58,15 @@ const LEGAL_URLS = {
   dpa: 'https://tribocrm.com.br/legal/dpa.html',
 } as const
 
+// Versões atuais dos documentos legais publicados em
+// tribocrm.com.br/legal. Incrementar quando publicar nova versão.
+// Enviado no POST /public/signup para auditoria do que o user aceitou.
+const LEGAL_VERSIONS = {
+  terms: '2.0',
+  privacy: '2.0',
+  dpa: '2.0',
+} as const
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 function formatCEP(value: string): string {
@@ -415,6 +424,45 @@ export default function SignupPage() {
     saveToStep2Storage({ termsAccepted: next })
   }
 
+  // Derived boolean for the "Finalizar cadastro" button — every state
+  // in the dep array causes re-render, keeping the button reactive.
+  // Mirrors validateStep2 below, but returns boolean (no message).
+  const canFinish = useMemo<boolean>(() => (
+    !loading &&
+    !cepLoading &&
+    documentValidation.valid &&
+    zipCode.replace(/\D/g, '').length === 8 &&
+    addressStreet.trim() !== '' &&
+    addressNumber.trim() !== '' &&
+    addressNeighborhood.trim() !== '' &&
+    addressCity.trim() !== '' &&
+    addressState.trim() !== '' &&
+    termsAccepted === true
+  ), [
+    loading, cepLoading,
+    documentValidation.valid,
+    zipCode,
+    addressStreet, addressNumber, addressNeighborhood, addressCity, addressState,
+    termsAccepted,
+  ])
+
+  // Step 2 validation — returns the first error message (same shape
+  // as validate()). Used by handleFinishSignup as defense-in-depth so
+  // a user who bypasses the disabled button (devtools, scripts) still
+  // gets a clear error. canFinish above is the UI gate; this is the
+  // submit gate.
+  function validateStep2(): string | null {
+    if (!documentValidation.valid) return 'Informe um CPF ou CNPJ válido'
+    if (zipCode.replace(/\D/g, '').length !== 8) return 'Informe um CEP válido (8 dígitos)'
+    if (addressStreet.trim() === '') return 'Informe o endereço'
+    if (addressNumber.trim() === '') return 'Informe o número'
+    if (addressNeighborhood.trim() === '') return 'Informe o bairro'
+    if (addressCity.trim() === '') return 'Informe a cidade'
+    if (addressState.trim() === '') return 'Selecione a UF'
+    if (!termsAccepted) return 'É necessário aceitar os Termos de Uso, a Política de Privacidade e o DPA LGPD'
+    return null
+  }
+
   function validate(): string | null {
     if (!name.trim()) return 'Informe seu nome completo.'
     if (!EMAIL_RE.test(email.trim())) return 'E-mail inválido.'
@@ -480,12 +528,17 @@ export default function SignupPage() {
   async function handleFinishSignup() {
     setError('')
 
-    const err = validate()
-    if (err) { setError(err); return }
+    // Two-layer validation: step 1 fields (never shown on step 2 but
+    // still required by the backend) then step 2 fields.
+    const err1 = validate()
+    if (err1) { setError(err1); return }
+    const err2 = validateStep2()
+    if (err2) { setError(err2); return }
 
     setLoading(true)
     try {
       const { data } = await axios.post(`${baseURL}/public/signup`, {
+        // Step 1 fields — same payload as before.
         name: name.trim(),
         email: email.trim().toLowerCase(),
         password,
@@ -496,9 +549,48 @@ export default function SignupPage() {
         // PIX/Boleto webhook extends planExpiresAt by the right number
         // of days (30 for MONTHLY, 365 for YEARLY).
         planCycle: ciclo === 'anual' ? 'YEARLY' : 'MONTHLY',
+
+        // Step 2 fields (sub-etapa 5G). Backend 5F strips formatting
+        // as needed — sending formatted values keeps Railway logs
+        // easy to eyeball.
+        document: documentValue,
+        zipCode,
+        addressStreet: addressStreet.trim(),
+        addressNumber: addressNumber.trim(),
+        // omit the key entirely when empty — backend treats undefined
+        // as null.
+        addressComplement: addressComplement.trim() || undefined,
+        addressNeighborhood: addressNeighborhood.trim(),
+        addressCity: addressCity.trim(),
+        addressState: addressState.trim().toUpperCase(),
+        preferredPaymentMethod: paymentMethod,
+
+        // Legal acceptance — versions let the backend record exactly
+        // which document the user agreed to, independent of whatever
+        // is current at submit-time.
+        termsAccepted: true,
+        termsVersion: LEGAL_VERSIONS.terms,
+        privacyAccepted: true,
+        privacyVersion: LEGAL_VERSIONS.privacy,
       })
 
       if (data?.success) {
+        // Clear the scratch state used across the 2-step signup so
+        // (a) a second signup on the same device starts clean and
+        // (b) stale PII doesn't linger after navigating to
+        // verify-email-sent. Wrapped in try/catch because disabled
+        // storage (private mode) must not block the redirect.
+        try {
+          sessionStorage.removeItem('signup_step1_data')
+          sessionStorage.removeItem('signup_step2_data')
+          localStorage.removeItem('signup_plano')
+          localStorage.removeItem('signup_ciclo')
+          localStorage.removeItem('signup_nome')
+          localStorage.removeItem('signup_email')
+          localStorage.removeItem('signup_telefone')
+          localStorage.removeItem('signup_empresa')
+        } catch { /* storage may be disabled */ }
+
         navigate('/auth/verify-email-sent', {
           replace: true,
           state: { email: email.trim().toLowerCase() },
@@ -1094,12 +1186,32 @@ export default function SignupPage() {
           </button>
           <button
             type="button"
-            disabled
-            title="Em construção"
+            disabled={!canFinish || loading}
             onClick={handleFinishSignup}
-            style={{ flex: 1, background: '#f97316', color: '#fff', fontWeight: 600, fontSize: 15, borderRadius: 8, padding: 12, border: 'none', cursor: 'not-allowed', opacity: 0.5, fontFamily: 'inherit' }}
+            style={{
+              flex: 1,
+              background: (!canFinish || loading) ? '#c2590f' : '#f97316',
+              color: '#fff',
+              fontWeight: 600,
+              fontSize: 15,
+              borderRadius: 8,
+              padding: 12,
+              border: 'none',
+              cursor: (!canFinish || loading) ? 'not-allowed' : 'pointer',
+              opacity: (!canFinish || loading) ? 0.7 : 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              transition: 'all 0.15s',
+              fontFamily: 'inherit',
+            }}
           >
-            Finalizar cadastro
+            {loading ? (
+              <><Loader2 size={18} className="animate-spin" />Criando conta...</>
+            ) : (
+              'Finalizar cadastro'
+            )}
           </button>
         </div>
         </>
