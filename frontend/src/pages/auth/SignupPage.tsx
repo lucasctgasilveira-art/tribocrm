@@ -49,6 +49,15 @@ const UF_OPTIONS = [
   'RS','RO','RR','SC','SP','SE','TO',
 ]
 
+// Published locations of the three legal documents the signup flow
+// requires acceptance of. TERMS_VERSION will land alongside these in
+// sub-etapa 5G, when handleFinishSignup reads it for the POST body.
+const LEGAL_URLS = {
+  terms: 'https://tribocrm.com.br/legal/termos.html',
+  privacy: 'https://tribocrm.com.br/legal/privacidade.html',
+  dpa: 'https://tribocrm.com.br/legal/dpa.html',
+} as const
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 function formatCEP(value: string): string {
@@ -145,6 +154,11 @@ interface Step2Data {
   addressNeighborhood?: string
   addressCity?: string
   addressState?: string
+  // Unified acceptance of Terms of Use + Privacy Policy + DPA. false
+  // means "explicitly declined"; absent means "never interacted" — the
+  // saveToStep2Storage helper keeps false around (only '' and
+  // undefined are stripped) so the distinction survives reloads.
+  termsAccepted?: boolean
 }
 
 const STEP2_STORAGE_KEY = 'signup_step2_data'
@@ -386,6 +400,19 @@ export default function SignupPage() {
   function handleStateChange(e: React.ChangeEvent<HTMLSelectElement>) {
     setAddressState(e.target.value)
     saveToStep2Storage({ addressState: e.target.value })
+  }
+
+  // Step 2 — unified terms acceptance. Hydrates strictly from boolean
+  // true; any other value (string, null, missing) defaults to false
+  // so tampered storage can't force a false-positive acceptance.
+  const [termsAccepted, setTermsAccepted] = useState<boolean>(
+    () => readStep2Data()?.termsAccepted === true
+  )
+
+  function handleTermsAcceptedChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const next = e.target.checked
+    setTermsAccepted(next)
+    saveToStep2Storage({ termsAccepted: next })
   }
 
   function validate(): string | null {
@@ -984,10 +1011,77 @@ export default function SignupPage() {
           </div>
         </div>
 
-        {/* Under-construction notice for the field that will land in
-            sub-etapa 5E (terms acceptance checkbox). */}
-        <div style={{ background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.30)', borderRadius: 10, padding: '12px 14px', marginTop: 20, marginBottom: 20, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-          🚧 <strong style={{ color: '#f97316' }}>Em construção</strong> — O checkbox de aceite de termos aparecerá aqui na próxima etapa.
+        {/* Aceite unificado dos 3 documentos legais. Versionado via
+            TERMS_VERSION. Timestamp gerado no backend ao criar tenant.
+            stopPropagation nos links evita que clicar em "Termos de
+            Uso" etc. marque o checkbox por conta do <label htmlFor>. */}
+        <div style={{
+          marginTop: 20,
+          marginBottom: 20,
+          padding: '12px 14px',
+          background: 'rgba(34,197,94,0.05)',
+          border: '1px solid rgba(34,197,94,0.20)',
+          borderRadius: 8,
+          display: 'flex',
+          gap: 10,
+          alignItems: 'flex-start',
+        }}>
+          <input
+            id="signup-terms-accepted"
+            type="checkbox"
+            checked={termsAccepted}
+            onChange={handleTermsAcceptedChange}
+            aria-required="true"
+            style={{
+              marginTop: 3,
+              width: 16,
+              height: 16,
+              accentColor: '#f97316',
+              cursor: 'pointer',
+              flexShrink: 0,
+            }}
+          />
+          <label
+            htmlFor="signup-terms-accepted"
+            style={{
+              fontSize: 13,
+              lineHeight: 1.5,
+              color: 'var(--text-primary)',
+              cursor: 'pointer',
+            }}
+          >
+            Li e concordo com os{' '}
+            <a
+              href={LEGAL_URLS.terms}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: '#f97316', textDecoration: 'underline' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              Termos de Uso
+            </a>
+            , a{' '}
+            <a
+              href={LEGAL_URLS.privacy}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: '#f97316', textDecoration: 'underline' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              Política de Privacidade
+            </a>
+            {' '}e o{' '}
+            <a
+              href={LEGAL_URLS.dpa}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: '#f97316', textDecoration: 'underline' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              DPA LGPD
+            </a>
+            .
+          </label>
         </div>
 
         <div style={{ display: 'flex', gap: 12 }}>
