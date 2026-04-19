@@ -43,7 +43,23 @@ const PAYMENT_OPTIONS = [
   { value: 'CREDIT_CARD' as const, label: 'Cartão',  desc: 'Débito automático',      Icon: CreditCard, color: '#a855f7' },
 ]
 
+const UF_OPTIONS = [
+  'AC','AL','AP','AM','BA','CE','DF','ES','GO','MA',
+  'MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN',
+  'RS','RO','RR','SC','SP','SE','TO',
+]
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+function formatCEP(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 8)
+  if (digits.length <= 5) return digits
+  return digits.slice(0, 5) + '-' + digits.slice(5)
+}
+
+function stripCEP(value: string): string {
+  return value.replace(/\D/g, '')
+}
 
 function maskPhoneBR(value: string): string {
   const digits = value.replace(/\D/g, '').slice(0, 11)
@@ -118,6 +134,17 @@ interface Step2Data {
   // Empty string is never stored — the field is removed from the
   // object when cleared so readStep2Data stays truthful about state.
   document?: string
+  // Address — zipCode persisted with the dash mask (e.g. "35300-168");
+  // state holds the 2-letter UF (e.g. "MG"). Empty values are stripped
+  // by saveToStep2Storage so absent/empty are indistinguishable in
+  // readStep2Data.
+  zipCode?: string
+  addressStreet?: string
+  addressNumber?: string
+  addressComplement?: string
+  addressNeighborhood?: string
+  addressCity?: string
+  addressState?: string
 }
 
 const STEP2_STORAGE_KEY = 'signup_step2_data'
@@ -246,6 +273,119 @@ export default function SignupPage() {
 
   function handleDocumentBlur() {
     setDocumentTouched(true)
+  }
+
+  // Step 2 — address fields. Hydrated from sessionStorage; cepLoading
+  // and cepError are pure UI state (not persisted).
+  const [zipCode, setZipCode] = useState<string>(() => readStep2Data()?.zipCode ?? '')
+  const [addressStreet, setAddressStreet] = useState<string>(() => readStep2Data()?.addressStreet ?? '')
+  const [addressNumber, setAddressNumber] = useState<string>(() => readStep2Data()?.addressNumber ?? '')
+  const [addressComplement, setAddressComplement] = useState<string>(() => readStep2Data()?.addressComplement ?? '')
+  const [addressNeighborhood, setAddressNeighborhood] = useState<string>(() => readStep2Data()?.addressNeighborhood ?? '')
+  const [addressCity, setAddressCity] = useState<string>(() => readStep2Data()?.addressCity ?? '')
+  const [addressState, setAddressState] = useState<string>(() => readStep2Data()?.addressState ?? '')
+  const [cepLoading, setCepLoading] = useState<boolean>(false)
+  const [cepError, setCepError] = useState<string | null>(null)
+
+  // Generic patch helper for step 2 fields. Drops keys whose value is
+  // empty so the persisted object never carries stale empty strings —
+  // keeps readStep2Data parsing predictable. Not used by
+  // handlePaymentMethodChange / handleDocumentChange (those have
+  // field-specific cleanup logic).
+  function saveToStep2Storage(patch: Partial<Step2Data>) {
+    try {
+      const current = readStep2Data() ?? {}
+      const merged = { ...current, ...patch } as Step2Data
+      ;(Object.keys(merged) as Array<keyof Step2Data>).forEach(k => {
+        if (merged[k] === '' || merged[k] === undefined) delete merged[k]
+      })
+      sessionStorage.setItem(STEP2_STORAGE_KEY, JSON.stringify(merged))
+    } catch { /* private mode */ }
+  }
+
+  // ViaCEP autofill. Triggers when the formatted value reaches 8
+  // digits. Re-fires every time digits=8 (no in-component cache —
+  // simpler, and the API is fast). Does not abort prior in-flight
+  // requests; in the rare race where two fetches resolve out of
+  // order the second-typed CEP wins by a happy accident of the
+  // event loop, but a stale completion can overwrite. Acceptable
+  // tradeoff for the typical signup flow.
+  async function handleCepChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const formatted = formatCEP(e.target.value)
+    setZipCode(formatted)
+    setCepError(null)
+    saveToStep2Storage({ zipCode: formatted })
+
+    const digits = stripCEP(formatted)
+    if (digits.length !== 8) return
+
+    setCepLoading(true)
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`)
+      if (!res.ok) {
+        setCepError('Não foi possível buscar o CEP. Preencha manualmente.')
+        return
+      }
+      const data = await res.json() as {
+        erro?: boolean | string
+        logradouro?: string
+        bairro?: string
+        localidade?: string
+        uf?: string
+      }
+      // ViaCEP returns either { erro: true } (boolean) or { erro: "true" }
+      // (string) for unknown CEPs depending on the day. Be defensive.
+      if (data.erro === true || (typeof data.erro === 'string' && data.erro)) {
+        setCepError('CEP não encontrado. Preencha o endereço manualmente.')
+        return
+      }
+      const street = data.logradouro ?? ''
+      const neighborhood = data.bairro ?? ''
+      const city = data.localidade ?? ''
+      const uf = data.uf ?? ''
+      setAddressStreet(street)
+      setAddressNeighborhood(neighborhood)
+      setAddressCity(city)
+      setAddressState(uf)
+      saveToStep2Storage({
+        addressStreet: street,
+        addressNeighborhood: neighborhood,
+        addressCity: city,
+        addressState: uf,
+      })
+    } catch {
+      setCepError('Não foi possível buscar o CEP. Preencha manualmente.')
+    } finally {
+      setCepLoading(false)
+    }
+  }
+
+  // Six explicit field handlers — symmetric with the step 1 setters
+  // and trivially greppable. Each one keeps state and storage in sync
+  // for the single field it owns.
+  function handleStreetChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setAddressStreet(e.target.value)
+    saveToStep2Storage({ addressStreet: e.target.value })
+  }
+  function handleNumberChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setAddressNumber(e.target.value)
+    saveToStep2Storage({ addressNumber: e.target.value })
+  }
+  function handleComplementChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setAddressComplement(e.target.value)
+    saveToStep2Storage({ addressComplement: e.target.value })
+  }
+  function handleNeighborhoodChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setAddressNeighborhood(e.target.value)
+    saveToStep2Storage({ addressNeighborhood: e.target.value })
+  }
+  function handleCityChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setAddressCity(e.target.value)
+    saveToStep2Storage({ addressCity: e.target.value })
+  }
+  function handleStateChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    setAddressState(e.target.value)
+    saveToStep2Storage({ addressState: e.target.value })
   }
 
   function validate(): string | null {
@@ -696,10 +836,158 @@ export default function SignupPage() {
           )}
         </div>
 
-        {/* Under-construction notice for the fields that will land in
-            subsequent sub-etapas (address, terms acceptance). */}
+        {/* Address fields — sub-etapa 5D. CEP autofills the four
+            ViaCEP-derived fields when 8 digits are typed; everything
+            stays editable so the user can correct what the API got
+            wrong (or fill manually when ViaCEP is down). */}
+        <div style={{ marginTop: 16 }}>
+          <label htmlFor="signup-cep" style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 6 }}>
+            CEP <span style={{ color: '#ef4444' }}>*</span>
+          </label>
+          <div style={{ position: 'relative' }}>
+            <input
+              id="signup-cep"
+              type="text"
+              inputMode="numeric"
+              autoComplete="postal-code"
+              maxLength={9}
+              aria-required="true"
+              aria-busy={cepLoading}
+              value={zipCode}
+              onChange={handleCepChange}
+              placeholder="00000-000"
+              style={{ ...inputStyle, paddingRight: 44 }}
+              onFocus={focusOn}
+              onBlur={focusOff}
+            />
+            {cepLoading && (
+              <Loader2
+                size={18}
+                color="var(--text-muted)"
+                strokeWidth={1.8}
+                aria-label="Buscando endereço"
+                className="animate-spin"
+                style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)' }}
+              />
+            )}
+          </div>
+          {cepError && (
+            <p role="alert" style={{ marginTop: 6, fontSize: 13, color: '#ef4444' }}>{cepError}</p>
+          )}
+        </div>
+
+        <div style={{ marginTop: 12 }}>
+          <label htmlFor="signup-street" style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 6 }}>
+            Endereço <span style={{ color: '#ef4444' }}>*</span>
+          </label>
+          <input
+            id="signup-street"
+            type="text"
+            autoComplete="address-line1"
+            aria-required="true"
+            value={addressStreet}
+            onChange={handleStreetChange}
+            placeholder="Rua, Avenida, etc."
+            style={inputStyle}
+            onFocus={focusOn}
+            onBlur={focusOff}
+          />
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 10, marginTop: 12 }}>
+          <div>
+            <label htmlFor="signup-number" style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 6 }}>
+              Número <span style={{ color: '#ef4444' }}>*</span>
+            </label>
+            <input
+              id="signup-number"
+              type="text"
+              autoComplete="address-line2"
+              aria-required="true"
+              value={addressNumber}
+              onChange={handleNumberChange}
+              placeholder="123"
+              style={inputStyle}
+              onFocus={focusOn}
+              onBlur={focusOff}
+            />
+          </div>
+          <div>
+            <label htmlFor="signup-complement" style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 6 }}>
+              Complemento
+            </label>
+            <input
+              id="signup-complement"
+              type="text"
+              value={addressComplement}
+              onChange={handleComplementChange}
+              placeholder="Apto, sala, etc."
+              style={inputStyle}
+              onFocus={focusOn}
+              onBlur={focusOff}
+            />
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1fr', gap: 10, marginTop: 12, marginBottom: 20 }}>
+          <div>
+            <label htmlFor="signup-neighborhood" style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 6 }}>
+              Bairro <span style={{ color: '#ef4444' }}>*</span>
+            </label>
+            <input
+              id="signup-neighborhood"
+              type="text"
+              autoComplete="address-level3"
+              aria-required="true"
+              value={addressNeighborhood}
+              onChange={handleNeighborhoodChange}
+              placeholder="Centro"
+              style={inputStyle}
+              onFocus={focusOn}
+              onBlur={focusOff}
+            />
+          </div>
+          <div>
+            <label htmlFor="signup-city" style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 6 }}>
+              Cidade <span style={{ color: '#ef4444' }}>*</span>
+            </label>
+            <input
+              id="signup-city"
+              type="text"
+              autoComplete="address-level2"
+              aria-required="true"
+              value={addressCity}
+              onChange={handleCityChange}
+              placeholder="São Paulo"
+              style={inputStyle}
+              onFocus={focusOn}
+              onBlur={focusOff}
+            />
+          </div>
+          <div>
+            <label htmlFor="signup-uf" style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 6 }}>
+              UF <span style={{ color: '#ef4444' }}>*</span>
+            </label>
+            <select
+              id="signup-uf"
+              autoComplete="address-level1"
+              aria-required="true"
+              value={addressState}
+              onChange={handleStateChange}
+              style={inputStyle}
+              onFocus={(e) => { e.target.style.borderColor = '#f97316'; e.target.style.boxShadow = '0 0 0 3px rgba(249,115,22,0.10)' }}
+              onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none' }}
+            >
+              <option value="">Selecione</option>
+              {UF_OPTIONS.map(uf => <option key={uf} value={uf}>{uf}</option>)}
+            </select>
+          </div>
+        </div>
+
+        {/* Under-construction notice for the field that will land in
+            sub-etapa 5E (terms acceptance checkbox). */}
         <div style={{ background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.30)', borderRadius: 10, padding: '12px 14px', marginTop: 20, marginBottom: 20, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-          🚧 <strong style={{ color: '#f97316' }}>Em construção</strong> — Os campos de endereço e aceite de termos aparecerão aqui nas próximas etapas.
+          🚧 <strong style={{ color: '#f97316' }}>Em construção</strong> — O checkbox de aceite de termos aparecerá aqui na próxima etapa.
         </div>
 
         <div style={{ display: 'flex', gap: 12 }}>
