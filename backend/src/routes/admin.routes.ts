@@ -132,7 +132,7 @@ router.post('/tenants/:id/charge', async (req: Request, res: Response) => {
     finalValue = Math.round(finalValue * 100) / 100
 
     const desc = `${plan.name} (${planCycle === 'YEARLY' ? 'Anual' : 'Mensal'}) — ${tenant.name}`
-    const cnpjClean = tenant.cnpj.replace(/\D/g, '')
+    const cnpjClean = tenant.document || tenant.cnpj.replace(/\D/g, '')
 
     if (paymentMethod === 'PIX') {
       const result = await createPixCharge(tenantId, {
@@ -361,12 +361,12 @@ router.post('/charges/:id/retry', async (req: Request, res: Response) => {
 
     if (paymentMethod === 'PIX') {
       const { createPixCharge } = await import('../services/efi.service')
-      const result = await createPixCharge(charge.tenantId, { value, description: desc, debtorName: charge.tenant.name, debtorCpf: charge.tenant.cnpj.replace(/\D/g, '') })
+      const result = await createPixCharge(charge.tenantId, { value, description: desc, debtorName: charge.tenant.name, debtorCpf: charge.tenant.document || charge.tenant.cnpj.replace(/\D/g, '') })
       res.json({ success: true, data: result })
     } else {
       const { createBoletoCharge } = await import('../services/efi.service')
       const dueDate = new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10)
-      const result = await createBoletoCharge(charge.tenantId, { value, description: desc, dueDate, debtorName: charge.tenant.name, debtorCpf: charge.tenant.cnpj.replace(/\D/g, ''), debtorEmail: charge.tenant.email, debtorStreet: 'N/A', debtorCity: 'São Paulo', debtorState: 'SP', debtorZipCode: '01000000' })
+      const result = await createBoletoCharge(charge.tenantId, { value, description: desc, dueDate, debtorName: charge.tenant.name, debtorCpf: charge.tenant.document || charge.tenant.cnpj.replace(/\D/g, ''), debtorEmail: charge.tenant.email, debtorStreet: 'N/A', debtorCity: 'São Paulo', debtorState: 'SP', debtorZipCode: '01000000' })
       res.json({ success: true, data: result })
     }
   } catch (error: any) {
