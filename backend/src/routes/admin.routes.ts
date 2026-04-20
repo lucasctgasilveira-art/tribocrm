@@ -8,7 +8,7 @@ import {
   getAdminDashboard, getTenants, getTenant, updateTenant, getFinancial,
 } from '../controllers/admin.controller'
 import { registerPixWebhook, createPixCharge, createBoletoCharge } from '../services/efi.service'
-import { sendMail } from '../services/mailer.service'
+import { sendMail, sendTemplateMail } from '../services/mailer.service'
 import { runBillingStateMachineJob } from '../jobs/billing-state-machine.job'
 
 function generateTempPassword(): string {
@@ -716,6 +716,232 @@ router.get('/email-logs', async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: { code: 'EMAIL_LOGS_FAILED', message: 'Erro ao buscar logs' },
+    })
+    return
+  }
+})
+
+// ── Email Campaigns (sub-etapa 6L.2.a) ──
+//
+// Broadcast de email transacional (template Brevo) pra grupos de
+// usuários filtrados. MVP: dispara em loop sequencial com 100ms de
+// delay entre envios. Logs caem em email_logs via sendTemplateMail
+// (correlação com tenantId quando disponível). Listas grandes (>500)
+// podem estourar o timeout HTTP — admin divide em lotes manualmente
+// ou aguarda 6L.3 (background job).
+
+const campaignFiltersSchema = z.object({
+  planIds: z.array(z.string().uuid()).optional(),
+  tenantStatuses: z.array(z.string()).optional(),
+  roles: z.array(z.enum(['OWNER', 'MANAGER', 'TEAM_LEADER', 'SELLER'])).optional(),
+})
+
+const campaignPreviewBodySchema = z.object({
+  filters: campaignFiltersSchema,
+  audience: z.enum(['OWNERS', 'ALL_USERS']),
+})
+
+const campaignSendBodySchema = z.object({
+  filters: campaignFiltersSchema,
+  audience: z.enum(['OWNERS', 'ALL_USERS']),
+  templateId: z.number().int().positive(),
+  params: z.record(z.union([z.string(), z.number()])).default({}),
+})
+
+interface CampaignRecipient {
+  userId: string
+  name: string
+  email: string
+  role: string
+  tenantId: string
+  tenantName: string
+  planName: string | null
+}
+
+async function resolveCampaignRecipients(
+  filters: z.infer<typeof campaignFiltersSchema>,
+  audience: 'OWNERS' | 'ALL_USERS',
+): Promise<CampaignRecipient[]> {
+  const userWhere: any = {
+    isActive: true,
+    deletedAt: null,
+  }
+
+  if (audience === 'OWNERS') {
+    userWhere.role = 'OWNER'
+  } else if (filters.roles && filters.roles.length > 0) {
+    userWhere.role = { in: filters.roles }
+  }
+
+  const tenantWhere: any = {}
+  if (filters.planIds && filters.planIds.length > 0) {
+    tenantWhere.planId = { in: filters.planIds }
+  }
+  if (filters.tenantStatuses && filters.tenantStatuses.length > 0) {
+    tenantWhere.status = { in: filters.tenantStatuses }
+  }
+  if (Object.keys(tenantWhere).length > 0) {
+    userWhere.tenant = tenantWhere
+  }
+
+  const users = await prisma.user.findMany({
+    where: userWhere,
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      tenantId: true,
+      tenant: {
+        select: {
+          name: true,
+          plan: { select: { name: true } },
+        },
+      },
+    },
+  })
+
+  // Dedupe por email — defensivo contra duplicatas cross-tenant.
+  const seen = new Set<string>()
+  const deduped = users.filter((u) => {
+    if (!u.email || seen.has(u.email)) return false
+    seen.add(u.email)
+    return true
+  })
+
+  return deduped.map((u) => ({
+    userId: u.id,
+    name: u.name,
+    email: u.email,
+    role: u.role,
+    tenantId: u.tenantId,
+    tenantName: u.tenant?.name ?? '',
+    planName: u.tenant?.plan?.name ?? null,
+  }))
+}
+
+router.post('/campaign/preview', async (req: Request, res: Response) => {
+  try {
+    const parseResult = campaignPreviewBodySchema.safeParse(req.body)
+    if (!parseResult.success) {
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_FILTERS',
+          message: 'Filtros inválidos',
+          details: parseResult.error.flatten(),
+        },
+      })
+      return
+    }
+
+    const { filters, audience } = parseResult.data
+    const recipients = await resolveCampaignRecipients(filters, audience)
+
+    res.json({
+      success: true,
+      data: {
+        count: recipients.length,
+        sample: recipients.slice(0, 10),
+      },
+    })
+    return
+  } catch (err: any) {
+    console.error('[POST /admin/campaign/preview] erro:', err?.message)
+    res.status(500).json({
+      success: false,
+      error: { code: 'PREVIEW_FAILED', message: 'Erro ao calcular prévia' },
+    })
+    return
+  }
+})
+
+router.post('/campaign/send', async (req: Request, res: Response) => {
+  try {
+    const parseResult = campaignSendBodySchema.safeParse(req.body)
+    if (!parseResult.success) {
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_BODY',
+          message: 'Dados inválidos',
+          details: parseResult.error.flatten(),
+        },
+      })
+      return
+    }
+
+    const { filters, audience, templateId, params } = parseResult.data
+    const recipients = await resolveCampaignRecipients(filters, audience)
+
+    if (recipients.length === 0) {
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'NO_RECIPIENTS',
+          message: 'Nenhum destinatário encontrado com esses filtros',
+        },
+      })
+      return
+    }
+
+    const startedAt = Date.now()
+    let sent = 0
+    let failed = 0
+    let skipped = 0
+
+    console.log(`[Campaign] iniciando disparo pra ${recipients.length} destinatários (template ${templateId})`)
+
+    for (let i = 0; i < recipients.length; i++) {
+      const r = recipients[i]
+      if (!r) {
+        skipped++
+        continue
+      }
+
+      try {
+        const result = await sendTemplateMail({
+          to: r.email,
+          templateId,
+          params,
+          tenantId: r.tenantId,
+        })
+        if (result.sent) sent++
+        else failed++
+      } catch (err: any) {
+        console.error(`[Campaign] falha com ${r.email}: ${err?.message}`)
+        failed++
+      }
+
+      if ((i + 1) % 50 === 0) {
+        console.log(`[Campaign] progresso ${i + 1}/${recipients.length} (sent=${sent}, failed=${failed})`)
+      }
+
+      // Rate limit: 100ms entre envios — Brevo aguenta tranquilo.
+      if (i < recipients.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 100))
+      }
+    }
+
+    const durationMs = Date.now() - startedAt
+    console.log(`[Campaign] concluído: total=${recipients.length} sent=${sent} failed=${failed} skipped=${skipped} duration=${durationMs}ms`)
+
+    res.json({
+      success: true,
+      data: {
+        total: recipients.length,
+        sent,
+        failed,
+        skipped,
+        durationMs,
+      },
+    })
+    return
+  } catch (err: any) {
+    console.error('[POST /admin/campaign/send] erro:', err?.message)
+    res.status(500).json({
+      success: false,
+      error: { code: 'CAMPAIGN_FAILED', message: 'Erro ao disparar campanha' },
     })
     return
   }
