@@ -247,52 +247,216 @@ export async function cancelCharge(txid: string): Promise<void> {
 }
 
 // ── Card Subscription ──
+//
+// Real recurring subscription flow (sub-etapa 6J.3). Uses the Efi
+// oneStepSubscription endpoint against a pre-created plan on Efi's
+// side — plan IDs come from EFI_PLAN_ID_MONTHLY / EFI_PLAN_ID_YEARLY
+// env vars. Replaces the pre-6J stub that used createOneStepCharge
+// with an empty payment_token and optimistically wrote Charge=PAID.
+// Recurring events (renewal, payment confirmation) are delivered by
+// Efi via the notification webhook handled in sub-etapa 6J.4.
 
-interface CardData {
-  cardNumber: string
-  holderName: string
-  expirationMonth: string
-  expirationYear: string
-  cvv: string
-  value: number
-  description: string
-  customerName: string
-  customerCpf: string
-  customerEmail: string
+export interface CardSubscriptionInput {
+  tenantId: string
+  paymentToken: string
+  billingAddress: {
+    street: string
+    number: string
+    neighborhood: string
+    zipcode: string
+    city: string
+    state: string
+    complement?: string
+  }
+  customer: {
+    name: string
+    email: string
+    cpf: string
+    birth?: string
+    phone_number?: string
+  }
 }
 
-export async function createCardSubscription(tenantId: string, cardData: CardData): Promise<{ chargeId: string; status: string; lastFour: string }> {
-  const efi = getClient()
-  const cpfClean = cardData.customerCpf.replace(/\D/g, '') || '11144477735'
+export interface CardSubscriptionResult {
+  subscriptionId: string
+  chargeId: string
+  status: string
+  lastFour?: string
+  brand?: string
+  nextBillingAt?: Date
+}
 
-  const charge = await efi.createOneStepCharge([] as any, {
-    items: [{ name: cardData.description, value: Math.round(cardData.value * 100), amount: 1 }],
+export async function createCardSubscription(input: CardSubscriptionInput): Promise<CardSubscriptionResult> {
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: input.tenantId },
+    include: { plan: true },
+  })
+  if (!tenant) throw new Error('Tenant não encontrado')
+  if (!tenant.plan) throw new Error('Tenant sem plano')
+
+  // Best-effort cancel of a pre-existing active subscription — never
+  // blocks the new signup. If the old one lingers on Efi's side the
+  // operator sees the error in logs and can reconcile manually.
+  if (tenant.efiSubscriptionId && tenant.efiSubscriptionStatus === 'ACTIVE') {
+    try {
+      await cancelCardSubscription(tenant.id)
+      console.log(`[createCardSubscription] antiga ${tenant.efiSubscriptionId} cancelada antes de criar nova`)
+    } catch (err: any) {
+      console.error(`[createCardSubscription] falha ao cancelar antiga ${tenant.efiSubscriptionId}:`, err?.message)
+    }
+  }
+
+  const planIdEnv = tenant.planCycle === 'YEARLY'
+    ? process.env.EFI_PLAN_ID_YEARLY
+    : process.env.EFI_PLAN_ID_MONTHLY
+
+  if (!planIdEnv) {
+    throw new Error(`EFI_PLAN_ID_${tenant.planCycle} não configurado`)
+  }
+
+  const planId = parseInt(planIdEnv, 10)
+  if (isNaN(planId)) throw new Error('Plan ID Efi inválido')
+
+  const price = tenant.planCycle === 'YEARLY'
+    ? tenant.plan.priceYearly
+    : tenant.plan.priceMonthly
+
+  if (!price) throw new Error('Preço do plano não configurado')
+
+  const valueInCents = Math.round(Number(price) * 100)
+
+  const efi = getClient()
+
+  const params = { id: planId }
+
+  const body: any = {
+    items: [{
+      name: `TriboCRM ${tenant.plan.name} - ${tenant.planCycle === 'YEARLY' ? 'Anual' : 'Mensal'}`,
+      value: valueInCents,
+      amount: 1,
+    }],
     payment: {
       credit_card: {
         installments: 1,
-        payment_token: '', // In production, generate via Efi.js frontend tokenizer
-        billing_address: { street: 'Não informado', number: '0', neighborhood: 'Centro', zipcode: '01000000', city: 'São Paulo', state: 'SP' },
-        customer: { name: cardData.customerName, cpf: cpfClean, email: cardData.customerEmail },
+        payment_token: input.paymentToken,
+        billing_address: {
+          street: input.billingAddress.street,
+          number: input.billingAddress.number,
+          neighborhood: input.billingAddress.neighborhood,
+          zipcode: input.billingAddress.zipcode.replace(/\D/g, ''),
+          city: input.billingAddress.city,
+          state: input.billingAddress.state,
+          ...(input.billingAddress.complement
+            ? { complement: input.billingAddress.complement }
+            : {}),
+        },
+        customer: {
+          name: input.customer.name,
+          email: input.customer.email,
+          cpf: input.customer.cpf.replace(/\D/g, ''),
+          ...(input.customer.birth ? { birth: input.customer.birth } : {}),
+          ...(input.customer.phone_number
+            ? { phone_number: input.customer.phone_number.replace(/\D/g, '') }
+            : {}),
+        },
       },
     },
-  } as any) as any
+  }
 
-  const chargeId = String(charge?.charge_id ?? Date.now())
+  let efiResponse: any
+  try {
+    efiResponse = await (efi as any).oneStepSubscription(params, body)
+    console.log('[createCardSubscription] Efi response:', JSON.stringify(efiResponse).substring(0, 500))
+  } catch (err: any) {
+    console.error('[createCardSubscription] Efi error:', err?.message, err?.response?.data)
+    throw new Error(`Falha ao criar assinatura na Efi: ${err?.message ?? 'erro desconhecido'}`)
+  }
 
-  await prisma.charge.create({
-    data: {
-      tenantId,
-      efiChargeId: chargeId,
-      amount: cardData.value,
-      dueDate: new Date(),
-      paymentMethod: 'CREDIT_CARD',
-      status: 'PAID',
-      paidAt: new Date(),
-      referenceMonth: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`,
-    },
+  const dataRoot = efiResponse?.data ?? efiResponse
+  const subscriptionId = String(dataRoot?.subscription_id ?? '')
+  const chargeId = String(dataRoot?.charge_id ?? '')
+  const status = String(dataRoot?.status ?? 'new')
+
+  if (!subscriptionId) {
+    throw new Error('Efi não retornou subscription_id')
+  }
+
+  const now = new Date()
+  const cycleDays = tenant.planCycle === 'YEARLY' ? 365 : 30
+  const nextBillingAt = new Date(now.getTime() + cycleDays * 24 * 60 * 60 * 1000)
+
+  await prisma.$transaction(async (tx) => {
+    await tx.tenant.update({
+      where: { id: tenant.id },
+      data: {
+        efiSubscriptionId: subscriptionId,
+        efiSubscriptionStatus: 'ACTIVE',
+        cardLastFour: null,
+        cardBrand: null,
+        nextBillingAt,
+        status: 'ACTIVE',
+        trialEndsAt: null,
+        planStartedAt: tenant.planStartedAt ?? now,
+        planExpiresAt: nextBillingAt,
+        lastBillingState: null,
+        lastBillingStateAt: null,
+      },
+    })
+
+    await tx.charge.create({
+      data: {
+        tenantId: tenant.id,
+        efiChargeId: chargeId || null,
+        efiSubscriptionId: subscriptionId,
+        amount: price,
+        paymentMethod: 'CREDIT_CARD',
+        status: status === 'paid' ? 'PAID' : 'PENDING',
+        dueDate: now,
+        paidAt: status === 'paid' ? now : null,
+        referenceMonth: now.toISOString().slice(0, 7),
+      },
+    })
   })
 
-  return { chargeId, status: 'PAID', lastFour: cardData.cardNumber.slice(-4) }
+  return {
+    subscriptionId,
+    chargeId: chargeId || '',
+    status,
+    lastFour: undefined,
+    brand: undefined,
+    nextBillingAt,
+  }
+}
+
+export async function cancelCardSubscription(tenantId: string): Promise<void> {
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { id: true, efiSubscriptionId: true, efiSubscriptionStatus: true },
+  })
+
+  if (!tenant) throw new Error('Tenant não encontrado')
+  if (!tenant.efiSubscriptionId) {
+    console.warn(`[cancelCardSubscription] tenant ${tenantId} sem efiSubscriptionId, nothing to cancel`)
+    return
+  }
+
+  const efi = getClient()
+
+  try {
+    await (efi as any).cancelSubscription({ id: parseInt(tenant.efiSubscriptionId, 10) })
+    console.log(`[cancelCardSubscription] subscription ${tenant.efiSubscriptionId} cancelada na Efi`)
+  } catch (err: any) {
+    console.error(`[cancelCardSubscription] Efi error:`, err?.message, err?.response?.data)
+    throw new Error(`Falha ao cancelar assinatura na Efi: ${err?.message ?? 'erro desconhecido'}`)
+  }
+
+  await prisma.tenant.update({
+    where: { id: tenantId },
+    data: {
+      efiSubscriptionStatus: 'CANCELLED',
+      nextBillingAt: null,
+    },
+  })
 }
 
 // ── Payment History ──
