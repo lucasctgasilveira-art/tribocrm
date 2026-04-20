@@ -624,6 +624,7 @@ router.post('/test-email', async (req: Request, res: Response) => {
       to,
       subject: '✅ TriboCRM — Teste de e-mail',
       text: 'Se você recebeu este e-mail, o SMTP está configurado corretamente no TriboCRM!',
+      tenantId: null,
     })
     if (result.sent) {
       return res.json({ success: true, sent: true })

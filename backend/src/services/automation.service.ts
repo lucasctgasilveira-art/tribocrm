@@ -77,6 +77,7 @@ async function handleSendEmail(
     subject,
     text: body.replace(/<[^>]*>/g, ''),
     html: body,
+    tenantId: automation.tenantId,
   })
 
   if (!result.sent) return 'FAILED'

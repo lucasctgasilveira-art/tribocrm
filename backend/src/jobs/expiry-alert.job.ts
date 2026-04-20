@@ -76,6 +76,7 @@ export async function runExpiryAlertJob(): Promise<void> {
 
         // Send email (fire-and-forget — mailer.service handles missing config)
         const emailResult = await sendMail({
+          tenantId: t.id,
           to: owner.email,
           subject: `Seu plano TriboCRM vence em ${daysLeft} dia${daysLeft !== 1 ? 's' : ''}`,
           text: [

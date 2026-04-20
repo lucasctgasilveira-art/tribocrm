@@ -217,7 +217,7 @@ export async function createUser(req: Request, res: Response): Promise<void> {
       </div>
     `
 
-    const mailResult = await sendMail({ to: user.email, subject, text, html })
+    const mailResult = await sendMail({ to: user.email, subject, text, html, tenantId })
 
     res.status(201).json({
       success: true,

@@ -991,6 +991,28 @@ model AuditLog {
   @@map("audit_logs")
 }
 
+// Persistent log of every transactional/system email attempt
+// (sub-etapa 6L.1.a). Populated by mailer.service fire-and-forget
+// after each Brevo call — failure to write here never blocks the
+// email itself. Surfaces in /admin UI for ops debugging.
+model EmailLog {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String?  @map("tenant_id") @db.Uuid
+  toEmail         String   @map("to_email") @db.VarChar(255)
+  templateId      Int?     @map("template_id")
+  subject         String?  @db.VarChar(255)
+  status          String   @db.VarChar(30)
+  brevoMessageId  String?  @map("brevo_message_id") @db.VarChar(150)
+  errorReason     String?  @map("error_reason") @db.VarChar(50)
+  errorDetails    String?  @map("error_details") @db.Text
+  paramsJson      Json?    @map("params_json")
+  sentAt          DateTime @default(now()) @map("sent_at")
+
+  @@index([tenantId, sentAt(sort: Desc)])
+  @@index([status, sentAt(sort: Desc)])
+  @@map("email_logs")
+}
+
 model Popup {
   id          String    @id @default(cuid())
   type        String

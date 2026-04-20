@@ -472,6 +472,7 @@ export async function runBillingStateMachineJob(): Promise<void> {
         to: owner.email,
         templateId: templateId!,
         params,
+        tenantId: tenant.id,
       })
 
       if (!result.sent) {
