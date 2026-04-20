@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import multer from 'multer'
 import { authMiddleware } from '../middleware/auth.middleware'
+import { tenantStatusGuard } from '../middleware/tenant-status.middleware'
 import {
   getLeads, getLead, createLead, updateLead, deleteLead,
   importLeads, getImportTemplate, exportLeads, bulkUpdateLeads,
@@ -10,6 +11,7 @@ import {
 const router = Router()
 
 router.use(authMiddleware)
+router.use(tenantStatusGuard)
 
 // Multer config for XLSX upload — in-memory, 5MB cap, only spreadsheet mimetypes
 const upload = multer({

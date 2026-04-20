@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express'
 import multer from 'multer'
 import sharp from 'sharp'
 import { authMiddleware } from '../middleware/auth.middleware'
+import { tenantStatusGuard } from '../middleware/tenant-status.middleware'
 import { prisma } from '../lib/prisma'
 import {
   getUsers, createUser, updateUser, resetUserPassword,
@@ -12,6 +13,7 @@ const router = Router()
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024 }, fileFilter: (_req, file, cb) => { cb(null, file.mimetype.startsWith('image/')) } })
 
 router.use(authMiddleware)
+router.use(tenantStatusGuard)
 
 // Me
 router.patch('/users/me', upload.single('avatar'), async (req: Request, res: Response) => {
