@@ -4,6 +4,8 @@ import { QRCodeSVG } from 'qrcode.react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
 import api from '../../services/api'
+import CardSubscriptionForm from '../../components/billing/CardSubscriptionForm'
+import { invalidateCurrentTenantCache } from '../../hooks/useCurrentTenant'
 
 // Row shape consumed by the history table. Built on-the-fly from the
 // charges returned by GET /payments/history — no longer hardcoded.
@@ -344,11 +346,11 @@ export default function MySubscriptionPage() {
 
       {/* Modals */}
       {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: '4px solid #22c55e', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 60 }}>{toast}</div>}
-      {payModal && <PaymentFlowModal onClose={() => setPayModal(false)} />}
-      {upgradeModal && <PaymentFlowModal onClose={() => setUpgradeModal(false)} showPlanSelection />}
+      {payModal && <PaymentFlowModal onClose={() => setPayModal(false)} onSuccess={() => { setPayModal(false); setToast('Assinatura ativada com sucesso!'); invalidateCurrentTenantCache(); setTimeout(() => window.location.reload(), 1500) }} />}
+      {upgradeModal && <PaymentFlowModal onClose={() => setUpgradeModal(false)} showPlanSelection onSuccess={() => { setUpgradeModal(false); setToast('Assinatura ativada com sucesso!'); invalidateCurrentTenantCache(); setTimeout(() => window.location.reload(), 1500) }} />}
       {annualModal && <AnnualModal onClose={() => setAnnualModal(false)} />}
       {cancelModal && <CancelModal onClose={() => setCancelModal(false)} onCancelled={() => { setCancelModal(false); setToast('Cancelamento agendado'); setTimeout(() => setToast(''), 4000) }} />}
-      {changeMethodModal && <ChangeMethodModal onClose={() => setChangeMethodModal(false)} onSaved={() => { setChangeMethodModal(false); setToast('Método de pagamento atualizado!'); setTimeout(() => setToast(''), 4000) }} />}
+      {changeMethodModal && <ChangeMethodModal onClose={() => setChangeMethodModal(false)} onSaved={() => { setChangeMethodModal(false); setToast('Método de pagamento atualizado!'); invalidateCurrentTenantCache(); setTimeout(() => window.location.reload(), 1500) }} />}
     </AppLayout>
   )
 }
@@ -530,51 +532,9 @@ export function _BoletoModal({ onClose }: { onClose: () => void }) {
   )
 }
 
-// ── Coming Soon Modal ──
-
-// ── Card Payment Modal ──
-
-export function _CardPaymentModal({ onClose }: { onClose: () => void }) {
-  const [loading, setLoading] = useState(false)
-  const [toast, setToast] = useState('')
-
-  async function handleCard(cardData: { cardNumber: string; holderName: string; expirationMonth: string; expirationYear: string; cvv: string }) {
-    setLoading(true)
-    try {
-      await api.post('/payments/card-subscription', cardData)
-      setToast('Pagamento realizado com sucesso!')
-      setTimeout(() => { setToast(''); onClose() }, 2000)
-    } catch { setLoading(false) }
-  }
-
-  return (
-    <>
-      {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: '4px solid #22c55e', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 70 }}>{toast}</div>}
-      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
-      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 420, maxWidth: '90vw', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
-          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Pagar com Cartao</h2>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
-        </div>
-        <div style={{ padding: 24 }}>
-          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 16, textAlign: 'center' }}>R$ 349,00</div>
-          {loading ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 20 }}>
-              <Loader2 size={18} color="var(--accent)" className="animate-spin" />
-              <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Processando pagamento...</span>
-            </div>
-          ) : (
-            <CardForm onCard={handleCard} />
-          )}
-        </div>
-      </div>
-    </>
-  )
-}
-
 // ── Payment Flow Modal (2-step) ──
 
-function PaymentFlowModal({ onClose, showPlanSelection }: { onClose: () => void; showPlanSelection?: boolean }) {
+function PaymentFlowModal({ onClose, onSuccess, showPlanSelection }: { onClose: () => void; onSuccess?: () => void; showPlanSelection?: boolean }) {
   const ap = [{ id: 'essencial', name: 'Essencial', monthly: 197 }, { id: 'pro', name: 'Pro', monthly: 349, current: true }, { id: 'enterprise', name: 'Enterprise', monthly: 649 }]
   const [planId, setPlanId] = useState<string | null>(null)
   const [cycle, setCycle] = useState<'M' | 'Y'>('M')
@@ -597,7 +557,6 @@ function PaymentFlowModal({ onClose, showPlanSelection }: { onClose: () => void;
       else if (method === 'BOLETO') { const dd = new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10); const e = showPlanSelection ? '/payments/upgrade' : '/payments/boleto'; const b = showPlanSelection ? { newPlanId: planId, paymentMethod: 'BOLETO' } : { value: dp, description: d, dueDate: dd }; const r = await api.post(e, b); setBoletoRes({ boletoUrl: r.data.data.boletoUrl ?? '', barCode: r.data.data.barCode ?? '' }) }
     } catch {/**/} setLoading(false)
   }
-  async function card(c: any) { setLoading(true); try { await api.post('/payments/card-subscription', c); onClose() } catch {/**/} setLoading(false) }
   return (<>
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
     <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 500, maxWidth: '90vw', maxHeight: '90vh', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
@@ -616,7 +575,7 @@ function PaymentFlowModal({ onClose, showPlanSelection }: { onClose: () => void;
               <div onClick={() => setCycle('M')} style={{ flex: 1, padding: 14, borderRadius: 10, border: `2px solid ${cycle === 'M' ? 'var(--accent)' : 'var(--border)'}`, background: cycle === 'M' ? 'rgba(249,115,22,0.06)' : 'transparent', cursor: 'pointer', textAlign: 'center' }}><div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Mensal</div><div style={{ fontSize: 20, fontWeight: 800, color: cycle === 'M' ? 'var(--accent)' : 'var(--text-primary)' }}>R$ {bm}<span style={{ fontSize: 11, fontWeight: 400 }}>/mes</span></div></div>
               <div onClick={() => setCycle('Y')} style={{ flex: 1, padding: 14, borderRadius: 10, border: `2px solid ${cycle === 'Y' ? '#22c55e' : 'var(--border)'}`, background: cycle === 'Y' ? 'rgba(34,197,94,0.06)' : 'transparent', cursor: 'pointer', textAlign: 'center' }}><div style={{ fontSize: 11, color: '#22c55e', marginBottom: 4, fontWeight: 600 }}>Anual (-15%)</div><div style={{ fontSize: 20, fontWeight: 800, color: cycle === 'Y' ? '#22c55e' : 'var(--text-primary)' }}>R$ {ym}<span style={{ fontSize: 11, fontWeight: 400 }}>/mes</span></div><div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>R$ {yt.toLocaleString('pt-BR')}/ano</div><div style={{ fontSize: 10, color: '#22c55e', marginTop: 2 }}>Economize R$ {sv}</div></div>
             </div></div>
-            <div><div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 10, fontWeight: 600 }}>Como deseja pagar?</div><div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>{([{ k: 'PIX' as const, i: QrCode, c: '#22c55e', l: 'PIX', d: 'Aprovacao imediata' }, { k: 'BOLETO' as const, i: FileText, c: '#3b82f6', l: 'Boleto', d: 'Vence em 3 dias uteis' }, { k: 'CARTAO' as const, i: CreditCard, c: '#f97316', l: 'Cartao', d: cycle === 'Y' ? '12x sem juros' : 'Cobrado todo mes' }]).map(m => { const I = m.i; const a = method === m.k; return <div key={m.k} onClick={() => setMethod(m.k)} style={{ flex: 1, padding: 12, borderRadius: 10, border: `1px solid ${a ? m.c : 'var(--border)'}`, background: a ? `${m.c}0D` : 'transparent', cursor: 'pointer', textAlign: 'center', transition: 'all 0.15s' }}><I size={20} color={a ? m.c : 'var(--text-muted)'} strokeWidth={1.5} /><div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginTop: 4 }}>{m.l}</div><div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{m.d}</div></div> })}</div>{method === 'CARTAO' && <CardForm onCard={card} />}</div>
+            <div><div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 10, fontWeight: 600 }}>Como deseja pagar?</div><div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>{([{ k: 'PIX' as const, i: QrCode, c: '#22c55e', l: 'PIX', d: 'Aprovacao imediata' }, { k: 'BOLETO' as const, i: FileText, c: '#3b82f6', l: 'Boleto', d: 'Vence em 3 dias uteis' }, { k: 'CARTAO' as const, i: CreditCard, c: '#f97316', l: 'Cartao', d: cycle === 'Y' ? '12x sem juros' : 'Cobrado todo mes' }]).map(m => { const I = m.i; const a = method === m.k; return <div key={m.k} onClick={() => setMethod(m.k)} style={{ flex: 1, padding: 12, borderRadius: 10, border: `1px solid ${a ? m.c : 'var(--border)'}`, background: a ? `${m.c}0D` : 'transparent', cursor: 'pointer', textAlign: 'center', transition: 'all 0.15s' }}><I size={20} color={a ? m.c : 'var(--text-muted)'} strokeWidth={1.5} /><div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginTop: 4 }}>{m.l}</div><div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{m.d}</div></div> })}</div>{method === 'CARTAO' && <CardSubscriptionForm onSuccess={() => onSuccess?.()} onCancel={onClose} />}</div>
           </>}
         </>}
       </div>
@@ -629,6 +588,8 @@ function PaymentFlowModal({ onClose, showPlanSelection }: { onClose: () => void;
 }
 
 // ── Card Form ──
+// legacy CardForm — only referenced by dead _-prefixed modals
+// (_UpgradeModal, _PayNowModal); safe to remove with them
 
 function CardForm({ onCard }: { onCard: (d: { cardNumber: string; holderName: string; expirationMonth: string; expirationYear: string; cvv: string }) => void }) {
   const [num, setNum] = useState('')
@@ -961,14 +922,6 @@ function ChangeMethodModal({ onClose, onSaved }: { onClose: () => void; onSaved:
     } catch { setSaving(false) }
   }
 
-  async function handleCard(cardData: { cardNumber: string; holderName: string; expirationMonth: string; expirationYear: string; cvv: string }) {
-    setSaving(true)
-    try {
-      await api.post('/payments/card-subscription', cardData)
-      onSaved()
-    } catch { setSaving(false) }
-  }
-
   return (
     <>
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
@@ -996,7 +949,7 @@ function ChangeMethodModal({ onClose, onSaved }: { onClose: () => void; onSaved:
               )
             })}
           </div>
-          {selected === 'CARTAO' && <CardForm onCard={handleCard} />}
+          {selected === 'CARTAO' && <CardSubscriptionForm onSuccess={() => onSaved()} onCancel={onClose} />}
         </div>
         {selected !== 'CARTAO' && (
           <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>

@@ -380,7 +380,7 @@ export default function CardSubscriptionForm({ onSuccess, onCancel }: CardSubscr
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <button
               type="button"
-              onClick={() => navigate('/gestao/perfil')}
+              onClick={() => navigate('/gestao/configuracoes')}
               style={styles.primaryBtn}
             >
               Completar perfil
@@ -465,7 +465,7 @@ export default function CardSubscriptionForm({ onSuccess, onCancel }: CardSubscr
           </div>
           <button
             type="button"
-            onClick={() => navigate('/gestao/perfil')}
+            onClick={() => navigate('/gestao/configuracoes')}
             style={styles.linkButton}
           >
             Editar no perfil →
