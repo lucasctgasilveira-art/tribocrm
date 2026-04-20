@@ -5,6 +5,9 @@ import Sidebar, { type SidebarEntry, SIDEBAR_EXPANDED_W, SIDEBAR_COLLAPSED_W } f
 import PopupManager, { type PopupData } from '../PopupManager/PopupManager'
 import GlobalSearch from '../GlobalSearch/GlobalSearch'
 import OnboardingWizard from '../OnboardingWizard/OnboardingWizard'
+import TenantStatusGate from '../../billing/TenantStatusGate'
+import BillingBanner from '../../billing/BillingBanner'
+import BillingOverduePopup from '../../billing/BillingOverduePopup'
 
 interface AppLayoutProps {
   menuItems: SidebarEntry[]
@@ -100,20 +103,24 @@ export default function AppLayout({ menuItems, children }: AppLayoutProps) {
   }, [])
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <Topbar onOpenSearch={openSearch} />
-      <Sidebar menuItems={menuItems} />
-      <main style={{ marginLeft: sidebarW, paddingTop: 60, transition: 'margin-left 0.25s cubic-bezier(0.4,0,0.2,1)' }}>
-        <div style={{ padding: 24, minHeight: 'calc(100vh - 60px)', overflow: 'hidden' }}>
-          {children}
-        </div>
-      </main>
-      {!isSuperAdmin && <PopupManager popups={mockPopups} />}
-      <GlobalSearch open={searchOpen} onClose={closeSearch} />
-      {/* Gestor first-access wizard. Self-gates on role (MANAGER/OWNER)
-          and tenant.onboardingCompleted === false — renders null for
-          everyone else, so mounting it unconditionally here is safe. */}
-      <OnboardingWizard />
-    </div>
+    <TenantStatusGate>
+      <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+        <Topbar onOpenSearch={openSearch} />
+        <Sidebar menuItems={menuItems} />
+        <main style={{ marginLeft: sidebarW, paddingTop: 60, transition: 'margin-left 0.25s cubic-bezier(0.4,0,0.2,1)' }}>
+          <BillingBanner />
+          <div style={{ padding: 24, minHeight: 'calc(100vh - 60px)', overflow: 'hidden' }}>
+            {children}
+          </div>
+        </main>
+        {!isSuperAdmin && <PopupManager popups={mockPopups} />}
+        {!isSuperAdmin && <BillingOverduePopup />}
+        <GlobalSearch open={searchOpen} onClose={closeSearch} />
+        {/* Gestor first-access wizard. Self-gates on role (MANAGER/OWNER)
+            and tenant.onboardingCompleted === false — renders null for
+            everyone else, so mounting it unconditionally here is safe. */}
+        <OnboardingWizard />
+      </div>
+    </TenantStatusGate>
   )
 }
