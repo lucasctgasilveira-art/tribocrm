@@ -35,7 +35,7 @@ function formatBR(decimal: unknown): string {
   return Number(decimal).toFixed(2).replace('.', ',')
 }
 
-function formatValor(
+export function formatValor(
   priceMonthly: unknown,
   priceYearly: unknown,
   planCycle: string | null,
@@ -53,7 +53,7 @@ function formatValor(
   return `R$ ${formatBR(priceYearly)} à vista`
 }
 
-function formatMetodo(method: string | null): string {
+export function formatMetodo(method: string | null): string {
   if (!method) return '-'
   const map: Record<string, string> = {
     PIX: 'PIX',
@@ -63,7 +63,7 @@ function formatMetodo(method: string | null): string {
   return map[method] ?? method
 }
 
-function formatDataBR(date: Date | null): string {
+export function formatDataBR(date: Date | null): string {
   if (!date) return '-'
   const d = String(date.getUTCDate()).padStart(2, '0')
   const m = String(date.getUTCMonth() + 1).padStart(2, '0')
@@ -71,14 +71,14 @@ function formatDataBR(date: Date | null): string {
   return `${d}/${m}/${y}`
 }
 
-function getFirstName(fullName: string | null): string {
+export function getFirstName(fullName: string | null): string {
   if (!fullName) return 'Olá'
   return fullName.trim().split(' ')[0] || 'Olá'
 }
 
 // Days between `now` and `target` normalized to UTC midnight so the
 // calc doesn't drift across the America/Sao_Paulo DST transitions.
-function daysUntil(target: Date, now: Date): number {
+export function daysUntil(target: Date, now: Date): number {
   const MS = 1000 * 60 * 60 * 24
   const nowMidnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
   const targetMidnight = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), target.getUTCDate()))
@@ -244,7 +244,7 @@ async function generateChargeForTrialEnd(tenant: {
 // Each Brevo template expects a different param shape; keeping the
 // branching in a helper keeps the main loop readable. Keys match the
 // placeholders Lucas configured in each template's HTML.
-function buildParamsForState(
+export function buildParamsForState(
   targetState: BillingState,
   tenant: {
     tradeName: string | null
