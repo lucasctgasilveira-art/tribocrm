@@ -8,6 +8,7 @@ import {
 } from '../controllers/admin.controller'
 import { registerPixWebhook, createPixCharge, createBoletoCharge } from '../services/efi.service'
 import { sendMail } from '../services/mailer.service'
+import { runBillingStateMachineJob } from '../jobs/billing-state-machine.job'
 
 function generateTempPassword(): string {
   const pool = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -630,6 +631,34 @@ router.post('/test-email', async (req: Request, res: Response) => {
     return res.json({ success: false, error: result.error ?? result.reason ?? 'Falha ao enviar e-mail' })
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error?.message ?? 'Erro interno ao enviar e-mail de teste' })
+  }
+})
+
+// ── Billing Jobs ──
+
+// Manual trigger for the billing state machine job (sub-etapa 6C).
+// Fires the run asynchronously — the handler returns 200 immediately
+// and the job runs in background. Useful to validate a deploy without
+// waiting for the 09:30 BRT cron window. Audit line is new on purpose:
+// mass-action triggers deserve a "who pulled the lever" trail.
+router.post('/jobs/billing-state-machine/run', async (req: Request, res: Response) => {
+  try {
+    console.log(`[Admin] billing-state-machine manual trigger by userId=${req.user?.userId ?? 'unknown'}`)
+
+    runBillingStateMachineJob().catch((err) => {
+      console.error('[BillingStateMachine] uncaught error from manual trigger:', err)
+    })
+
+    return res.json({
+      success: true,
+      data: { message: 'Job started. Check logs for results.' },
+    })
+  } catch (error: any) {
+    console.error('[Admin] billing-state-machine trigger failed:', error)
+    return res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: error?.message ?? 'Erro ao disparar job' },
+    })
   }
 })
 

@@ -6,6 +6,7 @@ import { runGoalCheckJob } from './goal-check.job'
 import { runAutomationJob } from './automation.job'
 import { runExpiryAlertJob } from './expiry-alert.job'
 import { runWonCardsArchiverJob } from './wonCardsArchiver.job'
+import { runBillingStateMachineJob } from './billing-state-machine.job'
 
 /**
  * Initializes all scheduled jobs.
@@ -14,6 +15,7 @@ import { runWonCardsArchiverJob } from './wonCardsArchiver.job'
  * Schedule:
  *   - Birthday             : 08:00 daily
  *   - Overdue charges      : 09:00 daily
+ *   - Billing state machine: 09:30 daily
  *   - Goal check           : 10:00 daily
  *   - Inactive leads       : every 2 hours
  *   - Automation engine    : every 5 minutes
@@ -28,6 +30,9 @@ export function initJobs(): void {
 
   cron.schedule('0 9 * * *', () => { runOverdueChargesJob().catch(e => console.error('[Job:overdue-charges] uncaught:', e)) }, tz)
   console.log('[Jobs] overdue-charges job scheduled — 09:00 daily')
+
+  cron.schedule('30 9 * * *', () => { runBillingStateMachineJob().catch(e => console.error('[Job:billing-state-machine] uncaught:', e)) }, tz)
+  console.log('[Jobs] billing-state-machine job scheduled — 09:30 daily')
 
   cron.schedule('0 10 * * *', () => { runGoalCheckJob().catch(e => console.error('[Job:goal-check] uncaught:', e)) }, tz)
   console.log('[Jobs] goal-check job scheduled — 10:00 daily')
