@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express'
 import bcrypt from 'bcryptjs'
+import { z } from 'zod'
 import { authMiddleware } from '../middleware/auth.middleware'
 import { adminOnly } from '../middleware/admin.middleware'
 import { prisma } from '../lib/prisma'
@@ -632,6 +633,91 @@ router.post('/test-email', async (req: Request, res: Response) => {
     return res.json({ success: false, error: result.error ?? result.reason ?? 'Falha ao enviar e-mail' })
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error?.message ?? 'Erro interno ao enviar e-mail de teste' })
+  }
+})
+
+// ── Email Logs (sub-etapa 6L.1.b) ──
+//
+// Surface for the super-admin UI to inspect every transactional /
+// system email persisted by mailer.service. Cursor-based pagination
+// (id of the last item) avoids the offset-skip cost on large result
+// sets. Defaults to 100 most recent rows; max 500.
+
+const emailLogsQuerySchema = z.object({
+  status: z.union([z.string(), z.array(z.string())]).optional(),
+  templateId: z.coerce.number().int().positive().optional(),
+  tenantId: z.string().uuid().optional(),
+  toEmail: z.string().optional(),
+  dateFrom: z.string().datetime().optional(),
+  dateTo: z.string().datetime().optional(),
+  limit: z.coerce.number().int().positive().max(500).default(100),
+  cursor: z.string().uuid().optional(),
+})
+
+router.get('/email-logs', async (req: Request, res: Response) => {
+  try {
+    const parseResult = emailLogsQuerySchema.safeParse(req.query)
+    if (!parseResult.success) {
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_PARAMS',
+          message: 'Parâmetros inválidos',
+          details: parseResult.error.flatten(),
+        },
+      })
+      return
+    }
+
+    const q = parseResult.data
+    const where: any = {}
+
+    if (q.status) {
+      const statuses = Array.isArray(q.status) ? q.status : [q.status]
+      where.status = { in: statuses }
+    }
+    if (q.templateId !== undefined) where.templateId = q.templateId
+    if (q.tenantId) where.tenantId = q.tenantId
+    if (q.toEmail) where.toEmail = { contains: q.toEmail, mode: 'insensitive' }
+
+    if (q.dateFrom || q.dateTo) {
+      where.sentAt = {} as Record<string, Date>
+      if (q.dateFrom) where.sentAt.gte = new Date(q.dateFrom)
+      if (q.dateTo) where.sentAt.lte = new Date(q.dateTo)
+    }
+
+    // Fetch limit+1 to know whether a next page exists without a
+    // separate count query.
+    const fetchLimit = q.limit + 1
+
+    const findArgs: any = {
+      where,
+      take: fetchLimit,
+      orderBy: { sentAt: 'desc' },
+    }
+    if (q.cursor) {
+      findArgs.cursor = { id: q.cursor }
+      findArgs.skip = 1
+    }
+
+    const results = await prisma.emailLog.findMany(findArgs)
+
+    const hasMore = results.length > q.limit
+    const items = hasMore ? results.slice(0, q.limit) : results
+    const nextCursor = hasMore ? items[items.length - 1]?.id ?? null : null
+
+    res.json({
+      success: true,
+      data: { items, hasMore, nextCursor },
+    })
+    return
+  } catch (err: any) {
+    console.error('[GET /admin/email-logs] erro:', err?.message)
+    res.status(500).json({
+      success: false,
+      error: { code: 'EMAIL_LOGS_FAILED', message: 'Erro ao buscar logs' },
+    })
+    return
   }
 })
 
