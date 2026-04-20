@@ -283,6 +283,7 @@ export async function publicSignup(req: Request, res: Response): Promise<void> {
         subject: 'Confirme seu e-mail — TriboCRM',
         text: `Olá! Confirme seu cadastro no TriboCRM acessando: ${verifyUrl}`,
         html,
+        tenantId: created.tenantId,
       })
       console.info('[Signup] email result:', JSON.stringify(mailResult))
     } catch (mailErr: any) {
@@ -566,7 +567,7 @@ export async function resendVerification(req: Request, res: Response): Promise<v
 
     const user = await prisma.user.findFirst({
       where: { email, emailVerified: false, deletedAt: null },
-      select: { id: true, name: true },
+      select: { id: true, name: true, tenantId: true },
     })
 
     if (!user) {
@@ -601,6 +602,7 @@ export async function resendVerification(req: Request, res: Response): Promise<v
         subject: 'Confirme seu e-mail — TriboCRM',
         text: `Confirme seu cadastro no TriboCRM: ${verifyUrl}`,
         html,
+        tenantId: user.tenantId,
       })
       console.info('[Signup] resend email result:', JSON.stringify(mailResult))
     } catch (mailErr: any) {

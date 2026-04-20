@@ -6,9 +6,49 @@
  * { sent: false, reason: 'not_configured' } and logs a warning.
  * Nothing in the codebase ever throws because the mailer isn't set —
  * the caller decides how to surface the email status to the UI.
+ *
+ * Sub-etapa 6L.1.a: every attempt (sent / failed / skipped) is also
+ * persisted to email_logs via fire-and-forget logEmailAttempt() so
+ * the super-admin UI can surface delivery state. Failure to write the
+ * log row is swallowed — the email itself is the source of truth.
  */
 
+import { prisma } from '../lib/prisma'
+
 const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email'
+
+interface EmailLogEntry {
+  tenantId?: string | null
+  toEmail: string
+  templateId?: number | null
+  subject?: string | null
+  status: 'SENT' | 'FAILED' | 'SKIPPED_NOT_CONFIGURED'
+  brevoMessageId?: string | null
+  errorReason?: string | null
+  errorDetails?: string | null
+  paramsJson?: Record<string, unknown> | null
+}
+
+async function logEmailAttempt(entry: EmailLogEntry): Promise<void> {
+  try {
+    await prisma.emailLog.create({
+      data: {
+        tenantId: entry.tenantId ?? null,
+        toEmail: entry.toEmail,
+        templateId: entry.templateId ?? null,
+        subject: entry.subject ?? null,
+        status: entry.status,
+        brevoMessageId: entry.brevoMessageId ?? null,
+        errorReason: entry.errorReason ?? null,
+        errorDetails: entry.errorDetails ?? null,
+        paramsJson: (entry.paramsJson as any) ?? undefined,
+      },
+    })
+  } catch (err: any) {
+    // Fire-and-forget: failing to log NEVER blocks the email itself.
+    console.error(`[Mailer:logEmailAttempt] failed to persist log: ${err?.message ?? err}`)
+  }
+}
 
 export function isMailerConfigured(): boolean {
   return !!process.env.BREVO_API_KEY
@@ -19,6 +59,7 @@ export interface SendMailOptions {
   subject: string
   text: string
   html?: string
+  tenantId?: string | null
 }
 
 export interface SendMailResult {
@@ -31,6 +72,13 @@ export interface SendMailResult {
 export async function sendMail(opts: SendMailOptions): Promise<SendMailResult> {
   if (!isMailerConfigured()) {
     console.warn(`[Mailer] BREVO_API_KEY not configured, skipping email to ${opts.to} (subject: ${opts.subject.slice(0, 60)})`)
+    await logEmailAttempt({
+      tenantId: opts.tenantId,
+      toEmail: opts.to,
+      subject: opts.subject,
+      status: 'SKIPPED_NOT_CONFIGURED',
+      errorReason: 'not_configured',
+    })
     return { sent: false, reason: 'not_configured' }
   }
 
@@ -59,13 +107,36 @@ export async function sendMail(opts: SendMailOptions): Promise<SendMailResult> {
     if (!res.ok) {
       const errBody = await res.text()
       console.error(`[Mailer] Brevo API error ${res.status}:`, errBody)
+      await logEmailAttempt({
+        tenantId: opts.tenantId,
+        toEmail: opts.to,
+        subject: opts.subject,
+        status: 'FAILED',
+        errorReason: 'http_error',
+        errorDetails: `Brevo ${res.status}: ${errBody}`,
+      })
       return { sent: false, reason: 'send_error', error: `Brevo ${res.status}: ${errBody}` }
     }
 
     const data = await res.json() as { messageId?: string }
+    await logEmailAttempt({
+      tenantId: opts.tenantId,
+      toEmail: opts.to,
+      subject: opts.subject,
+      status: 'SENT',
+      brevoMessageId: data.messageId ?? null,
+    })
     return { sent: true, messageId: data.messageId }
   } catch (err: any) {
     console.error('[Mailer] sendMail failed:', err?.message ?? err)
+    await logEmailAttempt({
+      tenantId: opts.tenantId,
+      toEmail: opts.to,
+      subject: opts.subject,
+      status: 'FAILED',
+      errorReason: 'send_error',
+      errorDetails: err?.message ?? String(err),
+    })
     return { sent: false, reason: 'send_error', error: err?.message ?? String(err) }
   }
 }
@@ -88,6 +159,7 @@ export interface SendTemplateMailArgs {
   templateId: number
   params: Record<string, string | number>
   replyTo?: string
+  tenantId?: string | null
 }
 
 export interface SendTemplateMailResult {
@@ -100,6 +172,14 @@ export interface SendTemplateMailResult {
 export async function sendTemplateMail(args: SendTemplateMailArgs): Promise<SendTemplateMailResult> {
   if (!isMailerConfigured()) {
     console.warn(`[Mailer:template] BREVO_API_KEY not configured, skipping templateId=${args.templateId} to=${args.to}`)
+    await logEmailAttempt({
+      tenantId: args.tenantId,
+      toEmail: args.to,
+      templateId: args.templateId,
+      status: 'SKIPPED_NOT_CONFIGURED',
+      errorReason: 'not_configured',
+      paramsJson: args.params,
+    })
     return { sent: false, reason: 'not_configured' }
   }
 
@@ -132,14 +212,40 @@ export async function sendTemplateMail(args: SendTemplateMailArgs): Promise<Send
     if (!res.ok) {
       const errBody = await res.text()
       console.error(`[Mailer:template] failed templateId=${args.templateId} to=${args.to} status=${res.status} body=${errBody}`)
+      await logEmailAttempt({
+        tenantId: args.tenantId,
+        toEmail: args.to,
+        templateId: args.templateId,
+        status: 'FAILED',
+        errorReason: 'http_error',
+        errorDetails: `Brevo ${res.status}: ${errBody}`,
+        paramsJson: args.params,
+      })
       return { sent: false, reason: 'send_error', error: `Brevo ${res.status}: ${errBody}` }
     }
 
     const data = await res.json() as { messageId?: string }
     console.log(`[Mailer:template] sent templateId=${args.templateId} to=${args.to} messageId=${data.messageId ?? 'n/a'}`)
+    await logEmailAttempt({
+      tenantId: args.tenantId,
+      toEmail: args.to,
+      templateId: args.templateId,
+      status: 'SENT',
+      brevoMessageId: data.messageId ?? null,
+      paramsJson: args.params,
+    })
     return { sent: true, messageId: data.messageId }
   } catch (err: any) {
     console.error(`[Mailer:template] failed templateId=${args.templateId} to=${args.to} reason=${err?.message ?? err}`)
+    await logEmailAttempt({
+      tenantId: args.tenantId,
+      toEmail: args.to,
+      templateId: args.templateId,
+      status: 'FAILED',
+      errorReason: 'send_error',
+      errorDetails: err?.message ?? String(err),
+      paramsJson: args.params,
+    })
     return { sent: false, reason: 'send_error', error: err?.message ?? String(err) }
   }
 }

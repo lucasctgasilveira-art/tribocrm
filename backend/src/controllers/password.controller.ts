@@ -30,7 +30,7 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
 
     const user = await prisma.user.findFirst({
       where: { email, deletedAt: null, isActive: true },
-      select: { id: true, name: true },
+      select: { id: true, name: true, tenantId: true },
     })
 
     if (!user) {
@@ -68,6 +68,7 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
         subject: 'Redefinir sua senha — TriboCRM',
         text: `Recebemos um pedido para redefinir sua senha no TriboCRM. Acesse: ${resetUrl} (link válido por 1 hora).`,
         html,
+        tenantId: user.tenantId,
       })
       console.info('[Password] reset email result:', JSON.stringify(mailResult))
     } catch (mailErr: any) {
