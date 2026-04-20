@@ -3,7 +3,8 @@ import { sendTemplateMail } from '../services/mailer.service'
 import { BILLING_TEMPLATES } from '../config/billing-templates'
 import { createPixCharge, createBoletoCharge } from '../services/efi.service'
 
-// Billing state machine — TRIAL + OVERDUE lanes (sub-etapas 6C / 6D / 6E).
+// Billing state machine — TRIAL + OVERDUE + SUSPENSION lanes
+// (sub-etapas 6C / 6D / 6E / 6F).
 //
 // Runs daily over every tenant in TRIAL or PAYMENT_OVERDUE:
 //   • Pre-expiry reminders at D-7 / D-3 / D-1 while still in TRIAL.
@@ -11,7 +12,8 @@ import { createPixCharge, createBoletoCharge } from '../services/efi.service'
 //   • Crossing the trial end → sends OVERDUE D+0 email + transitions
 //     TRIAL → PAYMENT_OVERDUE in the same update.
 //   • Once OVERDUE for 7+ days → sends last-warning D+7 email.
-//   • D+10 suspension is sub-etapa 6F, not handled here.
+//   • Once OVERDUE for 10+ days → sends D+10 email + transitions
+//     PAYMENT_OVERDUE → SUSPENDED in the same update.
 //
 // Idempotency is anchored in `tenant.lastBillingState` — once set to
 // 'TRIAL_D7_SENT' / 'OVERDUE_D0_SENT' etc., the tenant is skipped on
@@ -25,6 +27,7 @@ type BillingState =
   | 'TRIAL_D1_SENT'
   | 'OVERDUE_D0_SENT'
   | 'OVERDUE_D7_SENT'
+  | 'SUSPENDED_D10_SENT'
 
 // ── Pure formatting helpers (no I/O, easy to unit-test in 6K) ──
 
@@ -262,6 +265,17 @@ function buildParamsForState(
   const nome = getFirstName(owner.name)
   const dataVencimento = formatDataBR(tenant.trialEndsAt)
 
+  if (targetState === 'SUSPENDED_D10_SENT') {
+    // Template #7 — account suspended, same shape as D+7.
+    return {
+      nome,
+      valor: baseValor,
+      dataVencimento,
+      linkPagamento: 'https://app.tribocrm.com.br/gestao/assinatura',
+      linkContato: 'https://app.tribocrm.com.br/gestao/assinatura',
+    }
+  }
+
   if (targetState === 'OVERDUE_D7_SENT') {
     // Template #6 — last-warning email, minimal payload.
     return {
@@ -354,7 +368,9 @@ export async function runBillingStateMachineJob(): Promise<void> {
   let chargesFailed = 0
   let overdueD0Sent = 0
   let overdueD7Sent = 0
+  let suspendedD10Sent = 0
   let statusChangedToOverdue = 0
+  let statusChangedToSuspended = 0
 
   for (const tenant of tenants) {
     try {
@@ -377,9 +393,14 @@ export async function runBillingStateMachineJob(): Promise<void> {
       if (diasRestantes < 0) {
         // Trial ended — tenant is either still flagged TRIAL (never
         // processed post-expiry) or already sitting in PAYMENT_OVERDUE.
-        // Either way we fall into the OVERDUE lane.
+        // Either way we fall into the OVERDUE lane. Evaluate markers
+        // from most-advanced to least-advanced so a long-overdue tenant
+        // never gets pinned at an earlier state.
         const daysOverdue = -diasRestantes
-        if (tenant.lastBillingState === 'OVERDUE_D0_SENT' && daysOverdue >= 7) {
+        if (tenant.lastBillingState === 'OVERDUE_D7_SENT' && daysOverdue >= 10) {
+          targetState = 'SUSPENDED_D10_SENT'
+          templateId = BILLING_TEMPLATES.SUSPENDED_D10
+        } else if (tenant.lastBillingState === 'OVERDUE_D0_SENT' && daysOverdue >= 7) {
           targetState = 'OVERDUE_D7_SENT'
           templateId = BILLING_TEMPLATES.OVERDUE_D7
         } else if (
@@ -391,7 +412,7 @@ export async function runBillingStateMachineJob(): Promise<void> {
           targetState = 'OVERDUE_D0_SENT'
           templateId = BILLING_TEMPLATES.OVERDUE_D0
         }
-        // Else: OVERDUE_D7_SENT already fired — wait for 6F suspension.
+        // Else: SUSPENDED_D10_SENT already fired — terminal for this job.
       } else if (diasRestantes <= 1) {
         if (!['TRIAL_D1_SENT', 'TRIAL_EXPIRED'].includes(tenant.lastBillingState ?? '')) {
           targetState = 'TRIAL_D1_SENT'
@@ -461,22 +482,28 @@ export async function runBillingStateMachineJob(): Promise<void> {
       }
 
       // When firing OVERDUE_D0_SENT to a still-TRIAL tenant, we also
-      // flip status to PAYMENT_OVERDUE. For any other target state the
-      // current status stays put.
+      // flip status to PAYMENT_OVERDUE. When firing SUSPENDED_D10_SENT
+      // to a PAYMENT_OVERDUE tenant, we flip to SUSPENDED. Any other
+      // combination leaves the current status untouched.
       const willTransitionToOverdue =
         targetState === 'OVERDUE_D0_SENT' && tenant.status === 'TRIAL'
-      const newStatus: 'TRIAL' | 'ACTIVE' | 'PAYMENT_OVERDUE' | 'SUSPENDED' | 'CANCELLED' =
-        willTransitionToOverdue ? 'PAYMENT_OVERDUE' : tenant.status
+      const willTransitionToSuspended =
+        targetState === 'SUSPENDED_D10_SENT' && tenant.status === 'PAYMENT_OVERDUE'
+      let newStatus: 'TRIAL' | 'ACTIVE' | 'PAYMENT_OVERDUE' | 'SUSPENDED' | 'CANCELLED' = tenant.status
+      if (willTransitionToOverdue) newStatus = 'PAYMENT_OVERDUE'
+      else if (willTransitionToSuspended) newStatus = 'SUSPENDED'
 
       // updateMany with a composed `where` guards against a race with
       // the Efi webhook: if the user paid between our findMany and
       // this update, the tenant is already ACTIVE and we must not
       // regress it. count === 0 means the row no longer matches —
-      // treat as a no-op.
+      // treat as a no-op. SUSPENDED is included so we can still stamp
+      // lastBillingState even if the tenant was suspended by another
+      // path between findMany and update.
       const updateResult = await prisma.tenant.updateMany({
         where: {
           id: tenant.id,
-          status: { in: ['TRIAL', 'PAYMENT_OVERDUE'] },
+          status: { in: ['TRIAL', 'PAYMENT_OVERDUE', 'SUSPENDED'] },
         },
         data: {
           status: newStatus,
@@ -493,10 +520,14 @@ export async function runBillingStateMachineJob(): Promise<void> {
       sent++
       if (targetState === 'OVERDUE_D0_SENT') overdueD0Sent++
       if (targetState === 'OVERDUE_D7_SENT') overdueD7Sent++
+      if (targetState === 'SUSPENDED_D10_SENT') suspendedD10Sent++
 
       if (willTransitionToOverdue) {
         statusChangedToOverdue++
         console.log(`[BillingStateMachine] tenant=${tenant.id} transitioned TRIAL → PAYMENT_OVERDUE + D+0 email sent`)
+      } else if (willTransitionToSuspended) {
+        statusChangedToSuspended++
+        console.log(`[BillingStateMachine] tenant=${tenant.id} transitioned PAYMENT_OVERDUE → SUSPENDED + D+10 email sent`)
       } else {
         console.log(`[BillingStateMachine] sent ${targetState} to tenant=${tenant.id} owner=${owner.email}`)
       }
@@ -512,6 +543,9 @@ export async function runBillingStateMachineJob(): Promise<void> {
     `processed=${processed} sent=${sent} ` +
     `skippedNoOwner=${skippedNoOwner} errors=${errors} ` +
     `chargesGenerated=${chargesGenerated} chargesSkipped=${chargesSkipped} chargesFailed=${chargesFailed} ` +
-    `overdueD0=${overdueD0Sent} overdueD7=${overdueD7Sent} newOverdueTenants=${statusChangedToOverdue}`,
+    `overdueD0=${overdueD0Sent} overdueD7=${overdueD7Sent} ` +
+    `newOverdueTenants=${statusChangedToOverdue} ` +
+    `suspendedD10=${suspendedD10Sent} ` +
+    `newSuspendedTenants=${statusChangedToSuspended}`,
   )
 }
