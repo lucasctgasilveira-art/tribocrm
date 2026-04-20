@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express'
 import { timingSafeEqual } from 'crypto'
-import { processWebhookPayment } from '../services/efi.service'
+import { processWebhookPayment, processSubscriptionNotification } from '../services/efi.service'
 
 const router = Router()
 
@@ -116,6 +116,29 @@ async function handleEfiWebhook(req: Request, res: Response): Promise<void> {
         console.log(`[Webhook:efi:boleto] charge ${result.chargeId} paid for tenant ${result.tenantId} (${result.reason ?? 'newly_paid'})`)
       } else {
         console.warn(`[Webhook:efi:boleto] efiId=${efiId} failed: ${result.reason}`)
+      }
+      return
+    }
+
+    // ── Subscription notification payload (sub-etapa 6J.4) ──
+    // Efi envia { notification: "<token_opaco>" } pra eventos de
+    // assinatura (ativação, renovação mensal, mudança de status).
+    // O guard !body.charge protege o branch Boleto acima, que manda
+    // notification junto com charge.
+    if (typeof body?.notification === 'string' && !body.charge) {
+      const token = body.notification
+      const result = await processSubscriptionNotification(token)
+      if (result.ok) {
+        console.log(
+          `[Webhook:efi:subscription] ${result.reason ?? 'processed'} ` +
+          `sub=${result.subscriptionId} charge=${result.chargeId ?? '-'} ` +
+          `tenant=${result.tenantId ?? '-'}`,
+        )
+      } else {
+        console.warn(
+          `[Webhook:efi:subscription] token=${token.slice(0, 10)}... ` +
+          `failed: ${result.reason}`,
+        )
       }
       return
     }

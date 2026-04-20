@@ -571,3 +571,156 @@ export async function processWebhookPayment(efiId: string): Promise<{ ok: boolea
 
   return { ok: true, chargeId: charge.id, tenantId: charge.tenantId }
 }
+
+// ── Subscription Notification (sub-etapa 6J.4) ──
+//
+// Efi delivers subscription events as an opaque notification token
+// (different from PIX/Boleto which ship the payload directly). The
+// webhook router spots `{ notification: "<token>" }` payloads and
+// hands them here; we resolve the token via SDK.getNotification,
+// extract the latest event from the returned history, keep
+// `tenant.efiSubscriptionStatus` in sync, ensure the local Charge
+// row exists (idempotent — renewals create a new charge_id each
+// cycle), and when the event is `status=paid` we delegate to
+// processWebhookPayment so the extension of planExpiresAt, the
+// lastBillingState cleanup and the OVERDUE-recovery log stay in a
+// single place.
+
+export interface SubscriptionNotificationResult {
+  ok: boolean
+  reason?: string
+  subscriptionId?: string
+  chargeId?: string
+  tenantId?: string
+}
+
+export async function processSubscriptionNotification(
+  token: string,
+): Promise<SubscriptionNotificationResult> {
+  const efi = getClient()
+  let detail: any
+  try {
+    detail = await (efi as any).getNotification({ token })
+    console.log(
+      `[processSubscriptionNotification] token=${token.slice(0, 10)}... response:`,
+      JSON.stringify(detail).substring(0, 500),
+    )
+  } catch (err: any) {
+    console.error(
+      '[processSubscriptionNotification] Efi getNotification failed:',
+      err?.message,
+      err?.response?.data,
+    )
+    return { ok: false, reason: 'getNotification_failed' }
+  }
+
+  const history = detail?.data ?? detail
+  const latest = Array.isArray(history) ? history[history.length - 1] : history
+  if (!latest) return { ok: false, reason: 'empty_notification' }
+
+  const subIdRaw = latest?.identifiers?.subscription_id ?? latest?.subscription?.id
+  const chargeIdRaw = latest?.identifiers?.charge_id ?? latest?.charge?.id
+  const currentStatus = String(
+    latest?.status?.current ?? latest?.status ?? '',
+  ).toLowerCase()
+
+  if (!subIdRaw) return { ok: false, reason: 'no_subscription_id' }
+  const subId = String(subIdRaw)
+  const chargeIdEfi = chargeIdRaw ? String(chargeIdRaw) : null
+
+  const tenant = await prisma.tenant.findFirst({
+    where: { efiSubscriptionId: subId },
+    include: { plan: true },
+  })
+  if (!tenant) {
+    return { ok: false, reason: 'tenant_not_found', subscriptionId: subId }
+  }
+
+  const subStatusMap: Record<string, string> = {
+    new: 'ACTIVE',
+    active: 'ACTIVE',
+    paid: 'ACTIVE',
+    waiting: 'ACTIVE',
+    unpaid: 'OVERDUE',
+    canceled: 'CANCELLED',
+    refunded: 'CANCELLED',
+  }
+  const mapped = subStatusMap[currentStatus]
+
+  if (!mapped && currentStatus) {
+    console.warn(
+      `[processSubscriptionNotification] status desconhecido '${currentStatus}' — ignorando update`,
+    )
+  }
+
+  if (mapped && mapped !== tenant.efiSubscriptionStatus) {
+    await prisma.tenant.update({
+      where: { id: tenant.id },
+      data: { efiSubscriptionStatus: mapped },
+    })
+    console.log(
+      `[processSubscriptionNotification] tenant=${tenant.id} efiSubscriptionStatus: ${tenant.efiSubscriptionStatus} -> ${mapped}`,
+    )
+  }
+
+  if (chargeIdEfi) {
+    const existing = await prisma.charge.findFirst({
+      where: { efiChargeId: chargeIdEfi },
+    })
+
+    if (!existing) {
+      const price =
+        tenant.planCycle === 'YEARLY'
+          ? tenant.plan?.priceYearly
+          : tenant.plan?.priceMonthly
+
+      if (!price) {
+        console.error(
+          `[processSubscriptionNotification] tenant=${tenant.id} sem preço configurado`,
+        )
+        return {
+          ok: false,
+          reason: 'price_missing',
+          subscriptionId: subId,
+          chargeId: chargeIdEfi,
+        }
+      }
+
+      const now = new Date()
+      await prisma.charge.create({
+        data: {
+          tenantId: tenant.id,
+          efiChargeId: chargeIdEfi,
+          efiSubscriptionId: subId,
+          amount: price,
+          paymentMethod: 'CREDIT_CARD',
+          status: 'PENDING',
+          dueDate: now,
+          referenceMonth: now.toISOString().slice(0, 7),
+        },
+      })
+      console.log(
+        `[processSubscriptionNotification] criada charge efiChargeId=${chargeIdEfi} pra tenant=${tenant.id}`,
+      )
+    }
+  }
+
+  if (currentStatus === 'paid' && chargeIdEfi) {
+    const result = await processWebhookPayment(chargeIdEfi)
+    return {
+      ok: result.ok,
+      reason: result.reason,
+      subscriptionId: subId,
+      chargeId: chargeIdEfi,
+      tenantId: tenant.id,
+    }
+  }
+
+  return {
+    ok: true,
+    reason: `status=${currentStatus || 'unknown'}`,
+    subscriptionId: subId,
+    chargeId: chargeIdEfi ?? undefined,
+    tenantId: tenant.id,
+  }
+}
