@@ -214,6 +214,140 @@ router.post('/upgrade', authMiddleware, async (req: Request, res: Response) => {
   }
 })
 
+// ── Subscription Form Data (sub-etapa 6J.5.1) ──
+//
+// Pré-carrega os campos que o formulário de cartão (frontend) precisa:
+// dados do customer (do user owner) + endereço de cobrança (do tenant)
+// + resumo do plano atual. Reporta missing[] quando algum campo
+// obrigatório está vazio — UI mostra "Complete seu perfil antes de
+// cadastrar cartão" em vez de mandar um submit que o Efi rejeitaria.
+
+router.get(
+  '/subscription-form-data',
+  authMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const { role, tenantId, userId } = req.user!
+
+      if (role !== 'OWNER') {
+        res.status(403).json({
+          success: false,
+          error: { code: 'FORBIDDEN', message: 'Apenas o OWNER pode gerenciar cartão' },
+        })
+        return
+      }
+
+      if (!tenantId || !userId) {
+        res.status(400).json({
+          success: false,
+          error: { code: 'NO_CONTEXT', message: 'Usuário sem tenant vinculado' },
+        })
+        return
+      }
+
+      const [user, tenant] = await Promise.all([
+        prisma.user.findUnique({
+          where: { id: userId },
+          select: { name: true, email: true, cpf: true },
+        }),
+        prisma.tenant.findUnique({
+          where: { id: tenantId },
+          select: {
+            planCycle: true,
+            addressStreet: true,
+            addressNumber: true,
+            addressComplement: true,
+            addressNeighborhood: true,
+            addressCity: true,
+            addressState: true,
+            addressZip: true,
+            plan: {
+              select: { name: true, priceMonthly: true, priceYearly: true },
+            },
+          },
+        }),
+      ])
+
+      if (!user || !tenant || !tenant.plan) {
+        res.status(404).json({
+          success: false,
+          error: { code: 'NOT_FOUND', message: 'Usuário, tenant ou plano não encontrado' },
+        })
+        return
+      }
+
+      const missing: string[] = []
+      if (!user.cpf?.trim()) missing.push('cpf')
+      if (!tenant.addressStreet?.trim()) missing.push('rua')
+      if (!tenant.addressNumber?.trim()) missing.push('numero')
+      if (!tenant.addressZip?.trim()) missing.push('cep')
+      if (!tenant.addressCity?.trim()) missing.push('cidade')
+      if (!tenant.addressState?.trim()) missing.push('estado')
+
+      if (missing.length > 0) {
+        res.status(400).json({
+          success: false,
+          error: {
+            code: 'INCOMPLETE_PROFILE',
+            message: 'Complete seu perfil antes de cadastrar o cartão',
+            details: { missing },
+          },
+        })
+        return
+      }
+
+      const priceValue =
+        tenant.planCycle === 'YEARLY'
+          ? Number(tenant.plan.priceYearly)
+          : Number(tenant.plan.priceMonthly)
+
+      const priceFormatted = priceValue.toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+      })
+
+      res.json({
+        success: true,
+        data: {
+          customer: {
+            name: user.name,
+            email: user.email,
+            cpf: user.cpf ?? '',
+          },
+          billingAddress: {
+            street: tenant.addressStreet ?? '',
+            number: tenant.addressNumber ?? '',
+            neighborhood: tenant.addressNeighborhood ?? '',
+            zipcode: tenant.addressZip ?? '',
+            city: tenant.addressCity ?? '',
+            state: tenant.addressState ?? '',
+            ...(tenant.addressComplement
+              ? { complement: tenant.addressComplement }
+              : {}),
+          },
+          plan: {
+            name: tenant.plan.name,
+            cycle: tenant.planCycle,
+            priceFormatted,
+            priceValue,
+          },
+        },
+      })
+      return
+    } catch (err: any) {
+      console.error('[GET /subscription-form-data] erro:', err?.message)
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'FORM_DATA_FAILED',
+          message: 'Falha ao carregar dados do formulário',
+        },
+      })
+      return
+    }
+  },
+)
+
 // ── Card Subscription ──
 
 const cardSubscriptionBodySchema = z.object({
