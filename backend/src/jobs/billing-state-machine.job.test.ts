@@ -495,3 +495,188 @@ describe('runBillingStateMachineJob — TRIAL lane', () => {
     })
   })
 })
+
+// ─────────────────────────────────────────────────────────────
+// 6K.3b — runBillingStateMachineJob OVERDUE + SUSPENDED + edge
+// ─────────────────────────────────────────────────────────────
+
+describe('runBillingStateMachineJob — OVERDUE / SUSPENDED / edge', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-04-20T12:00:00Z'))
+
+    sendMock.mockResolvedValue({ sent: true })
+    prismaMock.charge.findFirst.mockResolvedValue(null as any)
+    prismaMock.tenant.updateMany.mockResolvedValue({ count: 1 } as any)
+
+    vi.spyOn(console, 'log').mockImplementation(() => {})
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
+
+  describe('OVERDUE lane', () => {
+    it('D+0 fresh: trial expirou ontem, flipa status TRIAL → PAYMENT_OVERDUE', async () => {
+      const tenant = makeTenant({
+        status: 'TRIAL',
+        lastBillingState: null,
+        trialEndsAt: new Date('2026-04-19T12:00:00Z'),
+      })
+      prismaMock.tenant.findMany.mockResolvedValue([tenant] as any)
+
+      await runBillingStateMachineJob()
+
+      expect(sendMock).toHaveBeenCalledWith(expect.objectContaining({
+        templateId: 5,
+        to: 'owner@example.com',
+      }))
+      expect(prismaMock.tenant.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: 'tenant-1',
+          status: { in: ['TRIAL', 'PAYMENT_OVERDUE', 'SUSPENDED'] },
+        },
+        data: expect.objectContaining({
+          status: 'PAYMENT_OVERDUE',
+          lastBillingState: 'OVERDUE_D0_SENT',
+        }),
+      })
+    })
+
+    it('D+0 legacy: tenant já PAYMENT_OVERDUE sem lastBillingState dispara D+0 sem flip', async () => {
+      const tenant = makeTenant({
+        status: 'PAYMENT_OVERDUE',
+        lastBillingState: null,
+        trialEndsAt: new Date('2026-04-19T12:00:00Z'),
+      })
+      prismaMock.tenant.findMany.mockResolvedValue([tenant] as any)
+
+      await runBillingStateMachineJob()
+
+      expect(sendMock).toHaveBeenCalledWith(expect.objectContaining({ templateId: 5 }))
+      expect(prismaMock.tenant.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            status: 'PAYMENT_OVERDUE',
+            lastBillingState: 'OVERDUE_D0_SENT',
+          }),
+        }),
+      )
+    })
+
+    it('D+7 fresh: tenant OVERDUE_D0_SENT há 7 dias dispara OVERDUE_D7', async () => {
+      const tenant = makeTenant({
+        status: 'PAYMENT_OVERDUE',
+        lastBillingState: 'OVERDUE_D0_SENT',
+        trialEndsAt: new Date('2026-04-13T12:00:00Z'),
+      })
+      prismaMock.tenant.findMany.mockResolvedValue([tenant] as any)
+
+      await runBillingStateMachineJob()
+
+      expect(sendMock).toHaveBeenCalledWith(expect.objectContaining({ templateId: 6 }))
+      expect(prismaMock.tenant.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            status: 'PAYMENT_OVERDUE',
+            lastBillingState: 'OVERDUE_D7_SENT',
+          }),
+        }),
+      )
+    })
+
+    it('Idempotência D+0: tenant OVERDUE_D0_SENT com 1 dia de atraso não reenvia', async () => {
+      const tenant = makeTenant({
+        status: 'PAYMENT_OVERDUE',
+        lastBillingState: 'OVERDUE_D0_SENT',
+        trialEndsAt: new Date('2026-04-19T12:00:00Z'),
+      })
+      prismaMock.tenant.findMany.mockResolvedValue([tenant] as any)
+
+      await runBillingStateMachineJob()
+
+      expect(sendMock).not.toHaveBeenCalled()
+      expect(prismaMock.tenant.updateMany).not.toHaveBeenCalled()
+    })
+
+    it('Idempotência D+7: tenant OVERDUE_D7_SENT com 7 dias de atraso não reenvia', async () => {
+      const tenant = makeTenant({
+        status: 'PAYMENT_OVERDUE',
+        lastBillingState: 'OVERDUE_D7_SENT',
+        trialEndsAt: new Date('2026-04-13T12:00:00Z'),
+      })
+      prismaMock.tenant.findMany.mockResolvedValue([tenant] as any)
+
+      await runBillingStateMachineJob()
+
+      expect(sendMock).not.toHaveBeenCalled()
+      expect(prismaMock.tenant.updateMany).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('SUSPENDED lane', () => {
+    it('D+10 fresh: tenant OVERDUE_D7_SENT há 10 dias flipa PAYMENT_OVERDUE → SUSPENDED', async () => {
+      const tenant = makeTenant({
+        status: 'PAYMENT_OVERDUE',
+        lastBillingState: 'OVERDUE_D7_SENT',
+        trialEndsAt: new Date('2026-04-10T12:00:00Z'),
+      })
+      prismaMock.tenant.findMany.mockResolvedValue([tenant] as any)
+
+      await runBillingStateMachineJob()
+
+      expect(sendMock).toHaveBeenCalledWith(expect.objectContaining({ templateId: 7 }))
+      expect(prismaMock.tenant.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            status: 'SUSPENDED',
+            lastBillingState: 'SUSPENDED_D10_SENT',
+          }),
+        }),
+      )
+    })
+  })
+
+  describe('Edge cases', () => {
+    it('Race condition: updateMany retorna count=0 — email já foi enviado antes', async () => {
+      const tenant = makeTenant({
+        status: 'TRIAL',
+        lastBillingState: null,
+        trialEndsAt: new Date('2026-04-19T12:00:00Z'),
+      })
+      prismaMock.tenant.findMany.mockResolvedValue([tenant] as any)
+      prismaMock.tenant.updateMany.mockResolvedValue({ count: 0 } as any)
+
+      await runBillingStateMachineJob()
+
+      // Email foi enviado ANTES do updateMany — ordem intencional
+      // pra não bloquear notificação caso UPDATE race.
+      expect(sendMock).toHaveBeenCalledTimes(1)
+      expect(prismaMock.tenant.updateMany).toHaveBeenCalledTimes(1)
+    })
+
+    it('Legacy TRIAL_EXPIRED: tenant com marker antigo entra no branch D+0', async () => {
+      const tenant = makeTenant({
+        status: 'TRIAL',
+        lastBillingState: 'TRIAL_EXPIRED',
+        trialEndsAt: new Date('2026-04-15T12:00:00Z'),
+      })
+      prismaMock.tenant.findMany.mockResolvedValue([tenant] as any)
+
+      await runBillingStateMachineJob()
+
+      expect(sendMock).toHaveBeenCalledWith(expect.objectContaining({ templateId: 5 }))
+      expect(prismaMock.tenant.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            lastBillingState: 'OVERDUE_D0_SENT',
+          }),
+        }),
+      )
+    })
+  })
+})
