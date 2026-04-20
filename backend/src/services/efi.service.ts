@@ -379,6 +379,11 @@ export async function processWebhookPayment(efiId: string): Promise<{ ok: boolea
     const baseDate = tenant.planExpiresAt && tenant.planExpiresAt > now ? tenant.planExpiresAt : now
     const nextExpiresAt = new Date(baseDate.getTime() + cycleDays * 24 * 60 * 60 * 1000)
 
+    // Track whether the payment is a recovery (vs. first-ever activation)
+    // so the log picks up a clear "back from overdue" signal. Useful
+    // both in Railway grep and on any future audit surface.
+    const comebackFromOverdue = tenant.status === 'PAYMENT_OVERDUE'
+
     await prisma.tenant.update({
       where: { id: charge.tenantId },
       data: {
@@ -386,8 +391,18 @@ export async function processWebhookPayment(efiId: string): Promise<{ ok: boolea
         trialEndsAt: null,
         planStartedAt: tenant.planStartedAt ?? now,
         planExpiresAt: nextExpiresAt,
+        // Clear billing-state-machine state so the next billing cycle
+        // starts from scratch — otherwise a tenant that paid from
+        // OVERDUE_D0_SENT would keep that marker and skip D-7/D-3/D-1
+        // reminders on the next cycle.
+        lastBillingState: null,
+        lastBillingStateAt: null,
       },
     })
+
+    if (comebackFromOverdue) {
+      console.log(`[Webhook:efi] tenant ${charge.tenantId} recovered from PAYMENT_OVERDUE to ACTIVE (charge paid)`)
+    }
   }
 
   return { ok: true, chargeId: charge.id, tenantId: charge.tenantId }

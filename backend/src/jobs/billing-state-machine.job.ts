@@ -3,19 +3,28 @@ import { sendTemplateMail } from '../services/mailer.service'
 import { BILLING_TEMPLATES } from '../config/billing-templates'
 import { createPixCharge, createBoletoCharge } from '../services/efi.service'
 
-// Billing state machine — TRIAL side (sub-etapa 6C).
+// Billing state machine — TRIAL + OVERDUE lanes (sub-etapas 6C / 6D / 6E).
 //
-// Runs daily and walks every tenant in TRIAL, sending the pre-expiry
-// reminder email at D-7 / D-3 / D-1 and flagging TRIAL_EXPIRED once
-// trialEndsAt passes. Never sends multiple emails in the same run:
-// only the most advanced applicable marker fires. Idempotency comes
-// from `tenant.lastBillingState` — once set to 'TRIAL_D7_SENT' etc.,
-// the tenant is skipped on the next run unless it progresses.
+// Runs daily over every tenant in TRIAL or PAYMENT_OVERDUE:
+//   • Pre-expiry reminders at D-7 / D-3 / D-1 while still in TRIAL.
+//   • Charge generation at D-3 (via generateChargeForTrialEnd).
+//   • Crossing the trial end → sends OVERDUE D+0 email + transitions
+//     TRIAL → PAYMENT_OVERDUE in the same update.
+//   • Once OVERDUE for 7+ days → sends last-warning D+7 email.
+//   • D+10 suspension is sub-etapa 6F, not handled here.
 //
-// OVERDUE / SUSPENSION lanes are out of scope for 6C — they land in
-// 6E along with the charge-generation logic.
+// Idempotency is anchored in `tenant.lastBillingState` — once set to
+// 'TRIAL_D7_SENT' / 'OVERDUE_D0_SENT' etc., the tenant is skipped on
+// the next run unless it progresses to the next marker. The string
+// literal 'TRIAL_EXPIRED' is still honoured in comparisons for
+// backwards compatibility with tenants flagged by the pre-6E job.
 
-type BillingState = 'TRIAL_D7_SENT' | 'TRIAL_D3_SENT' | 'TRIAL_D1_SENT' | 'TRIAL_EXPIRED'
+type BillingState =
+  | 'TRIAL_D7_SENT'
+  | 'TRIAL_D3_SENT'
+  | 'TRIAL_D1_SENT'
+  | 'OVERDUE_D0_SENT'
+  | 'OVERDUE_D7_SENT'
 
 // ── Pure formatting helpers (no I/O, easy to unit-test in 6K) ──
 
@@ -229,6 +238,70 @@ async function generateChargeForTrialEnd(tenant: {
   }
 }
 
+// Each Brevo template expects a different param shape; keeping the
+// branching in a helper keeps the main loop readable. Keys match the
+// placeholders Lucas configured in each template's HTML.
+function buildParamsForState(
+  targetState: BillingState,
+  tenant: {
+    tradeName: string | null
+    name: string
+    trialEndsAt: Date | null
+    planCycle: string | null
+    preferredPaymentMethod: string | null
+    plan: { name: string; priceMonthly: unknown; priceYearly: unknown } | null
+  },
+  owner: { name: string },
+): Record<string, string | number> {
+  const baseValor = formatValor(
+    tenant.plan?.priceMonthly,
+    tenant.plan?.priceYearly,
+    tenant.planCycle,
+    tenant.preferredPaymentMethod,
+  )
+  const nome = getFirstName(owner.name)
+  const dataVencimento = formatDataBR(tenant.trialEndsAt)
+
+  if (targetState === 'OVERDUE_D7_SENT') {
+    // Template #6 — last-warning email, minimal payload.
+    return {
+      nome,
+      valor: baseValor,
+      dataVencimento,
+      linkPagamento: 'https://app.tribocrm.com.br/gestao/assinatura',
+      linkContato: 'https://app.tribocrm.com.br/gestao/assinatura',
+    }
+  }
+
+  if (targetState === 'OVERDUE_D0_SENT') {
+    // Template #5 — trial ended today, payment is overdue.
+    return {
+      nome,
+      plano: tenant.plan?.name ?? '-',
+      valor: baseValor,
+      metodoPagamento: formatMetodo(tenant.preferredPaymentMethod),
+      dataVencimento,
+      linkPagamento: 'https://app.tribocrm.com.br/gestao/assinatura',
+    }
+  }
+
+  // Pre-expiry templates (D-7 / D-3 / D-1) share the same shape.
+  const daysMap: Record<string, number> = {
+    TRIAL_D7_SENT: 7,
+    TRIAL_D3_SENT: 3,
+    TRIAL_D1_SENT: 1,
+  }
+  return {
+    nome,
+    plano: tenant.plan?.name ?? '-',
+    valor: baseValor,
+    metodoPagamento: formatMetodo(tenant.preferredPaymentMethod),
+    dataVencimento,
+    diasRestantes: daysMap[targetState] ?? 0,
+    linkPlano: 'https://app.tribocrm.com.br/gestao/assinatura',
+  }
+}
+
 export async function runBillingStateMachineJob(): Promise<void> {
   console.log('[BillingStateMachine] starting…')
   const startedAt = Date.now()
@@ -238,13 +311,14 @@ export async function runBillingStateMachineJob(): Promise<void> {
   // Tenant has no deletedAt column (unlike User/Lead) — status filter
   // alone already excludes CANCELLED tenants we don't want to touch.
   const tenants = await prisma.tenant.findMany({
-    where: { status: 'TRIAL' },
+    where: { status: { in: ['TRIAL', 'PAYMENT_OVERDUE'] } },
     select: {
       id: true,
       name: true,
       tradeName: true,
       cnpj: true,
       document: true,
+      status: true,
       trialEndsAt: true,
       planCycle: true,
       preferredPaymentMethod: true,
@@ -274,11 +348,13 @@ export async function runBillingStateMachineJob(): Promise<void> {
   let processed = 0
   let sent = 0
   let skippedNoOwner = 0
-  let flaggedExpired = 0
   let errors = 0
   let chargesGenerated = 0
   let chargesSkipped = 0
   let chargesFailed = 0
+  let overdueD0Sent = 0
+  let overdueD7Sent = 0
+  let statusChangedToOverdue = 0
 
   for (const tenant of tenants) {
     try {
@@ -297,50 +373,43 @@ export async function runBillingStateMachineJob(): Promise<void> {
       // two emails in the same run.
       let targetState: BillingState | null = null
       let templateId: number | null = null
-      let templateDaysLeft: number | null = null
 
       if (diasRestantes < 0) {
-        // Trial expired — only flag state. 6E will generate the charge
-        // and move status to PAYMENT_OVERDUE.
-        if (tenant.lastBillingState !== 'TRIAL_EXPIRED') {
-          targetState = 'TRIAL_EXPIRED'
-          // no template, no email
+        // Trial ended — tenant is either still flagged TRIAL (never
+        // processed post-expiry) or already sitting in PAYMENT_OVERDUE.
+        // Either way we fall into the OVERDUE lane.
+        const daysOverdue = -diasRestantes
+        if (tenant.lastBillingState === 'OVERDUE_D0_SENT' && daysOverdue >= 7) {
+          targetState = 'OVERDUE_D7_SENT'
+          templateId = BILLING_TEMPLATES.OVERDUE_D7
+        } else if (
+          !tenant.lastBillingState ||
+          tenant.lastBillingState === 'TRIAL_EXPIRED'
+        ) {
+          // First visit post-expiry — or tenant carries the legacy
+          // 'TRIAL_EXPIRED' marker from the pre-6E version of this job.
+          targetState = 'OVERDUE_D0_SENT'
+          templateId = BILLING_TEMPLATES.OVERDUE_D0
         }
+        // Else: OVERDUE_D7_SENT already fired — wait for 6F suspension.
       } else if (diasRestantes <= 1) {
         if (!['TRIAL_D1_SENT', 'TRIAL_EXPIRED'].includes(tenant.lastBillingState ?? '')) {
           targetState = 'TRIAL_D1_SENT'
           templateId = BILLING_TEMPLATES.TRIAL_D1
-          templateDaysLeft = 1
         }
       } else if (diasRestantes <= 3) {
         if (!['TRIAL_D3_SENT', 'TRIAL_D1_SENT', 'TRIAL_EXPIRED'].includes(tenant.lastBillingState ?? '')) {
           targetState = 'TRIAL_D3_SENT'
           templateId = BILLING_TEMPLATES.TRIAL_D3
-          templateDaysLeft = 3
         }
       } else if (diasRestantes <= 7) {
         if (!['TRIAL_D7_SENT', 'TRIAL_D3_SENT', 'TRIAL_D1_SENT', 'TRIAL_EXPIRED'].includes(tenant.lastBillingState ?? '')) {
           targetState = 'TRIAL_D7_SENT'
           templateId = BILLING_TEMPLATES.TRIAL_D7
-          templateDaysLeft = 7
         }
       }
 
       if (!targetState) continue // Nothing to do this run.
-
-      // Expired path — flag without sending email.
-      if (targetState === 'TRIAL_EXPIRED') {
-        await prisma.tenant.update({
-          where: { id: tenant.id },
-          data: {
-            lastBillingState: 'TRIAL_EXPIRED',
-            lastBillingStateAt: new Date(),
-          },
-        })
-        flaggedExpired++
-        console.log(`[BillingStateMachine] tenant ${tenant.id} flagged as TRIAL_EXPIRED`)
-        continue
-      }
 
       // Email path — needs an active owner. If none, skip without
       // touching lastBillingState so the next run can retry once the
@@ -376,20 +445,7 @@ export async function runBillingStateMachineJob(): Promise<void> {
         }
       }
 
-      const params = {
-        nome: getFirstName(owner.name),
-        plano: tenant.plan?.name ?? '-',
-        valor: formatValor(
-          tenant.plan?.priceMonthly,
-          tenant.plan?.priceYearly,
-          tenant.planCycle,
-          tenant.preferredPaymentMethod,
-        ),
-        metodoPagamento: formatMetodo(tenant.preferredPaymentMethod),
-        dataVencimento: formatDataBR(tenant.trialEndsAt),
-        diasRestantes: templateDaysLeft!,
-        linkPlano: 'https://app.tribocrm.com.br/gestao/assinatura',
-      }
+      const params = buildParamsForState(targetState, tenant, owner)
 
       const result = await sendTemplateMail({
         to: owner.email,
@@ -404,17 +460,46 @@ export async function runBillingStateMachineJob(): Promise<void> {
         continue
       }
 
-      // Accepted risk: email sent OK but update may fail → tenant
-      // could get the same email twice. Consistent with expiry-alert.job.
-      await prisma.tenant.update({
-        where: { id: tenant.id },
+      // When firing OVERDUE_D0_SENT to a still-TRIAL tenant, we also
+      // flip status to PAYMENT_OVERDUE. For any other target state the
+      // current status stays put.
+      const willTransitionToOverdue =
+        targetState === 'OVERDUE_D0_SENT' && tenant.status === 'TRIAL'
+      const newStatus: 'TRIAL' | 'ACTIVE' | 'PAYMENT_OVERDUE' | 'SUSPENDED' | 'CANCELLED' =
+        willTransitionToOverdue ? 'PAYMENT_OVERDUE' : tenant.status
+
+      // updateMany with a composed `where` guards against a race with
+      // the Efi webhook: if the user paid between our findMany and
+      // this update, the tenant is already ACTIVE and we must not
+      // regress it. count === 0 means the row no longer matches —
+      // treat as a no-op.
+      const updateResult = await prisma.tenant.updateMany({
+        where: {
+          id: tenant.id,
+          status: { in: ['TRIAL', 'PAYMENT_OVERDUE'] },
+        },
         data: {
+          status: newStatus,
           lastBillingState: targetState,
           lastBillingStateAt: new Date(),
         },
       })
+
+      if (updateResult.count === 0) {
+        console.log(`[BillingStateMachine] tenant=${tenant.id} update skipped (status already ACTIVE, likely paid between findMany and update)`)
+        continue
+      }
+
       sent++
-      console.log(`[BillingStateMachine] sent ${targetState} to tenant=${tenant.id} owner=${owner.email}`)
+      if (targetState === 'OVERDUE_D0_SENT') overdueD0Sent++
+      if (targetState === 'OVERDUE_D7_SENT') overdueD7Sent++
+
+      if (willTransitionToOverdue) {
+        statusChangedToOverdue++
+        console.log(`[BillingStateMachine] tenant=${tenant.id} transitioned TRIAL → PAYMENT_OVERDUE + D+0 email sent`)
+      } else {
+        console.log(`[BillingStateMachine] sent ${targetState} to tenant=${tenant.id} owner=${owner.email}`)
+      }
     } catch (err: any) {
       console.error(`[BillingStateMachine] unexpected error on tenant ${tenant.id}: ${err?.message ?? err}`)
       errors++
@@ -424,8 +509,9 @@ export async function runBillingStateMachineJob(): Promise<void> {
   const duration = Date.now() - startedAt
   console.log(
     `[BillingStateMachine] done in ${duration}ms: ` +
-    `processed=${processed} sent=${sent} flaggedExpired=${flaggedExpired} ` +
+    `processed=${processed} sent=${sent} ` +
     `skippedNoOwner=${skippedNoOwner} errors=${errors} ` +
-    `chargesGenerated=${chargesGenerated} chargesSkipped=${chargesSkipped} chargesFailed=${chargesFailed}`,
+    `chargesGenerated=${chargesGenerated} chargesSkipped=${chargesSkipped} chargesFailed=${chargesFailed} ` +
+    `overdueD0=${overdueD0Sent} overdueD7=${overdueD7Sent} newOverdueTenants=${statusChangedToOverdue}`,
   )
 }
