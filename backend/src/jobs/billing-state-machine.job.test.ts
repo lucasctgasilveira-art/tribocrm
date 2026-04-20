@@ -1,7 +1,28 @@
 /// <reference types="vitest/globals" />
-// Unit tests dos helpers puros do billing-state-machine (sub-etapa 6K.2).
-// Zero I/O, zero mock — apenas entrada/saída dos 6 formatters exportados.
+// Unit tests do billing-state-machine.
+// 6K.2 — funções puras (formatters, daysUntil, buildParamsForState).
+// 6K.3a — TRIAL lane de runBillingStateMachineJob com mocks de
+//         Prisma / mailer / efi.service.
 
+import { mockDeep, type DeepMockProxy } from 'vitest-mock-extended'
+import type { PrismaClient } from '@prisma/client'
+
+vi.mock('../lib/prisma', () => ({
+  prisma: mockDeep<PrismaClient>(),
+}))
+
+vi.mock('../services/mailer.service', () => ({
+  sendTemplateMail: vi.fn(),
+}))
+
+vi.mock('../services/efi.service', () => ({
+  createPixCharge: vi.fn(),
+  createBoletoCharge: vi.fn(),
+}))
+
+import { prisma } from '../lib/prisma'
+import { sendTemplateMail } from '../services/mailer.service'
+import { createPixCharge, createBoletoCharge } from '../services/efi.service'
 import {
   daysUntil,
   formatValor,
@@ -9,7 +30,13 @@ import {
   formatMetodo,
   getFirstName,
   buildParamsForState,
+  runBillingStateMachineJob,
 } from './billing-state-machine.job'
+
+const prismaMock = prisma as unknown as DeepMockProxy<PrismaClient>
+const sendMock = sendTemplateMail as unknown as ReturnType<typeof vi.fn>
+const pixMock = createPixCharge as unknown as ReturnType<typeof vi.fn>
+const boletoMock = createBoletoCharge as unknown as ReturnType<typeof vi.fn>
 
 describe('daysUntil', () => {
   it('retorna 0 quando target e now caem no mesmo dia UTC', () => {
@@ -215,6 +242,256 @@ describe('buildParamsForState', () => {
       dataVencimento: '27/04/2026',
       linkPagamento: 'https://app.tribocrm.com.br/gestao/assinatura',
       linkContato: 'https://app.tribocrm.com.br/gestao/assinatura',
+    })
+  })
+})
+
+// ─────────────────────────────────────────────────────────────
+// 6K.3a — runBillingStateMachineJob (TRIAL lane + skip guards)
+// ─────────────────────────────────────────────────────────────
+
+interface TenantRow {
+  id: string
+  name: string
+  tradeName: string | null
+  cnpj: string
+  document: string | null
+  status: 'TRIAL' | 'ACTIVE' | 'PAYMENT_OVERDUE' | 'SUSPENDED' | 'CANCELLED'
+  trialEndsAt: Date | null
+  planCycle: 'MONTHLY' | 'YEARLY' | null
+  preferredPaymentMethod: 'PIX' | 'BOLETO' | 'CREDIT_CARD' | null
+  addressStreet: string | null
+  addressCity: string | null
+  addressState: string | null
+  addressZip: string | null
+  lastBillingState: string | null
+  plan: { name: string; priceMonthly: unknown; priceYearly: unknown } | null
+  users: Array<{ id: string; name: string; email: string }>
+}
+
+function makeTenant(overrides: Partial<TenantRow> = {}): TenantRow {
+  return {
+    id: 'tenant-1',
+    name: 'Tenant XYZ',
+    tradeName: null,
+    cnpj: '12345678000199',
+    document: null,
+    status: 'TRIAL',
+    trialEndsAt: new Date('2026-04-27T12:00:00Z'),
+    planCycle: 'MONTHLY',
+    preferredPaymentMethod: 'PIX',
+    addressStreet: 'Rua X',
+    addressCity: 'SP',
+    addressState: 'SP',
+    addressZip: '01000000',
+    lastBillingState: null,
+    plan: { name: 'Essencial', priceMonthly: 197, priceYearly: 1970 },
+    users: [{ id: 'u-1', name: 'Lucas Silveira', email: 'owner@example.com' }],
+    ...overrides,
+  }
+}
+
+describe('runBillingStateMachineJob — TRIAL lane', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-04-20T12:00:00Z'))
+
+    sendMock.mockResolvedValue({ sent: true })
+    prismaMock.charge.findFirst.mockResolvedValue(null as any)
+    prismaMock.tenant.updateMany.mockResolvedValue({ count: 1 } as any)
+
+    vi.spyOn(console, 'log').mockImplementation(() => {})
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
+
+  describe('D-7 fresh', () => {
+    it('envia template 2 e marca TRIAL_D7_SENT', async () => {
+      const tenant = makeTenant({
+        trialEndsAt: new Date('2026-04-27T12:00:00Z'),
+        lastBillingState: null,
+      })
+      prismaMock.tenant.findMany.mockResolvedValue([tenant] as any)
+
+      await runBillingStateMachineJob()
+
+      expect(sendMock).toHaveBeenCalledTimes(1)
+      expect(sendMock).toHaveBeenCalledWith(expect.objectContaining({
+        to: 'owner@example.com',
+        templateId: 2,
+        params: expect.objectContaining({
+          nome: 'Lucas',
+          diasRestantes: 7,
+        }),
+      }))
+      expect(prismaMock.tenant.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: 'tenant-1',
+          status: { in: ['TRIAL', 'PAYMENT_OVERDUE', 'SUSPENDED'] },
+        },
+        data: expect.objectContaining({
+          lastBillingState: 'TRIAL_D7_SENT',
+          status: 'TRIAL',
+        }),
+      })
+      expect(pixMock).not.toHaveBeenCalled()
+      expect(boletoMock).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('D-3 fresh', () => {
+    it('com PIX: cria charge PIX + envia template 3', async () => {
+      const tenant = makeTenant({
+        trialEndsAt: new Date('2026-04-23T12:00:00Z'),
+        preferredPaymentMethod: 'PIX',
+        lastBillingState: null,
+      })
+      prismaMock.tenant.findMany.mockResolvedValue([tenant] as any)
+      pixMock.mockResolvedValue({ txid: 'pix-123' } as any)
+
+      await runBillingStateMachineJob()
+
+      expect(prismaMock.charge.findFirst).toHaveBeenCalled()
+      expect(pixMock).toHaveBeenCalledTimes(1)
+      expect(boletoMock).not.toHaveBeenCalled()
+      expect(sendMock).toHaveBeenCalledWith(expect.objectContaining({
+        templateId: 3,
+      }))
+      expect(prismaMock.tenant.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ lastBillingState: 'TRIAL_D3_SENT' }),
+        }),
+      )
+    })
+
+    it('com BOLETO: cria charge Boleto + envia template 3', async () => {
+      const tenant = makeTenant({
+        trialEndsAt: new Date('2026-04-23T12:00:00Z'),
+        preferredPaymentMethod: 'BOLETO',
+      })
+      prismaMock.tenant.findMany.mockResolvedValue([tenant] as any)
+      boletoMock.mockResolvedValue({ chargeId: 'boleto-456' } as any)
+
+      await runBillingStateMachineJob()
+
+      expect(boletoMock).toHaveBeenCalledTimes(1)
+      expect(pixMock).not.toHaveBeenCalled()
+      expect(sendMock).toHaveBeenCalledWith(expect.objectContaining({
+        templateId: 3,
+      }))
+    })
+
+    it('com charge PENDING existente: não cria nova, envia email', async () => {
+      const tenant = makeTenant({
+        trialEndsAt: new Date('2026-04-23T12:00:00Z'),
+        preferredPaymentMethod: 'PIX',
+      })
+      prismaMock.tenant.findMany.mockResolvedValue([tenant] as any)
+      prismaMock.charge.findFirst.mockResolvedValue({ id: 'existing-charge' } as any)
+
+      await runBillingStateMachineJob()
+
+      expect(pixMock).not.toHaveBeenCalled()
+      expect(boletoMock).not.toHaveBeenCalled()
+      expect(sendMock).toHaveBeenCalled()
+    })
+
+    it('sem preferredPaymentMethod: pula charge, envia email', async () => {
+      const tenant = makeTenant({
+        trialEndsAt: new Date('2026-04-23T12:00:00Z'),
+        preferredPaymentMethod: null,
+      })
+      prismaMock.tenant.findMany.mockResolvedValue([tenant] as any)
+
+      await runBillingStateMachineJob()
+
+      expect(pixMock).not.toHaveBeenCalled()
+      expect(boletoMock).not.toHaveBeenCalled()
+      expect(sendMock).toHaveBeenCalled()
+    })
+  })
+
+  describe('D-1 fresh', () => {
+    it('envia template 4 e marca TRIAL_D1_SENT', async () => {
+      const tenant = makeTenant({
+        trialEndsAt: new Date('2026-04-21T12:00:00Z'),
+        lastBillingState: null,
+      })
+      prismaMock.tenant.findMany.mockResolvedValue([tenant] as any)
+
+      await runBillingStateMachineJob()
+
+      expect(sendMock).toHaveBeenCalledWith(expect.objectContaining({
+        templateId: 4,
+        params: expect.objectContaining({ diasRestantes: 1 }),
+      }))
+      expect(prismaMock.tenant.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ lastBillingState: 'TRIAL_D1_SENT' }),
+        }),
+      )
+    })
+  })
+
+  describe('Idempotência', () => {
+    it('tenant já com TRIAL_D7_SENT em D-7 não reenvia', async () => {
+      const tenant = makeTenant({
+        trialEndsAt: new Date('2026-04-27T12:00:00Z'),
+        lastBillingState: 'TRIAL_D7_SENT',
+      })
+      prismaMock.tenant.findMany.mockResolvedValue([tenant] as any)
+
+      await runBillingStateMachineJob()
+
+      expect(sendMock).not.toHaveBeenCalled()
+      expect(prismaMock.tenant.updateMany).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('Skip guards', () => {
+    it('sem owner ativo: não envia email e preserva lastBillingState', async () => {
+      const tenant = makeTenant({
+        trialEndsAt: new Date('2026-04-27T12:00:00Z'),
+        users: [],
+      })
+      prismaMock.tenant.findMany.mockResolvedValue([tenant] as any)
+
+      await runBillingStateMachineJob()
+
+      expect(sendMock).not.toHaveBeenCalled()
+      expect(prismaMock.tenant.updateMany).not.toHaveBeenCalled()
+    })
+
+    it('sem trialEndsAt: warn + skip sem enviar', async () => {
+      const tenant = makeTenant({ trialEndsAt: null })
+      prismaMock.tenant.findMany.mockResolvedValue([tenant] as any)
+
+      await runBillingStateMachineJob()
+
+      expect(sendMock).not.toHaveBeenCalled()
+      expect(prismaMock.tenant.updateMany).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('Error handling', () => {
+    it('sendTemplateMail retorna sent:false → preserva lastBillingState', async () => {
+      const tenant = makeTenant({
+        trialEndsAt: new Date('2026-04-27T12:00:00Z'),
+        lastBillingState: null,
+      })
+      prismaMock.tenant.findMany.mockResolvedValue([tenant] as any)
+      sendMock.mockResolvedValue({ sent: false, reason: 'brevo_down' })
+
+      await runBillingStateMachineJob()
+
+      expect(sendMock).toHaveBeenCalledTimes(1)
+      expect(prismaMock.tenant.updateMany).not.toHaveBeenCalled()
     })
   })
 })
