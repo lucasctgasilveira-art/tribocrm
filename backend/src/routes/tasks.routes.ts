@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express'
 import { authMiddleware } from '../middleware/auth.middleware'
+import { tenantStatusGuard } from '../middleware/tenant-status.middleware'
 import { prisma } from '../lib/prisma'
 import { resolveTenantId } from '../lib/platformTenant'
 import {
@@ -17,6 +18,7 @@ import {
 const router = Router()
 
 router.use(authMiddleware)
+router.use(tenantStatusGuard)
 
 // ── Managerial task types (MUST be before /:id routes) ──
 

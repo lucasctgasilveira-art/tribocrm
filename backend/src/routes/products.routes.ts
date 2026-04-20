@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { authMiddleware } from '../middleware/auth.middleware'
+import { tenantStatusGuard } from '../middleware/tenant-status.middleware'
 import {
   getProducts, createProduct, updateProduct, deleteProduct,
   getDiscountRequests, createDiscountRequest, reviewDiscountRequest,
@@ -8,6 +9,7 @@ import {
 const router = Router()
 
 router.use(authMiddleware)
+router.use(tenantStatusGuard)
 
 // Products
 router.get('/', getProducts)

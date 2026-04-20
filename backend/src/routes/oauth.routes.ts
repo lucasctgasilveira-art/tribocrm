@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express'
 import { authMiddleware } from '../middleware/auth.middleware'
+import { tenantStatusGuard } from '../middleware/tenant-status.middleware'
 import {
   getAuthorizationUrl,
   getCalendarAuthorizationUrl,
@@ -14,7 +15,7 @@ const CALENDAR_REDIRECT_URI = process.env.GOOGLE_CALENDAR_REDIRECT_URI || 'https
 
 // ── Gmail ──
 
-router.get('/google/authorize', authMiddleware, (req: Request, res: Response) => {
+router.get('/google/authorize', authMiddleware, tenantStatusGuard, (req: Request, res: Response) => {
   try {
     const url = getAuthorizationUrl(req.user!.userId, req.user!.tenantId)
     res.redirect(url)
@@ -47,7 +48,7 @@ router.get('/google/callback', async (req: Request, res: Response) => {
   }
 })
 
-router.get('/google/status', authMiddleware, async (req: Request, res: Response) => {
+router.get('/google/status', authMiddleware, tenantStatusGuard, async (req: Request, res: Response) => {
   try {
     const status = await getConnectionStatus(req.user!.userId, 'GMAIL')
     res.json({ success: true, data: status })
@@ -58,7 +59,7 @@ router.get('/google/status', authMiddleware, async (req: Request, res: Response)
 
 // ── Google Calendar ──
 
-router.get('/calendar/authorize', authMiddleware, (req: Request, res: Response) => {
+router.get('/calendar/authorize', authMiddleware, tenantStatusGuard, (req: Request, res: Response) => {
   try {
     const url = getCalendarAuthorizationUrl(req.user!.userId, req.user!.tenantId)
     res.redirect(url)
@@ -91,7 +92,7 @@ router.get('/calendar/callback', async (req: Request, res: Response) => {
   }
 })
 
-router.get('/calendar/status', authMiddleware, async (req: Request, res: Response) => {
+router.get('/calendar/status', authMiddleware, tenantStatusGuard, async (req: Request, res: Response) => {
   try {
     const status = await getConnectionStatus(req.user!.userId, 'GOOGLE_CALENDAR')
     res.json({ success: true, data: status })

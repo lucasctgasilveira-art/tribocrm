@@ -2,11 +2,12 @@ import { Router, Request, Response } from 'express'
 import { randomUUID } from 'crypto'
 import { prisma } from '../lib/prisma'
 import { authMiddleware } from '../middleware/auth.middleware'
+import { tenantStatusGuard } from '../middleware/tenant-status.middleware'
 import { sendEmail } from '../services/gmail.service'
 
 const router = Router()
 
-router.post('/send', authMiddleware, async (req: Request, res: Response) => {
+router.post('/send', authMiddleware, tenantStatusGuard, async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId
     const tenantId = req.user!.tenantId

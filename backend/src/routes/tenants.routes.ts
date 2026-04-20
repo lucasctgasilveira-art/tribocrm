@@ -1,10 +1,12 @@
 import { Router, Request, Response } from 'express'
 import { authMiddleware } from '../middleware/auth.middleware'
+import { tenantStatusGuard } from '../middleware/tenant-status.middleware'
 import { prisma } from '../lib/prisma'
 
 const router = Router()
 
 router.use(authMiddleware)
+router.use(tenantStatusGuard)
 
 /**
  * PATCH /tenants/onboarding
