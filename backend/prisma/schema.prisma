@@ -361,6 +361,15 @@ model Tenant {
   // re-runs on the same day become no-ops. Null means "never evaluated".
   lastBillingState   String?   @map("last_billing_state")
   lastBillingStateAt DateTime? @map("last_billing_state_at")
+  // Card subscription (sub-etapa 6J). Populated on successful
+  // /payments/card-subscription; null for PIX/Boleto customers who
+  // never opted into recurring billing.
+  efiSubscriptionId     String?   @map("efi_subscription_id") @db.VarChar(100)
+  efiSubscriptionStatus String?   @map("efi_subscription_status") @db.VarChar(20)
+  cardLastFour          String?   @map("card_last_four") @db.VarChar(4)
+  cardBrand             String?   @map("card_brand") @db.VarChar(20)
+  cardExpiresAt         DateTime? @map("card_expires_at") @db.Date
+  nextBillingAt         DateTime? @map("next_billing_at")
   termsAcceptedAt    DateTime? @map("terms_accepted_at")
   termsVersion       String?   @map("terms_version") @db.VarChar(10)
   privacyAcceptedAt  DateTime? @map("privacy_accepted_at")
@@ -422,6 +431,7 @@ model Charge {
   id            String        @id @default(uuid()) @db.Uuid
   tenantId      String        @map("tenant_id") @db.Uuid
   efiChargeId   String?       @map("efi_charge_id") @db.VarChar(100)
+  efiSubscriptionId String?   @map("efi_subscription_id") @db.VarChar(100)
   amount        Decimal       @db.Decimal(10, 2)
   discountValue Decimal?      @map("discount_value") @db.Decimal(10, 2)
   dueDate       DateTime      @map("due_date") @db.Date
