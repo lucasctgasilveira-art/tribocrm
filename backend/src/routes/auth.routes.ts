@@ -62,6 +62,8 @@ router.get('/me', authMiddleware, async (req: Request, res: Response) => {
           trialEndsAt: tenant.trialEndsAt,
           planExpiresAt: tenant.planExpiresAt,
           planStartedAt: tenant.planStartedAt,
+          lastBillingState: tenant.lastBillingState,
+          lastBillingStateAt: tenant.lastBillingStateAt,
         },
         plan: {
           id: tenant.plan.id,

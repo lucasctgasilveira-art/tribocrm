@@ -37,6 +37,20 @@ api.interceptors.response.use(
         window.location.href = '/login'
       }
     }
+    // Defesa secundária: se o backend bloquear um tenant suspenso,
+    // força navegação pra tela de assinatura. O TenantStatusGate vai
+    // detectar o novo status ao recarregar /auth/me e renderizar a
+    // tela apropriada. Guard !== '/gestao/assinatura' evita loop caso
+    // algum request dessa página dispare 403.
+    if (
+      error.response?.status === 403 &&
+      error.response?.data?.error?.code === 'TENANT_SUSPENDED'
+    ) {
+      if (window.location.pathname !== '/gestao/assinatura') {
+        window.location.href = '/gestao/assinatura'
+      }
+      return Promise.reject(error)
+    }
     return Promise.reject(error)
   },
 )
