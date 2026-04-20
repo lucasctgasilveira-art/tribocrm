@@ -1,10 +1,12 @@
 import { Router, Request, Response } from 'express'
+import { z } from 'zod'
 import { authMiddleware } from '../middleware/auth.middleware'
 import { prisma } from '../lib/prisma'
 import {
   createPixCharge,
   createBoletoCharge,
   createCardSubscription,
+  cancelCardSubscription,
   getChargeStatus,
   getPaymentHistory,
   processWebhookPayment,
@@ -214,54 +216,149 @@ router.post('/upgrade', authMiddleware, async (req: Request, res: Response) => {
 
 // ── Card Subscription ──
 
-router.post('/card-subscription', authMiddleware, async (req: Request, res: Response) => {
-  try {
-    const { role, tenantId, userId } = req.user!
-    if (role !== 'OWNER') { res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Apenas o dono' } }); return }
-
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true, cpf: true } })
-    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, include: { plan: true } })
-    if (!tenant) { res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Tenant não encontrado' } }); return }
-
-    const value = tenant.planCycle === 'YEARLY' ? Number(tenant.plan.priceYearly) : Number(tenant.plan.priceMonthly)
-
-    const result = await createCardSubscription(tenantId, {
-      ...req.body,
-      value,
-      description: `TriboCRM ${tenant.plan.name} — ${tenant.planCycle === 'YEARLY' ? 'Anual' : 'Mensal'}`,
-      customerName: user?.name ?? 'Cliente',
-      customerCpf: user?.cpf ?? '',
-      customerEmail: user?.email ?? '',
-    })
-    res.json({ success: true, data: result })
-  } catch (error: any) {
-    console.error('[Payments] card error:', error)
-    res.status(500).json({ success: false, error: { code: 'PAYMENT_ERROR', message: error.message } })
-  }
+const cardSubscriptionBodySchema = z.object({
+  paymentToken: z.string().min(10, 'paymentToken inválido'),
+  billingAddress: z.object({
+    street: z.string().min(1),
+    number: z.string().min(1),
+    neighborhood: z.string().min(1),
+    zipcode: z.string().min(8),
+    city: z.string().min(1),
+    state: z.string().length(2),
+    complement: z.string().optional(),
+  }),
+  customer: z.object({
+    name: z.string().min(3),
+    email: z.string().email(),
+    cpf: z.string().min(11),
+    birth: z.string().optional(),
+    phone_number: z.string().optional(),
+  }),
 })
+
+router.post(
+  '/card-subscription',
+  authMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const { role, tenantId } = req.user!
+
+      if (role !== 'OWNER') {
+        res.status(403).json({
+          success: false,
+          error: { code: 'FORBIDDEN', message: 'Apenas o OWNER pode gerenciar cartão' },
+        })
+        return
+      }
+
+      if (!tenantId) {
+        res.status(400).json({
+          success: false,
+          error: { code: 'NO_TENANT', message: 'Usuário sem tenant vinculado' },
+        })
+        return
+      }
+
+      const parseResult = cardSubscriptionBodySchema.safeParse(req.body)
+      if (!parseResult.success) {
+        res.status(400).json({
+          success: false,
+          error: {
+            code: 'INVALID_BODY',
+            message: 'Dados do cartão inválidos',
+            details: parseResult.error.flatten(),
+          },
+        })
+        return
+      }
+
+      const body = parseResult.data
+
+      const result = await createCardSubscription({
+        tenantId,
+        paymentToken: body.paymentToken,
+        billingAddress: body.billingAddress,
+        customer: body.customer,
+      })
+
+      res.json({
+        success: true,
+        data: {
+          subscriptionId: result.subscriptionId,
+          chargeId: result.chargeId,
+          status: result.status,
+          nextBillingAt: result.nextBillingAt,
+        },
+      })
+      return
+    } catch (err: any) {
+      console.error('[POST /card-subscription] erro:', err?.message)
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'SUBSCRIPTION_FAILED',
+          message: err?.message ?? 'Falha ao processar assinatura',
+        },
+      })
+      return
+    }
+  },
+)
 
 // ── Cancel ──
 
-router.post('/cancel', authMiddleware, async (req: Request, res: Response) => {
-  try {
-    const { role, tenantId } = req.user!
-    if (role !== 'OWNER') { res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Apenas o dono pode cancelar' } }); return }
+router.post(
+  '/cancel',
+  authMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const { role, tenantId } = req.user!
 
-    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } })
-    if (!tenant) { res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Tenant não encontrado' } }); return }
+      if (role !== 'OWNER') {
+        res.status(403).json({
+          success: false,
+          error: { code: 'FORBIDDEN', message: 'Apenas o OWNER pode cancelar a assinatura' },
+        })
+        return
+      }
 
-    const expiresAt = tenant.planExpiresAt ?? new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0)
+      if (!tenantId) {
+        res.status(400).json({
+          success: false,
+          error: { code: 'NO_TENANT', message: 'Usuário sem tenant vinculado' },
+        })
+        return
+      }
 
-    await prisma.tenant.update({
-      where: { id: tenantId },
-      data: { status: 'CANCELLED', planExpiresAt: expiresAt },
-    })
+      // Best-effort cancel on Efi's side. Never blocks the local
+      // state flip — if the remote call fails, operator sees the log
+      // and reconciles manually rather than leaving the customer
+      // stuck with an uncancellable subscription.
+      try {
+        await cancelCardSubscription(tenantId)
+      } catch (err: any) {
+        console.error(`[POST /cancel] falha ao cancelar Efi:`, err?.message)
+      }
 
-    res.json({ success: true, data: { expiresAt: expiresAt.toISOString() } })
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } })
-  }
-})
+      await prisma.tenant.update({
+        where: { id: tenantId },
+        data: {
+          status: 'CANCELLED',
+        },
+      })
+
+      res.json({ success: true })
+      return
+    } catch (err: any) {
+      console.error('[POST /cancel] erro:', err?.message)
+      res.status(500).json({
+        success: false,
+        error: { code: 'CANCEL_FAILED', message: 'Falha ao cancelar assinatura' },
+      })
+      return
+    }
+  },
+)
 
 // ── History ──
 
