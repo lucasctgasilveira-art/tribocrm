@@ -1,0 +1,523 @@
+/**
+ * CSS do painel lateral do WhatsApp Web.
+ *
+ * REGRAS CRÍTICAS DE ISOLAMENTO:
+ *   1. TODOS os seletores começam com .tribocrm- para não colidir com o CSS do WhatsApp.
+ *   2. Nunca usamos seletores genéricos (body, div, button) sem escopo.
+ *   3. O painel é position:fixed com z-index altíssimo para ficar acima do WhatsApp.
+ *   4. Redefinimos font-family, colors, box-sizing dentro do painel porque o WhatsApp
+ *      tem reset global que afetaria nossos elementos.
+ */
+
+/* ── Variáveis do TriboCRM (copiadas do design system) ─────────── */
+:root {
+  --tribocrm-orange: #f97316;
+  --tribocrm-orange-hover: #fb923c;
+  --tribocrm-orange-alpha-10: rgba(249, 115, 22, 0.10);
+  --tribocrm-orange-alpha-20: rgba(249, 115, 22, 0.20);
+
+  --tribocrm-bg: #0a0b0f;
+  --tribocrm-surface: #111318;
+  --tribocrm-card: #161a22;
+  --tribocrm-card-hover: #1c2130;
+  --tribocrm-border: #22283a;
+
+  --tribocrm-text-primary: #e8eaf0;
+  --tribocrm-text-secondary: #9ca3af;
+  --tribocrm-text-muted: #6b7280;
+
+  --tribocrm-green: #22c55e;
+  --tribocrm-red: #ef4444;
+  --tribocrm-blue: #3b82f6;
+  --tribocrm-gold: #f59e0b;
+
+  --tribocrm-hot: #f97316;
+  --tribocrm-warm: #f59e0b;
+  --tribocrm-cold: #3b82f6;
+
+  --tribocrm-font: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+
+  --tribocrm-panel-width: 360px;
+  --tribocrm-transition: 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── Container raiz do painel ──────────────────────────────────── */
+
+.tribocrm-panel-root {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: var(--tribocrm-panel-width);
+  height: 100vh;
+  background: var(--tribocrm-bg);
+  color: var(--tribocrm-text-primary);
+  font-family: var(--tribocrm-font);
+  font-size: 14px;
+  line-height: 1.4;
+  z-index: 2147483600; /* abaixo do max mas acima de qualquer coisa do WhatsApp */
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.4);
+  border-left: 1px solid var(--tribocrm-border);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  /* Animação de entrada/saída */
+  transform: translateX(100%);
+  transition: transform var(--tribocrm-transition);
+}
+
+.tribocrm-panel-root.tribocrm-open {
+  transform: translateX(0);
+}
+
+/* Reset local — afeta só descendentes do painel */
+.tribocrm-panel-root * {
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+/* ── Botão flutuante de abrir ──────────────────────────────────── */
+
+.tribocrm-toggle {
+  position: fixed;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 96px;
+  background: var(--tribocrm-orange);
+  color: white;
+  border: none;
+  border-radius: 8px 0 0 8px;
+  cursor: pointer;
+  z-index: 2147483601;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: -2px 0 12px rgba(0, 0, 0, 0.2);
+  transition: background var(--tribocrm-transition),
+              transform var(--tribocrm-transition);
+  font-family: var(--tribocrm-font);
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  writing-mode: vertical-rl;
+  transform: translateY(-50%) rotate(180deg);
+}
+
+.tribocrm-toggle:hover {
+  background: var(--tribocrm-orange-hover);
+}
+
+.tribocrm-toggle.tribocrm-hidden {
+  transform: translateY(-50%) translateX(100%) rotate(180deg);
+}
+
+/* ── Header do painel ──────────────────────────────────────────── */
+
+.tribocrm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--tribocrm-border);
+  background: var(--tribocrm-surface);
+  flex-shrink: 0;
+}
+
+.tribocrm-logo {
+  font-size: 18px;
+  letter-spacing: -0.02em;
+}
+.tribocrm-logo-tribo { color: var(--tribocrm-text-primary); font-weight: 400; }
+.tribocrm-logo-crm { color: var(--tribocrm-orange); font-weight: 800; }
+
+.tribocrm-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--tribocrm-text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--tribocrm-transition), background var(--tribocrm-transition);
+}
+.tribocrm-close-btn:hover {
+  color: var(--tribocrm-text-primary);
+  background: var(--tribocrm-card);
+}
+
+/* ── Corpo scrollável ─────────────────────────────────────────── */
+
+.tribocrm-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px;
+}
+
+/* Scrollbar customizada (opcional — fica bonito) */
+.tribocrm-body::-webkit-scrollbar { width: 6px; }
+.tribocrm-body::-webkit-scrollbar-track { background: transparent; }
+.tribocrm-body::-webkit-scrollbar-thumb {
+  background: var(--tribocrm-border);
+  border-radius: 3px;
+}
+.tribocrm-body::-webkit-scrollbar-thumb:hover {
+  background: var(--tribocrm-text-muted);
+}
+
+/* ── Estados ─────────────────────────────────────────────────── */
+
+.tribocrm-loading,
+.tribocrm-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--tribocrm-text-secondary);
+  gap: 12px;
+}
+
+.tribocrm-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--tribocrm-border);
+  border-top-color: var(--tribocrm-orange);
+  border-radius: 50%;
+  animation: tribocrm-spin 800ms linear infinite;
+}
+
+@keyframes tribocrm-spin {
+  to { transform: rotate(360deg); }
+}
+
+.tribocrm-empty-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--tribocrm-card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--tribocrm-text-muted);
+}
+
+/* ── Card do lead ─────────────────────────────────────────────── */
+
+.tribocrm-lead-card {
+  background: var(--tribocrm-card);
+  border: 1px solid var(--tribocrm-border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.tribocrm-lead-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.tribocrm-lead-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--tribocrm-text-primary);
+  margin: 0;
+}
+
+.tribocrm-lead-company {
+  font-size: 13px;
+  color: var(--tribocrm-text-secondary);
+  margin-top: 2px;
+}
+
+.tribocrm-temp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+.tribocrm-temp-hot { background: rgba(249, 115, 22, 0.12); color: var(--tribocrm-hot); }
+.tribocrm-temp-warm { background: rgba(245, 158, 11, 0.12); color: var(--tribocrm-warm); }
+.tribocrm-temp-cold { background: rgba(59, 130, 246, 0.12); color: var(--tribocrm-cold); }
+
+.tribocrm-lead-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--tribocrm-border);
+}
+
+.tribocrm-meta-label {
+  font-size: 11px;
+  color: var(--tribocrm-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
+}
+
+.tribocrm-meta-value {
+  font-size: 13px;
+  color: var(--tribocrm-text-primary);
+  font-weight: 500;
+}
+
+.tribocrm-stage-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--tribocrm-orange-alpha-10);
+  color: var(--tribocrm-orange);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ── Seção com título ────────────────────────────────────────── */
+
+.tribocrm-section {
+  margin-bottom: 20px;
+}
+
+.tribocrm-section-title {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--tribocrm-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 10px 0;
+}
+
+/* ── Timeline de interações ──────────────────────────────────── */
+
+.tribocrm-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tribocrm-interaction {
+  background: var(--tribocrm-card);
+  border-left: 2px solid var(--tribocrm-orange);
+  border-radius: 0 8px 8px 0;
+  padding: 10px 12px;
+}
+
+.tribocrm-interaction-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.tribocrm-interaction-type {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--tribocrm-text-secondary);
+}
+
+.tribocrm-interaction-date {
+  font-size: 11px;
+  color: var(--tribocrm-text-muted);
+}
+
+.tribocrm-interaction-body {
+  font-size: 13px;
+  color: var(--tribocrm-text-primary);
+  line-height: 1.5;
+}
+
+/* ── Botões ──────────────────────────────────────────────────── */
+
+.tribocrm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 14px;
+  font-family: var(--tribocrm-font);
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background var(--tribocrm-transition), color var(--tribocrm-transition);
+  text-decoration: none;
+  line-height: 1;
+}
+
+.tribocrm-btn-primary {
+  background: var(--tribocrm-orange);
+  color: white;
+}
+.tribocrm-btn-primary:hover:not(:disabled) {
+  background: var(--tribocrm-orange-hover);
+}
+
+.tribocrm-btn-ghost {
+  background: var(--tribocrm-card);
+  color: var(--tribocrm-text-primary);
+  border: 1px solid var(--tribocrm-border);
+}
+.tribocrm-btn-ghost:hover:not(:disabled) {
+  background: var(--tribocrm-card-hover);
+}
+
+.tribocrm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tribocrm-btn-full {
+  width: 100%;
+}
+
+.tribocrm-btn-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+/* ── Inputs ──────────────────────────────────────────────────── */
+
+.tribocrm-input,
+.tribocrm-textarea,
+.tribocrm-select {
+  width: 100%;
+  padding: 9px 11px;
+  font-family: var(--tribocrm-font);
+  font-size: 13px;
+  color: var(--tribocrm-text-primary);
+  background: var(--tribocrm-card);
+  border: 1px solid var(--tribocrm-border);
+  border-radius: 8px;
+  outline: none;
+  transition: border-color var(--tribocrm-transition);
+}
+.tribocrm-input:focus,
+.tribocrm-textarea:focus,
+.tribocrm-select:focus {
+  border-color: var(--tribocrm-orange);
+}
+.tribocrm-input::placeholder,
+.tribocrm-textarea::placeholder {
+  color: var(--tribocrm-text-muted);
+}
+.tribocrm-textarea {
+  resize: vertical;
+  min-height: 72px;
+  line-height: 1.5;
+}
+
+.tribocrm-field {
+  margin-bottom: 10px;
+}
+.tribocrm-field-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--tribocrm-text-secondary);
+  margin-bottom: 5px;
+}
+
+/* ── Banner de erro ──────────────────────────────────────────── */
+
+.tribocrm-error-banner {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: var(--tribocrm-red);
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+
+/* ── Toast de sucesso ────────────────────────────────────────── */
+
+.tribocrm-toast {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  right: 16px;
+  background: var(--tribocrm-green);
+  color: white;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: center;
+  animation: tribocrm-slide-up 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes tribocrm-slide-up {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* ── Templates list ─────────────────────────────────────────── */
+
+.tribocrm-template-item {
+  background: var(--tribocrm-card);
+  border: 1px solid var(--tribocrm-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  transition: background var(--tribocrm-transition), border-color var(--tribocrm-transition);
+}
+.tribocrm-template-item:hover {
+  background: var(--tribocrm-card-hover);
+  border-color: var(--tribocrm-orange);
+}
+.tribocrm-template-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--tribocrm-text-primary);
+  margin-bottom: 3px;
+}
+.tribocrm-template-preview {
+  font-size: 12px;
+  color: var(--tribocrm-text-secondary);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── Tela de não autenticado ─────────────────────────────────── */
+
+.tribocrm-auth-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 40px 16px;
+  gap: 14px;
+}
+.tribocrm-auth-prompt h3 {
+  margin: 0;
+  font-size: 15px;
+  color: var(--tribocrm-text-primary);
+}
+.tribocrm-auth-prompt p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--tribocrm-text-secondary);
+  line-height: 1.5;
+}
