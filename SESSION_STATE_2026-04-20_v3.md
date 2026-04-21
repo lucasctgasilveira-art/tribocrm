@@ -71,6 +71,7 @@ Ciclo end-to-end em produção:
 - Prisma 5.22 → 7.7 (major, adiado)
 - Bug latente select vs generateChargeForTrialEnd (boleto fallback)
 - Crash recovery de campanhas: campanha em RUNNING fica órfã se Railway reiniciar. Adicionar timeout-based recovery em 6L.3.d opcional futuro
+- UX do campo JSON de campanhas é confuso (6L.4 no backlog)
 
 ## Próxima sessão — opções
 
@@ -78,7 +79,11 @@ Ciclo end-to-end em produção:
 2. **Dívidas de segurança** (senha admin, credenciais — 1h)
 3. **Teste manual em produção** (cartão real R$1 + campanha real pequena pra validar 6L.3)
 4. **6L.3.d** (crash recovery de campanhas órfãs — ~30min)
-5. **Sub-etapas de outras fases** (fase 7+)
+5. **6L.4 — UX improvements do campo JSON** (1-5h dependendo do nível):
+   - 6L.4.a Dropdown de templates Brevo (1h) — recomendado começar aqui
+   - 6L.4.b Form dinâmico (2-3h) — depende da 4.a
+   - 6L.4.c Personalização por destinatário (4-5h) — depende da 4.b
+6. **Sub-etapas de outras fases** (fase 7+)
 
 ## Roteiro de boot
 

@@ -497,3 +497,42 @@
 - [ ] Doc 10 — GET /campaigns + /:id + /cancel; /send async retornando 202
 - [ ] Doc 12 — telas de progresso + cancelamento de campanha
 - [ ] Doc 00 (índice mestre) — refletir tudo
+
+---
+
+## Backlog de melhorias futuras (não iniciadas)
+
+### 6L.4 — UX do campo de parâmetros JSON em campanhas
+**Status:** 🔜 Backlog
+
+**Problema identificado:**
+O campo "Parâmetros do template (JSON)" em /admin/emails/novo exige que o admin conheça as variáveis exatas do template Brevo e escreva JSON manualmente. É confuso e propenso a erro (digitou 'name' em vez de 'nome' → email chega com buracos).
+
+**3 níveis de melhoria possíveis (escolher UM por sub-etapa):**
+
+#### 6L.4.a — Dropdown de templates (Nível 1, ~1h)
+- Backend novo: GET /admin/brevo-templates (chama Brevo API)
+- Frontend: dropdown com nome + ID em vez de input number
+- Ganho: admin não precisa lembrar IDs numéricos
+- Limitação: ainda precisa escrever JSON manualmente
+
+#### 6L.4.b — Form dinâmico baseado no template (Nível 2, ~2-3h)
+- Depende da 6L.4.a estar pronta
+- Ao selecionar template, Brevo API retorna lista de variáveis
+- Frontend gera campos de formulário dinamicamente
+- Backend monta JSON automaticamente
+- Ganho: admin nunca mais escreve JSON na mão
+- Risco: depende da Brevo retornar introspection do template
+
+#### 6L.4.c — Personalização por destinatário (Nível 3, ~4-5h)
+- Depende da 6L.4.b
+- Admin marca quais variáveis são "dinâmicas" (nome, email) vs "estáticas" (data, link)
+- Dinâmicas: backend no loop pega valor de cada user
+- Estáticas: admin digita uma vez
+- Ganho: emails totalmente personalizados
+- Risco: refactor do campaign-runner
+
+**Prioridade:** baixa-média. Sistema atual funciona — melhoria de UX, não de funcionalidade.
+
+**Por que não implementado hoje (20/04/2026):**
+Sessão já tinha 16 commits em produção. Adicionar feature nova em fim de sessão longa = risco de introduzir bug no código que acabou de ser estabilizado. Adiado pra próxima sessão.
