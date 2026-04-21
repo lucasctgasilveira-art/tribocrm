@@ -14,6 +14,9 @@ interface TenantData {
   id: string; name: string; email: string; cnpj: string; phone: string | null
   status: string; trialEndsAt: string | null; planStartedAt: string | null; planExpiresAt: string | null
   internalNotes: string | null; createdAt: string
+  addressStreet: string | null; addressNumber: string | null; addressComplement: string | null
+  addressNeighborhood: string | null; addressCity: string | null; addressState: string | null
+  addressZip: string | null
   plan: { id: string; name: string; slug: string; priceMonthly: number }
   users: TenantUser[]; charges: TenantCharge[]; notes: TenantNote[]
   _count?: { users: number; leads: number }
@@ -38,6 +41,18 @@ function formatCnpj(cnpj: string) {
   const digits = cnpj.replace(/\D/g, '')
   if (digits.length !== 14) return cnpj
   return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12, 14)}`
+}
+
+function formatCep(cep: string | null): string {
+  if (!cep) return '—'
+  const digits = cep.replace(/\D/g, '')
+  if (digits.length !== 8) return cep
+  return `${digits.slice(0, 5)}-${digits.slice(5)}`
+}
+
+function displayValue(v: string | null | undefined): string {
+  if (v === null || v === undefined || v === '') return '—'
+  return v
 }
 
 function formatDateTime(dateStr: string | null) {
@@ -181,6 +196,28 @@ export default function TenantDetailPage() {
           <Field label="Início do plano" value={data.planStartedAt ? new Date(data.planStartedAt).toLocaleDateString('pt-BR') : '—'} />
           <Field label="Expira em" value={data.planExpiresAt ? new Date(data.planExpiresAt).toLocaleDateString('pt-BR') : '—'} />
         </div>
+      </div>
+
+      {/* Address */}
+      <div style={{ ...card, padding: 20, marginBottom: 20 }}>
+        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 16 }}>Endereço</div>
+        {!data.addressStreet && !data.addressCity && !data.addressZip ? (
+          <div style={{ padding: 12, borderRadius: 6, background: 'var(--bg)', color: 'var(--text-secondary)', fontSize: 13, fontStyle: 'italic' }}>
+            Endereço não cadastrado
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+            <Field label="Logradouro" value={displayValue(data.addressStreet)} />
+            <Field label="Número" value={displayValue(data.addressNumber)} />
+            <Field label="Bairro" value={displayValue(data.addressNeighborhood)} />
+            <Field label="Cidade" value={displayValue(data.addressCity)} />
+            <Field label="UF" value={displayValue(data.addressState)} />
+            <Field label="CEP" value={formatCep(data.addressZip)} />
+            {data.addressComplement && (
+              <Field label="Complemento" value={data.addressComplement} style={{ gridColumn: '1 / -1' }} />
+            )}
+          </div>
+        )}
       </div>
 
       {/* Users */}
@@ -343,9 +380,9 @@ function KpiCard({ icon: Icon, iconColor, label, value }: { icon: typeof Users; 
   )
 }
 
-function Field({ label, value }: { label: string; value: string }) {
+function Field({ label, value, style }: { label: string; value: string; style?: React.CSSProperties }) {
   return (
-    <div>
+    <div style={style}>
       <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>{label}</div>
       <div style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{value}</div>
     </div>
