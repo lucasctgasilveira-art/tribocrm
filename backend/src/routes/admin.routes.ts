@@ -8,8 +8,13 @@ import {
   getAdminDashboard, getTenants, getTenant, updateTenant, getFinancial,
 } from '../controllers/admin.controller'
 import { registerPixWebhook, createPixCharge, createBoletoCharge } from '../services/efi.service'
-import { sendMail, sendTemplateMail } from '../services/mailer.service'
+import { sendMail } from '../services/mailer.service'
 import { runBillingStateMachineJob } from '../jobs/billing-state-machine.job'
+import {
+  resolveCampaignRecipients,
+  type CampaignFilters,
+  type CampaignAudience,
+} from '../services/campaigns.service'
 
 function generateTempPassword(): string {
   const pool = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -748,78 +753,6 @@ const campaignSendBodySchema = z.object({
   params: z.record(z.union([z.string(), z.number()])).default({}),
 })
 
-interface CampaignRecipient {
-  userId: string
-  name: string
-  email: string
-  role: string
-  tenantId: string
-  tenantName: string
-  planName: string | null
-}
-
-async function resolveCampaignRecipients(
-  filters: z.infer<typeof campaignFiltersSchema>,
-  audience: 'OWNERS' | 'ALL_USERS',
-): Promise<CampaignRecipient[]> {
-  const userWhere: any = {
-    isActive: true,
-    deletedAt: null,
-  }
-
-  if (audience === 'OWNERS') {
-    userWhere.role = 'OWNER'
-  } else if (filters.roles && filters.roles.length > 0) {
-    userWhere.role = { in: filters.roles }
-  }
-
-  const tenantWhere: any = {}
-  if (filters.planIds && filters.planIds.length > 0) {
-    tenantWhere.planId = { in: filters.planIds }
-  }
-  if (filters.tenantStatuses && filters.tenantStatuses.length > 0) {
-    tenantWhere.status = { in: filters.tenantStatuses }
-  }
-  if (Object.keys(tenantWhere).length > 0) {
-    userWhere.tenant = tenantWhere
-  }
-
-  const users = await prisma.user.findMany({
-    where: userWhere,
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      role: true,
-      tenantId: true,
-      tenant: {
-        select: {
-          name: true,
-          plan: { select: { name: true } },
-        },
-      },
-    },
-  })
-
-  // Dedupe por email — defensivo contra duplicatas cross-tenant.
-  const seen = new Set<string>()
-  const deduped = users.filter((u) => {
-    if (!u.email || seen.has(u.email)) return false
-    seen.add(u.email)
-    return true
-  })
-
-  return deduped.map((u) => ({
-    userId: u.id,
-    name: u.name,
-    email: u.email,
-    role: u.role,
-    tenantId: u.tenantId,
-    tenantName: u.tenant?.name ?? '',
-    planName: u.tenant?.plan?.name ?? null,
-  }))
-}
-
 router.post('/campaign/preview', async (req: Request, res: Response) => {
   try {
     const parseResult = campaignPreviewBodySchema.safeParse(req.body)
@@ -836,7 +769,10 @@ router.post('/campaign/preview', async (req: Request, res: Response) => {
     }
 
     const { filters, audience } = parseResult.data
-    const recipients = await resolveCampaignRecipients(filters, audience)
+    const recipients = await resolveCampaignRecipients(
+      filters as CampaignFilters,
+      audience as CampaignAudience,
+    )
 
     res.json({
       success: true,
@@ -872,7 +808,13 @@ router.post('/campaign/send', async (req: Request, res: Response) => {
     }
 
     const { filters, audience, templateId, params } = parseResult.data
-    const recipients = await resolveCampaignRecipients(filters, audience)
+
+    // Pré-valida: tem destinatários? Evita criar campanha vazia que
+    // só pra rodar e fechar como COMPLETED com 0 envios.
+    const recipients = await resolveCampaignRecipients(
+      filters as CampaignFilters,
+      audience as CampaignAudience,
+    )
 
     if (recipients.length === 0) {
       res.status(400).json({
@@ -885,55 +827,35 @@ router.post('/campaign/send', async (req: Request, res: Response) => {
       return
     }
 
-    const startedAt = Date.now()
-    let sent = 0
-    let failed = 0
-    let skipped = 0
+    // Sub-etapa 6L.3.a: cria EmailCampaign em PENDING. O campaign-runner
+    // job (cron 1 min) faz pickup atômico e processa em background.
+    // Resposta 202 retorna campaignId pra polling — frontend (6L.3.c)
+    // vai consumir GET /admin/campaigns/:id pra acompanhar progresso.
+    const campaign = await prisma.emailCampaign.create({
+      data: {
+        templateId,
+        paramsJson: params,
+        audience,
+        filtersJson: filters,
+        status: 'PENDING',
+        totalRecipients: recipients.length,
+        createdBy: (req as any).user?.userId ?? null,
+      },
+      select: {
+        id: true,
+        status: true,
+        totalRecipients: true,
+      },
+    })
 
-    console.log(`[Campaign] iniciando disparo pra ${recipients.length} destinatários (template ${templateId})`)
+    console.log(`[Campaign] agendada ${campaign.id} pra ${campaign.totalRecipients} destinatários`)
 
-    for (let i = 0; i < recipients.length; i++) {
-      const r = recipients[i]
-      if (!r) {
-        skipped++
-        continue
-      }
-
-      try {
-        const result = await sendTemplateMail({
-          to: r.email,
-          templateId,
-          params,
-          tenantId: r.tenantId,
-        })
-        if (result.sent) sent++
-        else failed++
-      } catch (err: any) {
-        console.error(`[Campaign] falha com ${r.email}: ${err?.message}`)
-        failed++
-      }
-
-      if ((i + 1) % 50 === 0) {
-        console.log(`[Campaign] progresso ${i + 1}/${recipients.length} (sent=${sent}, failed=${failed})`)
-      }
-
-      // Rate limit: 100ms entre envios — Brevo aguenta tranquilo.
-      if (i < recipients.length - 1) {
-        await new Promise((resolve) => setTimeout(resolve, 100))
-      }
-    }
-
-    const durationMs = Date.now() - startedAt
-    console.log(`[Campaign] concluído: total=${recipients.length} sent=${sent} failed=${failed} skipped=${skipped} duration=${durationMs}ms`)
-
-    res.json({
+    res.status(202).json({
       success: true,
       data: {
-        total: recipients.length,
-        sent,
-        failed,
-        skipped,
-        durationMs,
+        campaignId: campaign.id,
+        status: campaign.status,
+        totalRecipients: campaign.totalRecipients,
       },
     })
     return
@@ -941,7 +863,7 @@ router.post('/campaign/send', async (req: Request, res: Response) => {
     console.error('[POST /admin/campaign/send] erro:', err?.message)
     res.status(500).json({
       success: false,
-      error: { code: 'CAMPAIGN_FAILED', message: 'Erro ao disparar campanha' },
+      error: { code: 'CAMPAIGN_FAILED', message: 'Erro ao agendar campanha' },
     })
     return
   }

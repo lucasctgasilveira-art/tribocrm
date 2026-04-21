@@ -1013,6 +1013,33 @@ model EmailLog {
   @@map("email_logs")
 }
 
+// Background-processed email campaigns (sub-etapa 6L.3.a). Created
+// in PENDING by POST /admin/campaign/send, picked up by the
+// campaign-runner cron (every 1 min, 1 campaign per tick) which
+// resolves recipients and loops through sendTemplateMail with rate
+// limit. Frees the HTTP request from the timeout that capped the
+// 6L.2 MVP at ~500 destinatários.
+model EmailCampaign {
+  id              String    @id @default(uuid()) @db.Uuid
+  templateId      Int       @map("template_id")
+  paramsJson      Json      @map("params_json")
+  audience        String    @db.VarChar(20)
+  filtersJson     Json      @map("filters_json")
+  status          String    @db.VarChar(20)
+  totalRecipients Int       @default(0) @map("total_recipients")
+  sent            Int       @default(0)
+  failed          Int       @default(0)
+  skipped         Int       @default(0)
+  errorMessage    String?   @map("error_message") @db.Text
+  createdAt       DateTime  @default(now()) @map("created_at")
+  startedAt       DateTime? @map("started_at")
+  completedAt     DateTime? @map("completed_at")
+  createdBy       String?   @map("created_by") @db.Uuid
+
+  @@index([status, createdAt(sort: Desc)])
+  @@map("email_campaigns")
+}
+
 model Popup {
   id          String    @id @default(cuid())
   type        String
