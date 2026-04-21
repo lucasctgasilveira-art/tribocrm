@@ -2,7 +2,7 @@
 
 **Objetivo:** consolidar mudanças implementadas na fase billing (sub-etapas 6A–6L) para atualização em lote nos documentos principais do projeto após conclusão da 6K.
 
-**Última atualização:** 20/04/2026 (após 6L.2)
+**Última atualização:** 20/04/2026 (após 6L.3)
 
 ---
 
@@ -368,6 +368,87 @@
 
 ---
 
+### Sub-etapa 6L.3.a — Background job pra campanhas grandes
+**Status:** Em produção (commit 73cd120)
+
+**O que mudou:**
+- Nova migration add_email_campaigns criando tabela email_campaigns (16 campos + 1 índice composto status+createdAt)
+- Novo model Prisma EmailCampaign com estados: PENDING, RUNNING, COMPLETED, FAILED, CANCELLED
+- Novo arquivo backend/src/services/campaigns.service.ts (resolveCampaignRecipients extraído de admin.routes.ts + types CampaignFilters/CampaignAudience/CampaignRecipient)
+- Novo arquivo backend/src/jobs/campaign-runner.job.ts:
+  * Pickup atômico PENDING→RUNNING via updateMany (concurrency lock)
+  * 1 campanha por tick
+  * Loop com sendTemplateMail + rate limit 100ms
+  * Checagem de cancelamento a cada 10 iterações
+  * Persist incremental de progresso a cada 20 envios
+  * Estados finais: COMPLETED (sucesso), FAILED (erro top-level), CANCELLED (interrompido via admin)
+- backend/src/jobs/index.ts: registra cron a cada 1 minuto
+- Refactor POST /admin/campaign/send:
+  * BREAKING CHANGE: agora retorna 202 { campaignId, status, totalRecipients } em vez de { total, sent, failed, skipped }
+  * Cria EmailCampaign PENDING em vez de processar no request
+  * Job pega em até 1 minuto
+
+**Dívidas técnicas:**
+- Crash recovery: se Railway derrubar processo no meio, campanha fica órfã em RUNNING. Aceito pra MVP — adicionar timeout-based recovery em iteração futura (startedAt > 30min + status=RUNNING → marcar FAILED)
+
+**Documentos impactados:**
+- 07_Modelo_Banco_de_Dados.md (tabela email_campaigns)
+- 08_Arquitetura_do_Sistema.md (novo job campaign-runner + fluxo async)
+- 09_Estrutura_de_Codigo.md (services/campaigns.service.ts)
+- 10_Documentacao_da_API.md (POST /campaign/send agora retorna 202)
+
+---
+
+### Sub-etapa 6L.3.b — Rotas de consulta + cancelamento
+**Status:** Em produção (commit f61313c)
+
+**O que mudou:**
+- 3 novas rotas em admin.routes.ts:
+  * GET /admin/campaigns — lista paginada cursor (status filter, limit 50/200)
+  * GET /admin/campaigns/:id — detalhe completo (usado pelo polling do frontend)
+  * POST /admin/campaigns/:id/cancel — marca CANCELLED com guard (só PENDING/RUNNING)
+- Race handling: updateMany atômico retorna 409 STATUS_CHANGED se status mudou entre findUnique e updateMany
+- Runner detecta CANCELLED na próxima iteração e para gracioso
+
+**Documentos impactados:**
+- 10_Documentacao_da_API.md (3 novos endpoints)
+
+---
+
+### Sub-etapa 6L.3.c — Frontend async com polling + cancel
+**Status:** Em produção (commit 65e7c42)
+
+**O que mudou:**
+- Refactor frontend/src/pages/admin/NewCampaignPage.tsx (778 → 995 linhas)
+- Novos estados: campaignId, campaign (interface Campaign com 16 campos), cancelling
+- Removidos: sendStartedAt, sendElapsed, sendResult (estados do fluxo síncrono antigo)
+- Polling: useEffect dispara GET /admin/campaigns/:id a cada 2s até status cair em FINAL_STATUSES (COMPLETED/FAILED/CANCELLED)
+- Nova tela "em andamento":
+  * Título dinâmico (Aguardando / Enviando)
+  * Tempo decorrido via formatElapsed
+  * Progress bar laranja (sent+failed+skipped)/total
+  * Contadores inline
+  * Botão "Cancelar campanha" (vermelho, chama POST /:id/cancel)
+  * Aviso "Você pode fechar esta aba"
+- Tela de resultado atualizada pros 3 estados finais:
+  * COMPLETED: verde (failed=0) ou amarelo (com falhas)
+  * FAILED: vermelho + errorMessage em <pre>
+  * CANCELLED: cinza + aviso "Campanha cancelada no meio"
+- Resolve breaking change da 6L.3.a
+
+**Ciclo completo operacional:**
+- Admin abre /admin/emails/novo
+- Preenche form + calcula prévia + confirma
+- POST /send retorna 202 imediato com campaignId
+- Polling começa; cron pega em até 1 min e começa processar
+- Admin vê progresso live e pode cancelar
+- Quando termina, stats finais + botão "Ver logs completos"
+
+**Documentos impactados:**
+- 12_Design_das_Instancias.md (tela de progresso + cancelamento)
+
+---
+
 ## Divergências detectadas entre docs e implementação
 
 | Item | Doc afetado | Realidade em produção |
@@ -410,4 +491,9 @@
 - [ ] Doc 10 — GET /admin/email-logs
 - [ ] Doc 10 — POST /admin/campaign/preview e /send
 - [ ] Doc 12 — telas /admin/logs/emails e /admin/emails/novo
+- [ ] Doc 07 — tabela email_campaigns
+- [ ] Doc 08 — job campaign-runner + fluxo async de campanhas
+- [ ] Doc 09 — services/campaigns.service.ts
+- [ ] Doc 10 — GET /campaigns + /:id + /cancel; /send async retornando 202
+- [ ] Doc 12 — telas de progresso + cancelamento de campanha
 - [ ] Doc 00 (índice mestre) — refletir tudo
