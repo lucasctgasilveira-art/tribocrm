@@ -17,3 +17,15 @@ coverage/
 .vercel
 .env*.local
 backend/certs/
+
+# === Ruídos locais de desenvolvimento ===
+# Config local do Claude Code
+.claude/
+
+# Scripts de teste/dev não versionados
+find-p12.ps1
+test-webhook.ps1
+test-webhook-*.ps1
+
+# Dumps SQL de staging (não versionar)
+backend/staging-*.sql
