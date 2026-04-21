@@ -89,6 +89,71 @@ router.patch('/onboarding', async (req: Request, res: Response) => {
 // endereço completo em /subscription-form-data sem oferecer caminho
 // de correção.
 
+// Mesma seleção usada pelo PATCH abaixo — extraída pra reuso entre
+// GET (hidratação inicial do form) e PATCH (response pós-update).
+const myTenantSelect = {
+  id: true,
+  name: true,
+  tradeName: true,
+  phone: true,
+  email: true,
+  cnpj: true,
+  document: true,
+  addressStreet: true,
+  addressNumber: true,
+  addressComplement: true,
+  addressNeighborhood: true,
+  addressCity: true,
+  addressState: true,
+  addressZip: true,
+} as const
+
+router.get('/me', async (req: Request, res: Response) => {
+  try {
+    const role = req.user!.role
+    if (role !== 'OWNER' && role !== 'MANAGER') {
+      res.status(403).json({
+        success: false,
+        error: {
+          code: 'FORBIDDEN',
+          message: 'Apenas OWNER ou MANAGER podem acessar dados da empresa',
+        },
+      })
+      return
+    }
+
+    const tenantId = req.user!.tenantId
+    if (tenantId === 'platform') {
+      res.status(400).json({
+        success: false,
+        error: { code: 'INVALID_TENANT', message: 'Super Admin não tem tenant pra consultar' },
+      })
+      return
+    }
+
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: myTenantSelect,
+    })
+
+    if (!tenant) {
+      res.status(404).json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Tenant não encontrado' },
+      })
+      return
+    }
+
+    res.json({ success: true, data: tenant })
+  } catch (err: any) {
+    console.error('[GET /tenants/me] erro:', err?.message ?? err)
+    res.status(500).json({
+      success: false,
+      error: { code: 'FETCH_FAILED', message: 'Erro ao buscar dados' },
+    })
+  }
+})
+
 const updateMyTenantBodySchema = z.object({
   name: z.string().min(2).max(150).optional(),
   tradeName: z.string().max(150).optional(),
@@ -170,22 +235,7 @@ router.patch('/me', async (req: Request, res: Response) => {
     const updated = await prisma.tenant.update({
       where: { id: tenantId },
       data: updateData,
-      select: {
-        id: true,
-        name: true,
-        tradeName: true,
-        phone: true,
-        email: true,
-        cnpj: true,
-        document: true,
-        addressStreet: true,
-        addressNumber: true,
-        addressComplement: true,
-        addressNeighborhood: true,
-        addressCity: true,
-        addressState: true,
-        addressZip: true,
-      },
+      select: myTenantSelect,
     })
 
     console.log(
