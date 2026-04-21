@@ -158,17 +158,29 @@ export async function createBoletoCharge(tenantId: string, chargeData: BoletoCha
   // flow (can be CPF or CNPJ). Fall back to legacy `debtorCpf` so
   // existing upgrade/card flows keep working unchanged.
   const docClean = (chargeData.document ?? chargeData.debtorCpf ?? '').replace(/\D/g, '')
+  const debtorName = chargeData.customerName ?? chargeData.debtorName
+
   const customer: any = {
-    name: chargeData.customerName ?? chargeData.debtorName,
     email: chargeData.customerEmail ?? chargeData.debtorEmail,
   }
+
   if (docClean.length === 14) {
-    customer.cnpj = docClean
+    // PJ: shape conforme doc Efi. Razão social vai em
+    // juridical_person.corporate_name; `customer.name` e
+    // `customer.cnpj` no root são rejeitados com code 3500034
+    // ("Propriedade desconhecida").
+    customer.juridical_person = {
+      corporate_name: debtorName,
+      cnpj: docClean,
+    }
   } else if (docClean.length === 11) {
+    // PF
+    customer.name = debtorName
     customer.cpf = docClean
   } else {
-    // Keep Efi happy in dev/sandbox when no document was provided; the
-    // real gestor-entered value only arrives via the checkout field.
+    // Sandbox/fallback — sempre PF com CPF de teste documentado
+    // pela Efi. Real gestor-entered value vem via checkout field.
+    customer.name = debtorName
     customer.cpf = docClean.slice(0, 11) || '11144477735'
   }
 
