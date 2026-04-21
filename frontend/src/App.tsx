@@ -23,6 +23,7 @@ import MenuInstanciasPage from './pages/admin/MenuInstanciasPage'
 import PlansPage from './pages/admin/PlansPage'
 import LogsPage from './pages/admin/LogsPage'
 import EmailLogsPage from './pages/admin/EmailLogsPage'
+import NewCampaignPage from './pages/admin/NewCampaignPage'
 import GlobalSettingsPage from './pages/admin/GlobalSettingsPage'
 import TenantDetailPage from './pages/admin/TenantDetailPage'
 import CouponsPage from './pages/admin/CouponsPage'
@@ -114,6 +115,7 @@ export default function App() {
       <Route path="/admin/planos" element={<PrivateRoute allowed={['admin']}><PlansPage /></PrivateRoute>} />
       <Route path="/admin/logs" element={<PrivateRoute allowed={['admin']}><LogsPage /></PrivateRoute>} />
       <Route path="/admin/logs/emails" element={<PrivateRoute allowed={['admin']}><EmailLogsPage /></PrivateRoute>} />
+      <Route path="/admin/emails/novo" element={<PrivateRoute allowed={['admin']}><NewCampaignPage /></PrivateRoute>} />
       <Route path="/admin/configuracoes" element={<PrivateRoute allowed={['admin']}><GlobalSettingsPage /></PrivateRoute>} />
 
       {/* Gestão */}
