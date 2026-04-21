@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Search, Plus, MoreHorizontal, Loader2, X } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { adminMenuItems } from '../../config/adminMenu'
-import { getTenants, updateTenant } from '../../services/admin.service'
+import { getTenant, getTenants, updateTenant } from '../../services/admin.service'
 import api from '../../services/api'
 
 // ── Types ──
@@ -496,69 +496,191 @@ function NoteModal({ tenantId, onClose, onSaved }: { tenantId: string; onClose: 
 
 function EditTenantModal({ tenant, onClose, onSaved }: { tenant: Tenant; onClose: () => void; onSaved: () => void }) {
   const [name, setName] = useState(tenant.name)
+  const [tradeName, setTradeName] = useState(tenant.tradeName ?? '')
   const [email, setEmail] = useState(tenant.email)
+  const [phone, setPhone] = useState('')
   const [status, setStatus] = useState(tenant.status)
   const [planId, setPlanId] = useState(tenant.plan.id)
   const [plans, setPlans] = useState<{ id: string; name: string }[]>([])
   const [cycle, setCycle] = useState('MONTHLY')
+  // Endereço — 7 campos. Hidratados pelo useEffect abaixo via
+  // getTenant(id), já que a interface Tenant da listagem não
+  // carrega address* (payload de /admin/tenants é enxuto).
+  const [addressZip, setAddressZip] = useState('')
+  const [addressStreet, setAddressStreet] = useState('')
+  const [addressNumber, setAddressNumber] = useState('')
+  const [addressNeighborhood, setAddressNeighborhood] = useState('')
+  const [addressCity, setAddressCity] = useState('')
+  const [addressState, setAddressState] = useState('')
+  const [addressComplement, setAddressComplement] = useState('')
+  const [cepLoading, setCepLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const iS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
 
-  useState(() => { api.get('/payments/plans').then(r => setPlans(r.data.data)).catch(() => {}) })
+  useEffect(() => {
+    let cancelled = false
+    Promise.all([
+      api.get('/payments/plans').then(r => r.data.data as { id: string; name: string }[]).catch(() => []),
+      getTenant(tenant.id).catch(() => null),
+    ]).then(([planList, full]) => {
+      if (cancelled) return
+      setPlans(planList)
+      if (full) {
+        setName(full.name ?? tenant.name)
+        setTradeName(full.tradeName ?? '')
+        setEmail(full.email ?? tenant.email)
+        setPhone(full.phone ?? '')
+        setStatus(full.status ?? tenant.status)
+        setPlanId(full.plan?.id ?? tenant.plan.id)
+        setAddressZip(full.addressZip ? maskCEP(full.addressZip) : '')
+        setAddressStreet(full.addressStreet ?? '')
+        setAddressNumber(full.addressNumber ?? '')
+        setAddressNeighborhood(full.addressNeighborhood ?? '')
+        setAddressCity(full.addressCity ?? '')
+        setAddressState(full.addressState ?? '')
+        setAddressComplement(full.addressComplement ?? '')
+      }
+      setLoading(false)
+    })
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tenant.id])
+
+  async function buscarCep() {
+    const c = addressZip.replace(/\D/g, '')
+    if (c.length !== 8) return
+    setCepLoading(true)
+    try {
+      const r = await fetch(`https://viacep.com.br/ws/${c}/json/`)
+      const d = await r.json()
+      if (!d.erro) {
+        if (d.logradouro) setAddressStreet(d.logradouro)
+        if (d.bairro) setAddressNeighborhood(d.bairro)
+        if (d.localidade) setAddressCity(d.localidade)
+        if (d.uf) setAddressState(d.uf)
+      }
+    } catch {/**/}
+    setCepLoading(false)
+  }
 
   async function handleSave() {
     setSaving(true); setError('')
-    try { await updateTenant(tenant.id, { name, email, status, planId }); onSaved() }
+    try {
+      await updateTenant(tenant.id, {
+        name,
+        tradeName: tradeName || undefined,
+        email,
+        phone: phone || undefined,
+        status,
+        planId,
+        addressZip: addressZip || undefined,
+        addressStreet: addressStreet || undefined,
+        addressNumber: addressNumber || undefined,
+        addressNeighborhood: addressNeighborhood || undefined,
+        addressCity: addressCity || undefined,
+        addressState: addressState || undefined,
+        addressComplement: addressComplement || undefined,
+      })
+      onSaved()
+    }
     catch (e: any) { setError(e.response?.data?.error?.message ?? 'Erro ao salvar'); setSaving(false) }
   }
 
   function Lbl({ children }: { children: string }) { return <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>{children}</label> }
+  function Sec({ children }: { children: string }) { return <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, marginBottom: 10, marginTop: 16 }}>{children}</div> }
 
   return (
     <>
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
-      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 520, maxWidth: '90vw', maxHeight: '90vh', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 640, maxWidth: '90vw', maxHeight: '90vh', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
           <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Editar — {tenant.name}</h2>
           <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
         </div>
-        <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
-          <div style={{ marginBottom: 16 }}><Lbl>Razão Social</Lbl><input value={name} onChange={e => setName(e.target.value)} style={iS} /></div>
-          <div style={{ marginBottom: 16 }}><Lbl>Nome Fantasia</Lbl><input value={tenant.tradeName ?? ''} disabled style={{ ...iS, opacity: 0.6 }} /></div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-            <div><Lbl>CNPJ</Lbl><input value={tenant.cnpj} disabled style={{ ...iS, opacity: 0.6, cursor: 'not-allowed' }} /></div>
-            <div><Lbl>E-mail</Lbl><input value={email} onChange={e => setEmail(e.target.value)} style={iS} /></div>
+        {loading ? (
+          <div style={{ padding: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <Loader2 size={16} className="animate-spin" color="#f97316" />
+            <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Carregando dados do cliente...</span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-            <div><Lbl>Plano</Lbl>
-              <select value={planId} onChange={e => setPlanId(e.target.value)} style={{ ...iS, appearance: 'none' as const, cursor: 'pointer' }}>
-                {plans.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
+        ) : (
+          <>
+          <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
+            <Sec>Identificação</Sec>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+              <div><Lbl>Razão Social</Lbl><input value={name} onChange={e => setName(e.target.value)} style={iS} /></div>
+              <div><Lbl>Nome Fantasia</Lbl><input value={tradeName} onChange={e => setTradeName(e.target.value)} style={iS} /></div>
             </div>
-            <div><Lbl>Status</Lbl>
-              <select value={status} onChange={e => setStatus(e.target.value)} style={{ ...iS, appearance: 'none' as const, cursor: 'pointer' }}>
-                <option value="ACTIVE">Ativo</option><option value="TRIAL">Trial</option><option value="SUSPENDED">Suspenso</option><option value="CANCELLED">Cancelado</option>
-              </select>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+              <div><Lbl>CNPJ</Lbl><input value={tenant.cnpj} disabled style={{ ...iS, opacity: 0.6, cursor: 'not-allowed' }} /></div>
+              <div><Lbl>Telefone</Lbl><input value={phone} onChange={e => setPhone(e.target.value)} placeholder="(00) 00000-0000" style={iS} /></div>
             </div>
+            <div style={{ marginBottom: 4 }}><Lbl>E-mail</Lbl><input type="email" value={email} onChange={e => setEmail(e.target.value)} style={iS} /></div>
+
+            <Sec>Plano e Status</Sec>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+              <div><Lbl>Plano</Lbl>
+                <select value={planId} onChange={e => setPlanId(e.target.value)} style={{ ...iS, appearance: 'none' as const, cursor: 'pointer' }}>
+                  {plans.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+              <div><Lbl>Status</Lbl>
+                <select value={status} onChange={e => setStatus(e.target.value)} style={{ ...iS, appearance: 'none' as const, cursor: 'pointer' }}>
+                  <option value="ACTIVE">Ativo</option><option value="TRIAL">Trial</option><option value="SUSPENDED">Suspenso</option><option value="CANCELLED">Cancelado</option>
+                </select>
+              </div>
+            </div>
+            <div><Lbl>Ciclo</Lbl>
+              <div style={{ display: 'flex', gap: 10 }}>
+                {[{ k: 'MONTHLY', l: 'Mensal' }, { k: 'YEARLY', l: 'Anual (-15%)' }].map(c => (
+                  <label key={c.k} onClick={() => setCycle(c.k)} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)' }}>
+                    <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${cycle === c.k ? '#f97316' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{cycle === c.k && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f97316' }} />}</div>{c.l}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <Sec>Endereço</Sec>
+            <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+              <div style={{ width: 180 }}>
+                <Lbl>CEP</Lbl>
+                <div style={{ position: 'relative' }}>
+                  <input value={addressZip} onChange={e => setAddressZip(maskCEP(e.target.value))} onBlur={buscarCep} placeholder="00000-000" style={iS} />
+                  {cepLoading && (
+                    <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)' }}>
+                      <Loader2 size={14} className="animate-spin" color="#f97316" />
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div style={{ flex: 1 }}><Lbl>Logradouro</Lbl><input value={addressStreet} onChange={e => setAddressStreet(e.target.value)} style={iS} /></div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 12, marginBottom: 12 }}>
+              <div><Lbl>Número</Lbl><input value={addressNumber} onChange={e => setAddressNumber(e.target.value)} style={iS} /></div>
+              <div><Lbl>Complemento</Lbl><input value={addressComplement} onChange={e => setAddressComplement(e.target.value)} placeholder="opcional" style={iS} /></div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 100px', gap: 12 }}>
+              <div><Lbl>Bairro</Lbl><input value={addressNeighborhood} onChange={e => setAddressNeighborhood(e.target.value)} style={iS} /></div>
+              <div><Lbl>Cidade</Lbl><input value={addressCity} onChange={e => setAddressCity(e.target.value)} style={iS} /></div>
+              <div><Lbl>UF</Lbl>
+                <select value={addressState} onChange={e => setAddressState(e.target.value)} style={{ ...iS, appearance: 'none' as const, cursor: 'pointer' }}>
+                  <option value="">--</option>
+                  {UFS.map(u => <option key={u} value={u}>{u}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {error && <div style={{ fontSize: 12, color: '#ef4444', marginTop: 12 }}>{error}</div>}
           </div>
-          <div style={{ marginBottom: 16 }}><Lbl>Ciclo</Lbl>
-            <div style={{ display: 'flex', gap: 10 }}>
-              {[{ k: 'MONTHLY', l: 'Mensal' }, { k: 'YEARLY', l: 'Anual (-15%)' }].map(c => (
-                <label key={c.k} onClick={() => setCycle(c.k)} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)' }}>
-                  <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${cycle === c.k ? '#f97316' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{cycle === c.k && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f97316' }} />}</div>{c.l}
-                </label>
-              ))}
-            </div>
+          <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+            <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
+            <button onClick={handleSave} disabled={saving} style={{ background: '#f97316', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: '#fff', cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: saving ? 0.7 : 1 }}>
+              {saving && <Loader2 size={14} className="animate-spin" />}{saving ? 'Salvando...' : 'Salvar'}
+            </button>
           </div>
-          {error && <div style={{ fontSize: 12, color: '#ef4444', marginTop: 12 }}>{error}</div>}
-        </div>
-        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
-          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
-          <button onClick={handleSave} disabled={saving} style={{ background: '#f97316', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-            {saving && <Loader2 size={14} className="animate-spin" />}{saving ? 'Salvando...' : 'Salvar'}
-          </button>
-        </div>
+          </>
+        )}
       </div>
     </>
   )
