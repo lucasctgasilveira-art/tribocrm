@@ -14,13 +14,45 @@ import {
 // Cancelamento (status=CANCELLED gravado por outra rota) é checado
 // a cada 10 iterações pra reduzir queries; se detectado, persiste
 // progresso parcial e sai sem marcar COMPLETED.
-// Crash recovery: campanhas que travarem em RUNNING ficam órfãs
-// até intervenção manual (sub-etapa futura adiciona timeout).
+// Crash recovery (6L.3.d): campanhas RUNNING há mais de 30min são
+// marcadas como FAILED no início de cada tick — protege contra
+// processo que crashou ou foi reiniciado no meio do envio. Os
+// contadores sent/failed/skipped que já tinham sido persistidos
+// (a cada 20 iter) ficam como stats finais.
 
 const RATE_LIMIT_MS = 100
+const ORPHAN_TIMEOUT_MS = 30 * 60 * 1000
+
+async function recoverOrphanedCampaigns(): Promise<void> {
+  const threshold = new Date(Date.now() - ORPHAN_TIMEOUT_MS)
+
+  try {
+    const result = await prisma.emailCampaign.updateMany({
+      where: {
+        status: 'RUNNING',
+        startedAt: { lt: threshold },
+      },
+      data: {
+        status: 'FAILED',
+        errorMessage: 'Campanha interrompida (processo reiniciado ou travou)',
+        completedAt: new Date(),
+      },
+    })
+
+    if (result.count > 0) {
+      console.warn(`[CampaignRunner] recovered ${result.count} orphaned campaign(s) as FAILED`)
+    }
+  } catch (err: any) {
+    // Não propaga — falha no recovery não deve bloquear o pickup
+    // de novas campanhas PENDING. A próxima tick tenta de novo.
+    console.error('[CampaignRunner] erro no recovery de órfãs:', err?.message)
+  }
+}
 
 export async function runCampaignRunnerJob(): Promise<void> {
   try {
+    await recoverOrphanedCampaigns()
+
     const next = await prisma.emailCampaign.findFirst({
       where: { status: 'PENDING' },
       orderBy: { createdAt: 'asc' },
