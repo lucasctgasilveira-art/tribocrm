@@ -2,7 +2,7 @@
 
 **Objetivo:** consolidar mudanças implementadas na fase billing (sub-etapas 6A–6L) para atualização em lote nos documentos principais do projeto após conclusão da 6K.
 
-**Última atualização:** 20/04/2026 (após 6K.2)
+**Última atualização:** 20/04/2026 (após 6L.2)
 
 ---
 
@@ -239,15 +239,132 @@
 
 ---
 
-### Sub-etapa 6K.3 — Unit tests runBillingStateMachineJob (PENDENTE)
-**Status:** Pendente (próxima sub-etapa)
+### Sub-etapa 6K.3a — Unit tests TRIAL lane
+**Status:** Em produção (commit a98f0b2)
 
-**Escopo planejado:**
-- Mocks de prisma (findMany, updateMany, charge.create/findFirst)
-- Mock de sendTemplateMail
-- Mock de createPixCharge / createBoletoCharge
-- 10 cenários: TRIAL D-7/D-3/D-1, trial expirado, OVERDUE D+7, SUSPENDED D+10, idempotência, race condition, skip guards, error handling
-- vi.useFakeTimers() + vi.setSystemTime
+**O que mudou:**
+- 10 novos unit tests em billing-state-machine.job.test.ts cobrindo:
+  * D-7 fresh (dispara template 2)
+  * D-3 fresh × 4 (PIX / BOLETO / charge existente / sem preferredPaymentMethod)
+  * D-1 fresh (dispara template 4)
+  * Idempotência D-7
+  * Skip guards (sem owner / sem trialEndsAt)
+  * Error handling (sendTemplateMail sent:false preserva state)
+- Setup de mocks via vitest-mock-extended: mockDeep<PrismaClient>() + vi.mock em mailer.service e efi.service
+- Factory makeTenant reutilizável
+- vi.useFakeTimers() + setSystemTime(2026-04-20) pra datas determinísticas
+
+---
+
+### Sub-etapa 6K.3b — Unit tests OVERDUE + SUSPENDED + edge cases
+**Status:** Em produção (commit 0563cd6)
+
+**O que mudou:**
+- 8 novos unit tests organizados em sibling describe:
+  * OVERDUE lane: D+0 fresh (TRIAL→OVERDUE) / D+0 legacy / D+7 fresh / idempotência D+0 e D+7
+  * SUSPENDED lane: D+10 fresh (OVERDUE→SUSPENDED)
+  * Edge cases: race condition (updateMany count=0) / legacy TRIAL_EXPIRED marker
+- Total final: 51 tests verdes (2 smoke + 31 puros + 10 TRIAL + 8 OVERDUE) em <600ms
+- Régua de billing completamente coberta contra regressão
+
+---
+
+### Sub-etapa 6L.1.a — Migration email_logs + persistência no mailer
+**Status:** Em produção (commit cf6b899)
+
+**O que mudou:**
+- Nova migration add_email_logs criando tabela email_logs:
+  * id, tenantId, toEmail, templateId, subject, status
+  * brevoMessageId, errorReason, errorDetails, paramsJson
+  * sentAt
+  * 2 índices: (tenantId, sentAt desc) e (status, sentAt desc)
+- Helper logEmailAttempt() em mailer.service.ts (fire-and-forget)
+- tenantId? opcional adicionado a SendMailOptions e SendTemplateMailArgs
+- 8 chamadores atualizados passando tenantId:
+  * billing-state-machine.job.ts (tenant.id)
+  * automation.service.ts (automation.tenantId)
+  * expiry-alert.job.ts (t.id)
+  * password.controller.ts (user.tenantId)
+  * signup.controller.ts ×2 (created/user.tenantId)
+  * users.controller.ts (tenantId local)
+  * admin.routes.ts test-email (null)
+
+**Documentos impactados:**
+- 07_Modelo_Banco_de_Dados.md (tabela email_logs)
+
+---
+
+### Sub-etapa 6L.1.b — Rota admin GET /email-logs
+**Status:** Em produção (commit 8e3c83e)
+
+**O que mudou:**
+- Nova rota GET /admin/email-logs em admin.routes.ts
+- Query params (via Zod): status (single/array), templateId, tenantId, toEmail (LIKE), dateFrom, dateTo, limit (default 100, max 500), cursor (UUID)
+- Paginação cursor-based com take: limit+1 pra detectar hasMore
+- Response: { items, hasMore, nextCursor }
+- authMiddleware + adminOnly herdados do router
+
+**Documentos impactados:**
+- 10_Documentacao_da_API.md
+
+---
+
+### Sub-etapa 6L.1.c — Página frontend EmailLogsPage
+**Status:** Em produção (commit 5342092)
+
+**O que mudou:**
+- Nova página frontend/src/pages/admin/EmailLogsPage.tsx (620 linhas)
+- Filtros inline no topo: status, busca por destinatário (debounce 400ms), dateFrom, dateTo, templateId
+- Tabela com badge colorido de status (verde SENT, vermelho FAILED, cinza SKIPPED)
+- Paginação "Carregar mais" (consome nextCursor)
+- Modal de detalhes ao clicar linha: metadata grid + params JSON formatado + error details
+- Fecha com ESC
+- Rota nova: /admin/logs/emails
+- Entrada "Logs de E-mails" (ícone Mail) no adminMenu.ts
+
+**Documentos impactados:**
+- 12_Design_das_Instancias.md (página admin)
+
+---
+
+### Sub-etapa 6L.2.a — Rotas admin campaign preview + send
+**Status:** Em produção (commit aa335e0)
+
+**O que mudou:**
+- Nova rota POST /admin/campaign/preview: aceita filtros + audience, retorna { count, sample (até 10) }
+- Nova rota POST /admin/campaign/send: loop sequencial chamando sendTemplateMail, rate limit 100ms entre envios, retorna { total, sent, failed, skipped, durationMs }
+- Helper resolveCampaignRecipients reutilizado entre ambas
+- Filtros simples: planIds, tenantStatuses, roles (todos opcionais)
+- Audience: OWNERS ou ALL_USERS
+- Emails gerados caem automaticamente em email_logs (6L.1.a)
+- Role TEAM_LEADER confirmado no schema
+
+**Limitação conhecida:** campanhas > 500 destinatários podem dar timeout HTTP. MVP documenta; 6L.3 migrará pra background job.
+
+**Documentos impactados:**
+- 10_Documentacao_da_API.md
+
+---
+
+### Sub-etapa 6L.2.b — Página frontend NewCampaignPage
+**Status:** Em produção (commit 6b07eba)
+
+**O que mudou:**
+- Nova página frontend/src/pages/admin/NewCampaignPage.tsx (778 linhas)
+- Seções: Template Brevo (ID + params JSON), Audiência (radio OWNERS/ALL_USERS), Filtros (chips clicáveis), Ações
+- Plan multi-select dinâmico via GET /admin/plans
+- Status e Role via chips coloridos
+- Botão "Calcular prévia" → mostra count + sample inline
+- Botão "Disparar" (habilitado só após prévia) → modal de confirmação
+- Modal confirm: count, templateId, tempo estimado, warning vermelho
+- Durante envio: full-screen com timer de segundos decorridos
+- Resultado final: stats grid 2×2 + botões "Ver logs completos" e "Nova campanha"
+- Roles escondidos quando audience=OWNERS (backend já força)
+- Rota: /admin/emails/novo
+- Entrada "Nova Campanha" (ícone Send) no menu admin
+
+**Documentos impactados:**
+- 12_Design_das_Instancias.md (página admin)
 
 ---
 
@@ -288,4 +405,9 @@
 - [ ] Doc 14 — política de suporte alinhada com cronograma real
 - [ ] Doc 12 — telas de billing (BillingBanner, BillingOverduePopup, SuspendedPage, CardSubscriptionForm)
 - [ ] Doc 03 — jornadas de inadimplência
+- [ ] Doc 07 — tabela email_logs
+- [ ] Doc 09 — pasta admin/ com EmailLogsPage e NewCampaignPage
+- [ ] Doc 10 — GET /admin/email-logs
+- [ ] Doc 10 — POST /admin/campaign/preview e /send
+- [ ] Doc 12 — telas /admin/logs/emails e /admin/emails/novo
 - [ ] Doc 00 (índice mestre) — refletir tudo
