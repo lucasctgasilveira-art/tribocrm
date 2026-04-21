@@ -229,7 +229,11 @@ export async function updateTenant(req: Request, res: Response): Promise<void> {
       return
     }
 
-    const { status, planId, trialEndsAt, internalNotes, name, tradeName, email, phone } = req.body
+    const {
+      status, planId, trialEndsAt, internalNotes, name, tradeName, email, phone,
+      addressStreet, addressNumber, addressComplement, addressNeighborhood,
+      addressCity, addressState, addressZip,
+    } = req.body
 
     const data: Prisma.TenantUpdateInput = {}
     if (name !== undefined) data.name = name
@@ -240,6 +244,23 @@ export async function updateTenant(req: Request, res: Response): Promise<void> {
     if (planId !== undefined) data.plan = { connect: { id: planId } }
     if (trialEndsAt !== undefined) data.trialEndsAt = trialEndsAt ? new Date(trialEndsAt) : null
     if (internalNotes !== undefined) data.internalNotes = internalNotes
+    if (addressStreet !== undefined) data.addressStreet = addressStreet
+    if (addressNumber !== undefined) data.addressNumber = addressNumber
+    if (addressComplement !== undefined) data.addressComplement = addressComplement
+    if (addressNeighborhood !== undefined) data.addressNeighborhood = addressNeighborhood
+    if (addressCity !== undefined) data.addressCity = addressCity
+    // Sanitização espelha PATCH /tenants/me: UF VARCHAR(2) maiúsculo,
+    // CEP só dígitos (frontend pode enviar com hífen vindo de viacep).
+    if (addressState !== undefined) {
+      data.addressState = typeof addressState === 'string'
+        ? addressState.toUpperCase().slice(0, 2)
+        : addressState
+    }
+    if (addressZip !== undefined) {
+      data.addressZip = typeof addressZip === 'string'
+        ? addressZip.replace(/\D/g, '')
+        : addressZip
+    }
 
     const tenant = await prisma.tenant.update({
       where: { id },
