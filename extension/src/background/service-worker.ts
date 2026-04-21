@@ -34,7 +34,6 @@ chrome.runtime.onInstalled.addListener((details) => {
 
 chrome.runtime.onStartup.addListener(() => {
   log.info('Chrome iniciou — service worker acordou');
-  initScheduler();
 });
 
 // ── Roteador principal de mensagens ──────────────────────────────

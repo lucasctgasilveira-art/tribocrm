@@ -37,6 +37,20 @@ export function initScheduler() {
 }
 
 async function checkPendingMessages() {
+  // Sem sessão, pula silenciosamente — o alarme começa antes do login
+  const isAuthed = await api.auth.isAuthenticated();
+  if (!isAuthed) {
+    log.debug('Sem sessão, pulando ciclo');
+    return;
+  }
+
+  // Sem aba do WhatsApp Web, não há pra onde enviar
+  const tabs = await chrome.tabs.query({ url: 'https://web.whatsapp.com/*' });
+  if (tabs.length === 0) {
+    log.debug('WhatsApp Web não aberto, pulando ciclo');
+    return;
+  }
+
   try {
     const pending = await api.messages.listPending();
     const now = Date.now();
@@ -45,16 +59,6 @@ async function checkPendingMessages() {
     if (due.length === 0) return;
 
     log.info(`${due.length} mensagem(ns) pronta(s) para envio`);
-
-    // Encontra uma aba aberta do WhatsApp Web
-    const tabs = await chrome.tabs.query({
-      url: 'https://web.whatsapp.com/*'
-    });
-
-    if (tabs.length === 0) {
-      log.warn('WhatsApp Web não está aberto — abortando envios');
-      return;
-    }
 
     const wppTab = tabs[0];
     if (!wppTab.id) return;
