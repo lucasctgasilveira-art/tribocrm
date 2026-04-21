@@ -2,7 +2,7 @@
 
 **Objetivo:** consolidar mudanças implementadas na fase billing (sub-etapas 6A–6L) para atualização em lote nos documentos principais do projeto após conclusão da 6K.
 
-**Última atualização:** 20/04/2026 (após 6L.3)
+**Última atualização:** 21/04/2026 (após 6M + fixes Efi)
 
 ---
 
@@ -497,6 +497,97 @@
 - [ ] Doc 10 — GET /campaigns + /:id + /cancel; /send async retornando 202
 - [ ] Doc 12 — telas de progresso + cancelamento de campanha
 - [ ] Doc 00 (índice mestre) — refletir tudo
+
+---
+
+## Sub-etapa 6M — Endereço do tenant + fixes Efi
+**Status:** ✅ Em produção (sessão 21/04/2026)
+
+### 6M.1 — Gestor edita dados da empresa
+
+**6M.1.b** (commit `82b802d`) — Rota backend `PATCH /tenants/me`:
+- Schema Zod `.strict()` com 11 campos editáveis
+  (name, tradeName, phone, email + 7 address*)
+- Guards: role OWNER|MANAGER + tenantId !== 'platform'
+- Sanitização: zipcode remove não-dígitos, state uppercase slice(0,2)
+- Adicionada `GET /tenants/me` simétrica pra frontend hidratar
+
+**6M.1.c** (commit `9f7aa3f`) — Frontend: aba Empresa:
+- Nova aba "Empresa" (primeira) em `SettingsPage.tsx`
+- Componente novo: `frontend/src/components/settings/CompanyTab.tsx` (295 linhas)
+- Service novo: `frontend/src/services/tenant.service.ts`
+- ViaCEP integrado (copiado do SignupPage)
+- CNPJ disabled (com hint "contato com suporte")
+- Invalida cache de `useCurrentTenant` após save
+
+### 6M.2 — Super admin vê e edita endereço
+
+**6M.2.a** (commit `86c4482`) — Controller admin:
+- `updateTenant` aceita 7 campos address* (aumentou de 8 pra 15 aceitos)
+- Mesma sanitização do PATCH /tenants/me
+
+**6M.2.b** (commit `4526e9b`) — TenantDetailPage:
+- Nova seção "Endereço" entre "Dados da empresa" e "Usuários"
+- Empty state quando não preenchido
+- Grid 3 colunas + helpers formatCep e displayValue
+
+**6M.2.c** (commit `a69f8b4`) — EditTenantModal:
+- 7 campos address editáveis com ViaCEP
+- Modal alargado 520→640px
+- Fetch paralelo no mount: getTenant + plans
+- handleSave preserva null (empty strings viram undefined)
+
+### Fix crítico em boletos Efi (descoberto via teste real)
+
+**Fix 1** (commit `265b033`) — Endereço no payload Efi:
+- `BoletoChargeData` estendida com debtorNumber/Neighborhood/Complement
+- `createBoletoCharge` monta `customer.address` condicional
+- Se street+city+state+zipcode faltar → omite bloco address
+  (em vez de falsificar com 'N/A'/'São Paulo'/'01000000')
+- 4 callers (billing-state-machine.job + admin.routes + payments.routes)
+  limpos de fallbacks hardcoded
+
+**Fix 2** (commit `d34d1de`) — Shape juridical_person pra PJ:
+- Bug pré-existente: `customer.cnpj` no root → Efi rejeita com
+  code 3500034 "Propriedade desconhecida"
+- Correção: PJ usa `customer.juridical_person.{corporate_name, cnpj}`
+  conforme doc Efi
+- PF inalterado (name + cpf no root)
+- Invertido debtorName em billing-state-machine.job:220
+  (tenant.name ?? tenant.tradeName em vez do oposto) pra razão
+  social virar corporate_name
+
+### Regras de negócio Efi descobertas hoje
+
+**Code 3500034 — "Propriedade desconhecida"**
+- Causa: campos fora do schema aceito pela Efi
+- Exemplo real: `customer.cnpj` não existe em boletos, deve ser
+  `customer.juridical_person.cnpj`
+- Ação em caso de repetição: consultar doc oficial
+  (https://dev.efipay.com.br/docs/api-cobrancas/boleto) pra
+  shape correto do payload
+
+**Code 4600222 — "Recebedor e cliente não podem ser a mesma pessoa"**
+- Causa: CNPJ do sacado == CNPJ da conta Efi
+  (recebedor = beneficiário)
+- Acontece quando: tenant de teste criado com o mesmo CNPJ da
+  conta Efi do TriboCRM
+- Ação em produção: nunca vai acontecer pra cliente real
+  (CNPJs diferentes). Em ambiente de teste/QA, usar CNPJ válido
+  mas diferente do beneficiário
+- Payload nesse caso foi ACEITO pela Efi — só a regra de negócio
+  bloqueou
+
+### Dívida técnica identificada (não crítica)
+
+- PIX path em billing-state-machine.job:194 ainda usa
+  `tenant.tradeName ?? tenant.name`. Se algum dia a consistência
+  entre PIX e Boleto virar auditoria, inverter pra
+  `tenant.name ?? tenant.tradeName` (razão social prioritária).
+
+- Card subscription (`createCardSubscription`) só suporta PF
+  hoje. Se precisar suportar PJ via cartão recorrente, adaptar
+  shape com `juridical_person` (mesmo padrão do boleto).
 
 ---
 
