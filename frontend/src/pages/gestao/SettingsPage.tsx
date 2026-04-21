@@ -5,8 +5,9 @@ import { gestaoMenuItems } from '../../config/gestaoMenu'
 import api from '../../services/api'
 import { getPipelines, updatePipeline, createPipeline, saveStages, type PipelineDistributionType } from '../../services/pipeline.service'
 import { getUsers, getTeams } from '../../services/users.service'
+import CompanyTab from '../../components/settings/CompanyTab'
 
-type Tab = 'pipeline' | 'loss' | 'tasks' | 'integrations'
+type Tab = 'company' | 'pipeline' | 'loss' | 'tasks' | 'integrations'
 
 // ── Shared styles ──
 
@@ -42,9 +43,10 @@ const VISIBILITY_OPTS = [
 // ── Component ──
 
 export default function SettingsPage() {
-  const [tab, setTab] = useState<Tab>('pipeline')
+  const [tab, setTab] = useState<Tab>('company')
 
   const tabs: { key: Tab; label: string }[] = [
+    { key: 'company', label: 'Empresa' },
     { key: 'pipeline', label: 'Pipeline' },
     { key: 'loss', label: 'Motivos de Perda' },
     { key: 'tasks', label: 'Tarefas Gerenciais' },
@@ -68,6 +70,7 @@ export default function SettingsPage() {
         ))}
       </div>
 
+      {tab === 'company' && <CompanyTab />}
       {tab === 'pipeline' && <PipelineTab />}
       {tab === 'loss' && <LossReasonsTab />}
       {tab === 'tasks' && <ManagerialTasksTab />}
