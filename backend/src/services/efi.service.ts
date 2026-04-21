@@ -122,10 +122,18 @@ interface BoletoChargeData {
   debtorName: string
   debtorCpf: string
   debtorEmail: string
-  debtorStreet: string
-  debtorCity: string
-  debtorState: string
-  debtorZipCode: string
+  // Address fields — bloco `customer.address` só é enviado à Efi
+  // quando street+city+state+zipCode estão todos presentes; faltando
+  // qualquer um, o bloco é omitido por completo (Efi aceita boleto
+  // sem address). Number/neighborhood/complement têm defaults
+  // sensatos ('S/N' / 'Centro') ou são omitidos quando opcionais.
+  debtorStreet?: string
+  debtorCity?: string
+  debtorState?: string
+  debtorZipCode?: string
+  debtorNumber?: string
+  debtorNeighborhood?: string
+  debtorComplement?: string
   discountValue?: number // valor absoluto do desconto em R$, para registro
   // Newer checkout flow prefers these three — when a `document` is
   // passed, it's split into cpf (11 digits) or cnpj (14 digits) so a
@@ -162,6 +170,41 @@ export async function createBoletoCharge(tenantId: string, chargeData: BoletoCha
     // Keep Efi happy in dev/sandbox when no document was provided; the
     // real gestor-entered value only arrives via the checkout field.
     customer.cpf = docClean.slice(0, 11) || '11144477735'
+  }
+
+  // Só enviamos `customer.address` quando temos os 4 campos mínimos
+  // (street/city/state/zipcode). Faltando qualquer um, omitimos o
+  // bloco inteiro — boleto ainda é aceito pela Efi e evitamos
+  // injetar dados falsos.
+  const hasMinimumAddress = !!(
+    chargeData.debtorStreet &&
+    chargeData.debtorCity &&
+    chargeData.debtorState &&
+    chargeData.debtorZipCode
+  )
+
+  if (hasMinimumAddress) {
+    const zipClean = chargeData.debtorZipCode!.replace(/\D/g, '')
+    const stateClean = chargeData.debtorState!.toUpperCase().slice(0, 2)
+    customer.address = {
+      street: chargeData.debtorStreet!,
+      number: chargeData.debtorNumber || 'S/N',
+      neighborhood: chargeData.debtorNeighborhood || 'Centro',
+      zipcode: zipClean,
+      city: chargeData.debtorCity!,
+      state: stateClean,
+      ...(chargeData.debtorComplement
+        ? { complement: chargeData.debtorComplement }
+        : {}),
+    }
+    console.log(`[efi:createBoletoCharge] address incluído no payload (tenant=${tenantId})`)
+  } else {
+    console.warn(
+      `[efi:createBoletoCharge] address omitido para tenant=${tenantId} ` +
+      `(dados incompletos: street=${!!chargeData.debtorStreet} ` +
+      `city=${!!chargeData.debtorCity} state=${!!chargeData.debtorState} ` +
+      `zipcode=${!!chargeData.debtorZipCode})`,
+    )
   }
 
   console.log('[Efi Boleto] Creating charge:', JSON.stringify({ value: chargeData.value, dueDate: chargeData.dueDate, customer }))
