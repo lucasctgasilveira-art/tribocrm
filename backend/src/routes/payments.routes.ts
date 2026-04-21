@@ -96,7 +96,12 @@ router.post('/boleto', authMiddleware, async (req: Request, res: Response) => {
       return
     }
 
-    const { value, description, dueDate, debtorStreet, debtorCity, debtorState, debtorZipCode, document } = req.body
+    const {
+      value, description, dueDate,
+      debtorStreet, debtorCity, debtorState, debtorZipCode,
+      debtorNumber, debtorNeighborhood, debtorComplement,
+      document,
+    } = req.body
 
     // Persist the CPF/CNPJ on the tenant row so subsequent boletos
     // don't require the gestor to retype it. Only writes when the
@@ -125,10 +130,13 @@ router.post('/boleto', authMiddleware, async (req: Request, res: Response) => {
       debtorName: debtor.debtorName,
       debtorCpf: debtor.debtorCpf,
       debtorEmail: debtor.debtorEmail,
-      debtorStreet: debtorStreet ?? 'Rua não informada',
-      debtorCity: debtorCity ?? 'São Paulo',
-      debtorState: debtorState ?? 'SP',
-      debtorZipCode: debtorZipCode ?? '01000000',
+      debtorStreet: debtorStreet ?? undefined,
+      debtorCity: debtorCity ?? undefined,
+      debtorState: debtorState ?? undefined,
+      debtorZipCode: debtorZipCode ?? undefined,
+      debtorNumber: debtorNumber ?? undefined,
+      debtorNeighborhood: debtorNeighborhood ?? undefined,
+      debtorComplement: debtorComplement ?? undefined,
       customerName: tenant?.name ?? debtor.debtorName,
       customerEmail: user?.email ?? debtor.debtorEmail,
       document: effectiveDocument || undefined,
@@ -202,7 +210,21 @@ router.post('/upgrade', authMiddleware, async (req: Request, res: Response) => {
     if (paymentMethod === 'BOLETO') {
       const dueDate = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
       const boletoDebtor = await getBoletoDebtorData(userId)
-      const result = await createBoletoCharge(tenantId, { value: proratedValue, description: `Upgrade para ${newPlan.name}`, dueDate, debtorName: boletoDebtor.debtorName, debtorCpf: boletoDebtor.debtorCpf, debtorEmail: boletoDebtor.debtorEmail, debtorStreet: 'Não informado', debtorCity: 'São Paulo', debtorState: 'SP', debtorZipCode: '01000000' })
+      const result = await createBoletoCharge(tenantId, {
+        value: proratedValue,
+        description: `Upgrade para ${newPlan.name}`,
+        dueDate,
+        debtorName: boletoDebtor.debtorName,
+        debtorCpf: boletoDebtor.debtorCpf,
+        debtorEmail: boletoDebtor.debtorEmail,
+        debtorStreet: tenant.addressStreet ?? undefined,
+        debtorCity: tenant.addressCity ?? undefined,
+        debtorState: tenant.addressState ?? undefined,
+        debtorZipCode: tenant.addressZip ?? undefined,
+        debtorNumber: tenant.addressNumber ?? undefined,
+        debtorNeighborhood: tenant.addressNeighborhood ?? undefined,
+        debtorComplement: tenant.addressComplement ?? undefined,
+      })
       res.json({ success: true, data: { ...result, proratedValue, newPlanName: newPlan.name } })
     } else {
       const result = await createPixCharge(tenantId, { value: proratedValue, description: `Upgrade para ${newPlan.name}`, debtorName: debtor.debtorName, debtorCpf: debtor.debtorCpf })

@@ -159,10 +159,13 @@ router.post('/tenants/:id/charge', async (req: Request, res: Response) => {
         debtorName: tenant.name,
         debtorCpf: cnpjClean,
         debtorEmail: tenant.email,
-        debtorStreet: tenant.addressStreet ?? 'N/A',
-        debtorCity: tenant.addressCity ?? 'São Paulo',
-        debtorState: tenant.addressState ?? 'SP',
-        debtorZipCode: tenant.addressZip ?? '01000000',
+        debtorStreet: tenant.addressStreet ?? undefined,
+        debtorCity: tenant.addressCity ?? undefined,
+        debtorState: tenant.addressState ?? undefined,
+        debtorZipCode: tenant.addressZip ?? undefined,
+        debtorNumber: tenant.addressNumber ?? undefined,
+        debtorNeighborhood: tenant.addressNeighborhood ?? undefined,
+        debtorComplement: tenant.addressComplement ?? undefined,
         discountValue: discountAbs > 0 ? discountAbs : undefined,
       })
       return res.json({ success: true, data: { ...result, amount: finalValue, discountValue: discountAbs, paymentMethod: 'BOLETO' } })
@@ -373,7 +376,21 @@ router.post('/charges/:id/retry', async (req: Request, res: Response) => {
     } else {
       const { createBoletoCharge } = await import('../services/efi.service')
       const dueDate = new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10)
-      const result = await createBoletoCharge(charge.tenantId, { value, description: desc, dueDate, debtorName: charge.tenant.name, debtorCpf: charge.tenant.document || charge.tenant.cnpj.replace(/\D/g, ''), debtorEmail: charge.tenant.email, debtorStreet: 'N/A', debtorCity: 'São Paulo', debtorState: 'SP', debtorZipCode: '01000000' })
+      const result = await createBoletoCharge(charge.tenantId, {
+        value,
+        description: desc,
+        dueDate,
+        debtorName: charge.tenant.name,
+        debtorCpf: charge.tenant.document || charge.tenant.cnpj.replace(/\D/g, ''),
+        debtorEmail: charge.tenant.email,
+        debtorStreet: charge.tenant.addressStreet ?? undefined,
+        debtorCity: charge.tenant.addressCity ?? undefined,
+        debtorState: charge.tenant.addressState ?? undefined,
+        debtorZipCode: charge.tenant.addressZip ?? undefined,
+        debtorNumber: charge.tenant.addressNumber ?? undefined,
+        debtorNeighborhood: charge.tenant.addressNeighborhood ?? undefined,
+        debtorComplement: charge.tenant.addressComplement ?? undefined,
+      })
       res.json({ success: true, data: result })
     }
   } catch (error: any) {

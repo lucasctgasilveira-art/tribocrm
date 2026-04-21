@@ -137,6 +137,9 @@ async function generateChargeForTrialEnd(tenant: {
   addressCity: string | null
   addressState: string | null
   addressZip: string | null
+  addressNumber: string | null
+  addressNeighborhood: string | null
+  addressComplement: string | null
   plan: { name: string; priceMonthly: unknown; priceYearly: unknown } | null
   users: Array<{ email: string }>
 }): Promise<ChargeResult> {
@@ -220,13 +223,16 @@ async function generateChargeForTrialEnd(tenant: {
         // present.
         debtorCpf: getValidDocument(tenant) ?? '',
         debtorEmail: owner.email,
-        // Same fallbacks as admin.routes.ts:155-158 — pre-5D tenants
-        // have null addresses and we mirror the admin flow instead of
-        // failing the charge.
-        debtorStreet: tenant.addressStreet || 'N/A',
-        debtorCity: tenant.addressCity || 'São Paulo',
-        debtorState: tenant.addressState || 'SP',
-        debtorZipCode: tenant.addressZip || '01000000',
+        // Pre-5D tenants têm endereço null — passamos undefined e
+        // createBoletoCharge omite o bloco customer.address inteiro
+        // em vez de inventar dados falsos.
+        debtorStreet: tenant.addressStreet ?? undefined,
+        debtorCity: tenant.addressCity ?? undefined,
+        debtorState: tenant.addressState ?? undefined,
+        debtorZipCode: tenant.addressZip ?? undefined,
+        debtorNumber: tenant.addressNumber ?? undefined,
+        debtorNeighborhood: tenant.addressNeighborhood ?? undefined,
+        debtorComplement: tenant.addressComplement ?? undefined,
         document: getValidDocument(tenant) ?? undefined,
       })
       return { success: true, chargeId: result.chargeId }
@@ -340,6 +346,9 @@ export async function runBillingStateMachineJob(): Promise<void> {
       addressCity: true,
       addressState: true,
       addressZip: true,
+      addressNumber: true,
+      addressNeighborhood: true,
+      addressComplement: true,
       lastBillingState: true,
       plan: {
         select: {
