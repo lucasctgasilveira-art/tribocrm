@@ -869,6 +869,185 @@ router.post('/campaign/send', async (req: Request, res: Response) => {
   }
 })
 
+// ── Email Campaigns — listagem + detalhe + cancel (sub-etapa 6L.3.b) ──
+//
+// GET    /admin/campaigns           — lista paginada (cursor)
+// GET    /admin/campaigns/:id       — detalhe com progresso (frontend faz polling)
+// POST   /admin/campaigns/:id/cancel — marca CANCELLED; runner pega na próxima iter
+
+const campaignsListQuerySchema = z.object({
+  status: z.union([z.string(), z.array(z.string())]).optional(),
+  limit: z.coerce.number().int().positive().max(200).default(50),
+  cursor: z.string().uuid().optional(),
+})
+
+router.get('/campaigns', async (req: Request, res: Response) => {
+  try {
+    const parseResult = campaignsListQuerySchema.safeParse(req.query)
+    if (!parseResult.success) {
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_PARAMS',
+          message: 'Parâmetros inválidos',
+          details: parseResult.error.flatten(),
+        },
+      })
+      return
+    }
+
+    const q = parseResult.data
+    const where: any = {}
+
+    if (q.status) {
+      const statuses = Array.isArray(q.status) ? q.status : [q.status]
+      where.status = { in: statuses }
+    }
+
+    const fetchLimit = q.limit + 1
+    const findArgs: any = {
+      where,
+      take: fetchLimit,
+      orderBy: { createdAt: 'desc' },
+    }
+    if (q.cursor) {
+      findArgs.cursor = { id: q.cursor }
+      findArgs.skip = 1
+    }
+
+    const results = await prisma.emailCampaign.findMany(findArgs)
+
+    const hasMore = results.length > q.limit
+    const items = hasMore ? results.slice(0, q.limit) : results
+    const nextCursor = hasMore ? items[items.length - 1]?.id ?? null : null
+
+    res.json({
+      success: true,
+      data: { items, hasMore, nextCursor },
+    })
+    return
+  } catch (err: any) {
+    console.error('[GET /admin/campaigns] erro:', err?.message)
+    res.status(500).json({
+      success: false,
+      error: { code: 'CAMPAIGNS_LIST_FAILED', message: 'Erro ao listar campanhas' },
+    })
+    return
+  }
+})
+
+router.get('/campaigns/:id', async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string
+    const uuidCheck = z.string().uuid().safeParse(id)
+    if (!uuidCheck.success) {
+      res.status(400).json({
+        success: false,
+        error: { code: 'INVALID_ID', message: 'ID inválido' },
+      })
+      return
+    }
+
+    const campaign = await prisma.emailCampaign.findUnique({
+      where: { id },
+    })
+
+    if (!campaign) {
+      res.status(404).json({
+        success: false,
+        error: { code: 'CAMPAIGN_NOT_FOUND', message: 'Campanha não encontrada' },
+      })
+      return
+    }
+
+    res.json({ success: true, data: campaign })
+    return
+  } catch (err: any) {
+    console.error('[GET /admin/campaigns/:id] erro:', err?.message)
+    res.status(500).json({
+      success: false,
+      error: { code: 'CAMPAIGN_DETAIL_FAILED', message: 'Erro ao buscar campanha' },
+    })
+    return
+  }
+})
+
+router.post('/campaigns/:id/cancel', async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string
+    const uuidCheck = z.string().uuid().safeParse(id)
+    if (!uuidCheck.success) {
+      res.status(400).json({
+        success: false,
+        error: { code: 'INVALID_ID', message: 'ID inválido' },
+      })
+      return
+    }
+
+    const existing = await prisma.emailCampaign.findUnique({
+      where: { id },
+      select: { id: true, status: true },
+    })
+
+    if (!existing) {
+      res.status(404).json({
+        success: false,
+        error: { code: 'CAMPAIGN_NOT_FOUND', message: 'Campanha não encontrada' },
+      })
+      return
+    }
+
+    if (!['PENDING', 'RUNNING'].includes(existing.status)) {
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'CANNOT_CANCEL',
+          message: `Campanha não pode ser cancelada (status atual: ${existing.status})`,
+        },
+      })
+      return
+    }
+
+    // Atomic guard contra race com o runner (que pode estar mudando
+    // status na mesma janela). updateMany.count===0 indica que outro
+    // ator já moveu o status entre nosso findUnique e a tentativa
+    // de update — devolvemos 409 pra UI tentar reler o estado.
+    const updateResult = await prisma.emailCampaign.updateMany({
+      where: {
+        id,
+        status: { in: ['PENDING', 'RUNNING'] },
+      },
+      data: { status: 'CANCELLED' },
+    })
+
+    if (updateResult.count === 0) {
+      res.status(409).json({
+        success: false,
+        error: {
+          code: 'STATUS_CHANGED',
+          message: 'Status da campanha mudou; tente novamente',
+        },
+      })
+      return
+    }
+
+    console.log(`[Campaign] ${id} cancelada pelo admin`)
+
+    res.json({
+      success: true,
+      data: { id, status: 'CANCELLED' },
+    })
+    return
+  } catch (err: any) {
+    console.error('[POST /admin/campaigns/:id/cancel] erro:', err?.message)
+    res.status(500).json({
+      success: false,
+      error: { code: 'CANCEL_FAILED', message: 'Erro ao cancelar campanha' },
+    })
+    return
+  }
+})
+
 // ── Billing Jobs ──
 
 // Manual trigger for the billing state machine job (sub-etapa 6C).
