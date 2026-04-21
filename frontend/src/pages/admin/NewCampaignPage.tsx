@@ -28,13 +28,27 @@ interface PreviewResult {
   }>
 }
 
-interface SendResult {
-  total: number
+type CampaignStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED'
+
+interface Campaign {
+  id: string
+  templateId: number
+  paramsJson: Record<string, unknown>
+  audience: 'OWNERS' | 'ALL_USERS'
+  filtersJson: unknown
+  status: CampaignStatus
+  totalRecipients: number
   sent: number
   failed: number
   skipped: number
-  durationMs: number
+  errorMessage: string | null
+  createdAt: string
+  startedAt: string | null
+  completedAt: string | null
+  createdBy: string | null
 }
+
+const FINAL_STATUSES: CampaignStatus[] = ['COMPLETED', 'FAILED', 'CANCELLED']
 
 interface PlanOption {
   id: string
@@ -153,9 +167,9 @@ export default function NewCampaignPage() {
   const [preview, setPreview] = useState<PreviewResult | null>(null)
 
   const [sending, setSending] = useState(false)
-  const [sendStartedAt, setSendStartedAt] = useState<number | null>(null)
-  const [sendElapsed, setSendElapsed] = useState(0)
-  const [sendResult, setSendResult] = useState<SendResult | null>(null)
+  const [campaignId, setCampaignId] = useState<string | null>(null)
+  const [campaign, setCampaign] = useState<Campaign | null>(null)
+  const [cancelling, setCancelling] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
 
   const [toast, setToast] = useState<string | null>(null)
@@ -188,14 +202,50 @@ export default function NewCampaignPage() {
     return () => clearTimeout(t)
   }, [toast])
 
-  // Timer pra disparo em andamento
+  // Polling do status da campanha (sub-etapa 6L.3.c).
+  // Ativado quando POST /campaign/send retorna campaignId. Bate em
+  // GET /admin/campaigns/:id a cada 2s até status virar terminal.
   useEffect(() => {
-    if (!sending || !sendStartedAt) return
-    const interval = setInterval(() => {
-      setSendElapsed(Math.floor((Date.now() - sendStartedAt) / 1000))
-    }, 1000)
-    return () => clearInterval(interval)
-  }, [sending, sendStartedAt])
+    if (!campaignId) return
+
+    let cancelled = false
+    let intervalId: ReturnType<typeof setInterval> | null = null
+
+    const stopPolling = () => {
+      if (intervalId) {
+        clearInterval(intervalId)
+        intervalId = null
+      }
+    }
+
+    const poll = async () => {
+      if (cancelled) return
+      try {
+        const res = await api.get<{ success: boolean; data: Campaign }>(
+          `/admin/campaigns/${campaignId}`,
+        )
+        if (cancelled) return
+        const camp = res.data?.data
+        if (!camp) return
+        setCampaign(camp)
+        if (FINAL_STATUSES.includes(camp.status)) {
+          stopPolling()
+        }
+      } catch (err: any) {
+        // Erros transitórios não param o polling — UX prefere
+        // tentar de novo a deixar a tela travada.
+        console.error('[polling] erro:', err?.message)
+      }
+    }
+
+    void poll()
+    intervalId = setInterval(poll, 2000)
+
+    return () => {
+      cancelled = true
+      stopPolling()
+    }
+  }, [campaignId])
 
   // Invalida prévia ao mudar campos relevantes
   useEffect(() => {
@@ -261,35 +311,53 @@ export default function NewCampaignPage() {
     if (!preview || preview.count === 0) return
     setShowConfirm(false)
     setSending(true)
-    setSendStartedAt(Date.now())
-    setSendElapsed(0)
-    setSendResult(null)
+    setCampaign(null)
+    setCampaignId(null)
 
     try {
       const params = JSON.parse(paramsText || '{}')
-      const res = await api.post<{ success: boolean; data: SendResult }>(
-        '/admin/campaign/send',
-        {
-          filters,
-          audience,
-          templateId: Number(templateId),
-          params,
-        },
-      )
+      const res = await api.post<{
+        success: boolean
+        data: { campaignId: string; status: CampaignStatus; totalRecipients: number }
+      }>('/admin/campaign/send', {
+        filters,
+        audience,
+        templateId: Number(templateId),
+        params,
+      })
       const data = res.data?.data
-      if (!data) {
+      if (!data?.campaignId) {
         setToast('Resposta inválida do servidor')
         setSending(false)
         return
       }
-      setSendResult(data)
+      // Dispara o polling. sending continua true até o primeiro
+      // tick popular `campaign` — a tela de progresso renderiza
+      // com base em `campaign`, então `sending` sem `campaign`
+      // mostra apenas o loader de transição.
+      setCampaignId(data.campaignId)
     } catch (err: any) {
       const msg = err?.response?.data?.error?.message ?? 'Erro ao disparar campanha'
       setToast(msg)
-    } finally {
       setSending(false)
     }
   }, [preview, paramsText, filters, audience, templateId])
+
+  const handleCancel = useCallback(async () => {
+    if (!campaignId || cancelling) return
+    if (!window.confirm('Tem certeza que deseja cancelar esta campanha?')) return
+
+    try {
+      setCancelling(true)
+      await api.post(`/admin/campaigns/${campaignId}/cancel`)
+      // Polling vai pegar status=CANCELLED na próxima iteração.
+    } catch (err: any) {
+      const msg = err?.response?.data?.error?.message ?? 'Erro ao cancelar'
+      setToast(msg)
+    } finally {
+      setCancelling(false)
+    }
+  }, [campaignId, cancelling])
 
   function resetForm() {
     setTemplateId('')
@@ -297,42 +365,110 @@ export default function NewCampaignPage() {
     setAudience('OWNERS')
     setFilters({ planIds: [], tenantStatuses: [], roles: [] })
     setPreview(null)
-    setSendResult(null)
-    setSendElapsed(0)
-    setSendStartedAt(null)
+    setCampaign(null)
+    setCampaignId(null)
+    setSending(false)
+    setCancelling(false)
+  }
+
+  function formatElapsed(from: string | null, to: string | null): string {
+    if (!from) return '—'
+    const start = new Date(from).getTime()
+    const end = to ? new Date(to).getTime() : Date.now()
+    const seconds = Math.max(0, Math.floor((end - start) / 1000))
+    if (seconds < 60) return `${seconds}s`
+    const m = Math.floor(seconds / 60)
+    const s = seconds % 60
+    return `${m}m ${String(s).padStart(2, '0')}s`
   }
 
   const canPreview = templateId.trim() !== '' && Number(templateId) > 0
   const canSend = preview !== null && preview.count > 0
   const estimatedSeconds = preview ? Math.ceil(preview.count * 0.1) : 0
 
-  // Resultado final — substitui o form
-  if (sendResult) {
-    const allOk = sendResult.failed === 0
+  // ── Tela: campanha finalizada ────────────────────────────────
+  if (campaign && FINAL_STATUSES.includes(campaign.status)) {
+    const titleByStatus: Record<CampaignStatus, string> = {
+      PENDING: 'Aguardando',
+      RUNNING: 'Em execução',
+      COMPLETED: 'Campanha concluída',
+      FAILED: 'Campanha falhou',
+      CANCELLED: 'Campanha cancelada',
+    }
+    const borderColorByStatus: Record<CampaignStatus, string> = {
+      PENDING: 'var(--border)',
+      RUNNING: 'var(--border)',
+      COMPLETED: campaign.failed === 0 ? '#22c55e' : '#f59e0b',
+      FAILED: '#ef4444',
+      CANCELLED: 'var(--text-muted)',
+    }
+
     return (
       <AppLayout menuItems={adminMenuItems}>
         <div style={{ padding: 32, maxWidth: 720, margin: '0 auto' }}>
           <h1 style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-primary)', margin: 0, marginBottom: 24 }}>
-            Campanha disparada
+            {titleByStatus[campaign.status]}
           </h1>
+
           <div
             style={{
               ...card,
-              borderColor: allOk ? '#22c55e' : '#f59e0b',
+              borderColor: borderColorByStatus[campaign.status],
               borderWidth: 2,
               padding: 24,
             }}
           >
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              <Stat label="Total" value={sendResult.total} />
-              <Stat label="Enviados" value={sendResult.sent} color="#22c55e" />
-              <Stat label="Falhas" value={sendResult.failed} color="#ef4444" />
-              <Stat label="Pulados" value={sendResult.skipped} color="var(--text-muted)" />
+              <Stat label="Total" value={campaign.totalRecipients} />
+              <Stat label="Enviados" value={campaign.sent} color="#22c55e" />
+              <Stat label="Falhas" value={campaign.failed} color="#ef4444" />
+              <Stat label="Pulados" value={campaign.skipped} color="var(--text-muted)" />
             </div>
             <div style={{ marginTop: 16, fontSize: 13, color: 'var(--text-secondary)' }}>
-              Duração: {(sendResult.durationMs / 1000).toFixed(1)}s
+              Duração: {formatElapsed(campaign.startedAt, campaign.completedAt)}
             </div>
           </div>
+
+          {campaign.status === 'CANCELLED' && (
+            <div
+              style={{
+                marginTop: 16,
+                padding: 12,
+                background: 'rgba(107,114,128,0.08)',
+                border: '1px solid var(--border)',
+                borderRadius: 8,
+                fontSize: 13,
+                color: 'var(--text-secondary)',
+              }}
+            >
+              Esta campanha foi cancelada antes de processar todos os destinatários.
+            </div>
+          )}
+
+          {campaign.status === 'FAILED' && campaign.errorMessage && (
+            <div style={{ marginTop: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#ef4444', marginBottom: 6 }}>
+                Detalhes do erro:
+              </div>
+              <pre
+                style={{
+                  background: 'rgba(239,68,68,0.06)',
+                  border: '1px solid rgba(239,68,68,0.2)',
+                  padding: 12,
+                  borderRadius: 6,
+                  fontFamily: 'monospace',
+                  fontSize: 12,
+                  color: '#fca5a5',
+                  overflow: 'auto',
+                  margin: 0,
+                  whiteSpace: 'pre-wrap',
+                }}
+              >
+                {campaign.errorMessage}
+              </pre>
+            </div>
+          )}
+
           <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
             <button type="button" onClick={() => navigate('/admin/logs/emails')} style={primaryBtn}>
               Ver logs completos
@@ -347,36 +483,117 @@ export default function NewCampaignPage() {
     )
   }
 
-  // Tela de "enviando" — substitui o form
-  if (sending) {
+  // ── Tela: campanha em andamento (PENDING / RUNNING) ──────────
+  if (campaign) {
+    const processed = campaign.sent + campaign.failed + campaign.skipped
+    const total = Math.max(1, campaign.totalRecipients)
+    const pct = Math.min(100, Math.round((processed / total) * 100))
+    const titleByStatus = {
+      PENDING: 'Aguardando processamento...',
+      RUNNING: 'Enviando campanha...',
+    } as const
+    const elapsedFrom = campaign.startedAt ?? campaign.createdAt
+
     return (
       <AppLayout menuItems={adminMenuItems}>
-        <div style={{ padding: 32, maxWidth: 600, margin: '80px auto', textAlign: 'center' }}>
-          <Loader2 size={40} className="animate-spin" style={{ color: '#f97316', marginBottom: 16 }} />
-          <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
-            Enviando campanha...
-          </h2>
-          <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginTop: 12 }}>
-            {sendElapsed}s decorridos
-            {estimatedSeconds > 0 && ` — estimativa: ~${estimatedSeconds}s no total`}
-          </p>
+        <div style={{ padding: 32, maxWidth: 600, margin: '40px auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 24 }}>
+            <Loader2 size={40} className="animate-spin" style={{ color: '#f97316', marginBottom: 16 }} />
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+              {titleByStatus[campaign.status as 'PENDING' | 'RUNNING']}
+            </h2>
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginTop: 8 }}>
+              Template #{campaign.templateId} · {campaign.totalRecipients}{' '}
+              {campaign.totalRecipients === 1 ? 'destinatário' : 'destinatários'}
+            </p>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
+              Iniciada há {formatElapsed(elapsedFrom, null)}
+            </p>
+          </div>
+
           <div
             style={{
-              marginTop: 20,
+              background: 'var(--bg)',
+              borderRadius: 6,
+              height: 12,
+              overflow: 'hidden',
+              marginBottom: 12,
+            }}
+          >
+            <div
+              style={{
+                width: `${pct}%`,
+                height: '100%',
+                background: '#f97316',
+                transition: 'width 0.3s ease',
+              }}
+            />
+          </div>
+
+          <div
+            style={{
+              fontSize: 13,
+              color: 'var(--text-secondary)',
+              textAlign: 'center',
+              marginBottom: 24,
+            }}
+          >
+            {processed}/{campaign.totalRecipients} processados ({pct}%) · Enviados {campaign.sent} ·
+            Falhas {campaign.failed} · Pulados {campaign.skipped}
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+            <button
+              type="button"
+              onClick={handleCancel}
+              disabled={cancelling}
+              style={{
+                ...secondaryBtn,
+                borderColor: '#ef4444',
+                color: '#ef4444',
+                opacity: cancelling ? 0.5 : 1,
+                cursor: cancelling ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {cancelling ? 'Cancelando...' : 'Cancelar campanha'}
+            </button>
+          </div>
+
+          <div
+            style={{
               padding: 12,
               background: 'rgba(245,158,11,0.08)',
               border: '1px solid rgba(245,158,11,0.3)',
               borderRadius: 8,
               fontSize: 13,
               color: '#92400e',
-              display: 'inline-flex',
+              display: 'flex',
               alignItems: 'center',
               gap: 8,
+              justifyContent: 'center',
             }}
           >
             <AlertTriangle size={16} />
-            Não feche essa aba.
+            Você pode fechar esta aba — a campanha continua processando no servidor.
           </div>
+        </div>
+        {toastEl(toast)}
+      </AppLayout>
+    )
+  }
+
+  // ── Tela: loader inicial entre o POST e o primeiro polling ───
+  if (sending) {
+    return (
+      <AppLayout menuItems={adminMenuItems}>
+        <div style={{ padding: 32, maxWidth: 600, margin: '80px auto', textAlign: 'center' }}>
+          <Loader2 size={40} className="animate-spin" style={{ color: '#f97316', marginBottom: 16 }} />
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+            Agendando campanha...
+          </h2>
+          <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginTop: 12 }}>
+            Buscando status no servidor...
+          </p>
         </div>
         {toastEl(toast)}
       </AppLayout>
