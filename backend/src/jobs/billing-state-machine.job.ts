@@ -217,7 +217,10 @@ async function generateChargeForTrialEnd(tenant: {
         value: amount,
         description,
         dueDate: dueDateStr,
-        debtorName: tenant.tradeName ?? tenant.name,
+        // Razão social (tenant.name) prioritária — vira
+        // juridical_person.corporate_name no payload Efi quando
+        // tenant é PJ. tradeName fica como fallback defensivo.
+        debtorName: tenant.name ?? tenant.tradeName ?? 'Cliente',
         // Legacy `debtorCpf` kept for Efi envelope sanity; the newer
         // `document` field takes precedence inside efi.service when
         // present.
