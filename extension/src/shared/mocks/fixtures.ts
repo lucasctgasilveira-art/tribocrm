@@ -120,16 +120,16 @@ export const MOCK_TEMPLATES: WhatsAppTemplate[] = [
   {
     id: 'tpl-1',
     name: 'Primeiro Contato',
-    body: 'Oi {{nome_lead}}! 👋 Aqui é {{nome_vendedor}} da {{nome_empresa}}. Passando para apresentar nossa solução — podemos conversar?'
+    body: 'Oi {{primeiro_nome}}! 👋 Passando para apresentar nossa solução — podemos conversar?'
   },
   {
     id: 'tpl-2',
     name: 'Follow-up 3 dias',
-    body: 'Oi {{nome_lead}}, tudo bem? Passando para ver se ficou alguma dúvida sobre a proposta que enviei. Posso te ligar em um horário melhor?'
+    body: 'Oi {{primeiro_nome}}, tudo bem? Passando para ver se ficou alguma dúvida sobre a proposta de {{valor}} que enviei para a {{empresa}}. Posso te ligar em um horário melhor?'
   },
   {
     id: 'tpl-3',
     name: 'Reativação',
-    body: 'Olá {{nome_lead}}, faz um tempo que a gente não conversa! Como estão as coisas por aí? Quero saber se ainda faz sentido retomar nossa conversa sobre {{nome_produto}}.'
+    body: 'Olá {{primeiro_nome}}, faz um tempo que a gente não conversa! Como estão as coisas por aí? Quero saber se ainda faz sentido retomar nossa conversa sobre {{produto}}.'
   }
 ];

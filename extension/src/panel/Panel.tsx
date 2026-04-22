@@ -36,6 +36,8 @@ import {
   interactionTypeLabel,
   temperatureLabel
 } from './format';
+import { renderTemplate } from '@shared/utils/templates';
+import { injectTextIntoChat } from '../content/whatsapp-input';
 
 type PanelState =
   | { kind: 'loading' }
@@ -441,13 +443,9 @@ function LeadFoundView({ lead, interactions, onUpdate, onToast }: LeadFoundProps
 
       {mode === 'templates' && (
         <TemplatesList
-          leadName={lead.name}
-          phone={lead.phone ?? lead.whatsapp ?? ''}
-          onCancel={() => setMode('view')}
-          onSent={() => {
-            onToast('Mensagem pronta no WhatsApp');
-            setMode('view');
-          }}
+          lead={lead}
+          onClose={() => setMode('view')}
+          onToast={onToast}
         />
       )}
     </>
@@ -646,15 +644,13 @@ function StageForm({
 // ── Lista de templates ────────────────────────────────────────
 
 function TemplatesList({
-  leadName,
-  phone,
-  onCancel,
-  onSent
+  lead,
+  onClose,
+  onToast
 }: {
-  leadName: string;
-  phone: string;
-  onCancel: () => void;
-  onSent: () => void;
+  lead: Lead;
+  onClose: () => void;
+  onToast: (msg: string) => void;
 }) {
   const [templates, setTemplates] = useState<WhatsAppTemplate[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -666,18 +662,10 @@ function TemplatesList({
   }, []);
 
   function useTemplate(t: WhatsAppTemplate) {
-    // Substitui variáveis básicas
-    const body = t.body
-      .replace(/\{\{nome_lead\}\}/g, leadName.split(' ')[0])
-      .replace(/\{\{nome_vendedor\}\}/g, '')
-      .replace(/\{\{nome_empresa\}\}/g, '');
-
-    // Abre WhatsApp com a mensagem pré-preenchida.
-    // Obs: esta é a forma mais confiável — o próprio WhatsApp Web reconhece
-    // a URL e cola a mensagem no campo. Injetar direto no DOM é frágil.
-    const url = `https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(body)}`;
-    window.open(url, '_self');
-    onSent();
+    const texto = renderTemplate(t.body, lead);
+    const ok = injectTextIntoChat(texto);
+    onToast(ok ? 'Mensagem colada no chat' : 'Não foi possível colar no chat');
+    if (ok) onClose();
   }
 
   if (error) return <div class="tribocrm-error-banner">{error}</div>;
@@ -704,7 +692,7 @@ function TemplatesList({
       <button
         class="tribocrm-btn tribocrm-btn-ghost tribocrm-btn-full"
         style={{ marginTop: 8 }}
-        onClick={onCancel}
+        onClick={onClose}
       >
         Voltar
       </button>
