@@ -13,12 +13,14 @@
 import { useEffect, useState, useCallback } from 'preact/hooks';
 import type { Lead, Interaction, WhatsAppTemplate, Stage } from '@shared/types/domain';
 import { sendMessage } from '@shared/utils/messaging';
-import type { WhatsAppContactInfo } from '../content/whatsapp-dom';
+import { normalizePhone } from '@shared/utils/phone';
+import type { ChatInfo, WhatsAppContactInfo } from '../content/whatsapp-dom';
 import {
   IconX,
   IconPlus,
   IconMessageCircle,
-  IconUser
+  IconUser,
+  IconPhone
 } from './icons';
 import {
   formatRelativeTime,
@@ -31,19 +33,35 @@ type PanelState =
   | { kind: 'loading' }
   | { kind: 'unauthenticated' }
   | { kind: 'no-chat' }
+  | { kind: 'manual-phone-input'; detectedName: string }
   | { kind: 'lead-found'; lead: Lead; interactions: Interaction[] }
   | { kind: 'lead-not-found'; contact: WhatsAppContactInfo }
   | { kind: 'error'; message: string };
 
 type PanelProps = {
-  contact: WhatsAppContactInfo | null;
+  chatInfo: ChatInfo;
   isOpen: boolean;
   onClose: () => void;
 };
 
-export function Panel({ contact, isOpen, onClose }: PanelProps) {
+export function Panel({ chatInfo, isOpen, onClose }: PanelProps) {
   const [state, setState] = useState<PanelState>({ kind: 'loading' });
   const [toast, setToast] = useState<string | null>(null);
+  // Telefone digitado manualmente, associado à chave da conversa atual.
+  // Se a conversa muda, a associação "expira" automaticamente (deriva via chatKey).
+  const [manualPhoneFor, setManualPhoneFor] = useState<
+    { chatKey: string; phone: string } | null
+  >(null);
+
+  const chatKey =
+    chatInfo.kind === 'detected'
+      ? `phone:${chatInfo.contact.phone}`
+      : chatInfo.kind === 'needs-phone'
+      ? `name:${chatInfo.detectedName}`
+      : 'none';
+
+  const manualPhone =
+    manualPhoneFor?.chatKey === chatKey ? manualPhoneFor.phone : null;
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -66,7 +84,24 @@ export function Panel({ contact, isOpen, onClose }: PanelProps) {
       return;
     }
 
-    if (!contact) {
+    // Determina o "contato efetivo": manual tem prioridade sobre detectado.
+    let effectiveContact: WhatsAppContactInfo | null = null;
+    if (manualPhone) {
+      const displayName =
+        chatInfo.kind === 'detected'
+          ? chatInfo.contact.displayName
+          : chatInfo.kind === 'needs-phone'
+          ? chatInfo.detectedName
+          : manualPhone;
+      effectiveContact = { displayName, phone: manualPhone };
+    } else if (chatInfo.kind === 'detected') {
+      effectiveContact = chatInfo.contact;
+    } else if (chatInfo.kind === 'needs-phone') {
+      setState({ kind: 'manual-phone-input', detectedName: chatInfo.detectedName });
+      return;
+    }
+
+    if (!effectiveContact) {
       setState({ kind: 'no-chat' });
       return;
     }
@@ -74,11 +109,11 @@ export function Panel({ contact, isOpen, onClose }: PanelProps) {
     try {
       const lead = await sendMessage({
         type: 'LEAD_FIND_BY_PHONE',
-        payload: { phone: contact.phone }
+        payload: { phone: effectiveContact.phone }
       });
 
       if (!lead) {
-        setState({ kind: 'lead-not-found', contact });
+        setState({ kind: 'lead-not-found', contact: effectiveContact });
         return;
       }
 
@@ -92,11 +127,18 @@ export function Panel({ contact, isOpen, onClose }: PanelProps) {
       const message = err instanceof Error ? err.message : 'Erro ao buscar lead';
       setState({ kind: 'error', message });
     }
-  }, [contact]);
+  }, [chatInfo, manualPhone]);
 
   useEffect(() => {
     if (isOpen) reload();
-  }, [contact?.phone, isOpen, reload]);
+  }, [chatKey, manualPhone, isOpen, reload]);
+
+  const handleManualPhoneSubmit = useCallback(
+    (phone: string) => {
+      setManualPhoneFor({ chatKey, phone });
+    },
+    [chatKey]
+  );
 
   return (
     <div class={`tribocrm-panel-root ${isOpen ? 'tribocrm-open' : ''}`}>
@@ -115,6 +157,12 @@ export function Panel({ contact, isOpen, onClose }: PanelProps) {
         {state.kind === 'unauthenticated' && <UnauthenticatedState />}
         {state.kind === 'no-chat' && <NoChatState />}
         {state.kind === 'error' && <ErrorState message={state.message} />}
+        {state.kind === 'manual-phone-input' && (
+          <ManualPhoneInputView
+            detectedName={state.detectedName}
+            onSubmit={handleManualPhoneSubmit}
+          />
+        )}
         {state.kind === 'lead-found' && (
           <LeadFoundView
             lead={state.lead}
@@ -171,6 +219,62 @@ function ErrorState({ message }: { message: string }) {
   return (
     <div class="tribocrm-empty">
       <div class="tribocrm-error-banner">{message}</div>
+    </div>
+  );
+}
+
+function ManualPhoneInputView({
+  detectedName,
+  onSubmit
+}: {
+  detectedName: string;
+  onSubmit: (phone: string) => void;
+}) {
+  const [value, setValue] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  function submit(e: Event) {
+    e.preventDefault();
+    const normalized = normalizePhone(value);
+    if (!normalized) {
+      setError('Número inválido. Use o formato +55 (11) 91234-5678.');
+      return;
+    }
+    setError(null);
+    onSubmit(normalized);
+  }
+
+  return (
+    <div class="tribocrm-manual-phone">
+      <div class="tribocrm-empty-icon">
+        <IconPhone size={24} />
+      </div>
+      <div class="tribocrm-manual-phone-title">
+        Não consegui identificar o número automaticamente.
+      </div>
+      <div class="tribocrm-manual-phone-subtext">Contato detectado</div>
+      <div class="tribocrm-manual-phone-name">{detectedName}</div>
+      <form class="tribocrm-manual-phone-form" onSubmit={submit}>
+        {error && <div class="tribocrm-error-banner">{error}</div>}
+        <div class="tribocrm-field">
+          <label class="tribocrm-field-label">Número do contato</label>
+          <input
+            class="tribocrm-input"
+            type="tel"
+            value={value}
+            onInput={(e) => setValue((e.target as HTMLInputElement).value)}
+            placeholder="+55 (11) 91234-5678"
+            autofocus
+          />
+        </div>
+        <button
+          type="submit"
+          class="tribocrm-btn tribocrm-btn-primary tribocrm-btn-full"
+          disabled={!value.trim()}
+        >
+          Buscar no TriboCRM
+        </button>
+      </form>
     </div>
   );
 }

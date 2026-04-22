@@ -20,39 +20,60 @@ export interface WhatsAppContactInfo {
 }
 
 /**
+ * Estado detectado da conversa ativa no WhatsApp Web.
+ *
+ *   - 'none'         → nenhuma conversa aberta (ou não foi possível detectar)
+ *   - 'detected'     → conversa aberta com telefone identificado automaticamente
+ *   - 'needs-phone'  → conversa aberta mas o WhatsApp não expõe o telefone no DOM
+ *                      (contato salvo na agenda). Usuário precisa digitar.
+ */
+export type ChatInfo =
+  | { kind: 'none' }
+  | { kind: 'detected'; contact: WhatsAppContactInfo }
+  | { kind: 'needs-phone'; detectedName: string };
+
+/**
  * Extrai o número de telefone da conversa aberta atualmente.
  *
  * ESTRATÉGIA (ordem de tentativa):
- *   A. Se for uma conversa individual, o WhatsApp às vezes expõe o número
- *      em atributo data-id tipo "5521912345678@c.us" no container da conversa.
- *   B. Link telefônico no header (mais confiável quando o contato não tem nome salvo).
- *   C. Nome do contato que PARECE um telefone formatado (fallback final).
+ *   A. data-id puramente numérico (10–15 dígitos) em qualquer elemento da página.
+ *      O WhatsApp deixou de usar o sufixo "@c.us" — agora o data-id do contato
+ *      é só o telefone. Cuidado: existem data-ids curtos ("1", "2", …) que são
+ *      IDs internos de outros widgets; por isso o filtro de comprimento é crítico.
+ *   B. Nome do contato (header) que PARECE um telefone formatado — fallback
+ *      útil quando o contato não está salvo na agenda.
  *
  * @returns string E.164 sem '+' ou null se não conseguir extrair
  */
 export function extractPhoneFromActiveChat(): string | null {
-  // Estratégia A: data-id do container da conversa
-  // Exemplo: <div data-id="5521912345678@c.us" ...>
-  const chatContainer = document.querySelector('[data-id$="@c.us"]');
-  if (chatContainer) {
-    const dataId = chatContainer.getAttribute('data-id');
-    const match = dataId?.match(/^(\d{10,15})@c\.us$/);
-    if (match) return match[1];
+  // Seletores validados em 21/04/2026
+  // Estratégia A: varrer todos os data-id e pegar o primeiro que seja
+  // string puramente numérica de 10–15 caracteres (telefone E.164 sem '+').
+  const nodes = document.querySelectorAll('[data-id]');
+  for (const node of Array.from(nodes)) {
+    const dataId = node.getAttribute('data-id');
+    if (dataId && /^\d{10,15}$/.test(dataId)) {
+      return dataId;
+    }
   }
 
-  // Estratégia B: header do chat contém o nome. Se o nome é um número formatado,
-  // é porque o contato não está salvo — então o "nome" É o telefone.
+  // Estratégia B: elemento dedicado ao título do chat. Contato não salvo
+  // aparece aqui como "+55 33 99900-1821" — ou seja, o "nome" É o telefone.
+  // Validado em 21/04/2026
+  const titleEl = document.querySelector<HTMLElement>(
+    '[data-testid="conversation-info-header-chat-title"]'
+  );
+  const chatTitle = titleEl?.textContent?.trim();
+  if (chatTitle) {
+    const normalized = normalizeIfPhoneLike(chatTitle);
+    if (normalized) return normalized;
+  }
+
+  // Estratégia C: varredura mais ampla do header (fallback).
   const headerTitle = findChatHeaderTitle();
   if (headerTitle) {
-    const digits = headerTitle.replace(/\D/g, '');
-    // Tem que ter de 10 a 15 dígitos e começar com '+' no texto visual
-    if (
-      (headerTitle.startsWith('+') || /^\d/.test(headerTitle)) &&
-      digits.length >= 10 &&
-      digits.length <= 15
-    ) {
-      return digits.startsWith('55') ? digits : `55${digits}`;
-    }
+    const normalized = normalizeIfPhoneLike(headerTitle);
+    if (normalized) return normalized;
   }
 
   return null;
@@ -77,28 +98,81 @@ export function extractContactInfoFromActiveChat(): WhatsAppContactInfo | null {
   return { displayName, phone };
 }
 
+/**
+ * Classifica o estado da conversa ativa no WhatsApp Web lendo o DOM atual.
+ * Fonte única de verdade — usada tanto em leituras avulsas quanto pelo
+ * observer em onActiveChatChange.
+ */
+export function classifyActiveChat(): ChatInfo {
+  const phone = extractPhoneFromActiveChat();
+  if (phone) {
+    const displayName = extractDisplayNameFromActiveChat() ?? phone;
+    return { kind: 'detected', contact: { displayName, phone } };
+  }
+  const displayName = extractDisplayNameFromActiveChat();
+  if (displayName) return { kind: 'needs-phone', detectedName: displayName };
+  return { kind: 'none' };
+}
+
+/**
+ * Chave estável por estado de conversa — usada para deduplicar dispatches
+ * do observer. Duas leituras com a mesma chave representam o mesmo estado.
+ */
+function chatInfoKey(info: ChatInfo): string {
+  switch (info.kind) {
+    case 'none':
+      return 'none';
+    case 'detected':
+      return `detected:${info.contact.phone}`;
+    case 'needs-phone':
+      return `needs-phone:${info.detectedName}`;
+  }
+}
+
 // ── Helpers privados ─────────────────────────────────────────────
+
+/**
+ * Se a string parece um telefone BR (começa com '+' ou dígito, 10–15 dígitos
+ * após remover não-dígitos), devolve normalizado em E.164 sem '+' com prefixo
+ * 55 garantido. Caso contrário, null.
+ */
+function normalizeIfPhoneLike(s: string): string | null {
+  const digits = s.replace(/\D/g, '');
+  if (
+    (s.startsWith('+') || /^\d/.test(s)) &&
+    digits.length >= 10 &&
+    digits.length <= 15
+  ) {
+    return digits.startsWith('55') ? digits : `55${digits}`;
+  }
+  return null;
+}
 
 /**
  * Tenta várias abordagens pra achar o título do chat (nome do contato).
  *
- * Seletores testados em Abril 2026. Se quebrar, inspecione o header da conversa
- * no DevTools e atualize a lista aqui — é a única mudança necessária.
+ * Se quebrar, inspecione o <header data-testid="conversation-header"> da
+ * conversa ativa no DevTools e atualize os seletores abaixo.
  */
 function findChatHeaderTitle(): string | null {
-  const selectors = [
-    // Cabeçalho do chat — painel superior
-    'header [data-testid="conversation-info-header"] span[title]',
-    'header span[dir="auto"][title]',
-    '#main header span[title]',
-    // Fallback: primeiro span com title no topo do #main
-    '#main header span[dir="auto"]'
-  ];
+  // Validado em 21/04/2026
+  // Seletor principal: elemento dedicado ao título do chat.
+  const titleEl = document.querySelector<HTMLElement>(
+    '[data-testid="conversation-info-header-chat-title"]'
+  );
+  const title = titleEl?.textContent?.trim();
+  if (title) return title;
 
-  for (const sel of selectors) {
-    const el = document.querySelector<HTMLElement>(sel);
-    const text = el?.getAttribute('title') ?? el?.textContent?.trim();
-    if (text && text.length > 0) return text;
+  // Fallback: qualquer span com textContent no cabeçalho da conversa.
+  const header = document.querySelector<HTMLElement>(
+    '[data-testid="conversation-header"]'
+  );
+  if (!header) return null;
+
+  const spans = header.querySelectorAll<HTMLElement>('span');
+  for (const span of Array.from(spans)) {
+    const text = span.textContent?.trim();
+    if (text) return text;
   }
 
   return null;
@@ -112,14 +186,17 @@ function findChatHeaderTitle(): string | null {
  *   confiável é observar o DOM. Observamos o container principal (#main)
  *   que é recriado ao trocar de chat.
  *
- * @param callback chamado quando a conversa ativa muda. Recebe null se
- *                  nenhuma conversa estiver aberta.
+ * @param callback chamado quando a conversa ativa muda, com o ChatInfo
+ *                  classificado (detected / needs-phone / none).
  * @returns função para parar de observar
  */
 export function onActiveChatChange(
-  callback: (info: WhatsAppContactInfo | null) => void
+  callback: (info: ChatInfo) => void
 ): () => void {
-  let lastPhone: string | null = null;
+  // Sentinel — diferente de qualquer chave real de chatInfoKey(), garante
+  // que a primeira leitura sempre dispara o callback (inclusive para
+  // estados 'none' ou 'needs-phone', que o dedupe anterior barrava).
+  let lastKey: string | null = null;
   let debounceTimer: number | null = null;
 
   const check = () => {
@@ -127,13 +204,13 @@ export function onActiveChatChange(
     // Debounce porque MutationObserver dispara muito durante troca de chat.
     // Queremos esperar o DOM "estabilizar" antes de ler.
     debounceTimer = window.setTimeout(() => {
-      const info = extractContactInfoFromActiveChat();
-      const currentPhone = info?.phone ?? null;
-      if (currentPhone !== lastPhone) {
-        lastPhone = currentPhone;
+      const info = classifyActiveChat();
+      const key = chatInfoKey(info);
+      if (key !== lastKey) {
+        lastKey = key;
         callback(info);
       }
-    }, 250);
+    }, 200);
   };
 
   // Observa o body todo (light — apenas childList e attributes).

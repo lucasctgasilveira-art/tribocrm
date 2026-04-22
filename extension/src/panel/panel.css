@@ -521,3 +521,46 @@
   color: var(--tribocrm-text-secondary);
   line-height: 1.5;
 }
+
+/* ── Input manual de telefone ───────────────────────────────── */
+
+.tribocrm-manual-phone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 16px;
+  gap: 12px;
+  text-align: center;
+}
+
+.tribocrm-manual-phone-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--tribocrm-text-primary);
+  line-height: 1.4;
+}
+
+.tribocrm-manual-phone-subtext {
+  font-size: 13px;
+  color: var(--tribocrm-text-secondary);
+}
+
+.tribocrm-manual-phone-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--tribocrm-text-primary);
+}
+
+.tribocrm-manual-phone-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+/* zera o margin-bottom do .tribocrm-field para que o gap do form controle o espaçamento */
+.tribocrm-manual-phone-form .tribocrm-field {
+  margin-bottom: 0;
+  text-align: left;
+}

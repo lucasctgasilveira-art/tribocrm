@@ -33,14 +33,11 @@ export default defineManifest({
     type: 'module'
   },
 
-  // Content scripts — injetados automaticamente nos sites-alvo
+  // Content scripts — injetados automaticamente nos sites-alvo.
+  // O content script do WhatsApp NÃO é declarado aqui: ele é buildado
+  // separadamente (vite.config.whatsapp.ts) como IIFE monolítico e
+  // injetado no manifest pelo scripts/patch-manifest.mjs no pós-build.
   content_scripts: [
-    {
-      matches: ['https://web.whatsapp.com/*'],
-      js: ['src/content/whatsapp.ts'],
-      run_at: 'document_idle',
-      all_frames: false
-    },
     {
       matches: ['https://www.linkedin.com/*'],
       js: ['src/content/linkedin.ts'],

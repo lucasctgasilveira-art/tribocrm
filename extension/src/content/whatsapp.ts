@@ -19,7 +19,7 @@ import { Panel } from '../panel/Panel';
 import {
   onActiveChatChange,
   waitForWhatsAppReady,
-  type WhatsAppContactInfo
+  type ChatInfo
 } from './whatsapp-dom';
 import { mountPanelContainer } from './panel-mount';
 
@@ -33,12 +33,12 @@ const log = {
 log.info('Content script injetado em', window.location.hostname);
 
 interface AppState {
-  contact: WhatsAppContactInfo | null;
+  chatInfo: ChatInfo;
   isOpen: boolean;
 }
 
 const state: AppState = {
-  contact: null,
+  chatInfo: { kind: 'none' },
   isOpen: false
 };
 
@@ -49,7 +49,7 @@ function renderPanel() {
   if (!container) return;
   render(
     h(Panel, {
-      contact: state.contact,
+      chatInfo: state.chatInfo,
       isOpen: state.isOpen,
       onClose: () => {
         state.isOpen = false;
@@ -87,9 +87,19 @@ async function boot() {
 
     renderPanel();
 
-    onActiveChatChange((contact) => {
-      state.contact = contact;
-      log.info('Conversa ativa:', contact?.displayName ?? '(nenhuma)');
+    onActiveChatChange((chatInfo) => {
+      state.chatInfo = chatInfo;
+      switch (chatInfo.kind) {
+        case 'detected':
+          log.info('Conversa ativa com telefone:', chatInfo.contact.displayName);
+          break;
+        case 'needs-phone':
+          log.info('Conversa ativa sem telefone detectável:', chatInfo.detectedName);
+          break;
+        case 'none':
+          log.info('Nenhuma conversa aberta.');
+          break;
+      }
       renderPanel();
     });
   } catch (err) {
