@@ -14,13 +14,21 @@ import { useEffect, useState, useCallback } from 'preact/hooks';
 import type { Lead, Interaction, WhatsAppTemplate, Stage } from '@shared/types/domain';
 import { sendMessage } from '@shared/utils/messaging';
 import { normalizePhone } from '@shared/utils/phone';
+import {
+  type Theme,
+  getInitialTheme,
+  setTheme as persistTheme,
+  applyTheme
+} from '@shared/utils/theme';
 import type { ChatInfo, WhatsAppContactInfo } from '../content/whatsapp-dom';
 import {
   IconX,
   IconPlus,
   IconMessageCircle,
   IconUser,
-  IconPhone
+  IconPhone,
+  IconSun,
+  IconMoon
 } from './icons';
 import {
   formatRelativeTime,
@@ -66,6 +74,31 @@ export function Panel({ chatInfo, isOpen, onClose }: PanelProps) {
   const showToast = useCallback((msg: string) => {
     setToast(msg);
     window.setTimeout(() => setToast(null), 2500);
+  }, []);
+
+  const [theme, setThemeState] = useState<Theme>('dark');
+
+  useEffect(() => {
+    let cancelled = false;
+    getInitialTheme().then((initial) => {
+      if (cancelled) return;
+      setThemeState(initial);
+      const root = document.getElementById('tribocrm-panel-mount') ?? document.documentElement;
+      applyTheme(initial, root);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const toggleTheme = useCallback(() => {
+    setThemeState((prev) => {
+      const next: Theme = prev === 'dark' ? 'light' : 'dark';
+      const root = document.getElementById('tribocrm-panel-mount') ?? document.documentElement;
+      applyTheme(next, root);
+      void persistTheme(next);
+      return next;
+    });
   }, []);
 
   // Recarrega quando a conversa muda
@@ -147,9 +180,18 @@ export function Panel({ chatInfo, isOpen, onClose }: PanelProps) {
           <span class="tribocrm-logo-tribo">Tribo</span>
           <span class="tribocrm-logo-crm">CRM</span>
         </span>
-        <button class="tribocrm-close-btn" onClick={onClose} title="Fechar">
-          <IconX size={18} />
-        </button>
+        <div class="tribocrm-header-actions">
+          <button
+            class="tribocrm-header-btn"
+            onClick={toggleTheme}
+            title={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
+          >
+            {theme === 'dark' ? <IconSun size={20} /> : <IconMoon size={20} />}
+          </button>
+          <button class="tribocrm-header-btn" onClick={onClose} title="Fechar">
+            <IconX size={18} />
+          </button>
+        </div>
       </div>
 
       <div class="tribocrm-body">

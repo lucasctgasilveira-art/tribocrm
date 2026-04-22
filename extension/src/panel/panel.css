@@ -9,22 +9,19 @@
  *      tem reset global que afetaria nossos elementos.
  */
 
-/* ── Variáveis do TriboCRM (copiadas do design system) ─────────── */
+/* ── Design tokens ─────────────────────────────────────────────
+ *
+ * Theme-agnósticos (cores semânticas, tipografia, transição) ficam
+ * sempre no :root. Theme-dependentes têm default dark no :root
+ * (evita flash branco antes do JS setar data-theme) e são sobrescritos
+ * por [data-theme="light"] aplicado ao #tribocrm-panel-mount.
+ */
 :root {
+  /* Theme-agnósticos */
   --tribocrm-orange: #f97316;
   --tribocrm-orange-hover: #fb923c;
   --tribocrm-orange-alpha-10: rgba(249, 115, 22, 0.10);
   --tribocrm-orange-alpha-20: rgba(249, 115, 22, 0.20);
-
-  --tribocrm-bg: #0a0b0f;
-  --tribocrm-surface: #111318;
-  --tribocrm-card: #161a22;
-  --tribocrm-card-hover: #1c2130;
-  --tribocrm-border: #22283a;
-
-  --tribocrm-text-primary: #e8eaf0;
-  --tribocrm-text-secondary: #9ca3af;
-  --tribocrm-text-muted: #6b7280;
 
   --tribocrm-green: #22c55e;
   --tribocrm-red: #ef4444;
@@ -36,9 +33,39 @@
   --tribocrm-cold: #3b82f6;
 
   --tribocrm-font: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-
   --tribocrm-panel-width: 360px;
   --tribocrm-transition: 220ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Theme — default dark (aplicado antes do JS resolver chrome.storage) */
+  --tribocrm-bg: #0a0b0f;
+  --tribocrm-surface: #111318;
+  --tribocrm-card: #161a22;
+  --tribocrm-card-hover: #1c2130;
+  --tribocrm-border: #22283a;
+
+  --tribocrm-text-primary: #e8eaf0;
+  --tribocrm-text-secondary: #9ca3af;
+  --tribocrm-text-muted: #6b7280;
+}
+
+[data-theme="light"] {
+  --tribocrm-bg: #f8f9fc;
+  --tribocrm-surface: #ffffff;
+  --tribocrm-card: #f1f3f7;
+  --tribocrm-card-hover: #e9ecf2;
+  --tribocrm-border: #e4e6eb;
+
+  --tribocrm-text-primary: #0f1117;
+  --tribocrm-text-secondary: #52565c;
+  --tribocrm-text-muted: #8b9099;
+}
+
+/* Transição suave de tema para descendentes do painel — props
+ * baratas (paint-only), sem lag em hover/focus. O próprio
+ * .tribocrm-panel-root já tem transition próprio para o transform
+ * (open/close); suas transições de tema vão no mesmo shorthand abaixo. */
+.tribocrm-panel-root * {
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
 }
 
 /* ── Container raiz do painel ──────────────────────────────────── */
@@ -62,9 +89,12 @@
   flex-direction: column;
   overflow: hidden;
 
-  /* Animação de entrada/saída */
+  /* Animação de entrada/saída + transição suave entre temas */
   transform: translateX(100%);
-  transition: transform var(--tribocrm-transition);
+  transition: transform var(--tribocrm-transition),
+              background-color 0.2s,
+              color 0.2s,
+              border-color 0.2s;
 }
 
 .tribocrm-panel-root.tribocrm-open {
@@ -133,7 +163,13 @@
 .tribocrm-logo-tribo { color: var(--tribocrm-text-primary); font-weight: 400; }
 .tribocrm-logo-crm { color: var(--tribocrm-orange); font-weight: 800; }
 
-.tribocrm-close-btn {
+.tribocrm-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tribocrm-header-btn {
   background: transparent;
   border: none;
   color: var(--tribocrm-text-secondary);
@@ -145,7 +181,7 @@
   justify-content: center;
   transition: color var(--tribocrm-transition), background var(--tribocrm-transition);
 }
-.tribocrm-close-btn:hover {
+.tribocrm-header-btn:hover {
   color: var(--tribocrm-text-primary);
   background: var(--tribocrm-card);
 }
