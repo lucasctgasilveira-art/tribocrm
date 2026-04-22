@@ -28,7 +28,8 @@ import {
   IconUser,
   IconPhone,
   IconSun,
-  IconMoon
+  IconMoon,
+  IconAlertTriangle
 } from './icons';
 import {
   formatRelativeTime,
@@ -38,6 +39,8 @@ import {
 } from './format';
 import { renderTemplate } from '@shared/utils/templates';
 import { injectTextIntoChat } from '../content/whatsapp-input';
+
+const MOCK_MODE = import.meta.env.VITE_USE_MOCKS === 'true';
 
 type PanelState =
   | { kind: 'loading' }
@@ -196,6 +199,8 @@ export function Panel({ chatInfo, isOpen, onClose }: PanelProps) {
         </div>
       </div>
 
+      {MOCK_MODE && <MockModeBanner />}
+
       <div class="tribocrm-body">
         {state.kind === 'loading' && <LoadingState />}
         {state.kind === 'unauthenticated' && <UnauthenticatedState />}
@@ -226,6 +231,15 @@ export function Panel({ chatInfo, isOpen, onClose }: PanelProps) {
 }
 
 // ── Estados simples ───────────────────────────────────────────
+
+function MockModeBanner() {
+  return (
+    <div class="tribocrm-mock-banner">
+      <IconAlertTriangle size={14} />
+      <span>MODO DESENVOLVIMENTO — dados fictícios</span>
+    </div>
+  );
+}
 
 function LoadingState() {
   return (

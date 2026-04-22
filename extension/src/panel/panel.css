@@ -482,6 +482,27 @@
   margin-bottom: 12px;
 }
 
+/* ── Banner de modo mock (só aparece em dev) ───────────────── */
+
+.tribocrm-mock-banner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(245, 158, 11, 0.12);
+  border-bottom: 1px solid rgba(245, 158, 11, 0.35);
+  color: var(--tribocrm-gold);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+[data-theme="light"] .tribocrm-mock-banner {
+  background: rgba(245, 158, 11, 0.18);
+  border-bottom-color: rgba(245, 158, 11, 0.45);
+}
+
 /* ── Toast de sucesso ────────────────────────────────────────── */
 
 .tribocrm-toast {

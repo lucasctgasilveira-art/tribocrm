@@ -109,3 +109,13 @@ export const IconSun = make(
 export const IconMoon = make(
   h('path', { d: 'M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z' })
 );
+
+export const IconAlertTriangle = make(
+  h('g', {}, [
+    h('path', {
+      d: 'm21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z'
+    }),
+    h('path', { d: 'M12 9v4' }),
+    h('path', { d: 'M12 17h.01' })
+  ])
+);
