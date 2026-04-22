@@ -3,10 +3,10 @@
  *
  * FLUXO:
  *   1. Espera o WhatsApp Web terminar de carregar (usuário logado)
- *   2. Monta o container do painel no fim do body
- *   3. Cria botão flutuante "TriboCRM" no canto direito
- *   4. Observa mudanças de conversa ativa com MutationObserver
- *   5. A cada mudança, re-renderiza o Preact passando o novo contato
+ *   2. Monta o container do painel (oculto) e o botão flutuante laranja
+ *   3. Lê storage (panelOpen) e viewport para decidir estado inicial
+ *   4. Aplica layout inline no WhatsApp (empurra para a esquerda) se aberto
+ *   5. Observa mudanças de conversa ativa e redimensionamento da janela
  *
  * NOTA: este arquivo tem imports (diferente dos stubs do LinkedIn/Gmail).
  * O Vite+CRXJS vai criar chunks locais mas todos são carregados de uma vez
@@ -22,26 +22,31 @@ import {
   type ChatInfo
 } from './whatsapp-dom';
 import { mountPanelContainer } from './panel-mount';
+import { getPanelOpen, setPanelOpen } from '@shared/utils/panel-state';
+import {
+  applyInlineLayout,
+  isViewportTooNarrow,
+  onViewportResize
+} from './whatsapp-layout';
+import { createLogger } from '@shared/utils/logger';
 
-const log = {
-  info: (...args: unknown[]) =>
-    console.log('%c[TriboCRM:whatsapp]', 'color: #3b82f6', ...args),
-  error: (...args: unknown[]) =>
-    console.error('%c[TriboCRM:whatsapp]', 'color: #ef4444', ...args)
-};
+const log = createLogger('whatsapp');
 
 log.info('Content script injetado em', window.location.hostname);
 
 interface AppState {
   chatInfo: ChatInfo;
   isOpen: boolean;
+  isNarrow: boolean;
 }
 
 const state: AppState = {
   chatInfo: { kind: 'none' },
-  isOpen: false
+  isOpen: false,
+  isNarrow: false
 };
 
+let mount: ReturnType<typeof mountPanelContainer> | null = null;
 let container: HTMLElement | null = null;
 let toggleButton: HTMLButtonElement | null = null;
 
@@ -51,25 +56,63 @@ function renderPanel() {
     h(Panel, {
       chatInfo: state.chatInfo,
       isOpen: state.isOpen,
+      isNarrow: state.isNarrow,
       onClose: () => {
-        state.isOpen = false;
-        toggleButton?.classList.remove('tribocrm-hidden');
-        renderPanel();
+        setOpen(false);
       }
     }),
     container
   );
 }
 
-function createToggleButton() {
+/**
+ * Aplica o estado atual ao DOM: visibilidade do container, layout do
+ * WhatsApp, visibilidade do toggle e re-render do Preact.
+ */
+function applyState(): void {
+  if (!mount || !toggleButton) return;
+
+  const effectiveOpen = state.isOpen && !state.isNarrow;
+
+  mount.setPanelVisible(effectiveOpen);
+  applyInlineLayout(effectiveOpen);
+
+  if (effectiveOpen) {
+    toggleButton.classList.add('tribocrm-hidden');
+  } else {
+    toggleButton.classList.remove('tribocrm-hidden');
+  }
+
+  renderPanel();
+}
+
+function setOpen(open: boolean): void {
+  state.isOpen = open;
+  void setPanelOpen(open);
+  applyState();
+}
+
+function showStandaloneToast(msg: string): void {
+  const el = document.createElement('div');
+  el.className = 'tribocrm-standalone-toast';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  window.setTimeout(() => {
+    el.remove();
+  }, 2500);
+}
+
+function createToggleButton(): HTMLButtonElement {
   const btn = document.createElement('button');
   btn.className = 'tribocrm-toggle';
   btn.textContent = 'TriboCRM';
   btn.title = 'Abrir painel TriboCRM';
   btn.addEventListener('click', () => {
-    state.isOpen = true;
-    btn.classList.add('tribocrm-hidden');
-    renderPanel();
+    if (state.isNarrow) {
+      showStandaloneToast('Amplie a janela para usar o TriboCRM');
+      return;
+    }
+    setOpen(!state.isOpen);
   });
   document.body.appendChild(btn);
   return btn;
@@ -81,11 +124,22 @@ async function boot() {
     await waitForWhatsAppReady();
     log.info('WhatsApp Web pronto, montando painel.');
 
-    const mount = mountPanelContainer();
+    mount = mountPanelContainer();
     container = mount.container;
     toggleButton = createToggleButton();
 
-    renderPanel();
+    state.isNarrow = isViewportTooNarrow();
+    state.isOpen = await getPanelOpen();
+
+    applyState();
+
+    onViewportResize(() => {
+      const nowNarrow = isViewportTooNarrow();
+      if (nowNarrow === state.isNarrow) return;
+      state.isNarrow = nowNarrow;
+      log.info('viewport agora', nowNarrow ? 'estreito' : 'amplo');
+      applyState();
+    });
 
     onActiveChatChange((chatInfo) => {
       state.chatInfo = chatInfo;

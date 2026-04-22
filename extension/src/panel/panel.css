@@ -89,16 +89,17 @@
   flex-direction: column;
   overflow: hidden;
 
-  /* Animação de entrada/saída + transição suave entre temas */
-  transform: translateX(100%);
-  transition: transform var(--tribocrm-transition),
-              background-color 0.2s,
-              color 0.2s,
-              border-color 0.2s;
+  /* Transição suave entre temas (visibilidade é controlada via
+     display:none no #tribocrm-panel-mount, não via transform). */
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
 }
 
-.tribocrm-panel-root.tribocrm-open {
-  transform: translateX(0);
+/* Rede de segurança: em viewport muito estreito, garante que o painel
+   nunca ocupa espaço mesmo que algo falhe na lógica de display em JS. */
+@media (max-width: 1099px) {
+  #tribocrm-panel-mount {
+    display: none !important;
+  }
 }
 
 /* Reset local — afeta só descendentes do painel */
@@ -524,6 +525,25 @@
 @keyframes tribocrm-slide-up {
   from { transform: translateY(100%); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
+}
+
+/* ── Toast standalone ──────────────────────────────────────────
+   Usado por avisos injetados fora do painel (ex: quando o viewport
+   é estreito e o painel não está visível). */
+.tribocrm-standalone-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--tribocrm-green);
+  color: white;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-family: var(--tribocrm-font);
+  font-size: 13px;
+  font-weight: 500;
+  z-index: 2147483602;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  animation: tribocrm-slide-up 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* ── Templates list ─────────────────────────────────────────── */

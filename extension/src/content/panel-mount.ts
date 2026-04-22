@@ -6,6 +6,11 @@
  *   - Todo o CSS do painel é prefixado com .tribocrm- (ver panel.css).
  *   - O React do WhatsApp não mexe em elementos fora do seu próprio root,
  *     então nosso container fica seguro contra unmount espontâneo.
+ *
+ * VISIBILIDADE:
+ *   O container é criado com display:none e só fica visível após o boot
+ *   decidir (storage + viewport). Evita flash do painel aberto antes de
+ *   a decisão ser tomada.
  */
 
 const MOUNT_ID = 'tribocrm-panel-mount';
@@ -13,6 +18,7 @@ const STYLESHEET_ID = 'tribocrm-panel-styles';
 
 export interface PanelMount {
   container: HTMLElement;
+  setPanelVisible: (visible: boolean) => void;
   destroy: () => void;
 }
 
@@ -34,31 +40,35 @@ function ensureStylesheet(cssUrl: string): void {
   document.head.appendChild(link);
 }
 
+function setContainerVisible(container: HTMLElement, visible: boolean): void {
+  container.style.display = visible ? 'block' : 'none';
+}
+
 /**
  * Monta o container do painel (se ainda não estiver montado) e retorna
  * referência pra quem vai renderizar dentro (Preact, por exemplo).
  */
 export function mountPanelContainer(): PanelMount {
-  // Se já existe, apenas retorna a referência existente
   const existing = document.getElementById(MOUNT_ID);
   if (existing) {
     return {
       container: existing,
+      setPanelVisible: (visible) => setContainerVisible(existing, visible),
       destroy: () => destroyPanel()
     };
   }
 
-  // Injeta o CSS
   const cssUrl = chrome.runtime.getURL('src/panel/panel.css');
   ensureStylesheet(cssUrl);
 
-  // Cria o container no fim do body
   const container = document.createElement('div');
   container.id = MOUNT_ID;
+  container.style.display = 'none';
   document.body.appendChild(container);
 
   return {
     container,
+    setPanelVisible: (visible) => setContainerVisible(container, visible),
     destroy: () => destroyPanel()
   };
 }

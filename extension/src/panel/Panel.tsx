@@ -54,10 +54,11 @@ type PanelState =
 type PanelProps = {
   chatInfo: ChatInfo;
   isOpen: boolean;
+  isNarrow: boolean;
   onClose: () => void;
 };
 
-export function Panel({ chatInfo, isOpen, onClose }: PanelProps) {
+export function Panel({ chatInfo, isOpen, isNarrow, onClose }: PanelProps) {
   const [state, setState] = useState<PanelState>({ kind: 'loading' });
   const [toast, setToast] = useState<string | null>(null);
   // Telefone digitado manualmente, associado à chave da conversa atual.
@@ -168,8 +169,8 @@ export function Panel({ chatInfo, isOpen, onClose }: PanelProps) {
   }, [chatInfo, manualPhone]);
 
   useEffect(() => {
-    if (isOpen) reload();
-  }, [chatKey, manualPhone, isOpen, reload]);
+    if (isOpen && !isNarrow) reload();
+  }, [chatKey, manualPhone, isOpen, isNarrow, reload]);
 
   const handleManualPhoneSubmit = useCallback(
     (phone: string) => {
@@ -179,7 +180,7 @@ export function Panel({ chatInfo, isOpen, onClose }: PanelProps) {
   );
 
   return (
-    <div class={`tribocrm-panel-root ${isOpen ? 'tribocrm-open' : ''}`}>
+    <div class="tribocrm-panel-root">
       <div class="tribocrm-header">
         <span class="tribocrm-logo">
           <span class="tribocrm-logo-tribo">Tribo</span>
@@ -202,30 +203,36 @@ export function Panel({ chatInfo, isOpen, onClose }: PanelProps) {
       {MOCK_MODE && <MockModeBanner />}
 
       <div class="tribocrm-body">
-        {state.kind === 'loading' && <LoadingState />}
-        {state.kind === 'unauthenticated' && <UnauthenticatedState />}
-        {state.kind === 'no-chat' && <NoChatState />}
-        {state.kind === 'error' && <ErrorState message={state.message} />}
-        {state.kind === 'manual-phone-input' && (
-          <ManualPhoneInputView
-            detectedName={state.detectedName}
-            onSubmit={handleManualPhoneSubmit}
-          />
-        )}
-        {state.kind === 'lead-found' && (
-          <LeadFoundView
-            lead={state.lead}
-            interactions={state.interactions}
-            onUpdate={reload}
-            onToast={showToast}
-          />
-        )}
-        {state.kind === 'lead-not-found' && (
-          <LeadNotFoundView contact={state.contact} onCreated={reload} onToast={showToast} />
+        {isNarrow ? (
+          <ViewportTooNarrowState />
+        ) : (
+          <>
+            {state.kind === 'loading' && <LoadingState />}
+            {state.kind === 'unauthenticated' && <UnauthenticatedState />}
+            {state.kind === 'no-chat' && <NoChatState />}
+            {state.kind === 'error' && <ErrorState message={state.message} />}
+            {state.kind === 'manual-phone-input' && (
+              <ManualPhoneInputView
+                detectedName={state.detectedName}
+                onSubmit={handleManualPhoneSubmit}
+              />
+            )}
+            {state.kind === 'lead-found' && (
+              <LeadFoundView
+                lead={state.lead}
+                interactions={state.interactions}
+                onUpdate={reload}
+                onToast={showToast}
+              />
+            )}
+            {state.kind === 'lead-not-found' && (
+              <LeadNotFoundView contact={state.contact} onCreated={reload} onToast={showToast} />
+            )}
+          </>
         )}
       </div>
 
-      {toast && <div class="tribocrm-toast">{toast}</div>}
+      {toast && !isNarrow && <div class="tribocrm-toast">{toast}</div>}
     </div>
   );
 }
@@ -269,6 +276,17 @@ function NoChatState() {
         <IconMessageCircle size={24} />
       </div>
       <div>Abra uma conversa para ver os dados do lead.</div>
+    </div>
+  );
+}
+
+function ViewportTooNarrowState() {
+  return (
+    <div class="tribocrm-empty">
+      <div class="tribocrm-empty-icon">
+        <IconAlertTriangle size={24} />
+      </div>
+      <div>Amplie a janela para usar o TriboCRM.</div>
     </div>
   );
 }
