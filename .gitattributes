@@ -1,0 +1,23 @@
+﻿# Normalização automática de fim de linha
+# - Arquivos de texto: LF no repositório, checkout do sistema
+# - Binários: sem modificação
+* text=auto eol=lf
+
+# Scripts shell mantêm LF mesmo no Windows
+*.sh text eol=lf
+
+# Arquivos do Windows mantêm CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binários — sem normalização
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.woff binary
+*.woff2 binary
