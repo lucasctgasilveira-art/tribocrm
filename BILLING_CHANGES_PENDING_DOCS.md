@@ -627,3 +627,100 @@ O campo "Parâmetros do template (JSON)" em /admin/emails/novo exige que o admin
 
 **Por que não implementado hoje (20/04/2026):**
 Sessão já tinha 16 commits em produção. Adicionar feature nova em fim de sessão longa = risco de introduzir bug no código que acabou de ser estabilizado. Adiado pra próxima sessão.
+
+---
+
+## Fase 7 — Hardening de Segurança (backlog, não iniciada)
+
+**Status:** 🔜 Backlog — sessão dedicada futura
+**Estimativa:** 2-4h em sessão exclusiva
+**Prioridade:** Média (não-crítico no contexto atual)
+
+### Gatilho
+
+Email do Supabase Advisors (19/04/2026) detectou:
+- `rls_disabled_in_public` — tabelas sem Row-Level Security
+- `sensitive_columns_exposed` — colunas sensíveis acessíveis
+  via API pública
+
+### Por que não-crítico no contexto atual
+
+Investigação confirmou arquitetura do TriboCRM:
+- Frontend só fala com backend Node (Railway) via VITE_API_URL
+- Backend usa Prisma + DATABASE_URL pra PostgreSQL direto
+- Zero uso de `@supabase/supabase-js` (pacote não instalado)
+- Zero uso de PostgREST API pública
+- Zero uso de Supabase Auth (JWT próprio via jsonwebtoken)
+- Zero uso de Supabase Storage/Realtime
+
+Vars `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_KEY`
+em `.env.example` são vestígio histórico — declaradas como
+"opcional" mas não cabladas em código.
+
+O vetor de ataque clássico que RLS bloqueia (cliente final com
+anon_key fazendo query direta em PostgREST) **não existe no
+TriboCRM**.
+
+### Por que implementar RLS mesmo assim (futuro)
+
+Em ordem de importância:
+
+1. **Defesa em profundidade** — bug futuro no backend (query
+   sem filtro `tenantId` explícito) hoje = vazamento cross-tenant
+   total. Com RLS ativa, seria bloqueado no banco mesmo se a
+   aplicação errasse.
+
+2. **Futuras integrações** — se um dia integrar ferramenta no-code
+   (Retool, n8n, Zapier) ou webhook externo que acesse o Supabase
+   direto, aí RLS vira crítico imediato.
+
+3. **Auditoria/compliance** — sistema SaaS multi-tenant "sério"
+   tem RLS. Qualquer auditoria de segurança vai pedir.
+
+### Escopo estimado da Fase 7
+
+Sub-etapas sugeridas (a refinar na sessão dedicada):
+
+**7.1 — Mapeamento:**
+- Listar todas as tabelas multi-tenant (as que têm `tenantId`
+  ou equivalente)
+- Identificar quais tabelas são "compartilhadas/globais"
+  (ex: Plan, SystemLog) que NÃO devem ter RLS de tenant
+
+**7.2 — Políticas em staging:**
+- Escrever SQL policies por tabela baseado em JWT claim
+- Testar em branch `tribocrm-staging` do Supabase
+- Validar que queries Prisma continuam funcionando (service_role
+  ignora RLS, então backend Node não é afetado — mas confirmar)
+
+**7.3 — Limpeza de vars não usadas:**
+- Remover `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_KEY`
+  do `.env.example` já que não são usadas
+- Documentar no README que Supabase é "só banco, via Prisma"
+
+**7.4 — Aplicação em produção:**
+- Rodar em janela de baixo tráfego
+- Rollback plan: `ALTER TABLE x DISABLE ROW LEVEL SECURITY`
+- Monitorar logs Railway por 24h
+
+**7.5 — Senha admin fraca (já conhecida):**
+- Trocar senha admin (`admin@tribocrm.com.br / Teste@123`)
+  por senha forte
+- Documentar rotacionamento em password manager
+
+### Risco de implementação
+
+ALTO em sessão não dedicada:
+- RLS mal configurado pode quebrar queries em produção
+  silenciosamente
+- Service_role key cabida em lugar errado pode expor tudo
+
+Por isso a recomendação é sessão exclusiva com teste em staging
+antes de produção.
+
+### Ação imediata recomendada no Supabase Advisors
+
+Enquanto Fase 7 não acontece:
+- Marcar alertas como "acknowledged" no dashboard Supabase
+- Adicionar nota: "tratado como Fase 7 no backlog TriboCRM —
+  não-crítico no contexto: arquitetura não usa API pública"
