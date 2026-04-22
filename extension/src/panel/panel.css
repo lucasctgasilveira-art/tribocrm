@@ -1232,3 +1232,275 @@
 .tribocrm-date-custom {
   margin-top: 2px;
 }
+
+/* ── Outcome: botões Vender/Perder e badge ────────────────────── */
+
+/* Quando há outcome-buttons/badge abaixo do mini-header, o espaçamento
+   passa a ser controlado pelo próprio componente — evita duplicar
+   padding+margin nas duas bordas adjacentes. */
+.tribocrm-lead-mini--with-outcome {
+  padding-bottom: 0;
+}
+
+.tribocrm-outcome-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.tribocrm-btn-sell,
+.tribocrm-btn-lose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 12px;
+  font-family: var(--tribocrm-font);
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background var(--tribocrm-transition);
+  line-height: 1;
+}
+
+.tribocrm-btn-sell {
+  background: var(--tribocrm-green);
+  color: white;
+}
+.tribocrm-btn-sell:hover:not(:disabled) {
+  background: #16a34a;
+}
+
+.tribocrm-btn-lose {
+  background: var(--tribocrm-red);
+  color: white;
+}
+.tribocrm-btn-lose:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.tribocrm-btn-sell:disabled,
+.tribocrm-btn-lose:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tribocrm-outcome-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.3;
+  margin-bottom: 14px;
+}
+
+.tribocrm-outcome-badge-icon {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.tribocrm-outcome-badge-text {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.tribocrm-outcome-badge-won {
+  background: rgba(34, 197, 94, 0.14);
+  color: #15803d;
+  border: 1px solid rgba(34, 197, 94, 0.35);
+}
+[data-theme="dark"] .tribocrm-outcome-badge-won {
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.tribocrm-outcome-badge-lost {
+  background: rgba(239, 68, 68, 0.14);
+  color: #b91c1c;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+[data-theme="dark"] .tribocrm-outcome-badge-lost {
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.tribocrm-outcome-details-btn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-family: var(--tribocrm-font);
+  font-size: 12px;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  opacity: 0.8;
+  flex-shrink: 0;
+}
+.tribocrm-outcome-details-btn:hover {
+  opacity: 1;
+}
+
+/* ── Modal (scoped dentro do painel — NÃO usa viewport inteiro) ── */
+
+.tribocrm-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 10;
+  animation: tribocrm-fade-in 180ms ease-out;
+}
+
+@keyframes tribocrm-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.tribocrm-modal {
+  background: var(--tribocrm-surface);
+  border: 1px solid var(--tribocrm-border);
+  border-radius: 12px;
+  width: 100%;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.45);
+  animation: tribocrm-modal-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes tribocrm-modal-in {
+  from { transform: translateY(8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.tribocrm-modal-head {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--tribocrm-border);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tribocrm-text-primary);
+}
+
+.tribocrm-modal-body {
+  padding: 12px 14px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+.tribocrm-modal-foot {
+  padding: 10px 14px 12px;
+  border-top: 1px solid var(--tribocrm-border);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.tribocrm-modal-error {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--tribocrm-red);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.tribocrm-modal-products {
+  border: 1px solid var(--tribocrm-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--tribocrm-card);
+}
+
+.tribocrm-modal-products-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--tribocrm-text-secondary);
+  padding-bottom: 4px;
+  border-bottom: 1px dashed var(--tribocrm-border);
+}
+
+.tribocrm-modal-product-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--tribocrm-text-primary);
+}
+
+.tribocrm-modal-product-row input[type="checkbox"] {
+  margin: 0;
+  accent-color: var(--tribocrm-orange);
+  cursor: pointer;
+}
+
+.tribocrm-modal-product-row-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tribocrm-modal-product-row-total {
+  font-variant-numeric: tabular-nums;
+  color: var(--tribocrm-text-secondary);
+  flex-shrink: 0;
+}
+
+.tribocrm-modal-products-empty {
+  font-size: 12px;
+  color: var(--tribocrm-text-muted);
+  padding: 8px 10px;
+  border: 1px dashed var(--tribocrm-border);
+  border-radius: 6px;
+  background: var(--tribocrm-card);
+}
+
+.tribocrm-modal-details-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  padding: 4px 0;
+}
+
+.tribocrm-modal-details-row-label {
+  color: var(--tribocrm-text-secondary);
+  flex-shrink: 0;
+}
+
+.tribocrm-modal-details-row-value {
+  color: var(--tribocrm-text-primary);
+  text-align: right;
+  word-break: break-word;
+}
+
+.tribocrm-modal-details-divider {
+  height: 1px;
+  background: var(--tribocrm-border);
+  margin: 4px 0;
+}

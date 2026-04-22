@@ -54,6 +54,35 @@ export function formatCurrencyExact(value: number): string {
 }
 
 /**
+ * Data curta em pt-BR: "22/04/2026". Usada no badge de outcome e
+ * no modal de detalhes. Retorna string vazia se a data for inválida.
+ */
+export function formatDateShort(iso: string): string {
+  const date = new Date(iso);
+  if (!Number.isFinite(date.getTime())) return '';
+  const dd = String(date.getDate()).padStart(2, '0');
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const yyyy = date.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+/**
+ * Converte "yyyy-mm-dd" (do <input type="date">) em ISO no fuso LOCAL
+ * (meia-noite local, não UTC). Se receber string vazia/inválida,
+ * retorna string vazia.
+ *
+ * Uso: forms de outcome gravam closedAt a partir de um input date. Não
+ * queremos UTC porque "vendi dia 22/04" é lido como 22/04 no fuso do
+ * vendedor, não dia 21 à noite.
+ */
+export function dateInputToLocalISO(dateInput: string): string {
+  if (!dateInput) return '';
+  const date = new Date(`${dateInput}T00:00:00`);
+  if (!Number.isFinite(date.getTime())) return '';
+  return date.toISOString();
+}
+
+/**
  * Traduz o tipo de interação para exibição.
  */
 export function interactionTypeLabel(type: string): string {

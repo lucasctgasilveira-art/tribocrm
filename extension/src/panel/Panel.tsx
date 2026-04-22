@@ -13,7 +13,15 @@
 
 import { useEffect, useState, useCallback, useRef } from 'preact/hooks';
 import type { Lead, Interaction, WhatsAppTemplate, Stage } from '@shared/types/domain';
-import type { Product, LeadProduct, LeadTask, LeadTaskType } from '@shared/types/extra';
+import type {
+  Product,
+  LeadProduct,
+  LeadTask,
+  LeadTaskType,
+  LeadOutcome,
+  LossReason
+} from '@shared/types/extra';
+import type { ComponentChildren } from 'preact';
 import { sendMessage } from '@shared/utils/messaging';
 import { normalizePhone } from '@shared/utils/phone';
 import {
@@ -44,7 +52,9 @@ import {
   IconMoreVertical,
   IconTrash,
   IconEdit,
-  IconChevronDown
+  IconChevronDown,
+  IconCheckCircle,
+  IconXCircle
 } from './icons';
 import {
   formatRelativeTime,
@@ -54,7 +64,9 @@ import {
   temperatureLabel,
   leadTaskTypeEmoji,
   formatTaskDueRelative,
-  formatTaskDueAbsolute
+  formatTaskDueAbsolute,
+  formatDateShort,
+  dateInputToLocalISO
 } from './format';
 import { renderTemplate } from '@shared/utils/templates';
 import { injectTextIntoChat } from '../content/whatsapp-input';
@@ -468,18 +480,70 @@ type LeadFoundProps = {
 
 type Tab = 'dados' | 'notas' | 'tarefas' | 'produtos' | 'historico';
 
+type OutcomeModalKind = 'sell' | 'lose' | 'details' | null;
+
 function LeadFoundView({ lead, interactions, onUpdate, onToast }: LeadFoundProps) {
   const [tab, setTab] = useState<Tab>('dados');
+  const [outcome, setOutcome] = useState<LeadOutcome | null | undefined>(undefined);
+  const [modal, setModal] = useState<OutcomeModalKind>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setOutcome(undefined);
+    sendMessage({ type: 'LEAD_OUTCOME_GET', payload: { leadId: lead.id } })
+      .then((result) => {
+        if (!cancelled) setOutcome(result);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setOutcome(null);
+        onToast(err instanceof Error ? err.message : 'Erro ao carregar outcome');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [lead.id]);
+
+  const outcomeLoaded = outcome !== undefined;
+  const hasOutcome = outcome != null;
+
+  async function handleOutcomeSaved(next: LeadOutcome, toastMsg: string) {
+    setOutcome(next);
+    setModal(null);
+    onToast(toastMsg);
+    // Re-fetch do lead pra pegar a stage atualizada (se o handler conseguiu).
+    // Se falhou, lead volta igual — tudo bem, o outcome local manda.
+    onUpdate();
+  }
 
   return (
     <>
-      <div class="tribocrm-lead-mini">
+      <div
+        class={`tribocrm-lead-mini ${
+          outcomeLoaded ? 'tribocrm-lead-mini--with-outcome' : ''
+        }`}
+      >
         <div class="tribocrm-lead-mini-info">
           <h3 class="tribocrm-lead-name">{lead.name}</h3>
           {lead.company && <div class="tribocrm-lead-company">{lead.company}</div>}
         </div>
         <TemperatureBadge temperature={lead.temperature} />
       </div>
+
+      {!outcomeLoaded ? (
+        // Placeholder com altura reservada; o respiro de 14px vem do
+        // padding-bottom do mini-header (classe --with-outcome ainda
+        // não foi aplicada). Depois que carrega, o respiro passa a
+        // vir do margin-bottom dos botões/badge.
+        <div style={{ height: 38 }} />
+      ) : hasOutcome ? (
+        <OutcomeBadge outcome={outcome!} onDetails={() => setModal('details')} />
+      ) : (
+        <OutcomeButtons
+          onSell={() => setModal('sell')}
+          onLose={() => setModal('lose')}
+        />
+      )}
 
       <TabsBar active={tab} onChange={setTab} />
 
@@ -492,7 +556,525 @@ function LeadFoundView({ lead, interactions, onUpdate, onToast }: LeadFoundProps
       )}
       {tab === 'produtos' && <ProductsTab leadId={lead.id} onToast={onToast} />}
       {tab === 'historico' && <HistoricoTab interactions={interactions} />}
+
+      {modal === 'sell' && (
+        <SellModal
+          lead={lead}
+          onClose={() => setModal(null)}
+          onSaved={(o) => handleOutcomeSaved(o, 'Venda registrada')}
+        />
+      )}
+      {modal === 'lose' && (
+        <LoseModal
+          lead={lead}
+          onClose={() => setModal(null)}
+          onSaved={(o) => handleOutcomeSaved(o, 'Lead marcado como perdido')}
+        />
+      )}
+      {modal === 'details' && outcome && (
+        <OutcomeDetailsModal outcome={outcome} onClose={() => setModal(null)} />
+      )}
     </>
+  );
+}
+
+// ── Botões e badge de outcome ─────────────────────────────────
+
+function OutcomeButtons({ onSell, onLose }: { onSell: () => void; onLose: () => void }) {
+  return (
+    <div class="tribocrm-outcome-buttons">
+      <button type="button" class="tribocrm-btn-sell" onClick={onSell}>
+        <IconCheckCircle size={14} /> Marcar venda
+      </button>
+      <button type="button" class="tribocrm-btn-lose" onClick={onLose}>
+        <IconXCircle size={14} /> Marcar perda
+      </button>
+    </div>
+  );
+}
+
+function OutcomeBadge({
+  outcome,
+  onDetails
+}: {
+  outcome: LeadOutcome;
+  onDetails: () => void;
+}) {
+  const isWon = outcome.kind === 'won';
+  const dateLabel = formatDateShort(outcome.closedAt);
+  const wonExtra =
+    isWon && outcome.amount != null && outcome.amount > 0
+      ? ` · ${formatCurrency(outcome.amount)}`
+      : '';
+  const lostReason = outcome.reasonCustom?.trim() || outcome.reasonLabel || '';
+  const lostExtra = !isWon && lostReason ? ` · ${lostReason}` : '';
+  const label = isWon
+    ? `Vendido em ${dateLabel}${wonExtra}`
+    : `Perdido em ${dateLabel}${lostExtra}`;
+
+  return (
+    <div
+      class={`tribocrm-outcome-badge ${
+        isWon ? 'tribocrm-outcome-badge-won' : 'tribocrm-outcome-badge-lost'
+      }`}
+    >
+      <span class="tribocrm-outcome-badge-icon">
+        {isWon ? <IconCheckCircle size={16} /> : <IconXCircle size={16} />}
+      </span>
+      <span class="tribocrm-outcome-badge-text">{label}</span>
+      <button type="button" class="tribocrm-outcome-details-btn" onClick={onDetails}>
+        detalhes
+      </button>
+    </div>
+  );
+}
+
+// ── Modal shell (ESC + backdrop click) ────────────────────────
+
+function ModalShell({
+  title,
+  onClose,
+  children
+}: {
+  title: string;
+  onClose: () => void;
+  children: ComponentChildren;
+}) {
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+    }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return (
+    <div class="tribocrm-modal-backdrop" onClick={onClose} role="presentation">
+      <div
+        class="tribocrm-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div class="tribocrm-modal-head">{title}</div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// ── Modal: Marcar venda ───────────────────────────────────────
+
+function todayDateInputValue(): string {
+  const now = new Date();
+  const dd = String(now.getDate()).padStart(2, '0');
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  return `${now.getFullYear()}-${mm}-${dd}`;
+}
+
+function SellModal({
+  lead,
+  onClose,
+  onSaved
+}: {
+  lead: Lead;
+  onClose: () => void;
+  onSaved: (o: LeadOutcome) => void;
+}) {
+  const [amount, setAmount] = useState<string>('');
+  const [closedAtDate, setClosedAtDate] = useState<string>(todayDateInputValue());
+  const [leadProducts, setLeadProducts] = useState<LeadProduct[] | null>(null);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    sendMessage({
+      type: 'PRODUCTS_GET_FOR_LEAD',
+      payload: { leadId: lead.id }
+    })
+      .then((list) => {
+        if (cancelled) return;
+        setLeadProducts(list);
+        setSelected(new Set(list.map((_, i) => i))); // tudo marcado por default
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLeadProducts([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [lead.id]);
+
+  const amountNum = Number(amount);
+  const amountValid = Number.isFinite(amountNum) && amountNum >= 0.01;
+  const canSubmit = amountValid && !!closedAtDate && !saving && leadProducts !== null;
+
+  function toggleProduct(idx: number) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx);
+      else next.add(idx);
+      return next;
+    });
+  }
+
+  const subtotal = (leadProducts ?? []).reduce((acc, item, i) => {
+    if (!selected.has(i)) return acc;
+    return acc + item.quantity * item.unitPrice;
+  }, 0);
+
+  async function submit(e: Event) {
+    e.preventDefault();
+    if (!canSubmit) return;
+    setSaving(true);
+    setError(null);
+    const snapshot = (leadProducts ?? []).filter((_, i) => selected.has(i));
+    const outcome: LeadOutcome = {
+      leadId: lead.id,
+      kind: 'won',
+      amount: amountNum,
+      products: snapshot,
+      reasonId: null,
+      reasonLabel: null,
+      reasonCustom: null,
+      closedAt: dateInputToLocalISO(closedAtDate),
+      recordedAt: new Date().toISOString()
+    };
+    try {
+      await sendMessage({
+        type: 'LEAD_OUTCOME_SET',
+        payload: { leadId: lead.id, pipelineId: lead.pipeline.id, outcome }
+      });
+      onSaved(outcome);
+    } catch (err) {
+      setSaving(false);
+      setError(err instanceof Error ? err.message : 'Erro ao salvar venda');
+    }
+  }
+
+  return (
+    <ModalShell title="Registrar venda" onClose={onClose}>
+      <form class="tribocrm-modal-body" onSubmit={submit}>
+        {error && <div class="tribocrm-modal-error">{error}</div>}
+
+        <div class="tribocrm-field">
+          <label class="tribocrm-field-label">Valor fechado (R$) *</label>
+          <input
+            class="tribocrm-input"
+            type="number"
+            min="0.01"
+            step="0.01"
+            value={amount}
+            onInput={(e) => setAmount((e.target as HTMLInputElement).value)}
+            autofocus
+            required
+          />
+        </div>
+
+        <div class="tribocrm-field">
+          <label class="tribocrm-field-label">Data de fechamento *</label>
+          <input
+            class="tribocrm-input"
+            type="date"
+            value={closedAtDate}
+            onInput={(e) => setClosedAtDate((e.target as HTMLInputElement).value)}
+            required
+          />
+        </div>
+
+        {leadProducts === null ? null : leadProducts.length === 0 ? (
+          <div class="tribocrm-modal-products-empty">
+            Dica: cadastre produtos na aba Produtos para incluir aqui.
+          </div>
+        ) : (
+          <div class="tribocrm-modal-products">
+            <div class="tribocrm-modal-products-head">
+              <span>Produtos</span>
+              <span>Subtotal: {formatCurrencyExact(subtotal)}</span>
+            </div>
+            {leadProducts.map((item, idx) => (
+              <label key={idx} class="tribocrm-modal-product-row">
+                <input
+                  type="checkbox"
+                  checked={selected.has(idx)}
+                  onChange={() => toggleProduct(idx)}
+                />
+                <span class="tribocrm-modal-product-row-name">
+                  {item.name} · {item.quantity}×
+                </span>
+                <span class="tribocrm-modal-product-row-total">
+                  {formatCurrencyExact(item.quantity * item.unitPrice)}
+                </span>
+              </label>
+            ))}
+          </div>
+        )}
+      </form>
+      <div class="tribocrm-modal-foot">
+        <button
+          type="button"
+          class="tribocrm-btn tribocrm-btn-ghost"
+          onClick={onClose}
+          disabled={saving}
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="tribocrm-btn-sell"
+          onClick={submit}
+          disabled={!canSubmit}
+        >
+          {saving ? 'Salvando...' : 'Confirmar venda'}
+        </button>
+      </div>
+    </ModalShell>
+  );
+}
+
+// ── Modal: Marcar perda ───────────────────────────────────────
+
+function LoseModal({
+  lead,
+  onClose,
+  onSaved
+}: {
+  lead: Lead;
+  onClose: () => void;
+  onSaved: (o: LeadOutcome) => void;
+}) {
+  const [reasons, setReasons] = useState<LossReason[] | null>(null);
+  const [reasonId, setReasonId] = useState<string>('');
+  const [reasonCustom, setReasonCustom] = useState<string>('');
+  const [closedAtDate, setClosedAtDate] = useState<string>(todayDateInputValue());
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    sendMessage({ type: 'LOSS_REASONS_LIST' })
+      .then((list) => {
+        if (!cancelled) setReasons(list);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setReasons([]);
+        setError(err instanceof Error ? err.message : 'Erro ao carregar motivos');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const isOther = reasonId === 'other';
+  const customTrim = reasonCustom.trim();
+  const canSubmit =
+    !!reasonId &&
+    !!closedAtDate &&
+    !saving &&
+    (!isOther || customTrim.length > 0);
+
+  async function submit(e: Event) {
+    e.preventDefault();
+    if (!canSubmit || !reasons) return;
+    setSaving(true);
+    setError(null);
+    const reason = reasons.find((r) => r.id === reasonId) ?? null;
+    const outcome: LeadOutcome = {
+      leadId: lead.id,
+      kind: 'lost',
+      amount: null,
+      products: [],
+      reasonId,
+      reasonLabel: reason?.label ?? null,
+      reasonCustom: isOther ? customTrim : null,
+      closedAt: dateInputToLocalISO(closedAtDate),
+      recordedAt: new Date().toISOString()
+    };
+    try {
+      await sendMessage({
+        type: 'LEAD_OUTCOME_SET',
+        payload: { leadId: lead.id, pipelineId: lead.pipeline.id, outcome }
+      });
+      onSaved(outcome);
+    } catch (err) {
+      setSaving(false);
+      setError(err instanceof Error ? err.message : 'Erro ao salvar perda');
+    }
+  }
+
+  return (
+    <ModalShell title="Registrar perda" onClose={onClose}>
+      <form class="tribocrm-modal-body" onSubmit={submit}>
+        {error && <div class="tribocrm-modal-error">{error}</div>}
+
+        <div class="tribocrm-field">
+          <label class="tribocrm-field-label">Motivo *</label>
+          <select
+            class="tribocrm-select"
+            value={reasonId}
+            onChange={(e) => setReasonId((e.target as HTMLSelectElement).value)}
+            disabled={!reasons}
+            required
+            autofocus
+          >
+            <option value="">Selecione...</option>
+            {(reasons ?? []).map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {isOther && (
+          <div class="tribocrm-field">
+            <label class="tribocrm-field-label">Descreva *</label>
+            <textarea
+              class="tribocrm-textarea"
+              value={reasonCustom}
+              onInput={(e) =>
+                setReasonCustom((e.target as HTMLTextAreaElement).value)
+              }
+              required
+            />
+          </div>
+        )}
+
+        <div class="tribocrm-field">
+          <label class="tribocrm-field-label">Data *</label>
+          <input
+            class="tribocrm-input"
+            type="date"
+            value={closedAtDate}
+            onInput={(e) => setClosedAtDate((e.target as HTMLInputElement).value)}
+            required
+          />
+        </div>
+      </form>
+      <div class="tribocrm-modal-foot">
+        <button
+          type="button"
+          class="tribocrm-btn tribocrm-btn-ghost"
+          onClick={onClose}
+          disabled={saving}
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="tribocrm-btn-lose"
+          onClick={submit}
+          disabled={!canSubmit}
+        >
+          {saving ? 'Salvando...' : 'Confirmar perda'}
+        </button>
+      </div>
+    </ModalShell>
+  );
+}
+
+// ── Modal: Detalhes do outcome ────────────────────────────────
+
+function OutcomeDetailsModal({
+  outcome,
+  onClose
+}: {
+  outcome: LeadOutcome;
+  onClose: () => void;
+}) {
+  const isWon = outcome.kind === 'won';
+  const title = isWon ? 'Detalhes da venda' : 'Detalhes da perda';
+  const productsTotal = outcome.products.reduce(
+    (acc, p) => acc + p.quantity * p.unitPrice,
+    0
+  );
+
+  return (
+    <ModalShell title={title} onClose={onClose}>
+      <div class="tribocrm-modal-body">
+        <div class="tribocrm-modal-details-row">
+          <span class="tribocrm-modal-details-row-label">Status</span>
+          <span class="tribocrm-modal-details-row-value">
+            {isWon ? 'Vendido' : 'Perdido'}
+          </span>
+        </div>
+        <div class="tribocrm-modal-details-row">
+          <span class="tribocrm-modal-details-row-label">
+            {isWon ? 'Fechado em' : 'Registrado em'}
+          </span>
+          <span class="tribocrm-modal-details-row-value">
+            {formatDateShort(outcome.closedAt)}
+          </span>
+        </div>
+
+        {isWon && (
+          <>
+            <div class="tribocrm-modal-details-row">
+              <span class="tribocrm-modal-details-row-label">Valor</span>
+              <span class="tribocrm-modal-details-row-value">
+                {outcome.amount != null
+                  ? formatCurrencyExact(outcome.amount)
+                  : '—'}
+              </span>
+            </div>
+            {outcome.products.length > 0 && (
+              <>
+                <div class="tribocrm-modal-details-divider" />
+                <div class="tribocrm-modal-products">
+                  <div class="tribocrm-modal-products-head">
+                    <span>Produtos (snapshot)</span>
+                    <span>Subtotal: {formatCurrencyExact(productsTotal)}</span>
+                  </div>
+                  {outcome.products.map((p, i) => (
+                    <div key={i} class="tribocrm-modal-product-row">
+                      <span class="tribocrm-modal-product-row-name">
+                        {p.name} · {p.quantity}× {formatCurrencyExact(p.unitPrice)}
+                      </span>
+                      <span class="tribocrm-modal-product-row-total">
+                        {formatCurrencyExact(p.quantity * p.unitPrice)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </>
+        )}
+
+        {!isWon && (
+          <>
+            <div class="tribocrm-modal-details-row">
+              <span class="tribocrm-modal-details-row-label">Motivo</span>
+              <span class="tribocrm-modal-details-row-value">
+                {outcome.reasonLabel ?? '—'}
+              </span>
+            </div>
+            {outcome.reasonCustom && (
+              <div class="tribocrm-modal-details-row">
+                <span class="tribocrm-modal-details-row-label">Descrição</span>
+                <span class="tribocrm-modal-details-row-value">
+                  {outcome.reasonCustom}
+                </span>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+      <div class="tribocrm-modal-foot" style={{ gridTemplateColumns: '1fr' }}>
+        <button
+          type="button"
+          class="tribocrm-btn tribocrm-btn-ghost"
+          onClick={onClose}
+        >
+          Fechar
+        </button>
+      </div>
+    </ModalShell>
   );
 }
 

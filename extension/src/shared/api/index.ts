@@ -15,6 +15,7 @@ import { messagesService } from './messages.service';
 import { notesService } from './services/notes';
 import { productsService } from './services/products';
 import { tasksService } from './services/tasks';
+import { outcomeService } from './services/outcome';
 
 import {
   mockAuthService,
@@ -38,5 +39,6 @@ export const api = {
   messages: USE_MOCKS ? mockMessagesService : messagesService,
   notes: notesService,
   products: productsService,
-  tasks: tasksService
+  tasks: tasksService,
+  outcome: outcomeService
 };

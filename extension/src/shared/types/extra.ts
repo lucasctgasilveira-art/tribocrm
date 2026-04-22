@@ -34,3 +34,30 @@ export interface LeadTask {
   completedAt: string | null;
   notified: boolean;
 }
+
+// ── Outcome: vender/perder (persistência local) ───────────────────
+
+export interface LossReason {
+  id: string;
+  label: string;
+}
+
+export type LeadOutcomeKind = 'won' | 'lost';
+
+export interface LeadOutcome {
+  leadId: string;
+  kind: LeadOutcomeKind;
+
+  // Campos de venda
+  amount: number | null;
+  products: LeadProduct[];        // snapshot imutável na hora da venda
+
+  // Campos de perda
+  reasonId: string | null;
+  reasonLabel: string | null;     // label snapshot — se mudar no backend, histórico preservado
+  reasonCustom: string | null;    // texto livre quando reasonId === 'other'
+
+  // Comuns
+  closedAt: string;               // ISO — data escolhida no form (meia-noite local)
+  recordedAt: string;             // ISO — momento exato do registro
+}

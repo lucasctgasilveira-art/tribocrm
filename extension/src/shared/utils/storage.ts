@@ -91,12 +91,13 @@ export const storage = {
   },
 
   /**
-   * Remove TODOS os dados de leads (anotações + produtos + tarefas) de
-   * QUALQUER usuário no navegador. Chamar no logout, ANTES de limpar o
+   * Remove TODOS os dados de leads (notas + produtos + tarefas + outcomes)
+   * de QUALQUER usuário no navegador. Chamar no logout, ANTES de limpar o
    * authToken, para evitar que dados de uma sessão vazem para outra em
    * navegadores compartilhados.
    *
-   * Filtro: prefixos `lead-notes:`, `lead-products:` e `lead-tasks:`.
+   * Filtro: prefixos `lead-notes:`, `lead-products:`, `lead-tasks:` e
+   * `lead-outcome:`.
    * As chaves do schema fixo (auth, templatesCache, lastSync) NÃO
    * começam com esses prefixos, então estão protegidas.
    *
@@ -110,7 +111,8 @@ export const storage = {
       (k) =>
         k.startsWith('lead-notes:') ||
         k.startsWith('lead-products:') ||
-        k.startsWith('lead-tasks:')
+        k.startsWith('lead-tasks:') ||
+        k.startsWith('lead-outcome:')
     );
     if (keysToRemove.length > 0) {
       await chrome.storage.local.remove(keysToRemove);

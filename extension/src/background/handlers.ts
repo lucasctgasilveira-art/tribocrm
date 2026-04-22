@@ -7,11 +7,14 @@
 
 import { api } from '@shared/api';
 import { storage } from '@shared/utils/storage';
+import { createLogger } from '@shared/utils/logger';
 import type {
   ExtensionMessage,
   MessageResponseMap
 } from '@shared/types/messages';
-import type { LeadTask } from '@shared/types/extra';
+import type { LeadTask, LeadOutcome } from '@shared/types/extra';
+
+const log = createLogger('handlers');
 
 type HandlerMap = {
   [K in ExtensionMessage['type']]: (
@@ -35,6 +38,75 @@ async function scheduleTaskAlarm(task: LeadTask): Promise<void> {
 
 async function clearTaskAlarm(taskId: string): Promise<void> {
   await chrome.alarms.clear(`${TASK_ALARM_PREFIX}${taskId}`);
+}
+
+/**
+ * Resolve a stage "Vendido" ou "Perdido" no pipeline dado.
+ * Estratégia: procura primeiro por type (WON/LOST), que é o sinal forte
+ * do backend. Se não achar, tenta match por nome contendo "vendido"/"perdido"
+ * (caso um pipeline customizado não tenha o type mas tenha o nome).
+ * Retorna null se não encontrar — caller deve tratar silenciosamente.
+ */
+async function resolveOutcomeStage(
+  pipelineId: string,
+  kind: LeadOutcome['kind']
+): Promise<string | null> {
+  try {
+    const stages = await api.leads.listStages(pipelineId);
+    const wantedType = kind === 'won' ? 'WON' : 'LOST';
+    const fallbackName = kind === 'won' ? 'vendido' : 'perdido';
+    const stage =
+      stages.find((s) => s.type === wantedType) ??
+      stages.find((s) => s.name.toLowerCase().includes(fallbackName));
+    return stage?.id ?? null;
+  } catch (err) {
+    log.warn('Falha ao listar stages para resolver outcome', err);
+    return null;
+  }
+}
+
+/**
+ * Sincroniza o outcome local com a etapa atual do lead. Se houver um
+ * outcome gravado cujo kind não bate com o type da nova stage (WON/LOST),
+ * apaga o outcome. Caso contrário, mantém.
+ *
+ * Regra:
+ *   - stage WON  + outcome.kind 'won'  → mantém
+ *   - stage LOST + outcome.kind 'lost' → mantém
+ *   - qualquer outra combinação        → clearOutcome
+ *
+ * Disparada só pelo handler LEAD_UPDATE_STAGE (mudança manual de etapa).
+ * O fluxo "Marcar venda/perda" chama api.leads.updateStage diretamente
+ * (sem passar por esse handler), evitando limpar um outcome recém-criado.
+ * Falhas são silenciosas — o update da stage é o que importa.
+ */
+async function syncOutcomeWithStage(
+  leadId: string,
+  updatedLead: { stage: { id: string }; pipeline: { id: string } }
+): Promise<void> {
+  try {
+    const current = await api.outcome.getOutcome(leadId);
+    if (!current) return;
+
+    const stages = await api.leads.listStages(updatedLead.pipeline.id);
+    const newStage = stages.find((s) => s.id === updatedLead.stage.id);
+    if (!newStage) return;
+
+    const matches =
+      (newStage.type === 'WON' && current.kind === 'won') ||
+      (newStage.type === 'LOST' && current.kind === 'lost');
+
+    if (!matches) {
+      await api.outcome.clearOutcome(leadId);
+      log.info('Outcome limpo: etapa mudou e não é mais compatível', {
+        leadId,
+        newStageType: newStage.type,
+        outcomeKind: current.kind
+      });
+    }
+  } catch (err) {
+    log.warn('Falha ao sincronizar outcome com etapa — ignorado', err);
+  }
 }
 
 export const handlers: HandlerMap = {
@@ -68,7 +140,9 @@ export const handlers: HandlerMap = {
   },
 
   LEAD_UPDATE_STAGE: async (payload) => {
-    return api.leads.updateStage(payload.leadId, payload.stageId);
+    const updated = await api.leads.updateStage(payload.leadId, payload.stageId);
+    await syncOutcomeWithStage(payload.leadId, updated);
+    return updated;
   },
 
   INTERACTION_LIST: async (payload) => {
@@ -216,6 +290,46 @@ export const handlers: HandlerMap = {
       }
     }
     return updated;
+  },
+
+  // ── Outcome por lead ───────────────────────────────────────────
+
+  LEAD_OUTCOME_GET: async (payload) => {
+    return api.outcome.getOutcome(payload.leadId);
+  },
+
+  LEAD_OUTCOME_SET: async (payload) => {
+    await api.outcome.setOutcome(payload.leadId, payload.outcome);
+
+    // Side effect: tenta mudar a stage do lead para Vendido/Perdido.
+    // Se a stage não existir no pipeline (mock ou config parcial), loga
+    // warn e segue — o outcome local é a fonte de verdade pro painel.
+    const stageId = await resolveOutcomeStage(
+      payload.pipelineId,
+      payload.outcome.kind
+    );
+    if (stageId) {
+      try {
+        await api.leads.updateStage(payload.leadId, stageId);
+      } catch (err) {
+        log.warn('Falha ao mudar etapa após outcome — persistido local', err);
+      }
+    } else {
+      log.warn(
+        'Stage de outcome não encontrada no pipeline — outcome só persistido localmente',
+        { pipelineId: payload.pipelineId, kind: payload.outcome.kind }
+      );
+    }
+    return null;
+  },
+
+  LEAD_OUTCOME_CLEAR: async (payload) => {
+    await api.outcome.clearOutcome(payload.leadId);
+    return null;
+  },
+
+  LOSS_REASONS_LIST: async () => {
+    return api.outcome.listLossReasons();
   },
 
   // Esta mensagem VAI do service worker PARA o content script.

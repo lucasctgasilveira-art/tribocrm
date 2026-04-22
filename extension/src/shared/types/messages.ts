@@ -6,7 +6,15 @@ import type {
   CreateTaskDTO,
   Stage
 } from './domain';
-import type { Product, LeadProduct, LeadTask, LeadTaskType, LeadTaskStatus } from './extra';
+import type {
+  Product,
+  LeadProduct,
+  LeadTask,
+  LeadTaskType,
+  LeadTaskStatus,
+  LeadOutcome,
+  LossReason
+} from './extra';
 
 /**
  * Todas as mensagens que trafegam entre os contextos da extensão.
@@ -181,6 +189,35 @@ export interface MarkLeadTaskRequest {
   payload: { leadId: string; taskId: string; status: LeadTaskStatus };
 }
 
+// ── Mensagens de outcome (venda/perda) por lead ───────────────────
+//
+// LEAD_OUTCOME_SET inclui pipelineId porque o handler tenta resolver
+// a stage Vendido/Perdido via api.leads.listStages(pipelineId) e então
+// chama updateStage. Falha silenciosa se a stage não existir no mock.
+
+export interface GetLeadOutcomeRequest {
+  type: 'LEAD_OUTCOME_GET';
+  payload: { leadId: string };
+}
+
+export interface SetLeadOutcomeRequest {
+  type: 'LEAD_OUTCOME_SET';
+  payload: {
+    leadId: string;
+    pipelineId: string;
+    outcome: LeadOutcome;
+  };
+}
+
+export interface ClearLeadOutcomeRequest {
+  type: 'LEAD_OUTCOME_CLEAR';
+  payload: { leadId: string };
+}
+
+export interface ListLossReasonsRequest {
+  type: 'LOSS_REASONS_LIST';
+}
+
 // ── Union de todas as mensagens ────────────────────────────────────
 
 export type ExtensionMessage =
@@ -206,7 +243,11 @@ export type ExtensionMessage =
   | CreateLeadTaskRequest
   | UpdateLeadTaskRequest
   | DeleteLeadTaskRequest
-  | MarkLeadTaskRequest;
+  | MarkLeadTaskRequest
+  | GetLeadOutcomeRequest
+  | SetLeadOutcomeRequest
+  | ClearLeadOutcomeRequest
+  | ListLossReasonsRequest;
 
 // ── Formato de resposta ────────────────────────────────────────────
 
@@ -240,4 +281,8 @@ export interface MessageResponseMap {
   LEAD_TASK_UPDATE: LeadTask;
   LEAD_TASK_DELETE: null;
   LEAD_TASK_MARK: LeadTask;
+  LEAD_OUTCOME_GET: LeadOutcome | null;
+  LEAD_OUTCOME_SET: null;
+  LEAD_OUTCOME_CLEAR: null;
+  LOSS_REASONS_LIST: LossReason[];
 }
