@@ -39,6 +39,19 @@ export function formatCurrency(value: number | null | undefined): string {
 }
 
 /**
+ * Formata BRL com 2 casas decimais sempre — uso em produtos
+ * (preços unitários e totais com centavos).
+ */
+export function formatCurrencyExact(value: number): string {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value);
+}
+
+/**
  * Traduz o tipo de interação para exibição.
  */
 export function interactionTypeLabel(type: string): string {

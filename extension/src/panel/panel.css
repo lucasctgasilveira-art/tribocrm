@@ -711,3 +711,243 @@
 .tribocrm-onboarding-check a:hover {
   color: var(--tribocrm-orange-hover);
 }
+
+/* ── Mini-header do lead (sempre visível acima das tabs) ───────── */
+
+.tribocrm-lead-mini {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 0 14px;
+}
+
+.tribocrm-lead-mini-info {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Variante do lead-meta sem o separador superior (uso na aba Dados) */
+.tribocrm-lead-meta-no-border {
+  padding-top: 0;
+  border-top: none;
+}
+
+/* ── Tabs ─────────────────────────────────────────────────────── */
+
+.tribocrm-tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--tribocrm-border);
+  margin: 0 -16px 16px;
+  padding: 0 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  flex-shrink: 0;
+}
+
+.tribocrm-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tribocrm-tab {
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  padding: 10px 12px;
+  font-family: var(--tribocrm-font);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--tribocrm-text-secondary);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color var(--tribocrm-transition), border-color var(--tribocrm-transition);
+  white-space: nowrap;
+}
+
+.tribocrm-tab:hover:not(.tribocrm-tab-active) {
+  color: var(--tribocrm-text-primary);
+}
+
+.tribocrm-tab-active {
+  color: var(--tribocrm-orange);
+  border-bottom-color: var(--tribocrm-orange);
+}
+
+/* ── Aba Notas ────────────────────────────────────────────────── */
+
+.tribocrm-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tribocrm-notes-textarea {
+  min-height: 220px;
+  resize: vertical;
+}
+
+.tribocrm-notes-status {
+  font-size: 11px;
+  color: var(--tribocrm-text-muted);
+  min-height: 14px;
+  padding: 0 2px;
+}
+
+.tribocrm-notes-status-error {
+  color: var(--tribocrm-red);
+}
+
+/* ── Aba Produtos ─────────────────────────────────────────────── */
+
+.tribocrm-products {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tribocrm-product-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--tribocrm-card);
+  border: 1px solid var(--tribocrm-border);
+  border-radius: 8px;
+  padding: 6px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.tribocrm-product-picker-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--tribocrm-font);
+  font-size: 13px;
+  color: var(--tribocrm-text-primary);
+  transition: background var(--tribocrm-transition);
+}
+
+.tribocrm-product-picker-item:hover {
+  background: var(--tribocrm-card-hover);
+}
+
+.tribocrm-product-picker-name {
+  font-weight: 500;
+}
+
+.tribocrm-product-picker-price {
+  font-size: 12px;
+  color: var(--tribocrm-text-secondary);
+  flex-shrink: 0;
+}
+
+.tribocrm-products-empty {
+  padding: 16px;
+  text-align: center;
+  color: var(--tribocrm-text-muted);
+  font-size: 13px;
+}
+
+.tribocrm-product-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tribocrm-product-item {
+  background: var(--tribocrm-card);
+  border: 1px solid var(--tribocrm-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tribocrm-product-item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tribocrm-product-item-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--tribocrm-text-primary);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tribocrm-product-remove {
+  background: transparent;
+  border: none;
+  color: var(--tribocrm-text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--tribocrm-transition), background var(--tribocrm-transition);
+  flex-shrink: 0;
+}
+
+.tribocrm-product-remove:hover {
+  color: var(--tribocrm-red);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.tribocrm-product-item-fields {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 8px;
+}
+
+.tribocrm-product-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.tribocrm-product-field-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--tribocrm-text-muted);
+  font-weight: 500;
+}
+
+.tribocrm-product-input {
+  padding: 6px 9px;
+  font-size: 13px;
+}
+
+.tribocrm-product-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1px solid var(--tribocrm-border);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tribocrm-text-primary);
+}
+
+.tribocrm-product-total-value {
+  color: var(--tribocrm-orange);
+  font-size: 16px;
+}

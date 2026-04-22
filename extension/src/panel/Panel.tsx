@@ -11,8 +11,9 @@
  *   - 'error'           → erro inesperado
  */
 
-import { useEffect, useState, useCallback } from 'preact/hooks';
+import { useEffect, useState, useCallback, useRef } from 'preact/hooks';
 import type { Lead, Interaction, WhatsAppTemplate, Stage } from '@shared/types/domain';
+import type { Product, LeadProduct } from '@shared/types/extra';
 import { sendMessage } from '@shared/utils/messaging';
 import { normalizePhone } from '@shared/utils/phone';
 import {
@@ -37,11 +38,13 @@ import {
   IconPhone,
   IconSun,
   IconMoon,
-  IconAlertTriangle
+  IconAlertTriangle,
+  IconCalendar
 } from './icons';
 import {
   formatRelativeTime,
   formatCurrency,
+  formatCurrencyExact,
   interactionTypeLabel,
   temperatureLabel
 } from './format';
@@ -455,21 +458,76 @@ type LeadFoundProps = {
   onToast: (msg: string) => void;
 };
 
+type Tab = 'dados' | 'notas' | 'tarefas' | 'produtos' | 'historico';
+
 function LeadFoundView({ lead, interactions, onUpdate, onToast }: LeadFoundProps) {
+  const [tab, setTab] = useState<Tab>('dados');
+
+  return (
+    <>
+      <div class="tribocrm-lead-mini">
+        <div class="tribocrm-lead-mini-info">
+          <h3 class="tribocrm-lead-name">{lead.name}</h3>
+          {lead.company && <div class="tribocrm-lead-company">{lead.company}</div>}
+        </div>
+        <TemperatureBadge temperature={lead.temperature} />
+      </div>
+
+      <TabsBar active={tab} onChange={setTab} />
+
+      {tab === 'dados' && (
+        <DadosTab lead={lead} onUpdate={onUpdate} onToast={onToast} />
+      )}
+      {tab === 'notas' && <NotesTab leadId={lead.id} onToast={onToast} />}
+      {tab === 'tarefas' && <TasksPlaceholder />}
+      {tab === 'produtos' && <ProductsTab leadId={lead.id} onToast={onToast} />}
+      {tab === 'historico' && <HistoricoTab interactions={interactions} />}
+    </>
+  );
+}
+
+function TabsBar({ active, onChange }: { active: Tab; onChange: (t: Tab) => void }) {
+  const tabs: { id: Tab; label: string }[] = [
+    { id: 'dados', label: 'Dados' },
+    { id: 'notas', label: 'Notas' },
+    { id: 'tarefas', label: 'Tarefas' },
+    { id: 'produtos', label: 'Produtos' },
+    { id: 'historico', label: 'Histórico' }
+  ];
+
+  return (
+    <div class="tribocrm-tabs" role="tablist">
+      {tabs.map((t) => (
+        <button
+          key={t.id}
+          role="tab"
+          type="button"
+          aria-selected={active === t.id}
+          class={`tribocrm-tab ${active === t.id ? 'tribocrm-tab-active' : ''}`}
+          onClick={() => onChange(t.id)}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function DadosTab({
+  lead,
+  onUpdate,
+  onToast
+}: {
+  lead: Lead;
+  onUpdate: () => void;
+  onToast: (msg: string) => void;
+}) {
   const [mode, setMode] = useState<'view' | 'interaction' | 'templates' | 'stage'>('view');
 
   return (
     <>
-      {/* Card com dados do lead */}
       <div class="tribocrm-lead-card">
-        <div class="tribocrm-lead-header">
-          <div>
-            <h3 class="tribocrm-lead-name">{lead.name}</h3>
-            {lead.company && <div class="tribocrm-lead-company">{lead.company}</div>}
-          </div>
-          <TemperatureBadge temperature={lead.temperature} />
-        </div>
-        <div class="tribocrm-lead-meta">
+        <div class="tribocrm-lead-meta tribocrm-lead-meta-no-border">
           <div>
             <div class="tribocrm-meta-label">Etapa</div>
             <div class="tribocrm-meta-value">
@@ -491,11 +549,13 @@ function LeadFoundView({ lead, interactions, onUpdate, onToast }: LeadFoundProps
         </div>
       </div>
 
-      {/* Ações principais */}
       {mode === 'view' && (
         <>
           <div class="tribocrm-btn-group">
-            <button class="tribocrm-btn tribocrm-btn-primary" onClick={() => setMode('interaction')}>
+            <button
+              class="tribocrm-btn tribocrm-btn-primary"
+              onClick={() => setMode('interaction')}
+            >
               <IconPlus size={14} /> Interação
             </button>
             <button class="tribocrm-btn tribocrm-btn-ghost" onClick={() => setMode('stage')}>
@@ -509,34 +569,6 @@ function LeadFoundView({ lead, interactions, onUpdate, onToast }: LeadFoundProps
           >
             <IconMessageCircle size={14} /> Modelos de mensagem
           </button>
-
-          {/* Timeline */}
-          <div class="tribocrm-section" style={{ marginTop: 20 }}>
-            <div class="tribocrm-section-title">Histórico</div>
-            {interactions.length === 0 ? (
-              <div class="tribocrm-interaction">
-                <div class="tribocrm-interaction-body" style={{ color: 'var(--tribocrm-text-muted)' }}>
-                  Nenhuma interação registrada ainda.
-                </div>
-              </div>
-            ) : (
-              <div class="tribocrm-timeline">
-                {interactions.map((int) => (
-                  <div class="tribocrm-interaction" key={int.id}>
-                    <div class="tribocrm-interaction-head">
-                      <span class="tribocrm-interaction-type">
-                        {interactionTypeLabel(int.type)}
-                      </span>
-                      <span class="tribocrm-interaction-date">
-                        {formatRelativeTime(int.createdAt)}
-                      </span>
-                    </div>
-                    <div class="tribocrm-interaction-body">{int.description}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
         </>
       )}
 
@@ -565,13 +597,417 @@ function LeadFoundView({ lead, interactions, onUpdate, onToast }: LeadFoundProps
       )}
 
       {mode === 'templates' && (
-        <TemplatesList
-          lead={lead}
-          onClose={() => setMode('view')}
-          onToast={onToast}
-        />
+        <TemplatesList lead={lead} onClose={() => setMode('view')} onToast={onToast} />
       )}
     </>
+  );
+}
+
+function HistoricoTab({ interactions }: { interactions: Interaction[] }) {
+  if (interactions.length === 0) {
+    return (
+      <div class="tribocrm-interaction">
+        <div
+          class="tribocrm-interaction-body"
+          style={{ color: 'var(--tribocrm-text-muted)' }}
+        >
+          Nenhuma interação registrada ainda.
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div class="tribocrm-timeline">
+      {interactions.map((int) => (
+        <div class="tribocrm-interaction" key={int.id}>
+          <div class="tribocrm-interaction-head">
+            <span class="tribocrm-interaction-type">{interactionTypeLabel(int.type)}</span>
+            <span class="tribocrm-interaction-date">
+              {formatRelativeTime(int.createdAt)}
+            </span>
+          </div>
+          <div class="tribocrm-interaction-body">{int.description}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TasksPlaceholder() {
+  return (
+    <div class="tribocrm-empty">
+      <div class="tribocrm-empty-icon">
+        <IconCalendar size={24} />
+      </div>
+      <div>Em breve.</div>
+    </div>
+  );
+}
+
+// ── Aba Notas ──────────────────────────────────────────────────
+
+type NotesStatus =
+  | { kind: 'loading' }
+  | { kind: 'idle' }
+  | { kind: 'typing' }
+  | { kind: 'saving' }
+  | { kind: 'saved'; at: number }
+  | { kind: 'error' };
+
+function NotesTab({ leadId, onToast }: { leadId: string; onToast: (m: string) => void }) {
+  const [text, setText] = useState('');
+  const [status, setStatus] = useState<NotesStatus>({ kind: 'loading' });
+
+  const timeoutRef = useRef<number | null>(null);
+  const lastSavedRef = useRef('');
+  const dirtyRef = useRef(false);
+  const textRef = useRef('');
+  // Tick para "Salvo há X" atualizar visualmente
+  const [, setNow] = useState(0);
+
+  useEffect(() => {
+    textRef.current = text;
+  }, [text]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setStatus({ kind: 'loading' });
+    sendMessage({ type: 'NOTES_GET', payload: { leadId } })
+      .then((val) => {
+        if (cancelled) return;
+        setText(val);
+        textRef.current = val;
+        lastSavedRef.current = val;
+        dirtyRef.current = false;
+        setStatus({ kind: 'idle' });
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setStatus({ kind: 'error' });
+        onToast(err instanceof Error ? err.message : 'Erro ao carregar anotações');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [leadId]);
+
+  async function flush() {
+    if (!dirtyRef.current) return;
+    const snapshot = textRef.current;
+    setStatus({ kind: 'saving' });
+    try {
+      await sendMessage({ type: 'NOTES_SET', payload: { leadId, text: snapshot } });
+      lastSavedRef.current = snapshot;
+      const stillDirty = textRef.current !== lastSavedRef.current;
+      dirtyRef.current = stillDirty;
+      setStatus(stillDirty ? { kind: 'typing' } : { kind: 'saved', at: Date.now() });
+    } catch {
+      setStatus({ kind: 'error' });
+    }
+  }
+
+  function onInput(e: Event) {
+    const v = (e.target as HTMLTextAreaElement).value;
+    setText(v);
+    textRef.current = v;
+    dirtyRef.current = v !== lastSavedRef.current;
+
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+
+    if (!dirtyRef.current) {
+      setStatus(
+        lastSavedRef.current === '' ? { kind: 'idle' } : { kind: 'saved', at: Date.now() }
+      );
+      return;
+    }
+
+    setStatus({ kind: 'typing' });
+    timeoutRef.current = window.setTimeout(() => {
+      timeoutRef.current = null;
+      void flush();
+    }, 1000);
+  }
+
+  // Cleanup: ao trocar lead ou desmontar, flush pendente
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      if (dirtyRef.current) {
+        void sendMessage({
+          type: 'NOTES_SET',
+          payload: { leadId, text: textRef.current }
+        });
+      }
+    };
+  }, [leadId]);
+
+  // Re-render a cada 30s pra atualizar "Salvo há X"
+  useEffect(() => {
+    if (status.kind !== 'saved') return;
+    const id = window.setInterval(() => setNow((n) => n + 1), 30_000);
+    return () => clearInterval(id);
+  }, [status.kind]);
+
+  function statusLabel(): string {
+    switch (status.kind) {
+      case 'loading':
+        return 'Carregando...';
+      case 'idle':
+        return '';
+      case 'typing':
+        return 'Digitando...';
+      case 'saving':
+        return 'Salvando...';
+      case 'saved':
+        return `Salvo ${formatRelativeTime(new Date(status.at).toISOString())}`;
+      case 'error':
+        return 'Erro ao salvar';
+    }
+  }
+
+  return (
+    <div class="tribocrm-notes">
+      <textarea
+        class="tribocrm-textarea tribocrm-notes-textarea"
+        value={text}
+        onInput={onInput}
+        placeholder="Escreva anotações sobre este lead..."
+        disabled={status.kind === 'loading'}
+      />
+      <div
+        class={`tribocrm-notes-status ${
+          status.kind === 'error' ? 'tribocrm-notes-status-error' : ''
+        }`}
+      >
+        {statusLabel()}
+      </div>
+    </div>
+  );
+}
+
+// ── Aba Produtos ───────────────────────────────────────────────
+
+function ProductsTab({
+  leadId,
+  onToast
+}: {
+  leadId: string;
+  onToast: (m: string) => void;
+}) {
+  const [catalog, setCatalog] = useState<Product[] | null>(null);
+  const [items, setItems] = useState<LeadProduct[] | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  const debounceRef = useRef<number | null>(null);
+  const dirtyRef = useRef(false);
+  const itemsRef = useRef<LeadProduct[]>([]);
+
+  useEffect(() => {
+    if (items) itemsRef.current = items;
+  }, [items]);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      sendMessage({ type: 'PRODUCTS_CATALOG' }),
+      sendMessage({ type: 'PRODUCTS_GET_FOR_LEAD', payload: { leadId } })
+    ])
+      .then(([cat, leadItems]) => {
+        if (cancelled) return;
+        setCatalog(cat);
+        setItems(leadItems);
+        itemsRef.current = leadItems;
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        onToast(err instanceof Error ? err.message : 'Erro ao carregar produtos');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [leadId]);
+
+  // Cleanup: flush pending edit on unmount/leadId change
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+        debounceRef.current = null;
+        if (dirtyRef.current) {
+          void sendMessage({
+            type: 'PRODUCTS_SET_FOR_LEAD',
+            payload: { leadId, items: itemsRef.current }
+          });
+        }
+      }
+    };
+  }, [leadId]);
+
+  async function saveImmediate(next: LeadProduct[]) {
+    setItems(next);
+    itemsRef.current = next;
+    dirtyRef.current = false;
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+    try {
+      await sendMessage({
+        type: 'PRODUCTS_SET_FOR_LEAD',
+        payload: { leadId, items: next }
+      });
+    } catch (err) {
+      onToast(err instanceof Error ? err.message : 'Erro ao salvar produtos');
+    }
+  }
+
+  function scheduleSave(next: LeadProduct[]) {
+    setItems(next);
+    itemsRef.current = next;
+    dirtyRef.current = true;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = window.setTimeout(() => {
+      debounceRef.current = null;
+      sendMessage({
+        type: 'PRODUCTS_SET_FOR_LEAD',
+        payload: { leadId, items: itemsRef.current }
+      })
+        .then(() => {
+          dirtyRef.current = false;
+        })
+        .catch((err) => {
+          onToast(err instanceof Error ? err.message : 'Erro ao salvar produtos');
+        });
+    }, 500);
+  }
+
+  function addProduct(p: Product) {
+    const newItem: LeadProduct = {
+      productId: p.id,
+      name: p.name,
+      quantity: 1,
+      unitPrice: p.defaultPrice
+    };
+    void saveImmediate([...(items ?? []), newItem]);
+    setPickerOpen(false);
+  }
+
+  function removeAt(index: number) {
+    const next = (items ?? []).filter((_, i) => i !== index);
+    void saveImmediate(next);
+  }
+
+  function updateAt(index: number, patch: Partial<LeadProduct>) {
+    const next = (items ?? []).map((item, i) =>
+      i === index ? { ...item, ...patch } : item
+    );
+    scheduleSave(next);
+  }
+
+  if (!catalog || !items) {
+    return (
+      <div class="tribocrm-loading">
+        <div class="tribocrm-spinner" />
+      </div>
+    );
+  }
+
+  const total = items.reduce((acc, item) => acc + item.quantity * item.unitPrice, 0);
+
+  return (
+    <div class="tribocrm-products">
+      <button
+        class="tribocrm-btn tribocrm-btn-ghost tribocrm-btn-full"
+        onClick={() => setPickerOpen((v) => !v)}
+        type="button"
+      >
+        <IconPlus size={14} /> Adicionar produto
+      </button>
+
+      {pickerOpen && (
+        <div class="tribocrm-product-picker" role="listbox">
+          {catalog.map((p) => (
+            <button
+              key={p.id}
+              class="tribocrm-product-picker-item"
+              onClick={() => addProduct(p)}
+              type="button"
+            >
+              <span class="tribocrm-product-picker-name">{p.name}</span>
+              <span class="tribocrm-product-picker-price">
+                {formatCurrencyExact(p.defaultPrice)}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {items.length === 0 ? (
+        <div class="tribocrm-products-empty">Nenhum produto adicionado.</div>
+      ) : (
+        <div class="tribocrm-product-list">
+          {items.map((item, idx) => (
+            <div class="tribocrm-product-item" key={`${item.productId}-${idx}`}>
+              <div class="tribocrm-product-item-head">
+                <span class="tribocrm-product-item-name">{item.name}</span>
+                <button
+                  class="tribocrm-product-remove"
+                  onClick={() => removeAt(idx)}
+                  title="Remover"
+                  type="button"
+                >
+                  <IconX size={14} />
+                </button>
+              </div>
+              <div class="tribocrm-product-item-fields">
+                <div class="tribocrm-product-field">
+                  <label class="tribocrm-product-field-label">Qtd</label>
+                  <input
+                    class="tribocrm-input tribocrm-product-input"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={item.quantity}
+                    onInput={(e) => {
+                      const raw = Number((e.target as HTMLInputElement).value);
+                      const v = Number.isFinite(raw) ? Math.max(1, Math.floor(raw)) : 1;
+                      updateAt(idx, { quantity: v });
+                    }}
+                  />
+                </div>
+                <div class="tribocrm-product-field">
+                  <label class="tribocrm-product-field-label">Unit (R$)</label>
+                  <input
+                    class="tribocrm-input tribocrm-product-input"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={item.unitPrice}
+                    onInput={(e) => {
+                      const raw = Number((e.target as HTMLInputElement).value);
+                      const v = Number.isFinite(raw) ? Math.max(0, raw) : 0;
+                      updateAt(idx, { unitPrice: v });
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div class="tribocrm-product-total">
+        <span class="tribocrm-product-total-label">Total</span>
+        <span class="tribocrm-product-total-value">{formatCurrencyExact(total)}</span>
+      </div>
+    </div>
   );
 }
 

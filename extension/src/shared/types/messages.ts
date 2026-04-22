@@ -6,6 +6,7 @@ import type {
   CreateTaskDTO,
   Stage
 } from './domain';
+import type { Product, LeadProduct } from './extra';
 
 /**
  * Todas as mensagens que trafegam entre os contextos da extensão.
@@ -111,6 +112,34 @@ export interface SendScheduledMessageNotify {
   };
 }
 
+// ── Mensagens de anotações por lead (persistência local) ───────────
+
+export interface GetNotesRequest {
+  type: 'NOTES_GET';
+  payload: { leadId: string };
+}
+
+export interface SetNotesRequest {
+  type: 'NOTES_SET';
+  payload: { leadId: string; text: string };
+}
+
+// ── Mensagens de produtos (catálogo + itens por lead) ──────────────
+
+export interface ListCatalogRequest {
+  type: 'PRODUCTS_CATALOG';
+}
+
+export interface GetLeadProductsRequest {
+  type: 'PRODUCTS_GET_FOR_LEAD';
+  payload: { leadId: string };
+}
+
+export interface SetLeadProductsRequest {
+  type: 'PRODUCTS_SET_FOR_LEAD';
+  payload: { leadId: string; items: LeadProduct[] };
+}
+
 // ── Union de todas as mensagens ────────────────────────────────────
 
 export type ExtensionMessage =
@@ -126,7 +155,12 @@ export type ExtensionMessage =
   | CreateTaskRequest
   | ListTemplatesRequest
   | ScheduleMessageRequest
-  | SendScheduledMessageNotify;
+  | SendScheduledMessageNotify
+  | GetNotesRequest
+  | SetNotesRequest
+  | ListCatalogRequest
+  | GetLeadProductsRequest
+  | SetLeadProductsRequest;
 
 // ── Formato de resposta ────────────────────────────────────────────
 
@@ -150,4 +184,9 @@ export interface MessageResponseMap {
   TEMPLATE_LIST: WhatsAppTemplate[];
   MESSAGE_SCHEDULE: ScheduledMessage;
   MESSAGE_SEND_NOW: null;
+  NOTES_GET: string;
+  NOTES_SET: null;
+  PRODUCTS_CATALOG: Product[];
+  PRODUCTS_GET_FOR_LEAD: LeadProduct[];
+  PRODUCTS_SET_FOR_LEAD: null;
 }

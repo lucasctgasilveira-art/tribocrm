@@ -6,6 +6,7 @@
  */
 
 import { api } from '@shared/api';
+import { storage } from '@shared/utils/storage';
 import type {
   ExtensionMessage,
   MessageResponseMap
@@ -24,6 +25,9 @@ export const handlers: HandlerMap = {
   },
 
   AUTH_LOGOUT: async () => {
+    // Limpa dados locais de leads ANTES do logout pra evitar
+    // vazamento entre sessões em navegadores compartilhados.
+    await storage.clearAllLeadData();
     await api.auth.logout();
     return null;
   },
@@ -70,6 +74,28 @@ export const handlers: HandlerMap = {
 
   MESSAGE_SCHEDULE: async (payload) => {
     return api.messages.schedule(payload);
+  },
+
+  NOTES_GET: async (payload) => {
+    return api.notes.getNotes(payload.leadId);
+  },
+
+  NOTES_SET: async (payload) => {
+    await api.notes.setNotes(payload.leadId, payload.text);
+    return null;
+  },
+
+  PRODUCTS_CATALOG: async () => {
+    return api.products.listCatalog();
+  },
+
+  PRODUCTS_GET_FOR_LEAD: async (payload) => {
+    return api.products.getLeadProducts(payload.leadId);
+  },
+
+  PRODUCTS_SET_FOR_LEAD: async (payload) => {
+    await api.products.setLeadProducts(payload.leadId, payload.items);
+    return null;
   },
 
   // Esta mensagem VAI do service worker PARA o content script.

@@ -12,6 +12,8 @@
 import { authService } from './auth.service';
 import { leadsService } from './leads.service';
 import { messagesService } from './messages.service';
+import { notesService } from './services/notes';
+import { productsService } from './services/products';
 
 import {
   mockAuthService,
@@ -32,5 +34,7 @@ if (USE_MOCKS) {
 export const api = {
   auth: USE_MOCKS ? mockAuthService : authService,
   leads: USE_MOCKS ? mockLeadsService : leadsService,
-  messages: USE_MOCKS ? mockMessagesService : messagesService
+  messages: USE_MOCKS ? mockMessagesService : messagesService,
+  notes: notesService,
+  products: productsService
 };

@@ -88,5 +88,25 @@ export const storage = {
 
     chrome.storage.onChanged.addListener(listener);
     return () => chrome.storage.onChanged.removeListener(listener);
+  },
+
+  /**
+   * Remove TODOS os dados de leads (anotações + produtos) de QUALQUER
+   * usuário no navegador. Chamar no logout, ANTES de limpar o
+   * authToken, para evitar que dados de uma sessão vazem para outra
+   * em navegadores compartilhados.
+   *
+   * Filtro: prefixos `lead-notes:` e `lead-products:`. As chaves do
+   * schema fixo (auth, templatesCache, lastSync) NÃO começam com
+   * esses prefixos, então estão protegidas.
+   */
+  async clearAllLeadData(): Promise<void> {
+    const all = await chrome.storage.local.get(null);
+    const keysToRemove = Object.keys(all).filter(
+      (k) => k.startsWith('lead-notes:') || k.startsWith('lead-products:')
+    );
+    if (keysToRemove.length > 0) {
+      await chrome.storage.local.remove(keysToRemove);
+    }
   }
 };
