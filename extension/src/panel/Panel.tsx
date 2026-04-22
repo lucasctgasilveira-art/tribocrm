@@ -4,6 +4,7 @@
  * ESTADOS:
  *   - 'loading'         → buscando info (lead por telefone, interações...)
  *   - 'unauthenticated' → usuário não está logado na extensão
+ *   - 'onboarding'      → aceite de Termos/Privacidade pendente (ou versão mudou)
  *   - 'no-chat'         → nenhuma conversa do WhatsApp está aberta
  *   - 'lead-found'      → lead encontrado, mostra dados + ações
  *   - 'lead-not-found'  → contato não cadastrado, mostra botão de criar
@@ -20,6 +21,13 @@ import {
   setTheme as persistTheme,
   applyTheme
 } from '@shared/utils/theme';
+import {
+  CURRENT_VERSION as ONBOARDING_VERSION,
+  TERMS_URL,
+  PRIVACY_URL,
+  hasAcceptedCurrentVersion,
+  setAcceptedVersion
+} from '@shared/utils/onboarding';
 import type { ChatInfo, WhatsAppContactInfo } from '../content/whatsapp-dom';
 import {
   IconX,
@@ -45,6 +53,7 @@ const MOCK_MODE = import.meta.env.VITE_USE_MOCKS === 'true';
 type PanelState =
   | { kind: 'loading' }
   | { kind: 'unauthenticated' }
+  | { kind: 'onboarding' }
   | { kind: 'no-chat' }
   | { kind: 'manual-phone-input'; detectedName: string }
   | { kind: 'lead-found'; lead: Lead; interactions: Interaction[] }
@@ -120,6 +129,20 @@ export function Panel({ chatInfo, isOpen, isNarrow, onClose }: PanelProps) {
       }
     } catch (err) {
       setState({ kind: 'error', message: 'Não foi possível verificar sessão' });
+      return;
+    }
+
+    // Valida aceite de Termos/Privacidade (LGPD). Falha de storage = trata
+    // como não aceito — fail-safe: melhor pedir aceite de novo do que
+    // assumir consentimento que pode não existir.
+    try {
+      const accepted = await hasAcceptedCurrentVersion();
+      if (!accepted) {
+        setState({ kind: 'onboarding' });
+        return;
+      }
+    } catch {
+      setState({ kind: 'onboarding' });
       return;
     }
 
@@ -209,6 +232,7 @@ export function Panel({ chatInfo, isOpen, isNarrow, onClose }: PanelProps) {
           <>
             {state.kind === 'loading' && <LoadingState />}
             {state.kind === 'unauthenticated' && <UnauthenticatedState />}
+            {state.kind === 'onboarding' && <OnboardingView onAccept={reload} />}
             {state.kind === 'no-chat' && <NoChatState />}
             {state.kind === 'error' && <ErrorState message={state.message} />}
             {state.kind === 'manual-phone-input' && (
@@ -265,6 +289,73 @@ function UnauthenticatedState() {
       </div>
       <h3>Entre no TriboCRM</h3>
       <p>Clique no ícone do TriboCRM na barra do Chrome para fazer login.</p>
+    </div>
+  );
+}
+
+function OnboardingView({ onAccept }: { onAccept: () => void }) {
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [acceptPrivacy, setAcceptPrivacy] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleAccept() {
+    if (!acceptTerms || !acceptPrivacy || saving) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await setAcceptedVersion(ONBOARDING_VERSION);
+      onAccept();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao registrar aceite');
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div class="tribocrm-onboarding">
+      <h2 class="tribocrm-onboarding-title">Bem-vindo ao TriboCRM</h2>
+      <p class="tribocrm-onboarding-intro">
+        O TriboCRM integra seu WhatsApp Web, LinkedIn e Gmail ao seu CRM,
+        permitindo registrar leads e interações sem sair dessas plataformas.
+      </p>
+      {error && <div class="tribocrm-error-banner">{error}</div>}
+      <div class="tribocrm-onboarding-terms">
+        <label class="tribocrm-onboarding-check">
+          <input
+            type="checkbox"
+            checked={acceptTerms}
+            onChange={(e) => setAcceptTerms((e.target as HTMLInputElement).checked)}
+          />
+          <span>
+            Li e aceito os{' '}
+            <a href={TERMS_URL} target="_blank" rel="noopener noreferrer">
+              Termos de Uso
+            </a>
+          </span>
+        </label>
+        <label class="tribocrm-onboarding-check">
+          <input
+            type="checkbox"
+            checked={acceptPrivacy}
+            onChange={(e) => setAcceptPrivacy((e.target as HTMLInputElement).checked)}
+          />
+          <span>
+            Consinto com a coleta e processamento dos meus dados e dos
+            contatos com quem interajo, conforme a{' '}
+            <a href={PRIVACY_URL} target="_blank" rel="noopener noreferrer">
+              Política de Privacidade
+            </a>
+          </span>
+        </label>
+      </div>
+      <button
+        class="tribocrm-btn tribocrm-btn-primary tribocrm-btn-full"
+        disabled={!acceptTerms || !acceptPrivacy || saving}
+        onClick={handleAccept}
+      >
+        {saving ? 'Salvando...' : 'Começar'}
+      </button>
     </div>
   );
 }

@@ -641,3 +641,73 @@
   margin-bottom: 0;
   text-align: left;
 }
+
+/* ── Onboarding (aceite de termos) ───────────────────────────── */
+
+.tribocrm-onboarding {
+  display: flex;
+  flex-direction: column;
+  padding: 24px 8px 8px;
+  gap: 18px;
+}
+
+.tribocrm-onboarding-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--tribocrm-text-primary);
+  text-align: center;
+  letter-spacing: -0.01em;
+}
+
+.tribocrm-onboarding-intro {
+  margin: 0;
+  font-size: 13px;
+  color: var(--tribocrm-text-secondary);
+  line-height: 1.55;
+  text-align: center;
+}
+
+.tribocrm-onboarding-terms {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.tribocrm-onboarding-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  background: var(--tribocrm-card);
+  border: 1px solid var(--tribocrm-border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--tribocrm-text-primary);
+  line-height: 1.5;
+  transition: background var(--tribocrm-transition), border-color var(--tribocrm-transition);
+}
+
+.tribocrm-onboarding-check:hover {
+  background: var(--tribocrm-card-hover);
+}
+
+.tribocrm-onboarding-check input[type="checkbox"] {
+  margin: 2px 0 0 0;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--tribocrm-orange);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.tribocrm-onboarding-check a {
+  color: var(--tribocrm-orange);
+  text-decoration: underline;
+}
+
+.tribocrm-onboarding-check a:hover {
+  color: var(--tribocrm-orange-hover);
+}
