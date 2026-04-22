@@ -10,8 +10,9 @@
 
 export const CURRENT_VERSION = '2026-04-22';
 
-export const TERMS_URL = 'https://tribocrm.com.br/termos';
-export const PRIVACY_URL = 'https://tribocrm.com.br/privacidade';
+export const TERMS_URL = 'https://www.tribocrm.com.br/legal/extensao-termos.html';
+export const PRIVACY_URL = 'https://www.tribocrm.com.br/legal/extensao-privacidade.html';
+export const PURPOSE_URL = 'https://www.tribocrm.com.br/legal/extensao-proposito.html';
 
 const STORAGE_KEY = 'onboardingAcceptedVersion';
 
