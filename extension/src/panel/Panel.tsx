@@ -13,7 +13,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'preact/hooks';
 import type { Lead, Interaction, WhatsAppTemplate, Stage } from '@shared/types/domain';
-import type { Product, LeadProduct } from '@shared/types/extra';
+import type { Product, LeadProduct, LeadTask, LeadTaskType } from '@shared/types/extra';
 import { sendMessage } from '@shared/utils/messaging';
 import { normalizePhone } from '@shared/utils/phone';
 import {
@@ -39,14 +39,22 @@ import {
   IconSun,
   IconMoon,
   IconAlertTriangle,
-  IconCalendar
+  IconCalendar,
+  IconClock,
+  IconMoreVertical,
+  IconTrash,
+  IconEdit,
+  IconChevronDown
 } from './icons';
 import {
   formatRelativeTime,
   formatCurrency,
   formatCurrencyExact,
   interactionTypeLabel,
-  temperatureLabel
+  temperatureLabel,
+  leadTaskTypeEmoji,
+  formatTaskDueRelative,
+  formatTaskDueAbsolute
 } from './format';
 import { renderTemplate } from '@shared/utils/templates';
 import { injectTextIntoChat } from '../content/whatsapp-input';
@@ -479,7 +487,9 @@ function LeadFoundView({ lead, interactions, onUpdate, onToast }: LeadFoundProps
         <DadosTab lead={lead} onUpdate={onUpdate} onToast={onToast} />
       )}
       {tab === 'notas' && <NotesTab leadId={lead.id} onToast={onToast} />}
-      {tab === 'tarefas' && <TasksPlaceholder />}
+      {tab === 'tarefas' && (
+        <TasksTab leadId={lead.id} leadName={lead.name} onToast={onToast} />
+      )}
       {tab === 'produtos' && <ProductsTab leadId={lead.id} onToast={onToast} />}
       {tab === 'historico' && <HistoricoTab interactions={interactions} />}
     </>
@@ -634,13 +644,614 @@ function HistoricoTab({ interactions }: { interactions: Interaction[] }) {
   );
 }
 
-function TasksPlaceholder() {
-  return (
-    <div class="tribocrm-empty">
-      <div class="tribocrm-empty-icon">
-        <IconCalendar size={24} />
+// ── Aba Tarefas ───────────────────────────────────────────────
+
+type TaskFormMode =
+  | { kind: 'hidden' }
+  | { kind: 'create' }
+  | { kind: 'edit'; task: LeadTask };
+
+function TasksTab({
+  leadId,
+  leadName,
+  onToast
+}: {
+  leadId: string;
+  leadName: string;
+  onToast: (m: string) => void;
+}) {
+  const [tasks, setTasks] = useState<LeadTask[] | null>(null);
+  const [formMode, setFormMode] = useState<TaskFormMode>({ kind: 'hidden' });
+  const [doneOpen, setDoneOpen] = useState(false);
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setTasks(null);
+    sendMessage({ type: 'LEAD_TASK_LIST', payload: { leadId } })
+      .then((list) => {
+        if (cancelled) return;
+        setTasks(list);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        onToast(err instanceof Error ? err.message : 'Erro ao carregar tarefas');
+        setTasks([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [leadId]);
+
+  // Fecha menu ao clicar fora
+  useEffect(() => {
+    if (!menuOpenId) return;
+    function onDoc(e: MouseEvent) {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.tribocrm-task-menu-wrap')) {
+        setMenuOpenId(null);
+      }
+    }
+    document.addEventListener('click', onDoc);
+    return () => document.removeEventListener('click', onDoc);
+  }, [menuOpenId]);
+
+  // Re-render a cada 60s pra atualizar "em 2h" / "há 3h"
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = window.setInterval(() => setTick((n) => n + 1), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  async function handleCreate(input: {
+    title: string;
+    description: string;
+    type: LeadTaskType;
+    dueAt: string;
+  }) {
+    try {
+      const created = await sendMessage({
+        type: 'LEAD_TASK_CREATE',
+        payload: { leadId, leadName, ...input }
+      });
+      setTasks((prev) => [...(prev ?? []), created]);
+      setFormMode({ kind: 'hidden' });
+      onToast('Tarefa criada');
+    } catch (err) {
+      onToast(err instanceof Error ? err.message : 'Erro ao criar tarefa');
+    }
+  }
+
+  async function handleUpdate(
+    taskId: string,
+    patch: Partial<Pick<LeadTask, 'title' | 'description' | 'type' | 'dueAt'>>
+  ) {
+    try {
+      const updated = await sendMessage({
+        type: 'LEAD_TASK_UPDATE',
+        payload: { leadId, taskId, patch }
+      });
+      setTasks((prev) =>
+        (prev ?? []).map((t) => (t.id === taskId ? updated : t))
+      );
+      setFormMode({ kind: 'hidden' });
+      onToast('Tarefa atualizada');
+    } catch (err) {
+      onToast(err instanceof Error ? err.message : 'Erro ao atualizar');
+    }
+  }
+
+  async function handleDelete(taskId: string) {
+    const prev = tasks ?? [];
+    setTasks(prev.filter((t) => t.id !== taskId));
+    setMenuOpenId(null);
+    try {
+      await sendMessage({
+        type: 'LEAD_TASK_DELETE',
+        payload: { leadId, taskId }
+      });
+      onToast('Tarefa excluída');
+    } catch (err) {
+      setTasks(prev);
+      onToast(err instanceof Error ? err.message : 'Erro ao excluir');
+    }
+  }
+
+  async function handleToggleDone(task: LeadTask) {
+    const nextStatus = task.status === 'pending' ? 'done' : 'pending';
+    const prev = tasks ?? [];
+    setTasks(
+      prev.map((t) =>
+        t.id === task.id
+          ? {
+              ...t,
+              status: nextStatus,
+              completedAt: nextStatus === 'done' ? new Date().toISOString() : null
+            }
+          : t
+      )
+    );
+    try {
+      const updated = await sendMessage({
+        type: 'LEAD_TASK_MARK',
+        payload: { leadId, taskId: task.id, status: nextStatus }
+      });
+      setTasks((curr) =>
+        (curr ?? []).map((t) => (t.id === task.id ? updated : t))
+      );
+    } catch (err) {
+      setTasks(prev);
+      onToast(err instanceof Error ? err.message : 'Erro ao atualizar tarefa');
+    }
+  }
+
+  if (tasks === null) {
+    return (
+      <div class="tribocrm-loading">
+        <div class="tribocrm-spinner" />
       </div>
-      <div>Em breve.</div>
+    );
+  }
+
+  const pending = [...tasks.filter((t) => t.status === 'pending')].sort((a, b) => {
+    const now = Date.now();
+    const aOverdue = Date.parse(a.dueAt) < now;
+    const bOverdue = Date.parse(b.dueAt) < now;
+    if (aOverdue !== bOverdue) return aOverdue ? -1 : 1;
+    return Date.parse(a.dueAt) - Date.parse(b.dueAt);
+  });
+  const done = [...tasks.filter((t) => t.status === 'done')].sort((a, b) => {
+    const ta = a.completedAt ? Date.parse(a.completedAt) : 0;
+    const tb = b.completedAt ? Date.parse(b.completedAt) : 0;
+    return tb - ta;
+  });
+
+  const isEmpty = tasks.length === 0 && formMode.kind === 'hidden';
+
+  return (
+    <div class="tribocrm-tasks">
+      {formMode.kind === 'hidden' && !isEmpty && (
+        <button
+          class="tribocrm-btn tribocrm-btn-primary tribocrm-btn-full"
+          onClick={() => setFormMode({ kind: 'create' })}
+          type="button"
+        >
+          <IconPlus size={14} /> Nova tarefa
+        </button>
+      )}
+
+      {formMode.kind !== 'hidden' && (
+        <TaskForm
+          initial={formMode.kind === 'edit' ? formMode.task : null}
+          onCancel={() => setFormMode({ kind: 'hidden' })}
+          onSubmit={(input) => {
+            if (formMode.kind === 'edit') {
+              return handleUpdate(formMode.task.id, input);
+            }
+            return handleCreate(input);
+          }}
+        />
+      )}
+
+      {isEmpty && (
+        <div class="tribocrm-empty">
+          <div class="tribocrm-empty-icon">
+            <IconCalendar size={24} />
+          </div>
+          <div>Nenhuma tarefa ainda.</div>
+          <button
+            class="tribocrm-btn tribocrm-btn-primary"
+            onClick={() => setFormMode({ kind: 'create' })}
+            type="button"
+            style={{ marginTop: 12 }}
+          >
+            <IconPlus size={14} /> Nova tarefa
+          </button>
+        </div>
+      )}
+
+      {pending.length > 0 && (
+        <>
+          <div class="tribocrm-task-section-title">Pendentes ({pending.length})</div>
+          <div class="tribocrm-task-list">
+            {pending.map((t) => (
+              <TaskItem
+                key={t.id}
+                task={t}
+                menuOpen={menuOpenId === t.id}
+                onToggleMenu={() =>
+                  setMenuOpenId((curr) => (curr === t.id ? null : t.id))
+                }
+                onToggleDone={() => handleToggleDone(t)}
+                onEdit={() => {
+                  setMenuOpenId(null);
+                  setFormMode({ kind: 'edit', task: t });
+                }}
+                onDelete={() => handleDelete(t.id)}
+              />
+            ))}
+          </div>
+        </>
+      )}
+
+      {done.length > 0 && (
+        <>
+          <button
+            class="tribocrm-task-done-toggle"
+            onClick={() => setDoneOpen((v) => !v)}
+            type="button"
+            aria-expanded={doneOpen}
+          >
+            <IconChevronDown
+              size={14}
+              class={doneOpen ? 'tribocrm-task-chev-open' : ''}
+            />
+            <span>Concluídas ({done.length})</span>
+          </button>
+          {doneOpen && (
+            <div class="tribocrm-task-list">
+              {done.map((t) => (
+                <TaskItem
+                  key={t.id}
+                  task={t}
+                  menuOpen={menuOpenId === t.id}
+                  onToggleMenu={() =>
+                    setMenuOpenId((curr) => (curr === t.id ? null : t.id))
+                  }
+                  onToggleDone={() => handleToggleDone(t)}
+                  onEdit={() => {
+                    setMenuOpenId(null);
+                    setFormMode({ kind: 'edit', task: t });
+                  }}
+                  onDelete={() => handleDelete(t.id)}
+                />
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function TaskItem({
+  task,
+  menuOpen,
+  onToggleMenu,
+  onToggleDone,
+  onEdit,
+  onDelete
+}: {
+  task: LeadTask;
+  menuOpen: boolean;
+  onToggleMenu: () => void;
+  onToggleDone: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const isDone = task.status === 'done';
+  const overdue = !isDone && Date.parse(task.dueAt) < Date.now();
+
+  const subLabel = isDone
+    ? task.completedAt
+      ? `Concluída ${formatRelativeTime(task.completedAt)}`
+      : 'Concluída'
+    : formatTaskDueRelative(task.dueAt);
+
+  return (
+    <div
+      class={`tribocrm-task-item ${isDone ? 'tribocrm-task-item-done' : ''} ${
+        overdue ? 'tribocrm-task-item-overdue' : ''
+      }`}
+    >
+      <label class="tribocrm-task-check">
+        <input
+          type="checkbox"
+          checked={isDone}
+          onChange={onToggleDone}
+          aria-label={isDone ? 'Desmarcar como concluída' : 'Marcar como concluída'}
+        />
+      </label>
+
+      <div class="tribocrm-task-body">
+        <div class="tribocrm-task-head">
+          <span class="tribocrm-task-type-emoji" aria-hidden="true">
+            {leadTaskTypeEmoji(task.type)}
+          </span>
+          <span class="tribocrm-task-title">{task.title}</span>
+        </div>
+        <div class="tribocrm-task-sub">
+          {overdue && (
+            <span class="tribocrm-task-overdue-badge">
+              <IconClock size={10} /> Vencida
+            </span>
+          )}
+          <span class="tribocrm-task-due">{subLabel}</span>
+        </div>
+        {task.description && (
+          <div class="tribocrm-task-desc">{task.description}</div>
+        )}
+      </div>
+
+      <div class="tribocrm-task-menu-wrap">
+        <button
+          type="button"
+          class="tribocrm-task-menu-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleMenu();
+          }}
+          aria-label="Opções da tarefa"
+          aria-expanded={menuOpen}
+        >
+          <IconMoreVertical size={14} />
+        </button>
+        {menuOpen && (
+          <div class="tribocrm-task-menu" role="menu">
+            <button
+              type="button"
+              class="tribocrm-task-menu-item"
+              onClick={onEdit}
+              role="menuitem"
+            >
+              <IconEdit size={12} /> Editar
+            </button>
+            <button
+              type="button"
+              class="tribocrm-task-menu-item tribocrm-task-menu-item-danger"
+              onClick={onDelete}
+              role="menuitem"
+            >
+              <IconTrash size={12} /> Excluir
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TaskForm({
+  initial,
+  onCancel,
+  onSubmit
+}: {
+  initial: LeadTask | null;
+  onCancel: () => void;
+  onSubmit: (input: {
+    title: string;
+    description: string;
+    type: LeadTaskType;
+    dueAt: string;
+  }) => void | Promise<void>;
+}) {
+  const [title, setTitle] = useState(initial?.title ?? '');
+  const [description, setDescription] = useState(initial?.description ?? '');
+  const [type, setType] = useState<LeadTaskType>(initial?.type ?? 'call');
+  const [dueAt, setDueAt] = useState<string>(initial?.dueAt ?? '');
+  const [customOpen, setCustomOpen] = useState(!!initial);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit(e: Event) {
+    e.preventDefault();
+    const trimmed = title.trim();
+    if (!trimmed) {
+      setError('Título obrigatório');
+      return;
+    }
+    if (!dueAt) {
+      setError('Escolha data e hora');
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      await onSubmit({
+        title: trimmed,
+        description: description.trim(),
+        type,
+        dueAt
+      });
+    } catch {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form class="tribocrm-task-form" onSubmit={submit}>
+      <div class="tribocrm-section-title">
+        {initial ? 'Editar tarefa' : 'Nova tarefa'}
+      </div>
+      {error && <div class="tribocrm-error-banner">{error}</div>}
+
+      <div class="tribocrm-field">
+        <label class="tribocrm-field-label">Título *</label>
+        <input
+          class="tribocrm-input"
+          value={title}
+          onInput={(e) => setTitle((e.target as HTMLInputElement).value)}
+          autofocus
+          required
+        />
+      </div>
+
+      <div class="tribocrm-field">
+        <label class="tribocrm-field-label">Tipo</label>
+        <select
+          class="tribocrm-select"
+          value={type}
+          onChange={(e) =>
+            setType((e.target as HTMLSelectElement).value as LeadTaskType)
+          }
+        >
+          <option value="call">Ligação</option>
+          <option value="visit">Visita</option>
+          <option value="meeting">Reunião</option>
+          <option value="email">E-mail</option>
+          <option value="other">Outro</option>
+        </select>
+      </div>
+
+      <div class="tribocrm-field">
+        <label class="tribocrm-field-label">Quando</label>
+        <DateShortcuts
+          value={dueAt}
+          onChange={setDueAt}
+          customOpen={customOpen}
+          onOpenCustom={() => setCustomOpen(true)}
+        />
+        {dueAt && (
+          <div class="tribocrm-task-due-preview">
+            {formatTaskDueAbsolute(dueAt)}
+          </div>
+        )}
+      </div>
+
+      <div class="tribocrm-field">
+        <label class="tribocrm-field-label">Descrição</label>
+        <textarea
+          class="tribocrm-textarea"
+          value={description}
+          onInput={(e) =>
+            setDescription((e.target as HTMLTextAreaElement).value)
+          }
+          placeholder="Opcional"
+        />
+      </div>
+
+      <div class="tribocrm-btn-group">
+        <button
+          type="button"
+          class="tribocrm-btn tribocrm-btn-ghost"
+          onClick={onCancel}
+          disabled={saving}
+        >
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          class="tribocrm-btn tribocrm-btn-primary"
+          disabled={saving || !title.trim() || !dueAt}
+        >
+          {saving ? 'Salvando...' : initial ? 'Salvar' : 'Criar'}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+// ── Presets de data/hora ───────────────────────────────────────
+
+function toLocalInputValue(date: Date): string {
+  // formato esperado por <input type="datetime-local"> no fuso local
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(
+    date.getHours()
+  )}:${pad(date.getMinutes())}`;
+}
+
+function fromLocalInputValue(value: string): string {
+  // value vem como "YYYY-MM-DDTHH:mm" no fuso local → converte pra ISO UTC
+  const d = new Date(value);
+  return d.toISOString();
+}
+
+function makeIn1Hour(): Date {
+  const d = new Date();
+  d.setHours(d.getHours() + 1, 0, 0, 0);
+  return d;
+}
+
+/** Hoje às 18h; se já passou, amanhã às 18h. Label muda conforme. */
+function makeToday18h(): { date: Date; label: string } {
+  const now = new Date();
+  const d = new Date(now);
+  d.setHours(18, 0, 0, 0);
+  if (d.getTime() <= now.getTime()) {
+    d.setDate(d.getDate() + 1);
+    return { date: d, label: 'Amanhã 18h' };
+  }
+  return { date: d, label: 'Hoje 18h' };
+}
+
+function makeTomorrow9h(): Date {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  d.setHours(9, 0, 0, 0);
+  return d;
+}
+
+/** Próxima segunda-feira às 9h. Se hoje for segunda, vai pra próxima semana. */
+function makeNextMonday9h(): Date {
+  const d = new Date();
+  const day = d.getDay(); // 0=Dom 1=Seg ... 6=Sáb
+  let delta = (1 - day + 7) % 7;
+  if (delta === 0) delta = 7;
+  d.setDate(d.getDate() + delta);
+  d.setHours(9, 0, 0, 0);
+  return d;
+}
+
+function DateShortcuts({
+  value,
+  onChange,
+  customOpen,
+  onOpenCustom
+}: {
+  value: string;
+  onChange: (iso: string) => void;
+  customOpen: boolean;
+  onOpenCustom: () => void;
+}) {
+  const today18h = makeToday18h();
+
+  const presets = [
+    { label: 'Daqui 1h', make: () => makeIn1Hour() },
+    { label: today18h.label, make: () => today18h.date },
+    { label: 'Amanhã 9h', make: () => makeTomorrow9h() },
+    { label: 'Próx. seg', make: () => makeNextMonday9h() }
+  ];
+
+  function apply(date: Date) {
+    onChange(date.toISOString());
+  }
+
+  return (
+    <div class="tribocrm-date-shortcuts-wrap">
+      <div class="tribocrm-date-shortcuts">
+        {presets.map((p) => (
+          <button
+            key={p.label}
+            type="button"
+            class="tribocrm-date-chip"
+            onClick={() => apply(p.make())}
+          >
+            {p.label}
+          </button>
+        ))}
+        {!customOpen && (
+          <button
+            type="button"
+            class="tribocrm-date-chip tribocrm-date-chip-ghost"
+            onClick={onOpenCustom}
+          >
+            + outro horário
+          </button>
+        )}
+      </div>
+
+      {customOpen && (
+        <input
+          type="datetime-local"
+          class="tribocrm-input tribocrm-date-custom"
+          value={value ? toLocalInputValue(new Date(value)) : ''}
+          onInput={(e) => {
+            const v = (e.target as HTMLInputElement).value;
+            onChange(v ? fromLocalInputValue(v) : '');
+          }}
+        />
+      )}
     </div>
   );
 }

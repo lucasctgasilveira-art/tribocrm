@@ -15,3 +15,22 @@ export interface LeadProduct {
   quantity: number;
   unitPrice: number;
 }
+
+// ── Tarefas por lead (persistência local) ─────────────────────────
+
+export type LeadTaskType = 'call' | 'visit' | 'meeting' | 'email' | 'other';
+export type LeadTaskStatus = 'pending' | 'done';
+
+export interface LeadTask {
+  id: string;
+  leadId: string;
+  leadName: string;
+  title: string;
+  description: string;
+  type: LeadTaskType;
+  dueAt: string;
+  status: LeadTaskStatus;
+  createdAt: string;
+  completedAt: string | null;
+  notified: boolean;
+}

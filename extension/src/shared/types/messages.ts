@@ -6,7 +6,7 @@ import type {
   CreateTaskDTO,
   Stage
 } from './domain';
-import type { Product, LeadProduct } from './extra';
+import type { Product, LeadProduct, LeadTask, LeadTaskType, LeadTaskStatus } from './extra';
 
 /**
  * Todas as mensagens que trafegam entre os contextos da extensão.
@@ -140,6 +140,47 @@ export interface SetLeadProductsRequest {
   payload: { leadId: string; items: LeadProduct[] };
 }
 
+// ── Mensagens de tarefas por lead (persistência local + alarms) ────
+//
+// NOTA: prefixo LEAD_TASK_* pra não colidir com TASK_CREATE existente,
+// que é o create de task no backend (api.leads.createTask).
+
+export interface ListLeadTasksRequest {
+  type: 'LEAD_TASK_LIST';
+  payload: { leadId: string };
+}
+
+export interface CreateLeadTaskRequest {
+  type: 'LEAD_TASK_CREATE';
+  payload: {
+    leadId: string;
+    leadName: string;
+    title: string;
+    description: string;
+    type: LeadTaskType;
+    dueAt: string;
+  };
+}
+
+export interface UpdateLeadTaskRequest {
+  type: 'LEAD_TASK_UPDATE';
+  payload: {
+    leadId: string;
+    taskId: string;
+    patch: Partial<Pick<LeadTask, 'title' | 'description' | 'type' | 'dueAt'>>;
+  };
+}
+
+export interface DeleteLeadTaskRequest {
+  type: 'LEAD_TASK_DELETE';
+  payload: { leadId: string; taskId: string };
+}
+
+export interface MarkLeadTaskRequest {
+  type: 'LEAD_TASK_MARK';
+  payload: { leadId: string; taskId: string; status: LeadTaskStatus };
+}
+
 // ── Union de todas as mensagens ────────────────────────────────────
 
 export type ExtensionMessage =
@@ -160,7 +201,12 @@ export type ExtensionMessage =
   | SetNotesRequest
   | ListCatalogRequest
   | GetLeadProductsRequest
-  | SetLeadProductsRequest;
+  | SetLeadProductsRequest
+  | ListLeadTasksRequest
+  | CreateLeadTaskRequest
+  | UpdateLeadTaskRequest
+  | DeleteLeadTaskRequest
+  | MarkLeadTaskRequest;
 
 // ── Formato de resposta ────────────────────────────────────────────
 
@@ -189,4 +235,9 @@ export interface MessageResponseMap {
   PRODUCTS_CATALOG: Product[];
   PRODUCTS_GET_FOR_LEAD: LeadProduct[];
   PRODUCTS_SET_FOR_LEAD: null;
+  LEAD_TASK_LIST: LeadTask[];
+  LEAD_TASK_CREATE: LeadTask;
+  LEAD_TASK_UPDATE: LeadTask;
+  LEAD_TASK_DELETE: null;
+  LEAD_TASK_MARK: LeadTask;
 }

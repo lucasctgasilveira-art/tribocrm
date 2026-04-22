@@ -91,22 +91,40 @@ export const storage = {
   },
 
   /**
-   * Remove TODOS os dados de leads (anotações + produtos) de QUALQUER
-   * usuário no navegador. Chamar no logout, ANTES de limpar o
-   * authToken, para evitar que dados de uma sessão vazem para outra
-   * em navegadores compartilhados.
+   * Remove TODOS os dados de leads (anotações + produtos + tarefas) de
+   * QUALQUER usuário no navegador. Chamar no logout, ANTES de limpar o
+   * authToken, para evitar que dados de uma sessão vazem para outra em
+   * navegadores compartilhados.
    *
-   * Filtro: prefixos `lead-notes:` e `lead-products:`. As chaves do
-   * schema fixo (auth, templatesCache, lastSync) NÃO começam com
-   * esses prefixos, então estão protegidas.
+   * Filtro: prefixos `lead-notes:`, `lead-products:` e `lead-tasks:`.
+   * As chaves do schema fixo (auth, templatesCache, lastSync) NÃO
+   * começam com esses prefixos, então estão protegidas.
+   *
+   * Também limpa todos os chrome.alarms com prefixo `task:` — senão,
+   * um alarme sobrevivente poderia tentar notificar sobre uma tarefa
+   * cujo storage já foi apagado (abortaria silencioso, mas é lixo).
    */
   async clearAllLeadData(): Promise<void> {
     const all = await chrome.storage.local.get(null);
     const keysToRemove = Object.keys(all).filter(
-      (k) => k.startsWith('lead-notes:') || k.startsWith('lead-products:')
+      (k) =>
+        k.startsWith('lead-notes:') ||
+        k.startsWith('lead-products:') ||
+        k.startsWith('lead-tasks:')
     );
     if (keysToRemove.length > 0) {
       await chrome.storage.local.remove(keysToRemove);
+    }
+
+    try {
+      const alarms = await chrome.alarms.getAll();
+      await Promise.all(
+        alarms
+          .filter((a) => a.name.startsWith('task:'))
+          .map((a) => chrome.alarms.clear(a.name))
+      );
+    } catch (error) {
+      log.error('Falha ao limpar alarmes de tarefa', error);
     }
   }
 };

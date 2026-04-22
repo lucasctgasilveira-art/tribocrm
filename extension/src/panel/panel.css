@@ -951,3 +951,284 @@
   color: var(--tribocrm-orange);
   font-size: 16px;
 }
+
+/* ── Aba Tarefas ──────────────────────────────────────────────── */
+
+.tribocrm-tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tribocrm-task-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tribocrm-text-muted);
+  margin-top: 4px;
+}
+
+.tribocrm-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tribocrm-task-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
+  background: var(--tribocrm-card);
+  border: 1px solid var(--tribocrm-border);
+  border-radius: 8px;
+  padding: 9px 10px;
+  align-items: flex-start;
+}
+
+.tribocrm-task-item-overdue {
+  border-color: var(--tribocrm-red);
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.tribocrm-task-item-done .tribocrm-task-title {
+  text-decoration: line-through;
+  color: var(--tribocrm-text-muted);
+}
+
+.tribocrm-task-check {
+  display: flex;
+  align-items: center;
+  padding-top: 1px;
+}
+
+.tribocrm-task-check input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--tribocrm-orange);
+  cursor: pointer;
+  margin: 0;
+}
+
+.tribocrm-task-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tribocrm-task-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.tribocrm-task-type-emoji {
+  font-size: 13px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.tribocrm-task-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--tribocrm-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.tribocrm-task-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--tribocrm-text-secondary);
+  flex-wrap: wrap;
+}
+
+.tribocrm-task-overdue-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--tribocrm-red);
+  color: white;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.tribocrm-task-due {
+  color: var(--tribocrm-text-secondary);
+}
+
+.tribocrm-task-item-overdue .tribocrm-task-due {
+  color: var(--tribocrm-red);
+  font-weight: 500;
+}
+
+.tribocrm-task-desc {
+  font-size: 11px;
+  color: var(--tribocrm-text-muted);
+  margin-top: 4px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.tribocrm-task-menu-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.tribocrm-task-menu-btn {
+  background: transparent;
+  border: none;
+  color: var(--tribocrm-text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--tribocrm-transition), background var(--tribocrm-transition);
+}
+
+.tribocrm-task-menu-btn:hover {
+  color: var(--tribocrm-text-primary);
+  background: var(--tribocrm-card-hover);
+}
+
+.tribocrm-task-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 2px);
+  min-width: 120px;
+  background: var(--tribocrm-surface);
+  border: 1px solid var(--tribocrm-border);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  padding: 4px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tribocrm-task-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-family: var(--tribocrm-font);
+  font-size: 12px;
+  color: var(--tribocrm-text-primary);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--tribocrm-transition);
+}
+
+.tribocrm-task-menu-item:hover {
+  background: var(--tribocrm-card);
+}
+
+.tribocrm-task-menu-item-danger {
+  color: var(--tribocrm-red);
+}
+
+.tribocrm-task-menu-item-danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.tribocrm-task-done-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  padding: 6px 0;
+  font-family: var(--tribocrm-font);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tribocrm-text-muted);
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+.tribocrm-task-done-toggle:hover {
+  color: var(--tribocrm-text-primary);
+}
+
+.tribocrm-task-chev-open {
+  transform: rotate(180deg);
+  transition: transform var(--tribocrm-transition);
+}
+
+.tribocrm-task-form {
+  background: var(--tribocrm-card);
+  border: 1px solid var(--tribocrm-border);
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tribocrm-task-form .tribocrm-field {
+  margin: 0;
+}
+
+.tribocrm-task-due-preview {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--tribocrm-text-secondary);
+  font-style: italic;
+}
+
+.tribocrm-date-shortcuts-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tribocrm-date-shortcuts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.tribocrm-date-chip {
+  background: var(--tribocrm-surface);
+  border: 1px solid var(--tribocrm-border);
+  border-radius: 6px;
+  padding: 7px 8px;
+  font-family: var(--tribocrm-font);
+  font-size: 12px;
+  color: var(--tribocrm-text-primary);
+  cursor: pointer;
+  transition: background var(--tribocrm-transition), border-color var(--tribocrm-transition);
+  text-align: center;
+}
+
+.tribocrm-date-chip:hover {
+  background: var(--tribocrm-card-hover);
+  border-color: var(--tribocrm-orange);
+}
+
+.tribocrm-date-chip-ghost {
+  grid-column: 1 / -1;
+  color: var(--tribocrm-text-secondary);
+  border-style: dashed;
+}
+
+.tribocrm-date-custom {
+  margin-top: 2px;
+}
