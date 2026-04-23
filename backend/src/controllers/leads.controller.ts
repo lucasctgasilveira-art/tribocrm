@@ -165,7 +165,7 @@ export async function getLead(req: Request, res: Response): Promise<void> {
     const lead = await prisma.lead.findFirst({
       where: { id, tenantId, deletedAt: null },
       include: {
-        stage: { select: { id: true, name: true, color: true } },
+        stage: { select: { id: true, name: true, color: true, type: true } },
         responsible: { select: { id: true, name: true } },
         interactions: {
           orderBy: { createdAt: 'desc' },
