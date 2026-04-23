@@ -1,7 +1,10 @@
 /**
  * Content script do LinkedIn — STUB.
  *
- * Será implementado depois. Por enquanto apenas loga para confirmar injeção.
+ * TODO: este stub NÃO está ativo no manifest (removido antes da
+ * publicação na Chrome Web Store porque ainda não faz nada útil).
+ * Para reativar: re-adicionar entrada em content_scripts no
+ * src/manifest.config.ts e restaurar matches em web_accessible_resources.
  *
  * Próxima fase: botão "Salvar no TriboCRM" em perfis de pessoas,
  * extraindo nome, cargo, empresa do DOM.

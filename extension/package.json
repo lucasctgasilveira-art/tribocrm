@@ -1,7 +1,7 @@
 {
   "name": "tribocrm-extension",
   "version": "0.1.0",
-  "description": "Extensão do Chrome do TriboCRM — painel lateral no WhatsApp Web, captura no LinkedIn e Gmail",
+  "description": "TriboCRM — Extensão Chrome pro WhatsApp Web",
   "private": true,
   "type": "module",
   "scripts": {

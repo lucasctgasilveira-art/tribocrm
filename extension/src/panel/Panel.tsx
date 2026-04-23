@@ -362,8 +362,8 @@ function OnboardingView({ onAccept }: { onAccept: () => void }) {
     <div class="tribocrm-onboarding">
       <h2 class="tribocrm-onboarding-title">Bem-vindo ao TriboCRM</h2>
       <p class="tribocrm-onboarding-intro">
-        O TriboCRM integra seu WhatsApp Web, LinkedIn e Gmail ao seu CRM,
-        permitindo registrar leads e interações sem sair dessas plataformas.
+        O TriboCRM integra seu WhatsApp Web ao seu CRM, permitindo
+        registrar leads e interações sem sair da plataforma.
       </p>
       {error && <div class="tribocrm-error-banner">{error}</div>}
       <div class="tribocrm-onboarding-terms">
