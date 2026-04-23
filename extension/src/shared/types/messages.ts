@@ -91,6 +91,16 @@ export interface CreateTaskRequest {
   payload: CreateTaskDTO;
 }
 
+export interface FindLeadByIdRequest {
+  type: 'LEAD_FIND_BY_ID';
+  payload: { leadId: string };
+}
+
+export interface SearchLeadsRequest {
+  type: 'LEAD_SEARCH';
+  payload: { query: string };
+}
+
 // ── Mensagens de templates / mensagens agendadas ───────────────────
 
 export interface ListTemplatesRequest {
@@ -218,6 +228,28 @@ export interface ListLossReasonsRequest {
   type: 'LOSS_REASONS_LIST';
 }
 
+// ── Mensagens de telefones alternativos (vinculação local) ─────────
+//
+// Mapa phone → leadId por usuário, persistido em
+// chrome.storage.local com chave lead-alt-phones:{userId}.
+// Permite que um lead responda de um celular pessoal não cadastrado
+// no CRM e o painel ainda o reconheça.
+
+export interface AltPhoneLinkRequest {
+  type: 'ALT_PHONE_LINK';
+  payload: { phone: string; leadId: string };
+}
+
+export interface AltPhoneUnlinkRequest {
+  type: 'ALT_PHONE_UNLINK';
+  payload: { phone: string };
+}
+
+export interface AltPhoneFindLeadIdRequest {
+  type: 'ALT_PHONE_FIND_LEAD_ID';
+  payload: { phone: string };
+}
+
 // ── Union de todas as mensagens ────────────────────────────────────
 
 export type ExtensionMessage =
@@ -247,7 +279,12 @@ export type ExtensionMessage =
   | GetLeadOutcomeRequest
   | SetLeadOutcomeRequest
   | ClearLeadOutcomeRequest
-  | ListLossReasonsRequest;
+  | ListLossReasonsRequest
+  | FindLeadByIdRequest
+  | SearchLeadsRequest
+  | AltPhoneLinkRequest
+  | AltPhoneUnlinkRequest
+  | AltPhoneFindLeadIdRequest;
 
 // ── Formato de resposta ────────────────────────────────────────────
 
@@ -285,4 +322,9 @@ export interface MessageResponseMap {
   LEAD_OUTCOME_SET: null;
   LEAD_OUTCOME_CLEAR: null;
   LOSS_REASONS_LIST: LossReason[];
+  LEAD_FIND_BY_ID: Lead | null;
+  LEAD_SEARCH: Lead[];
+  ALT_PHONE_LINK: null;
+  ALT_PHONE_UNLINK: null;
+  ALT_PHONE_FIND_LEAD_ID: string | null;
 }

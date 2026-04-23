@@ -96,8 +96,8 @@ export const storage = {
    * authToken, para evitar que dados de uma sessão vazem para outra em
    * navegadores compartilhados.
    *
-   * Filtro: prefixos `lead-notes:`, `lead-products:`, `lead-tasks:` e
-   * `lead-outcome:`.
+   * Filtro: prefixos `lead-notes:`, `lead-products:`, `lead-tasks:`,
+   * `lead-outcome:` e `lead-alt-phones:`.
    * As chaves do schema fixo (auth, templatesCache, lastSync) NÃO
    * começam com esses prefixos, então estão protegidas.
    *
@@ -112,7 +112,8 @@ export const storage = {
         k.startsWith('lead-notes:') ||
         k.startsWith('lead-products:') ||
         k.startsWith('lead-tasks:') ||
-        k.startsWith('lead-outcome:')
+        k.startsWith('lead-outcome:') ||
+        k.startsWith('lead-alt-phones:')
     );
     if (keysToRemove.length > 0) {
       await chrome.storage.local.remove(keysToRemove);

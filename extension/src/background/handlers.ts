@@ -135,6 +135,14 @@ export const handlers: HandlerMap = {
     return api.leads.findByPhone(payload.phone);
   },
 
+  LEAD_FIND_BY_ID: async (payload) => {
+    return api.leads.findById(payload.leadId);
+  },
+
+  LEAD_SEARCH: async (payload) => {
+    return api.leads.search(payload.query);
+  },
+
   LEAD_CREATE: async (payload) => {
     return api.leads.create(payload);
   },
@@ -330,6 +338,22 @@ export const handlers: HandlerMap = {
 
   LOSS_REASONS_LIST: async () => {
     return api.outcome.listLossReasons();
+  },
+
+  // ── Telefones alternativos ──────────────────────────────────────
+
+  ALT_PHONE_LINK: async (payload) => {
+    await api.altPhones.link(payload.phone, payload.leadId);
+    return null;
+  },
+
+  ALT_PHONE_UNLINK: async (payload) => {
+    await api.altPhones.unlink(payload.phone);
+    return null;
+  },
+
+  ALT_PHONE_FIND_LEAD_ID: async (payload) => {
+    return api.altPhones.findLeadIdByPhone(payload.phone);
   },
 
   // Esta mensagem VAI do service worker PARA o content script.

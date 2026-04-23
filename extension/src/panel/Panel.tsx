@@ -192,10 +192,28 @@ export function Panel({ chatInfo, isOpen, isNarrow, onClose }: PanelProps) {
     }
 
     try {
-      const lead = await sendMessage({
+      let lead = await sendMessage({
         type: 'LEAD_FIND_BY_PHONE',
         payload: { phone: effectiveContact.phone }
       });
+
+      // Fallback: se backend/mock não achou pelo telefone, consulta o
+      // mapa local de alt-phones. Se houver vínculo manual, busca o
+      // lead por id. Entrada órfã (leadId cujo lead sumiu do backend)
+      // cai transparentemente em lead-not-found — decisão consciente
+      // pra não mascarar inconsistência.
+      if (!lead) {
+        const linkedId = await sendMessage({
+          type: 'ALT_PHONE_FIND_LEAD_ID',
+          payload: { phone: effectiveContact.phone }
+        });
+        if (linkedId) {
+          lead = await sendMessage({
+            type: 'LEAD_FIND_BY_ID',
+            payload: { leadId: linkedId }
+          });
+        }
+      }
 
       if (!lead) {
         setState({ kind: 'lead-not-found', contact: effectiveContact });
@@ -273,7 +291,12 @@ export function Panel({ chatInfo, isOpen, isNarrow, onClose }: PanelProps) {
               />
             )}
             {state.kind === 'lead-not-found' && (
-              <LeadNotFoundView contact={state.contact} onCreated={reload} onToast={showToast} />
+              <LeadNotFoundView
+                contact={state.contact}
+                onCreated={reload}
+                onLinked={reload}
+                onToast={showToast}
+              />
             )}
           </>
         )}
@@ -2457,12 +2480,15 @@ function TemplatesList({
 function LeadNotFoundView({
   contact,
   onCreated,
+  onLinked,
   onToast
 }: {
   contact: WhatsAppContactInfo;
   onCreated: () => void;
+  onLinked: () => void;
   onToast: (msg: string) => void;
 }) {
+  const [mode, setMode] = useState<'view' | 'linking'>('view');
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState(contact.displayName);
   const [email, setEmail] = useState('');
@@ -2495,6 +2521,17 @@ function LeadNotFoundView({
     }
   }
 
+  if (mode === 'linking') {
+    return (
+      <LinkExistingLeadView
+        contact={contact}
+        onLinked={onLinked}
+        onCancel={() => setMode('view')}
+        onToast={onToast}
+      />
+    );
+  }
+
   if (!showForm) {
     return (
       <div class="tribocrm-empty">
@@ -2511,6 +2548,13 @@ function LeadNotFoundView({
           onClick={() => setShowForm(true)}
         >
           <IconPlus size={14} /> Cadastrar como lead
+        </button>
+        <button
+          type="button"
+          class="tribocrm-link-trigger"
+          onClick={() => setMode('linking')}
+        >
+          ou vincular a lead existente
         </button>
       </div>
     );
@@ -2573,5 +2617,188 @@ function LeadNotFoundView({
         </button>
       </div>
     </form>
+  );
+}
+
+// ── Visão: vincular telefone detectado a lead existente ───────
+//
+// Sub-estado do 'lead-not-found' — NÃO é um modal, é uma
+// transição in-place. Busca leads por nome/empresa via LEAD_SEARCH
+// (debounce 300ms, >=2 chars), ao escolher um resultado pede
+// confirmação inline antes de gravar o mapeamento em
+// lead-alt-phones:{userId}. onLinked() dispara reload() do pai,
+// que re-resolve o contato e cai em 'lead-found'.
+function LinkExistingLeadView({
+  contact,
+  onLinked,
+  onCancel,
+  onToast
+}: {
+  contact: WhatsAppContactInfo;
+  onLinked: () => void;
+  onCancel: () => void;
+  onToast: (msg: string) => void;
+}) {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<Lead[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
+  const [selected, setSelected] = useState<Lead | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const debounceRef = useRef<number | null>(null);
+  // Evita race: uma resposta antiga sobrescrevendo uma nova.
+  const reqIdRef = useRef(0);
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
+  function handleInput(value: string) {
+    setQuery(value);
+    setError(null);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    const trimmed = value.trim();
+    if (trimmed.length < 2) {
+      setResults([]);
+      setSearched(false);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    const myReqId = ++reqIdRef.current;
+    debounceRef.current = window.setTimeout(() => {
+      debounceRef.current = null;
+      sendMessage({ type: 'LEAD_SEARCH', payload: { query: trimmed } })
+        .then((list) => {
+          if (myReqId !== reqIdRef.current) return;
+          setResults(list);
+          setSearched(true);
+          setLoading(false);
+        })
+        .catch((err) => {
+          if (myReqId !== reqIdRef.current) return;
+          setError(err instanceof Error ? err.message : 'Erro ao buscar');
+          setLoading(false);
+        });
+    }, 300);
+  }
+
+  async function handleConfirm() {
+    if (!selected) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await sendMessage({
+        type: 'ALT_PHONE_LINK',
+        payload: { phone: contact.phone, leadId: selected.id }
+      });
+      onToast(`Telefone vinculado a ${selected.name}`);
+      onLinked();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao vincular');
+      setSaving(false);
+    }
+  }
+
+  const trimmed = query.trim();
+  const showHintMin = !selected && trimmed.length < 2;
+  const showHintLoading = !selected && trimmed.length >= 2 && loading;
+  const showHintEmpty =
+    !selected && trimmed.length >= 2 && !loading && searched && results.length === 0;
+  const showResults = !selected && !loading && results.length > 0;
+
+  return (
+    <div class="tribocrm-link-existing">
+      <button type="button" class="tribocrm-link-back" onClick={onCancel}>
+        ← voltar
+      </button>
+
+      <div class="tribocrm-link-header">
+        <strong>{contact.displayName}</strong>
+        <span class="tribocrm-link-header-phone">+{contact.phone}</span>
+      </div>
+
+      {error && <div class="tribocrm-error-banner">{error}</div>}
+
+      {!selected && (
+        <>
+          <input
+            class="tribocrm-input tribocrm-link-search"
+            placeholder="Buscar lead por nome ou empresa..."
+            value={query}
+            onInput={(e) => handleInput((e.target as HTMLInputElement).value)}
+            autofocus
+          />
+
+          <div class="tribocrm-link-results">
+            {showHintMin && (
+              <div class="tribocrm-link-hint">Digite ao menos 2 caracteres…</div>
+            )}
+            {showHintLoading && (
+              <div class="tribocrm-link-hint">Buscando…</div>
+            )}
+            {showHintEmpty && (
+              <div class="tribocrm-link-hint">Nenhum lead encontrado</div>
+            )}
+            {showResults &&
+              results.map((lead) => (
+                <button
+                  key={lead.id}
+                  type="button"
+                  class="tribocrm-link-result-item"
+                  onClick={() => setSelected(lead)}
+                >
+                  <div class="tribocrm-link-result-name">{lead.name}</div>
+                  <div class="tribocrm-link-result-meta">
+                    {lead.company && <span>{lead.company}</span>}
+                    <span
+                      class="tribocrm-link-result-stage"
+                      style={{
+                        background: `${lead.stage.color}22`,
+                        color: lead.stage.color
+                      }}
+                    >
+                      {lead.stage.name}
+                    </span>
+                  </div>
+                </button>
+              ))}
+          </div>
+        </>
+      )}
+
+      {selected && (
+        <div class="tribocrm-link-confirm">
+          <div class="tribocrm-link-confirm-text">
+            Vincular <strong>+{contact.phone}</strong> ao lead{' '}
+            <strong>{selected.name}</strong>?
+          </div>
+          <div class="tribocrm-btn-group">
+            <button
+              type="button"
+              class="tribocrm-btn tribocrm-btn-ghost"
+              onClick={() => setSelected(null)}
+              disabled={saving}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              class="tribocrm-btn tribocrm-btn-primary"
+              onClick={handleConfirm}
+              disabled={saving}
+            >
+              {saving ? 'Vinculando…' : 'Confirmar'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
