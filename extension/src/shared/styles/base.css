@@ -1,0 +1,146 @@
+/**
+ * Variáveis e estilos base compartilhados entre popup e painel.
+ * Extraído do Guia de Identidade Visual (doc 11) do TriboCRM.
+ *
+ * Uso: importado como arquivo CSS normal — Vite cuida de processar.
+ */
+
+:root {
+  /* Cores primárias */
+  --tribo-orange: #f97316;
+  --tribo-orange-hover: #fb923c;
+  --tribo-orange-alpha-10: rgba(249, 115, 22, 0.10);
+  --tribo-orange-alpha-20: rgba(249, 115, 22, 0.20);
+
+  /* Fundos — modo escuro (padrão) */
+  --tribo-bg: #0a0b0f;
+  --tribo-surface: #111318;
+  --tribo-card: #161a22;
+  --tribo-card-hover: #1c2130;
+  --tribo-border: #22283a;
+
+  /* Texto */
+  --tribo-text-primary: #e8eaf0;
+  --tribo-text-secondary: #9ca3af;
+  --tribo-text-muted: #6b7280;
+
+  /* Semânticas */
+  --tribo-green: #22c55e;
+  --tribo-red: #ef4444;
+  --tribo-blue: #3b82f6;
+  --tribo-gold: #f59e0b;
+
+  /* Temperaturas */
+  --tribo-hot: #f97316;
+  --tribo-warm: #f59e0b;
+  --tribo-cold: #3b82f6;
+
+  /* Typography */
+  --tribo-font: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--tribo-font);
+  font-size: 14px;
+  color: var(--tribo-text-primary);
+  background: var(--tribo-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Utilitários */
+
+.tribo-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  font-family: var(--tribo-font);
+  font-size: 14px;
+  font-weight: 500;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  text-decoration: none;
+}
+
+.tribo-btn-primary {
+  background: var(--tribo-orange);
+  color: white;
+}
+
+.tribo-btn-primary:hover:not(:disabled) {
+  background: var(--tribo-orange-hover);
+}
+
+.tribo-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.tribo-btn-ghost {
+  background: transparent;
+  color: var(--tribo-text-secondary);
+  border: 1px solid var(--tribo-border);
+}
+
+.tribo-btn-ghost:hover:not(:disabled) {
+  background: var(--tribo-card);
+  color: var(--tribo-text-primary);
+}
+
+.tribo-input {
+  width: 100%;
+  padding: 10px 12px;
+  font-family: var(--tribo-font);
+  font-size: 14px;
+  color: var(--tribo-text-primary);
+  background: var(--tribo-card);
+  border: 1px solid var(--tribo-border);
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.tribo-input:focus {
+  border-color: var(--tribo-orange);
+}
+
+.tribo-input::placeholder {
+  color: var(--tribo-text-muted);
+}
+
+.tribo-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--tribo-text-secondary);
+  margin-bottom: 6px;
+}
+
+.tribo-error {
+  color: var(--tribo-red);
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.tribo-logo {
+  font-family: var(--tribo-font);
+  font-size: 20px;
+  letter-spacing: -0.02em;
+}
+.tribo-logo-tribo {
+  color: var(--tribo-text-primary);
+  font-weight: 400;
+}
+.tribo-logo-crm {
+  color: var(--tribo-orange);
+  font-weight: 800;
+}

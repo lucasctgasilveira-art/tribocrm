@@ -1,0 +1,1643 @@
+/**
+ * CSS do painel lateral do WhatsApp Web.
+ *
+ * REGRAS CRÍTICAS DE ISOLAMENTO:
+ *   1. TODOS os seletores começam com .tribocrm- para não colidir com o CSS do WhatsApp.
+ *   2. Nunca usamos seletores genéricos (body, div, button) sem escopo.
+ *   3. O painel é position:fixed com z-index altíssimo para ficar acima do WhatsApp.
+ *   4. Redefinimos font-family, colors, box-sizing dentro do painel porque o WhatsApp
+ *      tem reset global que afetaria nossos elementos.
+ */
+
+/* ── Design tokens ─────────────────────────────────────────────
+ *
+ * Theme-agnósticos (cores semânticas, tipografia, transição) ficam
+ * sempre no :root. Theme-dependentes têm default dark no :root
+ * (evita flash branco antes do JS setar data-theme) e são sobrescritos
+ * por [data-theme="light"] aplicado ao #tribocrm-panel-mount.
+ */
+:root {
+  /* Theme-agnósticos */
+  --tribocrm-orange: #f97316;
+  --tribocrm-orange-hover: #fb923c;
+  --tribocrm-orange-alpha-10: rgba(249, 115, 22, 0.10);
+  --tribocrm-orange-alpha-20: rgba(249, 115, 22, 0.20);
+
+  --tribocrm-green: #22c55e;
+  --tribocrm-red: #ef4444;
+  --tribocrm-blue: #3b82f6;
+  --tribocrm-gold: #f59e0b;
+
+  --tribocrm-hot: #f97316;
+  --tribocrm-warm: #f59e0b;
+  --tribocrm-cold: #3b82f6;
+
+  --tribocrm-font: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --tribocrm-panel-width: 360px;
+  --tribocrm-transition: 220ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Theme — default dark (aplicado antes do JS resolver chrome.storage) */
+  --tribocrm-bg: #0a0b0f;
+  --tribocrm-surface: #111318;
+  --tribocrm-card: #161a22;
+  --tribocrm-card-hover: #1c2130;
+  --tribocrm-border: #22283a;
+
+  --tribocrm-text-primary: #e8eaf0;
+  --tribocrm-text-secondary: #9ca3af;
+  --tribocrm-text-muted: #6b7280;
+}
+
+[data-theme="light"] {
+  --tribocrm-bg: #f8f9fc;
+  --tribocrm-surface: #ffffff;
+  --tribocrm-card: #f1f3f7;
+  --tribocrm-card-hover: #e9ecf2;
+  --tribocrm-border: #e4e6eb;
+
+  --tribocrm-text-primary: #0f1117;
+  --tribocrm-text-secondary: #52565c;
+  --tribocrm-text-muted: #8b9099;
+}
+
+/* Transição suave de tema para descendentes do painel — props
+ * baratas (paint-only), sem lag em hover/focus. O próprio
+ * .tribocrm-panel-root já tem transition próprio para o transform
+ * (open/close); suas transições de tema vão no mesmo shorthand abaixo. */
+.tribocrm-panel-root * {
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+/* ── Container raiz do painel ──────────────────────────────────── */
+
+.tribocrm-panel-root {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: var(--tribocrm-panel-width);
+  height: 100vh;
+  background: var(--tribocrm-bg);
+  color: var(--tribocrm-text-primary);
+  font-family: var(--tribocrm-font);
+  font-size: 14px;
+  line-height: 1.4;
+  z-index: 2147483600; /* abaixo do max mas acima de qualquer coisa do WhatsApp */
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.4);
+  border-left: 1px solid var(--tribocrm-border);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  /* Transição suave entre temas (visibilidade é controlada via
+     display:none no #tribocrm-panel-mount, não via transform). */
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+/* Rede de segurança: em viewport muito estreito, garante que o painel
+   nunca ocupa espaço mesmo que algo falhe na lógica de display em JS. */
+@media (max-width: 1099px) {
+  #tribocrm-panel-mount {
+    display: none !important;
+  }
+}
+
+/* Reset local — afeta só descendentes do painel */
+.tribocrm-panel-root * {
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+/* ── Botão flutuante de abrir ──────────────────────────────────── */
+
+.tribocrm-toggle {
+  position: fixed;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 96px;
+  background: var(--tribocrm-orange);
+  color: white;
+  border: none;
+  border-radius: 8px 0 0 8px;
+  cursor: pointer;
+  z-index: 2147483601;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: -2px 0 12px rgba(0, 0, 0, 0.2);
+  transition: background var(--tribocrm-transition),
+              transform var(--tribocrm-transition);
+  font-family: var(--tribocrm-font);
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  writing-mode: vertical-rl;
+  transform: translateY(-50%) rotate(180deg);
+}
+
+.tribocrm-toggle:hover {
+  background: var(--tribocrm-orange-hover);
+}
+
+.tribocrm-toggle.tribocrm-hidden {
+  transform: translateY(-50%) translateX(100%) rotate(180deg);
+}
+
+/* ── Header do painel ──────────────────────────────────────────── */
+
+.tribocrm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--tribocrm-border);
+  background: var(--tribocrm-surface);
+  flex-shrink: 0;
+}
+
+.tribocrm-logo {
+  font-size: 18px;
+  letter-spacing: -0.02em;
+}
+.tribocrm-logo-tribo { color: var(--tribocrm-text-primary); font-weight: 400; }
+.tribocrm-logo-crm { color: var(--tribocrm-orange); font-weight: 800; }
+
+.tribocrm-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tribocrm-header-btn {
+  background: transparent;
+  border: none;
+  color: var(--tribocrm-text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--tribocrm-transition), background var(--tribocrm-transition);
+}
+.tribocrm-header-btn:hover {
+  color: var(--tribocrm-text-primary);
+  background: var(--tribocrm-card);
+}
+
+/* ── Corpo scrollável ─────────────────────────────────────────── */
+
+.tribocrm-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px;
+}
+
+/* Scrollbar customizada (opcional — fica bonito) */
+.tribocrm-body::-webkit-scrollbar { width: 6px; }
+.tribocrm-body::-webkit-scrollbar-track { background: transparent; }
+.tribocrm-body::-webkit-scrollbar-thumb {
+  background: var(--tribocrm-border);
+  border-radius: 3px;
+}
+.tribocrm-body::-webkit-scrollbar-thumb:hover {
+  background: var(--tribocrm-text-muted);
+}
+
+/* ── Estados ─────────────────────────────────────────────────── */
+
+.tribocrm-loading,
+.tribocrm-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--tribocrm-text-secondary);
+  gap: 12px;
+}
+
+.tribocrm-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--tribocrm-border);
+  border-top-color: var(--tribocrm-orange);
+  border-radius: 50%;
+  animation: tribocrm-spin 800ms linear infinite;
+}
+
+@keyframes tribocrm-spin {
+  to { transform: rotate(360deg); }
+}
+
+.tribocrm-empty-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--tribocrm-card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--tribocrm-text-muted);
+}
+
+/* ── Card do lead ─────────────────────────────────────────────── */
+
+.tribocrm-lead-card {
+  background: var(--tribocrm-card);
+  border: 1px solid var(--tribocrm-border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.tribocrm-lead-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.tribocrm-lead-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--tribocrm-text-primary);
+  margin: 0;
+}
+
+.tribocrm-lead-company {
+  font-size: 13px;
+  color: var(--tribocrm-text-secondary);
+  margin-top: 2px;
+}
+
+.tribocrm-temp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+.tribocrm-temp-hot { background: rgba(249, 115, 22, 0.12); color: var(--tribocrm-hot); }
+.tribocrm-temp-warm { background: rgba(245, 158, 11, 0.12); color: var(--tribocrm-warm); }
+.tribocrm-temp-cold { background: rgba(59, 130, 246, 0.12); color: var(--tribocrm-cold); }
+
+.tribocrm-lead-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--tribocrm-border);
+}
+
+.tribocrm-meta-label {
+  font-size: 11px;
+  color: var(--tribocrm-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
+}
+
+.tribocrm-meta-value {
+  font-size: 13px;
+  color: var(--tribocrm-text-primary);
+  font-weight: 500;
+}
+
+.tribocrm-stage-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--tribocrm-orange-alpha-10);
+  color: var(--tribocrm-orange);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ── Seção com título ────────────────────────────────────────── */
+
+.tribocrm-section {
+  margin-bottom: 20px;
+}
+
+.tribocrm-section-title {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--tribocrm-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 10px 0;
+}
+
+/* ── Timeline de interações ──────────────────────────────────── */
+
+.tribocrm-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tribocrm-interaction {
+  background: var(--tribocrm-card);
+  border-left: 2px solid var(--tribocrm-orange);
+  border-radius: 0 8px 8px 0;
+  padding: 10px 12px;
+}
+
+.tribocrm-interaction-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.tribocrm-interaction-type {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--tribocrm-text-secondary);
+}
+
+.tribocrm-interaction-date {
+  font-size: 11px;
+  color: var(--tribocrm-text-muted);
+}
+
+.tribocrm-interaction-body {
+  font-size: 13px;
+  color: var(--tribocrm-text-primary);
+  line-height: 1.5;
+}
+
+/* ── Botões ──────────────────────────────────────────────────── */
+
+.tribocrm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 14px;
+  font-family: var(--tribocrm-font);
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background var(--tribocrm-transition), color var(--tribocrm-transition);
+  text-decoration: none;
+  line-height: 1;
+}
+
+.tribocrm-btn-primary {
+  background: var(--tribocrm-orange);
+  color: white;
+}
+.tribocrm-btn-primary:hover:not(:disabled) {
+  background: var(--tribocrm-orange-hover);
+}
+
+.tribocrm-btn-ghost {
+  background: var(--tribocrm-card);
+  color: var(--tribocrm-text-primary);
+  border: 1px solid var(--tribocrm-border);
+}
+.tribocrm-btn-ghost:hover:not(:disabled) {
+  background: var(--tribocrm-card-hover);
+}
+
+.tribocrm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tribocrm-btn-full {
+  width: 100%;
+}
+
+.tribocrm-btn-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+/* ── Inputs ──────────────────────────────────────────────────── */
+
+.tribocrm-input,
+.tribocrm-textarea,
+.tribocrm-select {
+  width: 100%;
+  padding: 9px 11px;
+  font-family: var(--tribocrm-font);
+  font-size: 13px;
+  color: var(--tribocrm-text-primary);
+  background: var(--tribocrm-card);
+  border: 1px solid var(--tribocrm-border);
+  border-radius: 8px;
+  outline: none;
+  transition: border-color var(--tribocrm-transition);
+}
+.tribocrm-input:focus,
+.tribocrm-textarea:focus,
+.tribocrm-select:focus {
+  border-color: var(--tribocrm-orange);
+}
+.tribocrm-input::placeholder,
+.tribocrm-textarea::placeholder {
+  color: var(--tribocrm-text-muted);
+}
+.tribocrm-textarea {
+  resize: vertical;
+  min-height: 72px;
+  line-height: 1.5;
+}
+
+.tribocrm-field {
+  margin-bottom: 10px;
+}
+.tribocrm-field-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--tribocrm-text-secondary);
+  margin-bottom: 5px;
+}
+
+/* ── Banner de erro ──────────────────────────────────────────── */
+
+.tribocrm-error-banner {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: var(--tribocrm-red);
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+
+/* ── Banner de modo mock (só aparece em dev) ───────────────── */
+
+.tribocrm-mock-banner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(245, 158, 11, 0.12);
+  border-bottom: 1px solid rgba(245, 158, 11, 0.35);
+  color: var(--tribocrm-gold);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+[data-theme="light"] .tribocrm-mock-banner {
+  background: rgba(245, 158, 11, 0.18);
+  border-bottom-color: rgba(245, 158, 11, 0.45);
+}
+
+/* ── Toast de sucesso ────────────────────────────────────────── */
+
+.tribocrm-toast {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  right: 16px;
+  background: var(--tribocrm-green);
+  color: white;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: center;
+  animation: tribocrm-slide-up 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes tribocrm-slide-up {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* ── Toast standalone ──────────────────────────────────────────
+   Usado por avisos injetados fora do painel (ex: quando o viewport
+   é estreito e o painel não está visível). */
+.tribocrm-standalone-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--tribocrm-green);
+  color: white;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-family: var(--tribocrm-font);
+  font-size: 13px;
+  font-weight: 500;
+  z-index: 2147483602;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  animation: tribocrm-slide-up 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── Templates list ─────────────────────────────────────────── */
+
+.tribocrm-template-item {
+  background: var(--tribocrm-card);
+  border: 1px solid var(--tribocrm-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  transition: background var(--tribocrm-transition), border-color var(--tribocrm-transition);
+}
+.tribocrm-template-item:hover {
+  background: var(--tribocrm-card-hover);
+  border-color: var(--tribocrm-orange);
+}
+.tribocrm-template-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--tribocrm-text-primary);
+  margin-bottom: 3px;
+}
+.tribocrm-template-preview {
+  font-size: 12px;
+  color: var(--tribocrm-text-secondary);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── Tela de não autenticado ─────────────────────────────────── */
+
+.tribocrm-auth-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 40px 16px;
+  gap: 14px;
+}
+.tribocrm-auth-prompt h3 {
+  margin: 0;
+  font-size: 15px;
+  color: var(--tribocrm-text-primary);
+}
+.tribocrm-auth-prompt p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--tribocrm-text-secondary);
+  line-height: 1.5;
+}
+
+/* ── Input manual de telefone ───────────────────────────────── */
+
+.tribocrm-manual-phone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 16px;
+  gap: 12px;
+  text-align: center;
+}
+
+.tribocrm-manual-phone-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--tribocrm-text-primary);
+  line-height: 1.4;
+}
+
+.tribocrm-manual-phone-subtext {
+  font-size: 13px;
+  color: var(--tribocrm-text-secondary);
+}
+
+.tribocrm-manual-phone-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--tribocrm-text-primary);
+}
+
+.tribocrm-manual-phone-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+/* zera o margin-bottom do .tribocrm-field para que o gap do form controle o espaçamento */
+.tribocrm-manual-phone-form .tribocrm-field {
+  margin-bottom: 0;
+  text-align: left;
+}
+
+/* ── Onboarding (aceite de termos) ───────────────────────────── */
+
+.tribocrm-onboarding {
+  display: flex;
+  flex-direction: column;
+  padding: 24px 8px 8px;
+  gap: 18px;
+}
+
+.tribocrm-onboarding-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--tribocrm-text-primary);
+  text-align: center;
+  letter-spacing: -0.01em;
+}
+
+.tribocrm-onboarding-intro {
+  margin: 0;
+  font-size: 13px;
+  color: var(--tribocrm-text-secondary);
+  line-height: 1.55;
+  text-align: center;
+}
+
+.tribocrm-onboarding-terms {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.tribocrm-onboarding-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  background: var(--tribocrm-card);
+  border: 1px solid var(--tribocrm-border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--tribocrm-text-primary);
+  line-height: 1.5;
+  transition: background var(--tribocrm-transition), border-color var(--tribocrm-transition);
+}
+
+.tribocrm-onboarding-check:hover {
+  background: var(--tribocrm-card-hover);
+}
+
+.tribocrm-onboarding-check input[type="checkbox"] {
+  margin: 2px 0 0 0;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--tribocrm-orange);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.tribocrm-onboarding-check a {
+  color: var(--tribocrm-orange);
+  text-decoration: underline;
+}
+
+.tribocrm-onboarding-check a:hover {
+  color: var(--tribocrm-orange-hover);
+}
+
+/* ── Mini-header do lead (sempre visível acima das tabs) ───────── */
+
+.tribocrm-lead-mini {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 0 14px;
+}
+
+.tribocrm-lead-mini-info {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Variante do lead-meta sem o separador superior (uso na aba Dados) */
+.tribocrm-lead-meta-no-border {
+  padding-top: 0;
+  border-top: none;
+}
+
+/* ── Tabs ─────────────────────────────────────────────────────── */
+
+.tribocrm-tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--tribocrm-border);
+  margin: 0 -16px 16px;
+  padding: 0 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  flex-shrink: 0;
+}
+
+.tribocrm-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tribocrm-tab {
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  padding: 10px 12px;
+  font-family: var(--tribocrm-font);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--tribocrm-text-secondary);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color var(--tribocrm-transition), border-color var(--tribocrm-transition);
+  white-space: nowrap;
+}
+
+.tribocrm-tab:hover:not(.tribocrm-tab-active) {
+  color: var(--tribocrm-text-primary);
+}
+
+.tribocrm-tab-active {
+  color: var(--tribocrm-orange);
+  border-bottom-color: var(--tribocrm-orange);
+}
+
+/* ── Aba Notas ────────────────────────────────────────────────── */
+
+.tribocrm-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tribocrm-notes-textarea {
+  min-height: 220px;
+  resize: vertical;
+}
+
+.tribocrm-notes-status {
+  font-size: 11px;
+  color: var(--tribocrm-text-muted);
+  min-height: 14px;
+  padding: 0 2px;
+}
+
+.tribocrm-notes-status-error {
+  color: var(--tribocrm-red);
+}
+
+/* ── Aba Produtos ─────────────────────────────────────────────── */
+
+.tribocrm-products {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tribocrm-product-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--tribocrm-card);
+  border: 1px solid var(--tribocrm-border);
+  border-radius: 8px;
+  padding: 6px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.tribocrm-product-picker-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--tribocrm-font);
+  font-size: 13px;
+  color: var(--tribocrm-text-primary);
+  transition: background var(--tribocrm-transition);
+}
+
+.tribocrm-product-picker-item:hover {
+  background: var(--tribocrm-card-hover);
+}
+
+.tribocrm-product-picker-name {
+  font-weight: 500;
+}
+
+.tribocrm-product-picker-price {
+  font-size: 12px;
+  color: var(--tribocrm-text-secondary);
+  flex-shrink: 0;
+}
+
+.tribocrm-products-empty {
+  padding: 16px;
+  text-align: center;
+  color: var(--tribocrm-text-muted);
+  font-size: 13px;
+}
+
+.tribocrm-product-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tribocrm-product-item {
+  background: var(--tribocrm-card);
+  border: 1px solid var(--tribocrm-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tribocrm-product-item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tribocrm-product-item-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--tribocrm-text-primary);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tribocrm-product-remove {
+  background: transparent;
+  border: none;
+  color: var(--tribocrm-text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--tribocrm-transition), background var(--tribocrm-transition);
+  flex-shrink: 0;
+}
+
+.tribocrm-product-remove:hover {
+  color: var(--tribocrm-red);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.tribocrm-product-item-fields {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 8px;
+}
+
+.tribocrm-product-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.tribocrm-product-field-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--tribocrm-text-muted);
+  font-weight: 500;
+}
+
+.tribocrm-product-input {
+  padding: 6px 9px;
+  font-size: 13px;
+}
+
+.tribocrm-product-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1px solid var(--tribocrm-border);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tribocrm-text-primary);
+}
+
+.tribocrm-product-total-value {
+  color: var(--tribocrm-orange);
+  font-size: 16px;
+}
+
+/* ── Aba Tarefas ──────────────────────────────────────────────── */
+
+.tribocrm-tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tribocrm-task-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tribocrm-text-muted);
+  margin-top: 4px;
+}
+
+.tribocrm-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tribocrm-task-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
+  background: var(--tribocrm-card);
+  border: 1px solid var(--tribocrm-border);
+  border-radius: 8px;
+  padding: 9px 10px;
+  align-items: flex-start;
+}
+
+.tribocrm-task-item-overdue {
+  border-color: var(--tribocrm-red);
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.tribocrm-task-item-done .tribocrm-task-title {
+  text-decoration: line-through;
+  color: var(--tribocrm-text-muted);
+}
+
+.tribocrm-task-check {
+  display: flex;
+  align-items: center;
+  padding-top: 1px;
+}
+
+.tribocrm-task-check input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--tribocrm-orange);
+  cursor: pointer;
+  margin: 0;
+}
+
+.tribocrm-task-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tribocrm-task-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.tribocrm-task-type-emoji {
+  font-size: 13px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.tribocrm-task-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--tribocrm-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.tribocrm-task-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--tribocrm-text-secondary);
+  flex-wrap: wrap;
+}
+
+.tribocrm-task-overdue-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--tribocrm-red);
+  color: white;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.tribocrm-task-due {
+  color: var(--tribocrm-text-secondary);
+}
+
+.tribocrm-task-item-overdue .tribocrm-task-due {
+  color: var(--tribocrm-red);
+  font-weight: 500;
+}
+
+.tribocrm-task-desc {
+  font-size: 11px;
+  color: var(--tribocrm-text-muted);
+  margin-top: 4px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.tribocrm-task-menu-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.tribocrm-task-menu-btn {
+  background: transparent;
+  border: none;
+  color: var(--tribocrm-text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--tribocrm-transition), background var(--tribocrm-transition);
+}
+
+.tribocrm-task-menu-btn:hover {
+  color: var(--tribocrm-text-primary);
+  background: var(--tribocrm-card-hover);
+}
+
+.tribocrm-task-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 2px);
+  min-width: 120px;
+  background: var(--tribocrm-surface);
+  border: 1px solid var(--tribocrm-border);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  padding: 4px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tribocrm-task-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-family: var(--tribocrm-font);
+  font-size: 12px;
+  color: var(--tribocrm-text-primary);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--tribocrm-transition);
+}
+
+.tribocrm-task-menu-item:hover {
+  background: var(--tribocrm-card);
+}
+
+.tribocrm-task-menu-item-danger {
+  color: var(--tribocrm-red);
+}
+
+.tribocrm-task-menu-item-danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.tribocrm-task-done-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  padding: 6px 0;
+  font-family: var(--tribocrm-font);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tribocrm-text-muted);
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+.tribocrm-task-done-toggle:hover {
+  color: var(--tribocrm-text-primary);
+}
+
+.tribocrm-task-chev-open {
+  transform: rotate(180deg);
+  transition: transform var(--tribocrm-transition);
+}
+
+.tribocrm-task-form {
+  background: var(--tribocrm-card);
+  border: 1px solid var(--tribocrm-border);
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tribocrm-task-form .tribocrm-field {
+  margin: 0;
+}
+
+.tribocrm-task-due-preview {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--tribocrm-text-secondary);
+  font-style: italic;
+}
+
+.tribocrm-date-shortcuts-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tribocrm-date-shortcuts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.tribocrm-date-chip {
+  background: var(--tribocrm-surface);
+  border: 1px solid var(--tribocrm-border);
+  border-radius: 6px;
+  padding: 7px 8px;
+  font-family: var(--tribocrm-font);
+  font-size: 12px;
+  color: var(--tribocrm-text-primary);
+  cursor: pointer;
+  transition: background var(--tribocrm-transition), border-color var(--tribocrm-transition);
+  text-align: center;
+}
+
+.tribocrm-date-chip:hover {
+  background: var(--tribocrm-card-hover);
+  border-color: var(--tribocrm-orange);
+}
+
+.tribocrm-date-chip-ghost {
+  grid-column: 1 / -1;
+  color: var(--tribocrm-text-secondary);
+  border-style: dashed;
+}
+
+.tribocrm-date-custom {
+  margin-top: 2px;
+}
+
+/* ── Outcome: botões Vender/Perder e badge ────────────────────── */
+
+/* Quando há outcome-buttons/badge abaixo do mini-header, o espaçamento
+   passa a ser controlado pelo próprio componente — evita duplicar
+   padding+margin nas duas bordas adjacentes. */
+.tribocrm-lead-mini--with-outcome {
+  padding-bottom: 0;
+}
+
+.tribocrm-outcome-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.tribocrm-btn-sell,
+.tribocrm-btn-lose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 12px;
+  font-family: var(--tribocrm-font);
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background var(--tribocrm-transition);
+  line-height: 1;
+}
+
+.tribocrm-btn-sell {
+  background: var(--tribocrm-green);
+  color: white;
+}
+.tribocrm-btn-sell:hover:not(:disabled) {
+  background: #16a34a;
+}
+
+.tribocrm-btn-lose {
+  background: var(--tribocrm-red);
+  color: white;
+}
+.tribocrm-btn-lose:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.tribocrm-btn-sell:disabled,
+.tribocrm-btn-lose:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tribocrm-outcome-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.3;
+  margin-bottom: 14px;
+}
+
+.tribocrm-outcome-badge-icon {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.tribocrm-outcome-badge-text {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.tribocrm-outcome-badge-won {
+  background: rgba(34, 197, 94, 0.14);
+  color: #15803d;
+  border: 1px solid rgba(34, 197, 94, 0.35);
+}
+[data-theme="dark"] .tribocrm-outcome-badge-won {
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.tribocrm-outcome-badge-lost {
+  background: rgba(239, 68, 68, 0.14);
+  color: #b91c1c;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+[data-theme="dark"] .tribocrm-outcome-badge-lost {
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.tribocrm-outcome-details-btn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-family: var(--tribocrm-font);
+  font-size: 12px;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  opacity: 0.8;
+  flex-shrink: 0;
+}
+.tribocrm-outcome-details-btn:hover {
+  opacity: 1;
+}
+
+/* ── Modal (scoped dentro do painel — NÃO usa viewport inteiro) ── */
+
+.tribocrm-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 10;
+  animation: tribocrm-fade-in 180ms ease-out;
+}
+
+@keyframes tribocrm-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.tribocrm-modal {
+  background: var(--tribocrm-surface);
+  border: 1px solid var(--tribocrm-border);
+  border-radius: 12px;
+  width: 100%;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.45);
+  animation: tribocrm-modal-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes tribocrm-modal-in {
+  from { transform: translateY(8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.tribocrm-modal-head {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--tribocrm-border);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tribocrm-text-primary);
+}
+
+.tribocrm-modal-body {
+  padding: 12px 14px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+.tribocrm-modal-foot {
+  padding: 10px 14px 12px;
+  border-top: 1px solid var(--tribocrm-border);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.tribocrm-modal-error {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--tribocrm-red);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.tribocrm-modal-products {
+  border: 1px solid var(--tribocrm-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--tribocrm-card);
+}
+
+.tribocrm-modal-products-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--tribocrm-text-secondary);
+  padding-bottom: 4px;
+  border-bottom: 1px dashed var(--tribocrm-border);
+}
+
+.tribocrm-modal-product-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--tribocrm-text-primary);
+}
+
+.tribocrm-modal-product-row input[type="checkbox"] {
+  margin: 0;
+  accent-color: var(--tribocrm-orange);
+  cursor: pointer;
+}
+
+.tribocrm-modal-product-row-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tribocrm-modal-product-row-total {
+  font-variant-numeric: tabular-nums;
+  color: var(--tribocrm-text-secondary);
+  flex-shrink: 0;
+}
+
+.tribocrm-modal-products-empty {
+  font-size: 12px;
+  color: var(--tribocrm-text-muted);
+  padding: 8px 10px;
+  border: 1px dashed var(--tribocrm-border);
+  border-radius: 6px;
+  background: var(--tribocrm-card);
+}
+
+.tribocrm-modal-details-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  padding: 4px 0;
+}
+
+.tribocrm-modal-details-row-label {
+  color: var(--tribocrm-text-secondary);
+  flex-shrink: 0;
+}
+
+.tribocrm-modal-details-row-value {
+  color: var(--tribocrm-text-primary);
+  text-align: right;
+  word-break: break-word;
+}
+
+.tribocrm-modal-details-divider {
+  height: 1px;
+  background: var(--tribocrm-border);
+  margin: 4px 0;
+}
+
+/* ── Sub-estado: vincular telefone a lead existente ──────────── */
+
+.tribocrm-link-trigger {
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  margin-top: 4px;
+  font-family: var(--tribocrm-font);
+  font-size: 12px;
+  color: var(--tribocrm-text-secondary);
+  cursor: pointer;
+  text-decoration: none;
+  transition: color var(--tribocrm-transition);
+}
+.tribocrm-link-trigger:hover {
+  color: var(--tribocrm-orange);
+  text-decoration: underline;
+}
+
+.tribocrm-link-existing {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tribocrm-link-back {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  padding: 2px 0;
+  font-family: var(--tribocrm-font);
+  font-size: 12px;
+  color: var(--tribocrm-text-secondary);
+  cursor: pointer;
+}
+.tribocrm-link-back:hover {
+  color: var(--tribocrm-text-primary);
+}
+
+.tribocrm-link-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--tribocrm-card);
+  border: 1px solid var(--tribocrm-border);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--tribocrm-text-primary);
+}
+.tribocrm-link-header-phone {
+  font-size: 12px;
+  color: var(--tribocrm-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.tribocrm-link-search {
+  margin-top: 2px;
+}
+
+.tribocrm-link-results {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 40px;
+}
+
+.tribocrm-link-hint {
+  padding: 10px;
+  font-size: 12px;
+  color: var(--tribocrm-text-muted);
+  text-align: center;
+  border: 1px dashed var(--tribocrm-border);
+  border-radius: 8px;
+  background: var(--tribocrm-card);
+}
+
+.tribocrm-link-result-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--tribocrm-card);
+  border: 1px solid var(--tribocrm-border);
+  border-radius: 8px;
+  font-family: var(--tribocrm-font);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--tribocrm-transition), border-color var(--tribocrm-transition);
+}
+.tribocrm-link-result-item:hover {
+  background: var(--tribocrm-card-hover);
+  border-color: var(--tribocrm-orange);
+}
+
+.tribocrm-link-result-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tribocrm-text-primary);
+}
+
+.tribocrm-link-result-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--tribocrm-text-secondary);
+}
+
+.tribocrm-link-result-stage {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.tribocrm-link-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  background: var(--tribocrm-card);
+  border: 1px solid var(--tribocrm-border);
+  border-radius: 10px;
+}
+
+.tribocrm-link-confirm-text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--tribocrm-text-primary);
+}
