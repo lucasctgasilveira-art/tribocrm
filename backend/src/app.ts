@@ -40,6 +40,7 @@ app.use(cors({
       'http://localhost:3000',
       'http://localhost:3001',
       'http://localhost:3002',
+      'chrome-extension://pgfegmelobfejcgccmdofmpljidffpga',
     ]
     if (!origin || allowed.includes(origin)) {
       callback(null, true)
