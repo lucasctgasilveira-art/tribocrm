@@ -1,0 +1,23 @@
+name: Staging Keep-Alive
+
+on:
+  schedule:
+    # A cada 5 dias às 00:00 UTC (= 21:00 BRT do dia anterior)
+    - cron: '0 0 */5 * *'
+  workflow_dispatch:
+
+jobs:
+  ping-staging:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping staging health endpoint
+        run: |
+          echo "Pinging staging at $(date -u)"
+          response=$(curl -s -o /dev/null -w "%{http_code}" \
+            https://tribocrm-production-07bc.up.railway.app/health)
+          echo "HTTP Status: $response"
+          if [ "$response" != "200" ]; then
+            echo "❌ Staging returned $response, expected 200"
+            exit 1
+          fi
+          echo "✅ Staging responded 200 OK"
