@@ -63,6 +63,13 @@ function cellText(cell: ExcelJS.Cell): string {
   return String(v)
 }
 
+// Restringe acesso a leads pra role SELLER (isolamento entre vendedores).
+// Non-SELLER roles (OWNER/MANAGER/TEAM_LEADER/SUPER_ADMIN) veem tudo do tenant.
+// Spread no where do Prisma: { tenantId, ...sellerScope(role, userId) }.
+export function sellerScope(role: string, userId: string): { responsibleId?: string } {
+  return role === 'SELLER' ? { responsibleId: userId } : {}
+}
+
 export async function getLossReasons(req: Request, res: Response): Promise<void> {
   try {
     const tenantId = req.user!.tenantId
@@ -163,9 +170,11 @@ export async function getLead(req: Request, res: Response): Promise<void> {
   try {
     const id = req.params.id as string
     const tenantId = req.user!.tenantId
+    const role = req.user!.role
+    const userId = req.user!.userId
 
     const lead = await prisma.lead.findFirst({
-      where: { id, tenantId, deletedAt: null },
+      where: { id, tenantId, deletedAt: null, ...sellerScope(role, userId) },
       include: {
         stage: { select: { id: true, name: true, color: true, type: true } },
         responsible: { select: { id: true, name: true } },
@@ -379,9 +388,11 @@ export async function updateLead(req: Request, res: Response): Promise<void> {
   try {
     const id = req.params.id as string
     const tenantId = req.user!.tenantId
+    const role = req.user!.role
+    const userId = req.user!.userId
 
     const existing = await prisma.lead.findFirst({
-      where: { id, tenantId, deletedAt: null },
+      where: { id, tenantId, deletedAt: null, ...sellerScope(role, userId) },
     })
 
     if (!existing) {
@@ -527,9 +538,11 @@ export async function deleteLead(req: Request, res: Response): Promise<void> {
   try {
     const id = req.params.id as string
     const tenantId = req.user!.tenantId
+    const role = req.user!.role
+    const userId = req.user!.userId
 
     const existing = await prisma.lead.findFirst({
-      where: { id, tenantId, deletedAt: null },
+      where: { id, tenantId, deletedAt: null, ...sellerScope(role, userId) },
     })
 
     if (!existing) {
