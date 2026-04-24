@@ -117,6 +117,16 @@ router.get('/:id/purchases', async (req, res) => {
     const { prisma } = await import('../lib/prisma')
     const leadId = req.params.id as string
     const tenantId = req.user!.tenantId
+    const role = req.user!.role
+    const userId = req.user!.userId
+    const lead = await prisma.lead.findFirst({
+      where: { id: leadId, tenantId, deletedAt: null, ...sellerScope(role, userId) },
+      select: { id: true },
+    })
+    if (!lead) {
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Lead não encontrado' } })
+      return
+    }
     const purchases = await prisma.leadPurchase.findMany({
       where: { leadId, tenantId },
       orderBy: { wonAt: 'asc' },
