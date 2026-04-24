@@ -299,6 +299,7 @@ export async function createLead(req: Request, res: Response): Promise<void> {
   try {
     const tenantId = req.user!.tenantId
     const userId = req.user!.userId
+    const role = req.user!.role
 
     const { name, company, email, phone, whatsapp, expectedValue, stageId, pipelineId, responsibleId, temperature = 'WARM' } = req.body
 
@@ -309,6 +310,12 @@ export async function createLead(req: Request, res: Response): Promise<void> {
       })
       return
     }
+
+    // SELLER não pode escolher outro responsável via body — ignora
+    // qualquer responsibleId enviado e força para o próprio usuário.
+    // Pipelines ROUND_ROBIN_* continuam decidindo normalmente no resolve
+    // (é escolha de config do pipeline, não privilégio do caller).
+    const effectiveResponsibleId = role === 'SELLER' ? userId : responsibleId
 
     const result = await prisma.$transaction(async (tx) => {
       const pipeline = await tx.pipeline.findFirst({
@@ -324,7 +331,7 @@ export async function createLead(req: Request, res: Response): Promise<void> {
       if (!stage) throw new Error('STAGE_NOT_FOUND')
 
       const { responsibleId: assignedId, teamId: assignedTeamId } =
-        await resolveResponsibleForPipeline(tx, pipeline, tenantId, userId, responsibleId)
+        await resolveResponsibleForPipeline(tx, pipeline, tenantId, userId, effectiveResponsibleId)
 
       const lead = await tx.lead.create({
         data: {
@@ -575,6 +582,19 @@ type BulkAction = 'change_responsible' | 'change_stage' | 'change_temperature' |
 export async function bulkUpdateLeads(req: Request, res: Response): Promise<void> {
   try {
     const tenantId = req.user!.tenantId
+    const role = req.user!.role
+
+    // Ações em massa são de gestão — SELLER não pode rodar bulk, nem
+    // sobre próprios leads. Operações individuais (PATCH /leads/:id)
+    // continuam disponíveis e aplicam sellerScope automaticamente.
+    if (role === 'SELLER') {
+      res.status(403).json({
+        success: false,
+        error: { code: 'FORBIDDEN', message: 'Ações em massa não disponíveis para vendedores' },
+      })
+      return
+    }
+
     const { leadIds, action, payload } = req.body as {
       leadIds: string[]
       action: BulkAction
