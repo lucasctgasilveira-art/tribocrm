@@ -1,0 +1,12 @@
+-- Per-admin permission overrides serialized as JSON. Read and written
+-- by GET/PATCH /admin/team/:id/permissions and consumed by the
+-- AdminPermissionsPage in the frontend. The column is *stored* but is
+-- not currently consulted by any auth middleware to gate requests —
+-- it backs the permission-editor UI only.
+--
+-- Drift recovery: this column already exists in production (added
+-- manually outside Prisma history); staging was DROP SCHEMA'd and
+-- re-applied only the 17 versioned migrations, so it lacks the
+-- column. IF NOT EXISTS keeps both environments idempotent on
+-- prisma migrate deploy.
+ALTER TABLE "admin_users" ADD COLUMN IF NOT EXISTS "permissions" JSONB;
