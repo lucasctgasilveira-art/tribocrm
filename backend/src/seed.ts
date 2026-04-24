@@ -175,7 +175,169 @@ async function main() {
 
   console.log(`  ✔ Usuário "${user.name}" (${user.email}) — OWNER`)
 
+  // ─── 5. Fixtures opcionais (extensão / dev) ──────────────
+  if (process.env.SEED_EXTENSION_FIXTURES === '1') {
+    await seedExtensionFixtures(tenant.id, user.id)
+  } else {
+    console.log('\n[Seed] Fixtures opcionais desativados (defina SEED_EXTENSION_FIXTURES=1 para popular pipeline/sellers/produtos/leads)')
+  }
+
   console.log('\n[Seed] Seed concluído com sucesso!')
+}
+
+// Pipeline + 4 stages + 2 sellers + 3 products + 5 leads + 1 LeadProduct.
+// Tudo idempotente via findFirst+create ou upsert. Os leads usam phone/whatsapp
+// em formatos diferentes (com/sem +55, com/sem máscara) para servir de fixture
+// da detecção de WhatsApp na extensão. Roda apenas com SEED_EXTENSION_FIXTURES=1
+// para não poluir produção sem intenção.
+async function seedExtensionFixtures(tenantId: string, ownerId: string): Promise<void> {
+  console.log('\n[Seed] === Fixtures opcionais (SEED_EXTENSION_FIXTURES=1) ===\n')
+
+  // Pipeline + Stages
+  const pipelineName = 'Funil Vendas'
+  let pipeline = await prisma.pipeline.findFirst({ where: { tenantId, name: pipelineName } })
+  if (!pipeline) {
+    pipeline = await prisma.pipeline.create({
+      data: { tenantId, name: pipelineName, isDefault: true, distributionType: 'MANUAL', isActive: true },
+    })
+  }
+  console.log(`  ✔ Pipeline "${pipeline.name}"`)
+
+  const stagesData = [
+    { name: 'Novo',         sortOrder: 1, color: '#6B7280' },
+    { name: 'Qualificando', sortOrder: 2, color: '#F59E0B' },
+    { name: 'Proposta',     sortOrder: 3, color: '#3B82F6' },
+    { name: 'Fechamento',   sortOrder: 4, color: '#10B981' },
+  ]
+  const stages: Record<string, string> = {}
+  for (const s of stagesData) {
+    let stage = await prisma.pipelineStage.findFirst({ where: { pipelineId: pipeline.id, name: s.name } })
+    if (!stage) {
+      stage = await prisma.pipelineStage.create({
+        data: {
+          tenantId,
+          pipelineId: pipeline.id,
+          name: s.name,
+          type: 'NORMAL',
+          sortOrder: s.sortOrder,
+          color: s.color,
+        },
+      })
+    }
+    stages[s.name] = stage.id
+    console.log(`    ✔ Stage "${s.name}"`)
+  }
+
+  // Sellers
+  const sellerPasswordHash = await bcrypt.hash('Teste@123', BCRYPT_ROUNDS)
+  const sellersData = [
+    { name: 'Ana Vendedora',   email: 'ana@tribodevendas.com.br' },
+    { name: 'Bruno Vendedor',  email: 'bruno@tribodevendas.com.br' },
+  ]
+  const sellers: Record<string, string> = {}
+  for (const s of sellersData) {
+    const seller = await prisma.user.upsert({
+      where: { tenantId_email: { tenantId, email: s.email } },
+      update: { name: s.name, passwordHash: sellerPasswordHash, role: 'SELLER', isActive: true },
+      create: { tenantId, name: s.name, email: s.email, passwordHash: sellerPasswordHash, role: 'SELLER', isActive: true },
+    })
+    sellers[s.email] = seller.id
+    console.log(`  ✔ Seller "${seller.name}" (${seller.email})`)
+  }
+
+  // Products
+  const productsData = [
+    { name: 'Consultoria Premium', price: 5000, allowsDiscount: true,  maxDiscount: 10,   discountType: 'PERCENTAGE' as const, approvalType: 'PASSWORD' as const },
+    { name: 'Mentoria Individual', price: 2500, allowsDiscount: true,  maxDiscount: 5,    discountType: 'PERCENTAGE' as const, approvalType: 'PASSWORD' as const },
+    { name: 'Workshop Vendas',     price: 1200, allowsDiscount: false, maxDiscount: null, discountType: null,                  approvalType: null },
+  ]
+  const products: Record<string, string> = {}
+  for (const p of productsData) {
+    let product = await prisma.product.findFirst({ where: { tenantId, name: p.name } })
+    const data = {
+      tenantId,
+      name: p.name,
+      price: p.price,
+      allowsDiscount: p.allowsDiscount,
+      maxDiscount: p.maxDiscount,
+      discountType: p.discountType,
+      approvalType: p.approvalType,
+      isActive: true,
+    }
+    if (!product) {
+      product = await prisma.product.create({ data })
+    } else {
+      product = await prisma.product.update({ where: { id: product.id }, data })
+    }
+    products[p.name] = product.id
+    console.log(`  ✔ Product "${product.name}" (R$ ${product.price})`)
+  }
+
+  // Leads — phones em formatos diferentes propositalmente
+  const novoStageId = stages['Novo']!
+  const anaId = sellers['ana@tribodevendas.com.br']!
+  const brunoId = sellers['bruno@tribodevendas.com.br']!
+  const leadsData = [
+    { name: 'João Silva',    phone: '+5511998765001',   whatsapp: '+5511998765001', responsibleId: anaId },
+    { name: 'Maria Souza',   phone: '11998765002',      whatsapp: '5511998765002',  responsibleId: anaId },
+    { name: 'Pedro Santos',  phone: '(11) 99876-5003',  whatsapp: '11998765003',    responsibleId: anaId },
+    { name: 'Carla Dias',    phone: '+5511998765004',   whatsapp: '+5511998765004', responsibleId: brunoId },
+    { name: 'Rafael Costa',  phone: '11998765005',      whatsapp: '11998765005',    responsibleId: brunoId },
+  ]
+  const leads: Record<string, string> = {}
+  for (const l of leadsData) {
+    let lead = await prisma.lead.findFirst({ where: { tenantId, name: l.name, deletedAt: null } })
+    if (!lead) {
+      lead = await prisma.lead.create({
+        data: {
+          tenantId,
+          pipelineId: pipeline.id,
+          stageId: novoStageId,
+          responsibleId: l.responsibleId,
+          createdBy: ownerId,
+          name: l.name,
+          phone: l.phone,
+          whatsapp: l.whatsapp,
+          status: 'ACTIVE',
+          temperature: 'WARM',
+        },
+      })
+    } else {
+      lead = await prisma.lead.update({
+        where: { id: lead.id },
+        data: { phone: l.phone, whatsapp: l.whatsapp, responsibleId: l.responsibleId, stageId: novoStageId },
+      })
+    }
+    leads[l.name] = lead.id
+    console.log(`  ✔ Lead "${lead.name}" (phone ${l.phone})`)
+  }
+
+  // 1 LeadProduct: João Silva ↔ Consultoria Premium, qty=1, desc=5%
+  const joaoId = leads['João Silva']!
+  const consultoriaId = products['Consultoria Premium']!
+  const consultoriaPrice = 5000
+  const consultoriaDiscount = 5
+  const finalPrice = Math.round(consultoriaPrice * 1 * (1 - consultoriaDiscount / 100) * 100) / 100
+  const existingLp = await prisma.leadProduct.findFirst({ where: { leadId: joaoId, productId: consultoriaId } })
+  if (!existingLp) {
+    await prisma.leadProduct.create({
+      data: {
+        tenantId,
+        leadId: joaoId,
+        productId: consultoriaId,
+        quantity: 1,
+        unitPrice: consultoriaPrice,
+        discountPercent: consultoriaDiscount,
+        finalPrice,
+      },
+    })
+  } else {
+    await prisma.leadProduct.update({
+      where: { id: existingLp.id },
+      data: { quantity: 1, unitPrice: consultoriaPrice, discountPercent: consultoriaDiscount, finalPrice },
+    })
+  }
+  console.log(`  ✔ LeadProduct (João Silva ↔ Consultoria Premium, 1x R$ ${finalPrice})`)
 }
 
 main()
