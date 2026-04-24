@@ -5,7 +5,7 @@ import { tenantStatusGuard } from '../middleware/tenant-status.middleware'
 import {
   getLeads, getLead, createLead, updateLead, deleteLead,
   importLeads, getImportTemplate, exportLeads, bulkUpdateLeads,
-  getLossReasons,
+  getLossReasons, sellerScope,
 } from '../controllers/leads.controller'
 
 const router = Router()
@@ -48,6 +48,16 @@ router.get('/:id/interactions', async (req, res) => {
     const { prisma } = await import('../lib/prisma')
     const leadId = req.params.id as string
     const tenantId = req.user!.tenantId
+    const role = req.user!.role
+    const userId = req.user!.userId
+    const lead = await prisma.lead.findFirst({
+      where: { id: leadId, tenantId, deletedAt: null, ...sellerScope(role, userId) },
+      select: { id: true },
+    })
+    if (!lead) {
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Lead não encontrado' } })
+      return
+    }
     const interactions = await prisma.interaction.findMany({
       where: { leadId, tenantId },
       orderBy: { createdAt: 'desc' },
@@ -69,6 +79,15 @@ router.post('/:id/interactions', async (req, res) => {
     const leadId = req.params.id as string
     const tenantId = req.user!.tenantId
     const userId = req.user!.userId
+    const role = req.user!.role
+    const lead = await prisma.lead.findFirst({
+      where: { id: leadId, tenantId, deletedAt: null, ...sellerScope(role, userId) },
+      select: { id: true },
+    })
+    if (!lead) {
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Lead não encontrado' } })
+      return
+    }
     const { type, content, notes, description } = req.body
     // Accept content/description/notes in any combination — single source of
     // truth is the `content` column, but clients that write `description`
