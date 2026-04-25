@@ -597,6 +597,7 @@ model Lead {
   lostAt         DateTime?     @map("lost_at")
   lastActivityAt DateTime?     @map("last_activity_at")
   notes          String?       @db.Text
+  altPhones      Json          @default("[]") @map("alt_phones")
   customFields   Json?         @map("custom_fields")
   createdAt      DateTime      @default(now()) @map("created_at")
   updatedAt      DateTime      @updatedAt @map("updated_at")
