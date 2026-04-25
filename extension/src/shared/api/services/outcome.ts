@@ -1,56 +1,127 @@
+import { http, ApiHttpError } from '../http';
+import type { LeadOutcome, LeadProduct, LossReason } from '@shared/types/extra';
+
 /**
- * TODO(backend): quando existirem endpoints de outcome por lead
- * (venda/perda), dividir em outcome.service.ts (real) +
- * mockOutcomeService em ../../mocks/services.ts, seguindo o padrão
- * de leads/messages.
+ * Service real (HTTP) pra outcome (venda/perda) de lead.
  *
- * Quando isso acontecer, o filtro por usuário/tenant será feito no
- * backend (via Row Level Security). O userId na chave local vira
- * redundante mas ainda útil como cache em navegadores multi-usuário.
+ * Backend NÃO tem entidade `LeadOutcome` separada — o estado vive nos
+ * campos do próprio Lead (status, closedValue, wonAt, lostAt,
+ * lossReasonId). Este service reconstrói/persiste o LeadOutcome via
+ * PATCH /leads/:id (handler updateLead aceita todos os campos no
+ * mesmo body).
  *
- * Persistência atual: chrome.storage.local com chave
- *   lead-outcome:{userId}:{leadId}
- * O userId garante isolamento entre sessões no mesmo navegador.
+ * Endpoints usados:
+ *   GET  /leads/:id              → reconstrói outcome do estado do lead
+ *   PATCH /leads/:id             → seta/limpa outcome (stageId + campos)
+ *   GET  /leads/:id/products     → snapshot de produtos (via api separada)
+ *   GET  /leads/loss-reasons     → lista de motivos de perda (com adapter)
  *
- * listLossReasons também vira GET no backend — por enquanto lê da
- * fixture LOSS_REASONS. Mantido async para preservar a assinatura
- * quando trocarmos por HTTP.
+ * Limites conhecidos pós-migração (vs versão local):
+ *   - reasonCustom: backend não tem campo dedicado. Briefing original
+ *     mandava registrar como Interaction; mantemos esse fallback.
+ *   - reasonLabel: snapshot do label era preservado localmente; agora
+ *     o label vem da lista atual de loss-reasons (não é snapshot).
+ *   - recordedAt: tinha semântica "quando o registro foi salvo no
+ *     storage local"; agora == wonAt/lostAt (mesma data do
+ *     fechamento, não do clique).
  */
 
-import type { LeadOutcome, LossReason } from '@shared/types/extra';
-import { LOSS_REASONS } from '@shared/mocks/loss-reasons';
-import { storage } from '@shared/utils/storage';
-
-const KEY = (userId: string, leadId: string) => `lead-outcome:${userId}:${leadId}`;
-
-async function getUserId(): Promise<string | null> {
-  const auth = await storage.get('auth');
-  return auth?.user?.id ?? null;
+interface LeadFromBackend {
+  id: string;
+  status: 'ACTIVE' | 'WON' | 'LOST' | 'ARCHIVED';
+  closedValue: string | number | null;
+  lossReasonId: string | null;
+  wonAt: string | null;
+  lostAt: string | null;
 }
 
 export const outcomeService = {
   async getOutcome(leadId: string): Promise<LeadOutcome | null> {
-    const userId = await getUserId();
-    if (!userId) return null;
-    const key = KEY(userId, leadId);
-    const result = await chrome.storage.local.get(key);
-    const value = result[key];
-    return value && typeof value === 'object' ? (value as LeadOutcome) : null;
+    try {
+      const lead = await http.get<LeadFromBackend>(
+        `/leads/${encodeURIComponent(leadId)}`,
+      );
+
+      if (!lead) return null;
+      if (lead.status !== 'WON' && lead.status !== 'LOST') return null;
+
+      const closedAt = (lead.wonAt ?? lead.lostAt ?? '') as string;
+
+      return {
+        leadId,
+        kind: lead.status === 'WON' ? 'won' : 'lost',
+        amount: lead.closedValue !== null ? Number(lead.closedValue) : null,
+        // products vivem em LeadProduct (productsService); Panel busca
+        // separado quando precisa exibir. Aqui retornamos vazio porque
+        // o backend não armazena snapshot dedicado.
+        products: [] as LeadProduct[],
+        reasonId: lead.lossReasonId,
+        // Label e custom vêm de loss-reasons / interactions; Panel
+        // resolve quando renderiza badge/details. Mantemos null aqui
+        // pra preservar o tipo LeadOutcome.
+        reasonLabel: null,
+        reasonCustom: null,
+        closedAt,
+        recordedAt: closedAt,
+      };
+    } catch (err) {
+      if (err instanceof ApiHttpError && err.status === 404) return null;
+      throw err;
+    }
   },
 
-  async setOutcome(leadId: string, outcome: LeadOutcome): Promise<void> {
-    const userId = await getUserId();
-    if (!userId) return; // sem sessão: falha silenciosa
-    await chrome.storage.local.set({ [KEY(userId, leadId)]: outcome });
+  /**
+   * Persiste outcome via PATCH /leads/:id. Caller (handler) resolve
+   * targetStageId via resolveOutcomeStage(pipelineId, kind) antes de
+   * chamar — service não conhece pipeline.
+   *
+   * Se reasonCustom existir (kind='lost' com motivo livre), registra
+   * uma interaction adicional com type=NOTE.
+   */
+  async setOutcome(
+    leadId: string,
+    outcome: LeadOutcome,
+    targetStageId: string,
+  ): Promise<void> {
+    const body: Record<string, unknown> = { stageId: targetStageId };
+
+    if (outcome.kind === 'won') {
+      if (outcome.amount !== null) body.closedValue = outcome.amount;
+      if (outcome.closedAt) body.wonAt = outcome.closedAt;
+    } else {
+      if (outcome.reasonId) body.lossReasonId = outcome.reasonId;
+      if (outcome.closedAt) body.lostAt = outcome.closedAt;
+    }
+
+    await http.patch(`/leads/${encodeURIComponent(leadId)}`, body);
+
+    if (outcome.kind === 'lost' && outcome.reasonCustom) {
+      await http.post(`/leads/${encodeURIComponent(leadId)}/interactions`, {
+        type: 'NOTE',
+        content: `Motivo de perda customizado: ${outcome.reasonCustom}`,
+      });
+    }
   },
 
+  /**
+   * Limpa campos de fechamento do lead. NÃO toca stageId — é chamado
+   * por syncOutcomeWithStage QUANDO a stage já foi mudada manualmente
+   * pra fora de WON/LOST (handler LEAD_UPDATE_STAGE).
+   */
   async clearOutcome(leadId: string): Promise<void> {
-    const userId = await getUserId();
-    if (!userId) return;
-    await chrome.storage.local.remove(KEY(userId, leadId));
+    await http.patch(`/leads/${encodeURIComponent(leadId)}`, {
+      closedValue: null,
+      lossReasonId: null,
+      wonAt: null,
+      lostAt: null,
+    });
   },
 
   async listLossReasons(): Promise<LossReason[]> {
-    return LOSS_REASONS;
-  }
+    // Backend retorna { id, name }; tipo client é { id, label }. Adapter.
+    const result = await http.get<{ id: string; name: string }[]>(
+      '/leads/loss-reasons',
+    );
+    return result.map((r) => ({ id: r.id, label: r.name }));
+  },
 };
