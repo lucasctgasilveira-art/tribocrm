@@ -411,4 +411,100 @@ router.delete('/:id/products/:itemId', async (req, res) => {
   }
 })
 
+// ════════════════════════════════════════════════════════════
+// Note (campo único de anotação livre por lead)
+// ════════════════════════════════════════════════════════════
+
+router.get('/:id/note', async (req, res) => {
+  try {
+    const { prisma } = await import('../lib/prisma')
+    const leadId = req.params.id as string
+    const tenantId = req.user!.tenantId
+    const role = req.user!.role
+    const userId = req.user!.userId
+
+    const lead = await prisma.lead.findFirst({
+      where: { id: leadId, tenantId, deletedAt: null, ...sellerScope(role, userId) },
+      select: { id: true, notes: true },
+    })
+
+    if (!lead) {
+      res.status(404).json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Lead não encontrado' },
+      })
+      return
+    }
+
+    res.json({
+      success: true,
+      data: { content: lead.notes ?? '' },
+    })
+  } catch (error: any) {
+    console.error('[Leads] getNote error:', error)
+    res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: error.message },
+    })
+  }
+})
+
+router.put('/:id/note', async (req, res) => {
+  try {
+    const { prisma } = await import('../lib/prisma')
+    const leadId = req.params.id as string
+    const tenantId = req.user!.tenantId
+    const role = req.user!.role
+    const userId = req.user!.userId
+    const { content } = req.body ?? {}
+
+    if (typeof content !== 'string') {
+      res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'content deve ser string' },
+      })
+      return
+    }
+
+    const MAX_LENGTH = 10000
+    if (content.length > MAX_LENGTH) {
+      res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: `content excede ${MAX_LENGTH} caracteres` },
+      })
+      return
+    }
+
+    const lead = await prisma.lead.findFirst({
+      where: { id: leadId, tenantId, deletedAt: null, ...sellerScope(role, userId) },
+      select: { id: true },
+    })
+
+    if (!lead) {
+      res.status(404).json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Lead não encontrado' },
+      })
+      return
+    }
+
+    const updated = await prisma.lead.update({
+      where: { id: leadId },
+      data: { notes: content || null },
+      select: { id: true, notes: true },
+    })
+
+    res.json({
+      success: true,
+      data: { content: updated.notes ?? '' },
+    })
+  } catch (error: any) {
+    console.error('[Leads] putNote error:', error)
+    res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: error.message },
+    })
+  }
+})
+
 export default router
