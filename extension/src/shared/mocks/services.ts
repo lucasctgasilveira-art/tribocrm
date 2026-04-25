@@ -283,3 +283,21 @@ export const mockProductsService = {
     return result;
   },
 };
+
+// ── Notes mock ───────────────────────────────────────────────────
+
+// State em memória pra simular nota por leadId. Mantém a interface
+// compatível com a do service real (string in / string out).
+const mockNotesDb = new Map<string, string>();
+
+export const mockNotesService = {
+  async getNotes(leadId: string): Promise<string> {
+    await delay(150);
+    return mockNotesDb.get(leadId) ?? '';
+  },
+
+  async setNotes(leadId: string, text: string): Promise<void> {
+    await delay(200);
+    mockNotesDb.set(leadId, text);
+  },
+};
