@@ -1,58 +1,106 @@
+import { http } from '../http';
+import type { LeadTask, LeadTaskType, LeadTaskStatus } from '@shared/types/extra';
+
 /**
- * TODO(backend): quando existirem endpoints /leads/:id/tasks,
- * dividir em tasks.service.ts (real) + mockTasksService em
- * ../../mocks/services.ts, seguindo o padrão de leads/messages.
+ * Service real (HTTP) pra tasks por lead.
+ * Endpoints backend (E3-A trouxe isDone no PATCH):
+ *   GET    /tasks?leadId=X
+ *   POST   /tasks               body: { leadId, type, title, description?, dueDate?, responsibleId? }
+ *   PATCH  /tasks/:id           body: { title?, description?, dueDate?, type?, isDone?, responsibleId? }
+ *   PATCH  /tasks/:id/complete  (legacy semantic — preservado, não usado aqui)
+ *   DELETE /tasks/:id
  *
- * Quando isso acontecer, o filtro por usuário/tenant será feito no
- * backend (via Row Level Security). O userId na chave local vira
- * redundante mas ainda útil como cache em navegadores multi-usuário.
+ * Adapters cliente↔backend:
+ *   dueAt        ↔ dueDate
+ *   status       ↔ isDone (boolean)
+ *   completedAt  ↔ doneAt
+ *   type         ↔ type (lower↔UPPER)
+ *   leadName     ← lead.name (do include do backend); snapshot é vivo,
+ *                  não imutável como na versão local
  *
- * Persistência atual: chrome.storage.local com chave
- *   lead-tasks:{userId}:{leadId}
- * O userId garante isolamento entre sessões no mesmo navegador.
- *
- * Este service NÃO agenda chrome.alarms nem dispara notificações —
- * só toca storage. O orchestramento de alarms/notifications fica
- * no handler (background/handlers.ts) e no service worker
- * (background/service-worker.ts). Motivo: quando trocarmos storage
- * por HTTP, o agendamento de alarm continua local e essa separação
- * evita mexer no lugar errado.
+ * notified (flag local de "alarm já tocou pra essa task") fica em
+ * chrome.storage.local com chave separada `task-notified:{taskId}`,
+ * porque o backend não tem esse campo. SW (alarms) lê/grava essa flag
+ * via getNotifiedFlag/setNotifiedFlag.
  */
 
-import type { LeadTask, LeadTaskStatus } from '@shared/types/extra';
-import { storage } from '@shared/utils/storage';
-
-const KEY = (userId: string, leadId: string) => `lead-tasks:${userId}:${leadId}`;
-
-async function getUserId(): Promise<string | null> {
-  const auth = await storage.get('auth');
-  return auth?.user?.id ?? null;
+interface BackendTask {
+  id: string;
+  leadId: string;
+  type: 'CALL' | 'EMAIL' | 'WHATSAPP' | 'MEETING' | 'VISIT';
+  title: string;
+  description: string | null;
+  dueDate: string | null;
+  isDone: boolean;
+  doneAt: string | null;
+  createdAt: string;
+  updatedAt?: string;
+  lead?: { id: string; name: string; company?: string | null };
 }
 
-async function readList(userId: string, leadId: string): Promise<LeadTask[]> {
-  const key = KEY(userId, leadId);
-  const result = await chrome.storage.local.get(key);
-  const value = result[key];
-  return Array.isArray(value) ? (value as LeadTask[]) : [];
+const NOTIFIED_KEY = (taskId: string) => `task-notified:${taskId}`;
+
+async function getNotifiedFlag(taskId: string): Promise<boolean> {
+  const result = await chrome.storage.local.get(NOTIFIED_KEY(taskId));
+  return Boolean(result[NOTIFIED_KEY(taskId)]);
 }
 
-async function writeList(userId: string, leadId: string, list: LeadTask[]): Promise<void> {
-  await chrome.storage.local.set({ [KEY(userId, leadId)]: list });
+async function setNotifiedFlag(taskId: string, value: boolean): Promise<void> {
+  if (value) {
+    await chrome.storage.local.set({ [NOTIFIED_KEY(taskId)]: true });
+  } else {
+    await chrome.storage.local.remove(NOTIFIED_KEY(taskId));
+  }
+}
+
+async function clearNotifiedFlag(taskId: string): Promise<void> {
+  await chrome.storage.local.remove(NOTIFIED_KEY(taskId));
+}
+
+async function fromBackend(t: BackendTask): Promise<LeadTask> {
+  return {
+    id: t.id,
+    leadId: t.leadId,
+    leadName: t.lead?.name ?? '',
+    type: t.type.toLowerCase() as LeadTaskType,
+    title: t.title,
+    description: t.description ?? '',
+    dueAt: t.dueDate ?? '',
+    status: t.isDone ? 'done' : 'pending',
+    createdAt: t.createdAt,
+    completedAt: t.doneAt,
+    notified: await getNotifiedFlag(t.id),
+  };
 }
 
 export const tasksService = {
   async listTasks(leadId: string): Promise<LeadTask[]> {
-    const userId = await getUserId();
-    if (!userId) return [];
-    return readList(userId, leadId);
+    const tasks = await http.get<BackendTask[]>(
+      `/tasks?leadId=${encodeURIComponent(leadId)}`
+    );
+    if (!Array.isArray(tasks)) return [];
+    return Promise.all(tasks.map(fromBackend));
   },
 
   async addTask(leadId: string, task: LeadTask): Promise<LeadTask> {
-    const userId = await getUserId();
-    if (!userId) throw new Error('Sessão expirada — faça login novamente');
-    const list = await readList(userId, leadId);
-    await writeList(userId, leadId, [...list, task]);
-    return task;
+    // O id do `task` vem gerado pelo handler via crypto.randomUUID, mas
+    // o backend gera próprio UUID e devolve no response. O id do client
+    // é descartado.
+    const created = await http.post<BackendTask>('/tasks', {
+      leadId,
+      type: task.type.toUpperCase(),
+      title: task.title,
+      description: task.description || undefined,
+      dueDate: task.dueAt || undefined,
+    });
+    const result = await fromBackend(created);
+    // Se o handler marcou notified=true (caso dueAt já passado),
+    // persistimos a flag local.
+    if (task.notified) {
+      await setNotifiedFlag(result.id, true);
+      result.notified = true;
+    }
+    return result;
   },
 
   async updateTask(
@@ -60,71 +108,84 @@ export const tasksService = {
     taskId: string,
     patch: Partial<LeadTask>
   ): Promise<LeadTask> {
-    const userId = await getUserId();
-    if (!userId) throw new Error('Sessão expirada — faça login novamente');
-    const list = await readList(userId, leadId);
-    const idx = list.findIndex((t) => t.id === taskId);
-    if (idx < 0) throw new Error('Tarefa não encontrada');
-    const updated: LeadTask = { ...list[idx], ...patch, id: list[idx].id };
-    const next = [...list];
-    next[idx] = updated;
-    await writeList(userId, leadId, next);
-    return updated;
+    // Separa flag local (notified) dos campos do backend.
+    if (patch.notified !== undefined) {
+      await setNotifiedFlag(taskId, patch.notified);
+    }
+
+    const body: Record<string, unknown> = {};
+    if (patch.title !== undefined) body.title = patch.title;
+    if (patch.description !== undefined) {
+      body.description = patch.description || null;
+    }
+    if (patch.dueAt !== undefined) {
+      body.dueDate = patch.dueAt || null;
+    }
+    if (patch.type !== undefined) {
+      body.type = patch.type.toUpperCase();
+    }
+    if (patch.status !== undefined) {
+      body.isDone = patch.status === 'done';
+    }
+
+    // Se não há nada pra mandar pro backend (só notified), retorna a
+    // task atual via listTasks(leadId) + filter — preserva contrato.
+    if (Object.keys(body).length === 0) {
+      const list = await this.listTasks(leadId);
+      const current = list.find((t) => t.id === taskId);
+      if (!current) throw new Error('Tarefa não encontrada');
+      return current;
+    }
+
+    const updated = await http.patch<BackendTask>(
+      `/tasks/${encodeURIComponent(taskId)}`,
+      body
+    );
+    return fromBackend(updated);
   },
 
-  async deleteTask(leadId: string, taskId: string): Promise<void> {
-    const userId = await getUserId();
-    if (!userId) return;
-    const list = await readList(userId, leadId);
-    const next = list.filter((t) => t.id !== taskId);
-    if (next.length !== list.length) {
-      await writeList(userId, leadId, next);
-    }
+  async deleteTask(_leadId: string, taskId: string): Promise<void> {
+    await http.delete(`/tasks/${encodeURIComponent(taskId)}`);
+    await clearNotifiedFlag(taskId);
   },
 
   async markStatus(
-    leadId: string,
+    _leadId: string,
     taskId: string,
     status: LeadTaskStatus
   ): Promise<LeadTask> {
-    const completedAt = status === 'done' ? new Date().toISOString() : null;
-    return this.updateTask(leadId, taskId, { status, completedAt });
+    const updated = await http.patch<BackendTask>(
+      `/tasks/${encodeURIComponent(taskId)}`,
+      { isDone: status === 'done' }
+    );
+    return fromBackend(updated);
   },
 
   /**
-   * Usado SÓ pelo service worker quando um alarm dispara. O SW tem o
-   * taskId (do nome do alarm) mas não o leadId — varre todas as chaves
-   * `lead-tasks:*` pra achar. Custo O(N_chaves × M_tasks_por_chave),
-   * aceitável no volume do MVP.
+   * Usado pelo SW quando alarm dispara. SW só tem taskId (do nome do
+   * alarm) — sem leadId. Solução: GET /tasks (sem filtro) traz todas
+   * as tasks do tenant que o SELLER vê (scope no backend); filtramos
+   * por id no client.
    */
-  async findTaskGlobally(
-    taskId: string
-  ): Promise<{ storageKey: string; task: LeadTask; list: LeadTask[] } | null> {
-    const all = await chrome.storage.local.get(null);
-    for (const [key, value] of Object.entries(all)) {
-      if (!key.startsWith('lead-tasks:')) continue;
-      if (!Array.isArray(value)) continue;
-      const list = value as LeadTask[];
-      const task = list.find((t) => t.id === taskId);
-      if (task) return { storageKey: key, task, list };
-    }
-    return null;
+  async findTaskGlobally(taskId: string): Promise<LeadTask | null> {
+    const tasks = await http.get<BackendTask[]>('/tasks');
+    if (!Array.isArray(tasks)) return null;
+    const found = tasks.find((t) => t.id === taskId);
+    return found ? fromBackend(found) : null;
   },
 
   /**
-   * Read-modify-write atômico (optimistic): marca notified=true se e somente
-   * se a task ainda está pending e notified=false. Usado pelo listener do
-   * alarm pra evitar race entre "fire" e "user marcou como done".
-   * Retorna a task atualizada ou null se a condição não foi satisfeita.
+   * CAS pra notificar exatamente 1 vez por task. Lê task do backend +
+   * flag local; se task ainda pending E flag local não setada, marca
+   * a flag e retorna a task; senão retorna null (não notifica).
    */
   async markNotifiedIfPending(taskId: string): Promise<LeadTask | null> {
-    const found = await this.findTaskGlobally(taskId);
-    if (!found) return null;
-    if (found.task.status !== 'pending' || found.task.notified) return null;
-    const updatedList = found.list.map((t) =>
-      t.id === taskId ? { ...t, notified: true } : t
-    );
-    await chrome.storage.local.set({ [found.storageKey]: updatedList });
-    return { ...found.task, notified: true };
-  }
+    const task = await this.findTaskGlobally(taskId);
+    if (!task) return null;
+    if (task.status !== 'pending') return null;
+    const already = await getNotifiedFlag(taskId);
+    if (already) return null;
+    await setNotifiedFlag(taskId, true);
+    return { ...task, notified: true };
+  },
 };
