@@ -23,7 +23,8 @@ import {
   mockLeadsService,
   mockMessagesService,
   mockProductsService,
-  mockNotesService
+  mockNotesService,
+  mockAltPhonesService
 } from '@shared/mocks/services';
 
 import { createLogger } from '@shared/utils/logger';
@@ -44,5 +45,5 @@ export const api = {
   products: USE_MOCKS ? mockProductsService : productsService,
   tasks: tasksService,
   outcome: outcomeService,
-  altPhones: altPhonesService
+  altPhones: USE_MOCKS ? mockAltPhonesService : altPhonesService
 };
