@@ -1695,7 +1695,7 @@ function TaskForm({
           <option value="visit">Visita</option>
           <option value="meeting">Reunião</option>
           <option value="email">E-mail</option>
-          <option value="other">Outro</option>
+          <option value="whatsapp">WhatsApp</option>
         </select>
       </div>
 

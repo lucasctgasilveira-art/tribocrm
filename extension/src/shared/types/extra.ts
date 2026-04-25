@@ -38,7 +38,7 @@ export interface LeadProductInput {
 
 // ── Tarefas por lead (persistência local) ─────────────────────────
 
-export type LeadTaskType = 'call' | 'visit' | 'meeting' | 'email' | 'other';
+export type LeadTaskType = 'call' | 'visit' | 'meeting' | 'email' | 'whatsapp';
 export type LeadTaskStatus = 'pending' | 'done';
 
 export interface LeadTask {
