@@ -117,7 +117,7 @@ export function leadTaskTypeLabel(type: LeadTaskType): string {
     visit: 'Visita',
     meeting: 'Reunião',
     email: 'E-mail',
-    other: 'Outro'
+    whatsapp: 'WhatsApp'
   };
   return map[type];
 }
@@ -128,7 +128,7 @@ export function leadTaskTypeEmoji(type: LeadTaskType): string {
     visit: '🏢',
     meeting: '📅',
     email: '✉️',
-    other: '📌'
+    whatsapp: '💬'
   };
   return map[type];
 }

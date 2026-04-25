@@ -6,7 +6,7 @@
  */
 
 import type { Lead, Interaction, WhatsAppTemplate, ScheduledMessage } from '@shared/types/domain';
-import type { LeadProduct, LeadProductInput, Product, LeadOutcome, LossReason } from '@shared/types/extra';
+import type { LeadProduct, LeadProductInput, Product, LeadOutcome, LossReason, LeadTask, LeadTaskStatus } from '@shared/types/extra';
 import type { CreateLeadInput } from '../api/leads.service';
 import type { ScheduleMessageInput } from '../api/messages.service';
 import { MOCK_LEADS, MOCK_INTERACTIONS, MOCK_TEMPLATES, MOCK_STAGES } from './fixtures';
@@ -369,5 +369,91 @@ export const mockOutcomeService = {
   async listLossReasons(): Promise<LossReason[]> {
     await delay(80);
     return LOSS_REASONS;
+  },
+};
+
+// ── Tasks mock ────────────────────────────────────────────────────
+
+// State em memória: por lead a lista de LeadTask. IDs são strings
+// "mock-task-{ts}-{n}" pra simular o id do backend.
+const mockTasksDb = new Map<string, LeadTask[]>();
+let mockTaskCounter = 0;
+
+function findTaskInMockDb(
+  taskId: string,
+): { leadId: string; idx: number; list: LeadTask[] } | null {
+  for (const [leadId, list] of mockTasksDb.entries()) {
+    const idx = list.findIndex((t) => t.id === taskId);
+    if (idx >= 0) return { leadId, idx, list };
+  }
+  return null;
+}
+
+export const mockTasksService = {
+  async listTasks(leadId: string): Promise<LeadTask[]> {
+    await delay(120);
+    return mockTasksDb.get(leadId) ?? [];
+  },
+
+  async addTask(leadId: string, task: LeadTask): Promise<LeadTask> {
+    await delay(180);
+    const newTask: LeadTask = {
+      ...task,
+      id: `mock-task-${Date.now()}-${++mockTaskCounter}`,
+    };
+    const list = mockTasksDb.get(leadId) ?? [];
+    mockTasksDb.set(leadId, [...list, newTask]);
+    return newTask;
+  },
+
+  async updateTask(
+    leadId: string,
+    taskId: string,
+    patch: Partial<LeadTask>,
+  ): Promise<LeadTask> {
+    await delay(150);
+    const list = mockTasksDb.get(leadId) ?? [];
+    const idx = list.findIndex((t) => t.id === taskId);
+    if (idx < 0) throw new Error('Tarefa não encontrada');
+    const updated: LeadTask = { ...list[idx], ...patch, id: list[idx].id };
+    const next = [...list];
+    next[idx] = updated;
+    mockTasksDb.set(leadId, next);
+    return updated;
+  },
+
+  async deleteTask(leadId: string, taskId: string): Promise<void> {
+    await delay(120);
+    const list = mockTasksDb.get(leadId) ?? [];
+    const next = list.filter((t) => t.id !== taskId);
+    if (next.length !== list.length) mockTasksDb.set(leadId, next);
+  },
+
+  async markStatus(
+    leadId: string,
+    taskId: string,
+    status: LeadTaskStatus,
+  ): Promise<LeadTask> {
+    const completedAt = status === 'done' ? new Date().toISOString() : null;
+    return this.updateTask(leadId, taskId, { status, completedAt });
+  },
+
+  async findTaskGlobally(taskId: string): Promise<LeadTask | null> {
+    await delay(80);
+    const found = findTaskInMockDb(taskId);
+    return found ? found.list[found.idx] : null;
+  },
+
+  async markNotifiedIfPending(taskId: string): Promise<LeadTask | null> {
+    await delay(80);
+    const found = findTaskInMockDb(taskId);
+    if (!found) return null;
+    const task = found.list[found.idx];
+    if (task.status !== 'pending' || task.notified) return null;
+    const updated: LeadTask = { ...task, notified: true };
+    const next = [...found.list];
+    next[found.idx] = updated;
+    mockTasksDb.set(found.leadId, next);
+    return updated;
   },
 };
