@@ -23,6 +23,7 @@ import {
   mockLeadsService,
   mockMessagesService,
   mockNotesService,
+  mockProductsService,
   mockAltPhonesService
 } from '@shared/mocks/services';
 
@@ -41,7 +42,7 @@ export const api = {
   leads: USE_MOCKS ? mockLeadsService : leadsService,
   messages: USE_MOCKS ? mockMessagesService : messagesService,
   notes: USE_MOCKS ? mockNotesService : notesService,
-  products: productsService,
+  products: USE_MOCKS ? mockProductsService : productsService,
   tasks: tasksService,
   outcome: outcomeService,
   altPhones: USE_MOCKS ? mockAltPhonesService : altPhonesService
