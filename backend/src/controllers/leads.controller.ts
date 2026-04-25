@@ -70,6 +70,31 @@ export function sellerScope(role: string, userId: string): { responsibleId?: str
   return role === 'SELLER' ? { responsibleId: userId } : {}
 }
 
+// Lookup reverso: dado um telefone, retorna o leadId do lead que tem
+// esse telefone na lista de alt-phones (campo Lead.altPhones, JSON array).
+// Respeita tenant scope e sellerScope. Retorna null se não encontrar.
+//
+// Função extraída do handler GET /leads/by-alt-phone/:phone pra permitir
+// teste unitário com Prisma mockado (supertest não está disponível).
+export async function findLeadByAltPhone(
+  prismaClient: typeof prisma,
+  tenantId: string,
+  phone: string,
+  role: string,
+  userId: string,
+): Promise<{ leadId: string } | null> {
+  const lead = await prismaClient.lead.findFirst({
+    where: {
+      tenantId,
+      deletedAt: null,
+      altPhones: { array_contains: phone },
+      ...sellerScope(role, userId),
+    },
+    select: { id: true },
+  })
+  return lead ? { leadId: lead.id } : null
+}
+
 export async function getLossReasons(req: Request, res: Response): Promise<void> {
   try {
     const tenantId = req.user!.tenantId

@@ -5,7 +5,7 @@ import { tenantStatusGuard } from '../middleware/tenant-status.middleware'
 import {
   getLeads, getLead, createLead, updateLead, deleteLead,
   importLeads, getImportTemplate, exportLeads, bulkUpdateLeads,
-  getLossReasons, sellerScope,
+  getLossReasons, sellerScope, findLeadByAltPhone,
 } from '../controllers/leads.controller'
 
 const router = Router()
@@ -34,6 +34,30 @@ router.post('/import', upload.single('file'), importLeads)
 router.get('/export', exportLeads)
 router.get('/loss-reasons', getLossReasons)
 router.patch('/bulk', bulkUpdateLeads)
+
+// Lookup reverso por alt-phone — declarado ANTES de /:id pra
+// não cair na rota dinâmica. Usado pela extensão Chrome quando
+// detecta um telefone no WhatsApp que não bate com o phone
+// principal de nenhum lead — verifica se algum lead tem o número
+// como alternativo.
+router.get('/by-alt-phone/:phone', async (req, res) => {
+  try {
+    const { prisma } = await import('../lib/prisma')
+    const phone = req.params.phone as string
+    const tenantId = req.user!.tenantId
+    const role = req.user!.role
+    const userId = req.user!.userId
+
+    const result = await findLeadByAltPhone(prisma, tenantId, phone, role, userId)
+    res.json({ success: true, data: result })
+  } catch (error: any) {
+    console.error('[Leads] findLeadByAltPhone error:', error)
+    res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: error.message },
+    })
+  }
+})
 
 router.get('/', getLeads)
 router.get('/:id', getLead)
