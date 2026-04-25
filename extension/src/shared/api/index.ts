@@ -21,7 +21,8 @@ import { altPhonesService } from './services/alt-phones';
 import {
   mockAuthService,
   mockLeadsService,
-  mockMessagesService
+  mockMessagesService,
+  mockNotesService
 } from '@shared/mocks/services';
 
 import { createLogger } from '@shared/utils/logger';
@@ -38,7 +39,7 @@ export const api = {
   auth: USE_MOCKS ? mockAuthService : authService,
   leads: USE_MOCKS ? mockLeadsService : leadsService,
   messages: USE_MOCKS ? mockMessagesService : messagesService,
-  notes: notesService,
+  notes: USE_MOCKS ? mockNotesService : notesService,
   products: productsService,
   tasks: tasksService,
   outcome: outcomeService,
