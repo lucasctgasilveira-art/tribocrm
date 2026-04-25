@@ -1,12 +1,12 @@
 {
   "name": "tribocrm-extension",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "TriboCRM — Extensão Chrome pro WhatsApp Web",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite build --watch --mode development",
-    "build": "vite build --mode production && vite build -c vite.config.whatsapp.ts --mode production && node scripts/patch-manifest.mjs",
+    "build": "vite build --mode production && vite build -c vite.config.whatsapp.ts --mode production && node scripts/patch-manifest.mjs && node scripts/verify-no-mocks.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts,.tsx",
     "zip": "cd dist && zip -r ../tribocrm-extension.zip ."
