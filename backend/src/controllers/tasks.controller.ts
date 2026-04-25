@@ -179,6 +179,32 @@ export async function completeTask(req: Request, res: Response): Promise<void> {
   }
 }
 
+// Constrói o objeto Prisma.TaskUpdateInput a partir do body do PATCH.
+// Função pura (sem Prisma client) pra ser testável — chamada pelo handler
+// updateTask. Aceita os campos editáveis da Task incluindo `isDone`:
+//   - isDone=true  → também seta doneAt=now() (timestamp do servidor)
+//   - isDone=false → também limpa doneAt (volta a "pending")
+//   - sem isDone   → comportamento preservado (não toca isDone/doneAt)
+export function buildTaskUpdateData(body: Record<string, unknown>): Prisma.TaskUpdateInput {
+  const data: Prisma.TaskUpdateInput = {}
+  if (body.title !== undefined) data.title = body.title as string
+  if (body.description !== undefined) data.description = body.description as string | null
+  if (body.dueDate !== undefined) {
+    const v = body.dueDate as string | null
+    data.dueDate = v ? new Date(v) : null
+  }
+  if (body.type !== undefined) data.type = body.type as 'CALL' | 'EMAIL' | 'WHATSAPP' | 'MEETING' | 'VISIT'
+  if (body.responsibleId !== undefined) {
+    data.responsible = { connect: { id: body.responsibleId as string } }
+  }
+  if (body.isDone !== undefined) {
+    const next = Boolean(body.isDone)
+    data.isDone = next
+    data.doneAt = next ? new Date() : null
+  }
+  return data
+}
+
 export async function updateTask(req: Request, res: Response): Promise<void> {
   try {
     const id = req.params.id as string
@@ -194,14 +220,7 @@ export async function updateTask(req: Request, res: Response): Promise<void> {
       return
     }
 
-    const { title, description, dueDate, type, responsibleId } = req.body
-
-    const data: Prisma.TaskUpdateInput = {}
-    if (title !== undefined) data.title = title
-    if (description !== undefined) data.description = description
-    if (dueDate !== undefined) data.dueDate = dueDate ? new Date(dueDate) : null
-    if (type !== undefined) data.type = type
-    if (responsibleId !== undefined) data.responsible = { connect: { id: responsibleId } }
+    const data = buildTaskUpdateData(req.body)
 
     const task = await prisma.task.update({
       where: { id },
