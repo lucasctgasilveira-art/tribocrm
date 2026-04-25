@@ -240,3 +240,39 @@ export const mockNotesService = {
     mockNotesDb.set(leadId, text);
   },
 };
+
+// ── AltPhones mock ───────────────────────────────────────────────
+
+// State em memória: por lead a lista de phones, e um mapa reverso
+// pro lookup findLeadIdByPhone. Mantidos em sync nas mutations.
+const mockAltPhonesByLead = new Map<string, string[]>();
+const mockLeadByAltPhone = new Map<string, string>();
+
+export const mockAltPhonesService = {
+  async findLeadIdByPhone(phone: string): Promise<string | null> {
+    await delay(120);
+    return mockLeadByAltPhone.get(phone) ?? null;
+  },
+
+  async link(phone: string, leadId: string): Promise<void> {
+    await delay(180);
+    const current = mockAltPhonesByLead.get(leadId) ?? [];
+    if (current.includes(phone)) return;
+    mockAltPhonesByLead.set(leadId, [...current, phone]);
+    mockLeadByAltPhone.set(phone, leadId);
+  },
+
+  async unlink(phone: string): Promise<void> {
+    await delay(180);
+    const leadId = mockLeadByAltPhone.get(phone);
+    if (!leadId) return;
+    const current = mockAltPhonesByLead.get(leadId) ?? [];
+    const updated = current.filter((p) => p !== phone);
+    if (updated.length === 0) {
+      mockAltPhonesByLead.delete(leadId);
+    } else {
+      mockAltPhonesByLead.set(leadId, updated);
+    }
+    mockLeadByAltPhone.delete(phone);
+  },
+};

@@ -1,71 +1,57 @@
+import { http, ApiHttpError } from '../http';
+
 /**
- * TODO(backend): quando existir endpoint pra telefones alternativos
- * por lead (ex.: POST /leads/:id/phones + GET /leads/by-phone/:phone
- * já respeitando alt phones), dividir em alt-phones.service.ts (real)
- * + mockAltPhonesService em ../../mocks/services.ts, seguindo o padrão
- * de leads/messages.
+ * Service real (HTTP) pra telefones alternativos por lead.
+ * Endpoints backend:
+ *   GET  /leads/:id/alt-phones        → { phones: string[] }
+ *   PUT  /leads/:id/alt-phones        → body { phones: string[] }
+ *   GET  /leads/by-alt-phone/:phone   → { leadId } | null  (lookup reverso)
  *
- * Quando isso acontecer, o filtro por usuário/tenant será feito no
- * backend (via Row Level Security). O userId na chave local vira
- * redundante mas ainda útil como cache em navegadores multi-usuário.
+ * link/unlink são compostas: GET + mutate + PUT. Não são atômicas no
+ * backend; se outro cliente alterar a lista entre o GET e o PUT, o PUT
+ * sobrescreve com a versão deste cliente. Aceito porque write contention
+ * em alt-phones é raro (vendedor mexendo em UM lead por vez).
  *
- * Persistência atual: chrome.storage.local com chave
- *   lead-alt-phones:{userId}   (singular — 1 registro por usuário)
- * O valor é um mapa { [phone]: leadId }. Um telefone só pode apontar
- * pra um lead — re-atribuição sobrescreve silenciosamente (a UI garante
- * confirmação inline antes de chamar link()).
+ * `getMap` (legado, retornava mapa global { phone: leadId }) foi
+ * removido — não tinha callers no Panel nem nos handlers.
  */
-
-import { storage } from '@shared/utils/storage';
-import { normalizePhone } from '@shared/utils/phone';
-
-type AltPhoneMap = Record<string, string>;
-
-const KEY = (userId: string) => `lead-alt-phones:${userId}`;
-
-async function getUserId(): Promise<string | null> {
-  const auth = await storage.get('auth');
-  return auth?.user?.id ?? null;
-}
-
-async function readMap(userId: string): Promise<AltPhoneMap> {
-  const key = KEY(userId);
-  const result = await chrome.storage.local.get(key);
-  const value = result[key];
-  return value && typeof value === 'object' ? (value as AltPhoneMap) : {};
-}
-
 export const altPhonesService = {
-  async getMap(): Promise<AltPhoneMap> {
-    const userId = await getUserId();
-    if (!userId) return {};
-    return readMap(userId);
+  async findLeadIdByPhone(phone: string): Promise<string | null> {
+    try {
+      const result = await http.get<{ leadId: string } | null>(
+        `/leads/by-alt-phone/${encodeURIComponent(phone)}`
+      );
+      return result?.leadId ?? null;
+    } catch (err) {
+      if (err instanceof ApiHttpError && err.status === 404) return null;
+      throw err;
+    }
   },
 
   async link(phone: string, leadId: string): Promise<void> {
-    const userId = await getUserId();
-    if (!userId) return; // sem sessão: falha silenciosa
-    const normalized = normalizePhone(phone) ?? phone;
-    const map = await readMap(userId);
-    map[normalized] = leadId;
-    await chrome.storage.local.set({ [KEY(userId)]: map });
+    const data = await http.get<{ phones: string[] }>(
+      `/leads/${encodeURIComponent(leadId)}/alt-phones`
+    );
+    const current = Array.isArray(data?.phones) ? data.phones : [];
+    if (current.includes(phone)) return;
+    await http.put<{ phones: string[] }>(
+      `/leads/${encodeURIComponent(leadId)}/alt-phones`,
+      { phones: [...current, phone] }
+    );
   },
 
   async unlink(phone: string): Promise<void> {
-    const userId = await getUserId();
-    if (!userId) return;
-    const normalized = normalizePhone(phone) ?? phone;
-    const map = await readMap(userId);
-    if (!(normalized in map)) return;
-    delete map[normalized];
-    await chrome.storage.local.set({ [KEY(userId)]: map });
+    const leadId = await this.findLeadIdByPhone(phone);
+    if (!leadId) return;
+    const data = await http.get<{ phones: string[] }>(
+      `/leads/${encodeURIComponent(leadId)}/alt-phones`
+    );
+    const current = Array.isArray(data?.phones) ? data.phones : [];
+    const updated = current.filter((p) => p !== phone);
+    if (updated.length === current.length) return;
+    await http.put<{ phones: string[] }>(
+      `/leads/${encodeURIComponent(leadId)}/alt-phones`,
+      { phones: updated }
+    );
   },
-
-  async findLeadIdByPhone(phone: string): Promise<string | null> {
-    const userId = await getUserId();
-    if (!userId) return null;
-    const normalized = normalizePhone(phone) ?? phone;
-    const map = await readMap(userId);
-    return map[normalized] ?? null;
-  }
 };
