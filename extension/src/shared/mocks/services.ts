@@ -6,11 +6,12 @@
  */
 
 import type { Lead, Interaction, WhatsAppTemplate, ScheduledMessage } from '@shared/types/domain';
-import type { LeadProduct, LeadProductInput, Product } from '@shared/types/extra';
+import type { LeadProduct, LeadProductInput, Product, LeadOutcome, LossReason } from '@shared/types/extra';
 import type { CreateLeadInput } from '../api/leads.service';
 import type { ScheduleMessageInput } from '../api/messages.service';
 import { MOCK_LEADS, MOCK_INTERACTIONS, MOCK_TEMPLATES, MOCK_STAGES } from './fixtures';
 import { CATALOG_PRODUCTS } from './catalog';
+import { LOSS_REASONS } from './loss-reasons';
 import { storage } from '@shared/utils/storage';
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -335,5 +336,38 @@ export const mockAltPhonesService = {
       mockAltPhonesByLead.set(leadId, updated);
     }
     mockLeadByAltPhone.delete(phone);
+  },
+};
+
+// ── Outcome mock ─────────────────────────────────────────────────
+
+// State em memória pra outcome por leadId. Aceita o targetStageId
+// só pra paridade com a signature do service real — mock ignora,
+// porque não simula pipeline/stage backend.
+const mockOutcomesDb = new Map<string, LeadOutcome>();
+
+export const mockOutcomeService = {
+  async getOutcome(leadId: string): Promise<LeadOutcome | null> {
+    await delay(120);
+    return mockOutcomesDb.get(leadId) ?? null;
+  },
+
+  async setOutcome(
+    leadId: string,
+    outcome: LeadOutcome,
+    _targetStageId: string,
+  ): Promise<void> {
+    await delay(180);
+    mockOutcomesDb.set(leadId, outcome);
+  },
+
+  async clearOutcome(leadId: string): Promise<void> {
+    await delay(120);
+    mockOutcomesDb.delete(leadId);
+  },
+
+  async listLossReasons(): Promise<LossReason[]> {
+    await delay(80);
+    return LOSS_REASONS;
   },
 };

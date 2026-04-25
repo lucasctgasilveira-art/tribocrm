@@ -32,7 +32,10 @@ export const leadsService = {
   },
 
   async updateStage(leadId: string, stageId: string): Promise<Lead> {
-    return http.patch<Lead>(`/leads/${leadId}/stage`, { stageId });
+    // Backend tem apenas PATCH /leads/:id (updateLead aceita stageId no body).
+    // Não existe /leads/:id/stage como rota separada — mantemos a função
+    // updateStage por compatibilidade de signature, mas o endpoint é /leads/:id.
+    return http.patch<Lead>(`/leads/${leadId}`, { stageId });
   },
 
   async registerInteraction(

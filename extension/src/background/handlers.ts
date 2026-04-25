@@ -306,26 +306,27 @@ export const handlers: HandlerMap = {
   },
 
   LEAD_OUTCOME_SET: async (payload) => {
-    await api.outcome.setOutcome(payload.leadId, payload.outcome);
-
-    // Side effect: tenta mudar a stage do lead para Vendido/Perdido.
-    // Se a stage não existir no pipeline (mock ou config parcial), loga
-    // warn e segue — o outcome local é a fonte de verdade pro painel.
+    // Resolve a stage WON/LOST do pipeline ANTES de chamar setOutcome —
+    // o service real (HTTP) faz UM ÚNICO PATCH /leads/:id com stageId +
+    // closedValue + lossReasonId + wonAt/lostAt no mesmo body. Sem stage
+    // resolvida, o outcome ficaria sem destino válido — abortamos com
+    // warn (mesma semântica do código anterior).
     const stageId = await resolveOutcomeStage(
       payload.pipelineId,
       payload.outcome.kind
     );
-    if (stageId) {
-      try {
-        await api.leads.updateStage(payload.leadId, stageId);
-      } catch (err) {
-        log.warn('Falha ao mudar etapa após outcome — persistido local', err);
-      }
-    } else {
+    if (!stageId) {
       log.warn(
-        'Stage de outcome não encontrada no pipeline — outcome só persistido localmente',
+        'Stage de outcome não encontrada no pipeline — outcome não persistido',
         { pipelineId: payload.pipelineId, kind: payload.outcome.kind }
       );
+      return null;
+    }
+
+    try {
+      await api.outcome.setOutcome(payload.leadId, payload.outcome, stageId);
+    } catch (err) {
+      log.warn('Falha ao salvar outcome', err);
     }
     return null;
   },
