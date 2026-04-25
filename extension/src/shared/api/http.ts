@@ -187,5 +187,8 @@ export const http = {
   patch: <T>(endpoint: string, body?: unknown) =>
     request<T>(endpoint, { method: 'PATCH', body }),
 
+  put: <T>(endpoint: string, body?: unknown) =>
+    request<T>(endpoint, { method: 'PUT', body }),
+
   delete: <T>(endpoint: string) => request<T>(endpoint, { method: 'DELETE' })
 };

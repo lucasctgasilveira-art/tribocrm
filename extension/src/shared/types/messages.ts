@@ -9,6 +9,7 @@ import type {
 import type {
   Product,
   LeadProduct,
+  LeadProductInput,
   LeadTask,
   LeadTaskType,
   LeadTaskStatus,
@@ -155,7 +156,7 @@ export interface GetLeadProductsRequest {
 
 export interface SetLeadProductsRequest {
   type: 'PRODUCTS_SET_FOR_LEAD';
-  payload: { leadId: string; items: LeadProduct[] };
+  payload: { leadId: string; items: LeadProductInput[] };
 }
 
 // ── Mensagens de tarefas por lead (persistência local + alarms) ────
@@ -312,7 +313,7 @@ export interface MessageResponseMap {
   NOTES_SET: null;
   PRODUCTS_CATALOG: Product[];
   PRODUCTS_GET_FOR_LEAD: LeadProduct[];
-  PRODUCTS_SET_FOR_LEAD: null;
+  PRODUCTS_SET_FOR_LEAD: LeadProduct[];
   LEAD_TASK_LIST: LeadTask[];
   LEAD_TASK_CREATE: LeadTask;
   LEAD_TASK_UPDATE: LeadTask;

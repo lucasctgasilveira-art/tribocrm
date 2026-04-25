@@ -22,6 +22,9 @@ backend/certs/
 # Config local do Claude Code
 .claude/
 
+# Backups locais (*.bkp) — nunca versionar
+*.bkp
+
 # Scripts de teste/dev não versionados
 find-p12.ps1
 test-webhook.ps1

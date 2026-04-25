@@ -6,9 +6,11 @@
  */
 
 import type { Lead, Interaction, WhatsAppTemplate, ScheduledMessage } from '@shared/types/domain';
+import type { LeadProduct, LeadProductInput, Product } from '@shared/types/extra';
 import type { CreateLeadInput } from '../api/leads.service';
 import type { ScheduleMessageInput } from '../api/messages.service';
 import { MOCK_LEADS, MOCK_INTERACTIONS, MOCK_TEMPLATES, MOCK_STAGES } from './fixtures';
+import { CATALOG_PRODUCTS } from './catalog';
 import { storage } from '@shared/utils/storage';
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -221,4 +223,63 @@ export const mockMessagesService = {
       m.failedAt = new Date().toISOString();
     }
   }
+};
+
+// ── Products mock ────────────────────────────────────────────────
+
+// State em memória pra simular leadProducts por leadId
+const mockLeadProductsDb = new Map<string, LeadProduct[]>();
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+const buildLeadProduct = (
+  input: LeadProductInput,
+  catalog: Product
+): LeadProduct => {
+  const unitPrice = catalog.price;
+  const quantity = input.quantity;
+  const discountPercent = input.discountPercent ?? null;
+  const finalPrice = round2(
+    unitPrice * quantity * (1 - (discountPercent ?? 0) / 100)
+  );
+  return {
+    id: `mock-lp-${Math.random().toString(36).slice(2, 10)}`,
+    productId: input.productId,
+    quantity,
+    unitPrice,
+    discountPercent,
+    finalPrice,
+    createdAt: new Date().toISOString(),
+    product: {
+      id: catalog.id,
+      name: catalog.name,
+      category: catalog.category,
+    },
+  };
+};
+
+export const mockProductsService = {
+  async listCatalog(): Promise<Product[]> {
+    return CATALOG_PRODUCTS.filter(p => p.isActive);
+  },
+
+  async getLeadProducts(leadId: string): Promise<LeadProduct[]> {
+    return mockLeadProductsDb.get(leadId) ?? [];
+  },
+
+  async setLeadProducts(
+    leadId: string,
+    items: LeadProductInput[]
+  ): Promise<LeadProduct[]> {
+    const result: LeadProduct[] = [];
+    for (const input of items) {
+      const catalog = CATALOG_PRODUCTS.find(p => p.id === input.productId);
+      if (!catalog) {
+        throw new Error(`mock: produto ${input.productId} nao existe`);
+      }
+      result.push(buildLeadProduct(input, catalog));
+    }
+    mockLeadProductsDb.set(leadId, result);
+    return result;
+  },
 };

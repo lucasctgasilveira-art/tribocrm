@@ -16,6 +16,7 @@ import type { Lead, Interaction, WhatsAppTemplate, Stage } from '@shared/types/d
 import type {
   Product,
   LeadProduct,
+  LeadProductInput,
   LeadTask,
   LeadTaskType,
   LeadOutcome,
@@ -827,7 +828,7 @@ function SellModal({
                   onChange={() => toggleProduct(idx)}
                 />
                 <span class="tribocrm-modal-product-row-name">
-                  {item.name} · {item.quantity}×
+                  {item.product.name} · {item.quantity}×
                 </span>
                 <span class="tribocrm-modal-product-row-total">
                   {formatCurrencyExact(item.quantity * item.unitPrice)}
@@ -1056,7 +1057,7 @@ function OutcomeDetailsModal({
                   {outcome.products.map((p, i) => (
                     <div key={i} class="tribocrm-modal-product-row">
                       <span class="tribocrm-modal-product-row-name">
-                        {p.name} · {p.quantity}× {formatCurrencyExact(p.unitPrice)}
+                        {p.product.name} · {p.quantity}× {formatCurrencyExact(p.unitPrice)}
                       </span>
                       <span class="tribocrm-modal-product-row-total">
                         {formatCurrencyExact(p.quantity * p.unitPrice)}
@@ -2059,44 +2060,58 @@ function ProductsTab({
         if (dirtyRef.current) {
           void sendMessage({
             type: 'PRODUCTS_SET_FOR_LEAD',
-            payload: { leadId, items: itemsRef.current }
+            payload: { leadId, items: itemsRef.current.map(toInput) }
           });
         }
       }
     };
   }, [leadId]);
 
-  async function saveImmediate(next: LeadProduct[]) {
-    setItems(next);
-    itemsRef.current = next;
+  // Backend espera LeadProductInput[]; o state local é LeadProduct[] (com
+  // id/finalPrice canônicos). Converte na borda da request.
+  function toInput(lp: LeadProduct): LeadProductInput {
+    return {
+      productId: lp.productId,
+      quantity: lp.quantity,
+      discountPercent: lp.discountPercent,
+    };
+  }
+
+  async function saveImmediate(nextItems: LeadProduct[]) {
+    setItems(nextItems);
+    itemsRef.current = nextItems;
     dirtyRef.current = false;
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
       debounceRef.current = null;
     }
     try {
-      await sendMessage({
+      const result = await sendMessage({
         type: 'PRODUCTS_SET_FOR_LEAD',
-        payload: { leadId, items: next }
+        payload: { leadId, items: nextItems.map(toInput) }
       });
+      setItems(result);
+      itemsRef.current = result;
     } catch (err) {
       onToast(err instanceof Error ? err.message : 'Erro ao salvar produtos');
     }
   }
 
-  function scheduleSave(next: LeadProduct[]) {
-    setItems(next);
-    itemsRef.current = next;
+  function scheduleSave(nextItems: LeadProduct[]) {
+    setItems(nextItems);
+    itemsRef.current = nextItems;
     dirtyRef.current = true;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = window.setTimeout(() => {
       debounceRef.current = null;
       sendMessage({
         type: 'PRODUCTS_SET_FOR_LEAD',
-        payload: { leadId, items: itemsRef.current }
+        payload: { leadId, items: itemsRef.current.map(toInput) }
       })
-        .then(() => {
+        .then((result) => {
           dirtyRef.current = false;
+          setItems(result);
+          itemsRef.current = result;
         })
         .catch((err) => {
           onToast(err instanceof Error ? err.message : 'Erro ao salvar produtos');
@@ -2105,13 +2120,18 @@ function ProductsTab({
   }
 
   function addProduct(p: Product) {
-    const newItem: LeadProduct = {
+    // Otimismo visual: mostra placeholder até backend devolver o canônico
+    const placeholder: LeadProduct = {
+      id: `temp-${Date.now()}`,
       productId: p.id,
-      name: p.name,
       quantity: 1,
-      unitPrice: p.defaultPrice
+      unitPrice: p.price,
+      discountPercent: null,
+      finalPrice: p.price,
+      createdAt: new Date().toISOString(),
+      product: { id: p.id, name: p.name, category: p.category },
     };
-    void saveImmediate([...(items ?? []), newItem]);
+    void saveImmediate([...(items ?? []), placeholder]);
     setPickerOpen(false);
   }
 
@@ -2158,7 +2178,7 @@ function ProductsTab({
             >
               <span class="tribocrm-product-picker-name">{p.name}</span>
               <span class="tribocrm-product-picker-price">
-                {formatCurrencyExact(p.defaultPrice)}
+                {formatCurrencyExact(p.price)}
               </span>
             </button>
           ))}
@@ -2172,7 +2192,7 @@ function ProductsTab({
           {items.map((item, idx) => (
             <div class="tribocrm-product-item" key={`${item.productId}-${idx}`}>
               <div class="tribocrm-product-item-head">
-                <span class="tribocrm-product-item-name">{item.name}</span>
+                <span class="tribocrm-product-item-name">{item.product.name}</span>
                 <button
                   class="tribocrm-product-remove"
                   onClick={() => removeAt(idx)}
