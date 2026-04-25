@@ -195,8 +195,7 @@ export const handlers: HandlerMap = {
   },
 
   PRODUCTS_SET_FOR_LEAD: async (payload) => {
-    await api.products.setLeadProducts(payload.leadId, payload.items);
-    return null;
+    return api.products.setLeadProducts(payload.leadId, payload.items);
   },
 
   // ── Tarefas por lead ────────────────────────────────────────────

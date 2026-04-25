@@ -6,14 +6,34 @@
 export interface Product {
   id: string;
   name: string;
-  defaultPrice: number;
+  description: string | null;
+  category: string | null;
+  price: number;
+  allowsDiscount: boolean;
+  discountType: 'PERCENTAGE' | 'FIXED_VALUE' | null;
+  maxDiscount: number | null;
+  isActive: boolean;
 }
 
 export interface LeadProduct {
+  id: string;
   productId: string;
-  name: string;
   quantity: number;
   unitPrice: number;
+  discountPercent: number | null;
+  finalPrice: number;
+  createdAt: string;
+  product: {
+    id: string;
+    name: string;
+    category: string | null;
+  };
+}
+
+export interface LeadProductInput {
+  productId: string;
+  quantity: number;
+  discountPercent?: number | null;
 }
 
 // ── Tarefas por lead (persistência local) ─────────────────────────
