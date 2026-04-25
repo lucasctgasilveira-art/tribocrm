@@ -507,4 +507,131 @@ router.put('/:id/note', async (req, res) => {
   }
 })
 
+// ════════════════════════════════════════════════════════════
+// AltPhones (telefones alternativos do lead)
+// ════════════════════════════════════════════════════════════
+
+router.get('/:id/alt-phones', async (req, res) => {
+  try {
+    const { prisma } = await import('../lib/prisma')
+    const leadId = req.params.id as string
+    const tenantId = req.user!.tenantId
+    const role = req.user!.role
+    const userId = req.user!.userId
+
+    const lead = await prisma.lead.findFirst({
+      where: { id: leadId, tenantId, deletedAt: null, ...sellerScope(role, userId) },
+      select: { id: true, altPhones: true },
+    })
+
+    if (!lead) {
+      res.status(404).json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Lead não encontrado' },
+      })
+      return
+    }
+
+    const phones = Array.isArray(lead.altPhones) ? lead.altPhones : []
+
+    res.json({
+      success: true,
+      data: { phones },
+    })
+  } catch (error: any) {
+    console.error('[Leads] getAltPhones error:', error)
+    res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: error.message },
+    })
+  }
+})
+
+router.put('/:id/alt-phones', async (req, res) => {
+  try {
+    const { prisma } = await import('../lib/prisma')
+    const leadId = req.params.id as string
+    const tenantId = req.user!.tenantId
+    const role = req.user!.role
+    const userId = req.user!.userId
+    const { phones } = req.body ?? {}
+
+    if (!Array.isArray(phones)) {
+      res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'phones deve ser array' },
+      })
+      return
+    }
+
+    const MAX_PHONES = 10
+    const MAX_LENGTH = 30
+
+    if (phones.length > MAX_PHONES) {
+      res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: `máximo ${MAX_PHONES} telefones` },
+      })
+      return
+    }
+
+    for (const p of phones) {
+      if (typeof p !== 'string') {
+        res.status(400).json({
+          success: false,
+          error: { code: 'VALIDATION_ERROR', message: 'cada phone deve ser string' },
+        })
+        return
+      }
+      if (p.length > MAX_LENGTH) {
+        res.status(400).json({
+          success: false,
+          error: { code: 'VALIDATION_ERROR', message: `phone excede ${MAX_LENGTH} caracteres` },
+        })
+        return
+      }
+    }
+
+    const seen = new Set<string>()
+    const deduped: string[] = []
+    for (const p of phones) {
+      const key = p.trim()
+      if (key && !seen.has(key)) {
+        seen.add(key)
+        deduped.push(key)
+      }
+    }
+
+    const lead = await prisma.lead.findFirst({
+      where: { id: leadId, tenantId, deletedAt: null, ...sellerScope(role, userId) },
+      select: { id: true },
+    })
+
+    if (!lead) {
+      res.status(404).json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Lead não encontrado' },
+      })
+      return
+    }
+
+    const updated = await prisma.lead.update({
+      where: { id: leadId },
+      data: { altPhones: deduped },
+      select: { id: true, altPhones: true },
+    })
+
+    res.json({
+      success: true,
+      data: { phones: Array.isArray(updated.altPhones) ? updated.altPhones : [] },
+    })
+  } catch (error: any) {
+    console.error('[Leads] putAltPhones error:', error)
+    res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: error.message },
+    })
+  }
+})
+
 export default router
