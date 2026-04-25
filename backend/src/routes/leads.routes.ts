@@ -412,6 +412,193 @@ router.delete('/:id/products/:itemId', async (req, res) => {
 })
 
 // ════════════════════════════════════════════════════════════
+// PUT /leads/:id/products — replace transactional do array todo
+// ════════════════════════════════════════════════════════════
+
+router.put('/:id/products', async (req, res) => {
+  try {
+    const { prisma } = await import('../lib/prisma')
+    const leadId = req.params.id as string
+    const tenantId = req.user!.tenantId
+    const role = req.user!.role
+    const userId = req.user!.userId
+    const { items } = req.body ?? {}
+
+    // ──────────────────────────────────────────────────────────
+    // Validação de payload
+    // ──────────────────────────────────────────────────────────
+    if (!Array.isArray(items)) {
+      res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'items deve ser array' },
+      })
+      return
+    }
+
+    const MAX_ITEMS = 50
+    if (items.length > MAX_ITEMS) {
+      res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: `máximo ${MAX_ITEMS} produtos` },
+      })
+      return
+    }
+
+    for (const item of items) {
+      if (!item || typeof item.productId !== 'string') {
+        res.status(400).json({
+          success: false,
+          error: { code: 'VALIDATION_ERROR', message: 'cada item precisa de productId' },
+        })
+        return
+      }
+      const qty = Number(item.quantity)
+      if (!Number.isInteger(qty) || qty < 1) {
+        res.status(400).json({
+          success: false,
+          error: { code: 'VALIDATION_ERROR', message: 'quantity deve ser inteiro >= 1' },
+        })
+        return
+      }
+      if (item.discountPercent != null) {
+        const dp = Number(item.discountPercent)
+        if (Number.isNaN(dp) || dp < 0 || dp > 100) {
+          res.status(400).json({
+            success: false,
+            error: { code: 'VALIDATION_ERROR', message: 'discountPercent entre 0-100' },
+          })
+          return
+        }
+      }
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // Confirma lead existe + sellerScope
+    // ──────────────────────────────────────────────────────────
+    const lead = await prisma.lead.findFirst({
+      where: { id: leadId, tenantId, deletedAt: null, ...sellerScope(role, userId) },
+      select: { id: true },
+    })
+
+    if (!lead) {
+      res.status(404).json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Lead não encontrado' },
+      })
+      return
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // Pré-busca catálogo pra validar desconto e calcular preço
+    // ──────────────────────────────────────────────────────────
+    const productIds = [...new Set(items.map((i: any) => i.productId as string))]
+    const catalog = await prisma.product.findMany({
+      where: { id: { in: productIds }, tenantId, isActive: true },
+      select: {
+        id: true, name: true, price: true, allowsDiscount: true,
+        maxDiscount: true, category: true,
+      },
+    })
+
+    const catalogMap = new Map(catalog.map(p => [p.id, p]))
+
+    // Verifica que todos productIds existem no catálogo
+    for (const item of items) {
+      const product = catalogMap.get(item.productId)
+      if (!product) {
+        res.status(400).json({
+          success: false,
+          error: { code: 'VALIDATION_ERROR', message: `produto ${item.productId} não encontrado` },
+        })
+        return
+      }
+      if (item.discountPercent != null && item.discountPercent > 0 && !product.allowsDiscount) {
+        res.status(400).json({
+          success: false,
+          error: { code: 'VALIDATION_ERROR', message: `produto "${product.name}" não permite desconto` },
+        })
+        return
+      }
+      if (
+        item.discountPercent != null &&
+        product.maxDiscount != null &&
+        Number(item.discountPercent) > Number(product.maxDiscount)
+      ) {
+        res.status(400).json({
+          success: false,
+          error: { code: 'VALIDATION_ERROR', message: `desconto excede máximo do produto "${product.name}"` },
+        })
+        return
+      }
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // Transação: deleta tudo + recria
+    // ──────────────────────────────────────────────────────────
+    const result = await prisma.$transaction(async (tx) => {
+      await tx.leadProduct.deleteMany({
+        where: { leadId, tenantId },
+      })
+
+      const created = []
+      for (const item of items) {
+        const product = catalogMap.get(item.productId)!
+        const unitPrice = Number(product.price)
+        const discountPercent = item.discountPercent != null ? Number(item.discountPercent) : 0
+        const finalPrice = round2(unitPrice * Number(item.quantity) * (1 - discountPercent / 100))
+
+        const newItem = await tx.leadProduct.create({
+          data: {
+            tenantId,
+            leadId,
+            productId: item.productId,
+            quantity: Number(item.quantity),
+            unitPrice,
+            discountPercent: discountPercent > 0 ? discountPercent : null,
+            finalPrice,
+          },
+          select: {
+            id: true, productId: true, quantity: true, unitPrice: true,
+            discountPercent: true, finalPrice: true, createdAt: true,
+            product: { select: { id: true, name: true, category: true } },
+          },
+        })
+        created.push(newItem)
+      }
+
+      return created
+    })
+
+    // ──────────────────────────────────────────────────────────
+    // Serializa resposta com Decimals como number
+    // ──────────────────────────────────────────────────────────
+    const serialized = result.map(i => ({
+      id: i.id,
+      productId: i.productId,
+      quantity: i.quantity,
+      unitPrice: Number(i.unitPrice),
+      discountPercent: i.discountPercent != null ? Number(i.discountPercent) : null,
+      finalPrice: Number(i.finalPrice),
+      createdAt: i.createdAt,
+      product: i.product,
+    }))
+
+    const total = round2(serialized.reduce((sum, i) => sum + i.finalPrice, 0))
+
+    res.json({
+      success: true,
+      data: { items: serialized, total },
+    })
+  } catch (error: any) {
+    console.error('[Leads] putLeadProducts (batch) error:', error)
+    res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: error.message },
+    })
+  }
+})
+
+// ════════════════════════════════════════════════════════════
 // Note (campo único de anotação livre por lead)
 // ════════════════════════════════════════════════════════════
 
