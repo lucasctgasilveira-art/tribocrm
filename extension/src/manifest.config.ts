@@ -60,10 +60,18 @@ export default defineManifest((env) => {
     ],
 
     // Domínios que a extensão acessa via fetch.
-    // localhost só entra em build de desenvolvimento.
+    // Em build prod: APENAS api.tribocrm.com.br.
+    // Em build dev (--mode development): adiciona portas locais usadas
+    // pelo desenvolvimento — backend (3002), web app (3000) e variante
+    // legada usada pelo .env.development.local (3001). Lista explícita
+    // pra evitar reintroduzir staging URLs hardcoded acidentalmente.
     host_permissions: [
       'https://api.tribocrm.com.br/*',
-      ...(isDev ? ['http://localhost:3000/*'] : [])
+      ...(isDev ? [
+        'http://localhost:3000/*',
+        'http://localhost:3001/*',
+        'http://localhost:3002/*'
+      ] : [])
     ],
 
     // CSP — Manifest V3 proíbe inline scripts e eval
