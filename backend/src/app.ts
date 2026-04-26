@@ -5,6 +5,7 @@ import helmet from 'helmet'
 import morgan from 'morgan'
 import cookieParser from 'cookie-parser'
 import rateLimit from 'express-rate-limit'
+import * as Sentry from '@sentry/node'
 import authRoutes from './routes/auth.routes'
 import publicRoutes from './routes/public.routes'
 import signupRoutes from './routes/signup.routes'
@@ -119,5 +120,21 @@ app.use('/forms', formsRoutes)
 app.use('/automations', automationsRoutes)
 app.use('/admin', adminRoutes)
 app.use('/payments', paymentsRoutes)
+
+// Sentry error handler — DEVE vir após todas as routes
+// mas ANTES de qualquer outro error handler customizado
+Sentry.setupExpressErrorHandler(app)
+
+// Fallback error handler genérico
+// (Sentry já capturou o erro antes de chegar aqui)
+app.use((err: any, _req: any, res: any, _next: any) => {
+  console.error('[Express] Erro não tratado:', err)
+  res.status(err.statusCode || 500).json({
+    error: 'Internal server error',
+    message: process.env.NODE_ENV === 'production'
+      ? 'Algo deu errado'
+      : err.message,
+  })
+})
 
 export default app
