@@ -12,6 +12,7 @@ import AutoLoginPage from './pages/auth/AutoLoginPage'
 import OnboardingGestorPage from './pages/auth/OnboardingGestorPage'
 import OnboardingVendedorPage from './pages/auth/OnboardingVendedorPage'
 import PrivateRoute from './components/shared/PrivateRoute'
+import DebugSentry from './pages/DebugSentry'
 
 // Admin
 import AdminDashboardPage from './pages/admin/DashboardPage'
@@ -77,6 +78,9 @@ export default function App() {
       <Route path="/auth/auto-login" element={<AutoLoginPage />} />
       <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
+
+      {/* Debug Sentry — temporario, remover apos validacao L10 */}
+      <Route path="/debug/sentry" element={<DebugSentry />} />
 
       {/* Onboarding */}
       <Route path="/gestao/onboarding" element={<PrivateRoute allowed={['gestao']}><Navigate to="/gestao/dashboard" replace /></PrivateRoute>} />
