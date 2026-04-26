@@ -33,7 +33,7 @@ jobs:
           FILENAME="backup-${TIMESTAMP}.sql.gz"
           echo "FILENAME=${FILENAME}" >> $GITHUB_ENV
 
-          pg_dump --no-owner --no-acl --clean --if-exists "${DB_URL}" | gzip > "${FILENAME}"
+          /usr/lib/postgresql/17/bin/pg_dump --no-owner --no-acl --clean --if-exists "${DB_URL}" | gzip > "${FILENAME}"
 
           ls -lh "${FILENAME}"
           echo "Dump size: $(du -h ${FILENAME} | cut -f1)"
