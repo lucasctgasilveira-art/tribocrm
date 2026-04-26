@@ -23,7 +23,7 @@ jobs:
 
       - name: Create dump
         env:
-          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          DB_URL: ${{ secrets.SUPABASE_DB_URL_DIRECT }}
         run: |
           TIMESTAMP=$(date -u +%Y-%m-%d_%H%M)
           FILENAME="backup-${TIMESTAMP}.sql.gz"
