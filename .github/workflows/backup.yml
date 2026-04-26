@@ -1,0 +1,66 @@
+name: Database backup to R2
+
+on:
+  schedule:
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Install postgresql-client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Install AWS CLI
+        run: |
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip -q awscliv2.zip
+          sudo ./aws/install --update
+
+      - name: Create dump
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          TIMESTAMP=$(date -u +%Y-%m-%d_%H%M)
+          FILENAME="backup-${TIMESTAMP}.sql.gz"
+          echo "FILENAME=${FILENAME}" >> $GITHUB_ENV
+
+          pg_dump --no-owner --no-acl --clean --if-exists "${DB_URL}" | gzip > "${FILENAME}"
+
+          ls -lh "${FILENAME}"
+          echo "Dump size: $(du -h ${FILENAME} | cut -f1)"
+
+      - name: Upload to R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          BUCKET: ${{ secrets.R2_BUCKET }}
+        run: |
+          aws s3 cp "${FILENAME}" "s3://${BUCKET}/${FILENAME}" \
+            --endpoint-url "${ENDPOINT}"
+          echo "Upload concluido: ${FILENAME}"
+
+      - name: Rotate old backups (keep last 30)
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          BUCKET: ${{ secrets.R2_BUCKET }}
+        run: |
+          aws s3api list-objects-v2 \
+            --bucket "${BUCKET}" \
+            --endpoint-url "${ENDPOINT}" \
+            --query 'reverse(sort_by(Contents,&LastModified))[30:].[Key]' \
+            --output text | while read KEY; do
+              if [ -n "$KEY" ]; then
+                echo "Removendo backup antigo: ${KEY}"
+                aws s3 rm "s3://${BUCKET}/${KEY}" --endpoint-url "${ENDPOINT}"
+              fi
+            done
