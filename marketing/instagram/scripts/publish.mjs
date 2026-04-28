@@ -172,9 +172,27 @@ async function getPermalink(mediaId) {
 }
 
 function parseSlot(slot) {
+  if (!slot || slot.data == null) throw new Error('slot.data ausente');
+
+  const dataStr =
+    slot.data instanceof Date
+      ? slot.data.toISOString().slice(0, 10)
+      : String(slot.data).slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dataStr)) {
+    throw new Error(`slot.data inválido: ${JSON.stringify(slot.data)}`);
+  }
+
   const time = (slot.horario || '09:00').replace(/\s+BRT$/i, '').trim();
-  const [h, m] = time.split(':').map((s) => s.padStart(2, '0'));
-  return new Date(`${slot.data}T${h}:${m || '00'}:00-03:00`);
+  const [h = '09', m = '00'] = time.split(':').map((s) => s.padStart(2, '0'));
+  if (!/^\d{2}$/.test(h) || !/^\d{2}$/.test(m)) {
+    throw new Error(`slot.horario inválido: ${JSON.stringify(slot.horario)}`);
+  }
+
+  const result = new Date(`${dataStr}T${h}:${m}:00-03:00`);
+  if (isNaN(result.getTime())) {
+    throw new Error(`Data construída inválida: ${dataStr}T${h}:${m}:00-03:00`);
+  }
+  return result;
 }
 
 async function main() {
