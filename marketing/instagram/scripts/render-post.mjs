@@ -55,6 +55,7 @@ export async function renderPost({ pautaPath, outDir, browser }) {
   if (ownsBrowser) {
     browser = await puppeteer.launch({
       headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
       defaultViewport: { width: 1200, height: 2000, deviceScaleFactor: 1 }
     });
   }
