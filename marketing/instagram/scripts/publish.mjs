@@ -31,10 +31,35 @@ const {
   IG_BUSINESS_ACCOUNT_ID,
   CLOUDINARY_CLOUD_NAME,
   CLOUDINARY_API_KEY,
-  CLOUDINARY_API_SECRET
+  CLOUDINARY_API_SECRET,
+  DISCORD_WEBHOOK_URL,
+  INSTAGRAM_HANDLE
 } = process.env;
 
 const IG_API = 'https://graph.instagram.com/v21.0';
+
+async function notify({ title, body, color }) {
+  if (!DISCORD_WEBHOOK_URL) return;
+  try {
+    await fetch(DISCORD_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        embeds: [
+          {
+            title,
+            description: body,
+            color: color ?? 0x2ecc71,
+            footer: { text: INSTAGRAM_HANDLE || '@tribocrmoficial' },
+            timestamp: new Date().toISOString()
+          }
+        ]
+      })
+    });
+  } catch {
+    // Notificação falhou: não interrompe o fluxo principal
+  }
+}
 
 function checkEnv() {
   const missing = [];
@@ -288,11 +313,27 @@ Filtros aplicados:
       console.log(`  ✓ media_id: ${mediaId}`);
       if (permalink) console.log(`  ✓ ${permalink}`);
       published++;
+
+      await notify({
+        title: `✅ Publicado · ${name.replace(/\.ya?ml$/, '')}`,
+        body: [
+          permalink ? `🔗 ${permalink}` : `media_id: ${mediaId}`,
+          `📐 ${files.length} ${files.length > 1 ? 'slides' : 'imagem'}`,
+          `📝 ${caption.split('\n')[0].slice(0, 80)}`
+        ].join('\n'),
+        color: 0x2ecc71
+      });
     } catch (err) {
       console.error(`  ✗ ${err.message}`);
       schedule.last_error = err.message;
       schedule.last_error_at = now.toISOString();
       await writeFile(path, yaml.dump(schedule, { lineWidth: 120, noRefs: true }), 'utf-8');
+
+      await notify({
+        title: `❌ Falhou · ${name.replace(/\.ya?ml$/, '')}`,
+        body: `\`\`\`\n${err.message}\n\`\`\`\nVer logs: https://github.com/lucasctgasilveira-art/tribocrm/actions/workflows/instagram-publisher.yml`,
+        color: 0xe74c3c
+      });
     }
   }
 
