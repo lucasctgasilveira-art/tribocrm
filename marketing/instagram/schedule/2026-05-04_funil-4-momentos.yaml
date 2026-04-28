@@ -1,16 +1,12 @@
-# --------------------------------------------------------
-# Agendamento — Carrossel "Os 4 momentos do funil"
-# --------------------------------------------------------
-status: aprovado
-aprovado_em: 2026-04-27
+status: publicado
+aprovado_em: 2026-04-27T00:00:00.000Z
 aprovado_por: lucas
 slot:
-  data: 2026-05-04            # SEG · Semana 1 · Mês 1
-  horario: "09:00 BRT"        # PME B2B abre o dia conferindo redes
+  data: 2026-05-04T00:00:00.000Z
+  horario: 09:00 BRT
   justificativa: >
-    Segunda 09:00 BRT — PME B2B abre o dia conferindo redes antes de entrar
-    na primeira reunião. Pilar Método em segunda alinha com a cadência do
-    B2 §3 do plano IG (segunda = método).
+    Segunda 09:00 BRT — PME B2B abre o dia conferindo redes antes de entrar na primeira reunião. Pilar Método em segunda
+    alinha com a cadência do B2 §3 do plano IG (segunda = método).
 formato: carrossel
 slides: 8
 arquivos:
@@ -24,7 +20,10 @@ arquivos:
   - output/2026-05-04_funil_08-cta.png
 caption_source: posts/2026-05-04_funil_08-cta.yaml#caption
 hashtags_inline_na_caption: true
-primeiro_comentario: null     # nenhum por enquanto
+primeiro_comentario: null
 publicacao:
   metodo: composio_instagram_graph
   acao_humana_necessaria: aprovacao_lucas_antes_de_postar
+published_at: '2026-04-28T20:56:02.607Z'
+media_id: '18104488295317006'
+permalink: https://www.instagram.com/p/DXsIdJ2mGY8/
