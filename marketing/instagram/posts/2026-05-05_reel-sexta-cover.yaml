@@ -1,0 +1,16 @@
+# --------------------------------------------------------
+# Pauta: Capa do reel "Sexta às 18h: ninguém sabe quanto fechou"
+# Calendário: TER 05/05/2026 · Semana 1 · Mês 1
+# Pilar: DOR DA PME
+# --------------------------------------------------------
+template: reel-cover
+slug: 2026-05-05_reel-sexta-cover
+data:
+  pilar: "Dor da PME"
+  titulo: |
+    Sexta às 18h:<br>
+    ninguém sabe<br>
+    quanto fechou<br>
+    na <span class="t-orange">semana</span>.
+  meta: "▶ Reel · 0:18"
+  handle: "@tribocrmoficial"

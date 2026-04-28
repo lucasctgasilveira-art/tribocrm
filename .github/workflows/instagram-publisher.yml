@@ -1,0 +1,90 @@
+name: Instagram Auto Publisher
+
+on:
+  schedule:
+    # A cada 15 min (UTC). Cobre publicação no horário marcado com lag máximo de ~15 min.
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+    inputs:
+      slug:
+        description: 'Slug específico (deixe vazio pra processar todo schedule/)'
+        required: false
+        default: ''
+      force:
+        description: 'Ignorar slot temporal (publicar imediatamente)'
+        type: boolean
+        default: false
+      dry_run:
+        description: 'Apenas simular, sem chamar API'
+        type: boolean
+        default: false
+
+concurrency:
+  group: instagram-publisher
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: marketing/instagram/package-lock.json
+
+      - name: Install dependencies
+        working-directory: marketing/instagram
+        run: npm ci --no-audit --no-fund
+
+      - name: Validate setup
+        working-directory: marketing/instagram
+        env:
+          IG_LONG_LIVED_TOKEN: ${{ secrets.IG_LONG_LIVED_TOKEN }}
+          IG_BUSINESS_ACCOUNT_ID: ${{ secrets.IG_BUSINESS_ACCOUNT_ID }}
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+        run: npm run validate --silent
+
+      - name: Render PNGs from YAMLs
+        working-directory: marketing/instagram
+        run: npm run posts:all --silent
+
+      - name: Publish scheduled posts
+        id: publish
+        working-directory: marketing/instagram
+        env:
+          IG_LONG_LIVED_TOKEN: ${{ secrets.IG_LONG_LIVED_TOKEN }}
+          IG_BUSINESS_ACCOUNT_ID: ${{ secrets.IG_BUSINESS_ACCOUNT_ID }}
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+        run: |
+          ARGS=""
+          if [ -n "${{ inputs.slug }}" ]; then ARGS="$ARGS --slug ${{ inputs.slug }}"; fi
+          if [ "${{ inputs.force }}" = "true" ]; then ARGS="$ARGS --force"; fi
+          if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
+          npm run publish --silent -- $ARGS
+
+      - name: Commit schedule updates
+        if: success() && !inputs.dry_run
+        run: |
+          if git diff --quiet marketing/instagram/schedule/; then
+            echo "Nada mudou no schedule/ — sem commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add marketing/instagram/schedule/
+          git commit -m "auto: instagram publisher run $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push

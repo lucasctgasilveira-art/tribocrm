@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 4 (Momento 2 — Next step combinado)
+# Carrossel "Os 4 momentos do funil"
+# Calendário: SEG 04/05/2026 · Semana 1 · Mês 1
+# Pilar: MÉTODO
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-04_funil_04-momento2
+data:
+  pilar: "Método · Momento 2"
+  step-num: "PASSO 2"
+  titulo: "Next step combinado"
+  body-1: |
+    Toda conversa termina com data clara.
+  body-2: |
+    "Falo na sexta às 14h"<br>
+    <span class="miolo-emphasis">≠</span><br>
+    "te procuro depois".
+  slide-number: "04 / 08"
+  handle: "@tribocrmoficial"

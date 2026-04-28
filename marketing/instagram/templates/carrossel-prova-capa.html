@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>TriboCRM · Carrossel Prova · Capa</title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  .prova-eyebrow {
+    position: absolute;
+    top: var(--canvas-pad);
+    left: var(--canvas-pad);
+    color: var(--tribo-orange);
+  }
+  .prova-cliente {
+    position: absolute;
+    top: calc(var(--canvas-pad) + 90px);
+    left: var(--canvas-pad);
+    right: var(--canvas-pad);
+    font-size: 36px;
+    font-weight: var(--w-medium);
+    color: var(--tribo-white-dim);
+  }
+  .prova-cliente strong {
+    color: var(--tribo-white);
+    font-weight: var(--w-bold);
+  }
+  .prova-transform {
+    position: absolute;
+    top: 45%;
+    left: var(--canvas-pad);
+    right: var(--canvas-pad);
+    transform: translateY(-30%);
+    max-width: 920px;
+  }
+  .prova-title {
+    margin-bottom: var(--s-3);
+  }
+  .prova-time {
+    font-size: 36px;
+    font-weight: var(--w-bold);
+    color: var(--tribo-orange);
+    margin-top: var(--s-3);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+  }
+  .prova-arrow {
+    position: absolute;
+    bottom: calc(var(--canvas-pad) + 12px);
+    right: calc(var(--canvas-pad) + 130px);
+    font-size: 64px;
+    font-weight: var(--w-black);
+    color: var(--tribo-orange);
+    line-height: 1;
+  }
+</style>
+</head>
+<body>
+<div class="preview-stage">
+
+  <div class="canvas canvas--feed" data-format="carrossel-prova-capa">
+
+    <span class="slide-number" data-edit="slide-number">01 / 06</span>
+
+    <span class="prova-eyebrow t-eyebrow" data-edit="pilar">Prova · Case real</span>
+
+    <div class="prova-cliente">
+      <strong data-edit="cliente">Móveis Sob Encomenda</strong> <span data-edit="segmento">· marcenaria · 6 vendedores</span>
+    </div>
+
+    <div class="prova-transform">
+      <h1 class="prova-title t-h1" data-edit="titulo">
+        De <span class="t-orange">planilha</span><br>
+        pro pipeline em<br>
+        <span class="t-orange">2 semanas</span>.
+      </h1>
+      <div class="prova-time" data-edit="contexto">Primeira venda rastreada · dia 11</div>
+    </div>
+
+    <span class="prova-arrow">→</span>
+
+    <span class="brand-signature" data-edit="handle">@tribocrmoficial</span>
+    <img class="brand-symbol" src="../_assets/symbol-d.svg" alt="">
+
+  </div>
+
+</div>
+</body>
+</html>

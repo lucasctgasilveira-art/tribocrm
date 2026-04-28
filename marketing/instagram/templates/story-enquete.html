@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>TriboCRM · Story Enquete</title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  .story-eyebrow {
+    position: absolute;
+    top: calc(var(--canvas-pad) + 80px);
+    left: var(--canvas-pad);
+    color: var(--tribo-orange);
+  }
+  .story-question {
+    position: absolute;
+    top: 30%;
+    left: var(--canvas-pad);
+    right: var(--canvas-pad);
+    max-width: 920px;
+  }
+  .story-question h2 {
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+  }
+  .story-options {
+    position: absolute;
+    top: 65%;
+    left: var(--canvas-pad);
+    right: var(--canvas-pad);
+    display: flex;
+    gap: var(--s-3);
+  }
+  .story-option {
+    flex: 1;
+    background: var(--tribo-black-soft);
+    border: 4px solid var(--tribo-line);
+    border-radius: var(--r-lg);
+    padding: var(--s-4) var(--s-3);
+    text-align: center;
+    font-size: 44px;
+    font-weight: var(--w-bold);
+    color: var(--tribo-white);
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+  }
+  .story-option--accent {
+    background: var(--tribo-orange);
+    color: var(--tribo-black);
+    border-color: var(--tribo-orange);
+  }
+  .story-vs {
+    position: absolute;
+    top: 65%;
+    left: 50%;
+    transform: translate(-50%, 60px);
+    font-size: 36px;
+    font-weight: var(--w-black);
+    color: var(--tribo-orange);
+    letter-spacing: var(--tracking-wide);
+    z-index: 2;
+    background: var(--tribo-black);
+    padding: 12px 24px;
+    border-radius: var(--r-pill);
+  }
+  .story-cta {
+    position: absolute;
+    bottom: 200px;
+    left: var(--canvas-pad);
+    right: var(--canvas-pad);
+    text-align: center;
+    font-size: 32px;
+    font-weight: var(--w-medium);
+    color: var(--tribo-white-dim);
+  }
+  .canvas--story .brand-symbol {
+    bottom: var(--canvas-pad);
+    right: var(--canvas-pad);
+  }
+  .canvas--story .brand-signature {
+    bottom: var(--canvas-pad);
+    left: var(--canvas-pad);
+    font-size: 30px;
+  }
+</style>
+</head>
+<body>
+<div class="preview-stage">
+
+  <div class="canvas canvas--story" data-format="story-enquete">
+
+    <span class="story-eyebrow t-eyebrow" data-edit="pilar">Pergunta da semana</span>
+
+    <div class="story-question">
+      <h2 class="t-h2" data-edit="pergunta">
+        Sua reunião comercial<br>
+        de sexta parece mais...
+      </h2>
+    </div>
+
+    <div class="story-options">
+      <div class="story-option" data-edit="opcao-a">Reunião<br>com método</div>
+      <div class="story-option story-option--accent" data-edit="opcao-b">"Tô<br>correndo<br>atrás"</div>
+    </div>
+    <div class="story-vs">VS</div>
+
+    <div class="story-cta" data-edit="cta">Manda DM se quiser conversar 🔥</div>
+
+    <span class="brand-signature" data-edit="handle">@tribocrmoficial</span>
+    <img class="brand-symbol" src="../_assets/symbol-d.svg" alt="">
+
+  </div>
+
+</div>
+</body>
+</html>

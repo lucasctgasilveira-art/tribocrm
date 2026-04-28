@@ -1,0 +1,22 @@
+# --------------------------------------------------------
+# Pauta: Slide 2 (DOR — POR QUE ISSO IMPORTA)
+# Carrossel "Os 4 momentos do funil"
+# Calendário: SEG 04/05/2026 · Semana 1 · Mês 1
+# Pilar: MÉTODO
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-04_funil_02-dor
+data:
+  pilar: "Método · O que pulamos"
+  step-num: ""
+  titulo: ""
+  body-1: |
+    Vendedor anota lead.<br>
+    Faz o primeiro contato.<br>
+    Manda proposta.<br>
+    Espera resposta.
+  body-2: |
+    No meio disso, <span class="miolo-emphasis">4 momentos somem</span>.<br>
+    Cada um custa venda.
+  slide-number: "02 / 08"
+  handle: "@tribocrmoficial"

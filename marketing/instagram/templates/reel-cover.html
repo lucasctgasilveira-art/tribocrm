@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>TriboCRM · Reel Cover</title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  .reel-eyebrow {
+    position: absolute;
+    top: var(--canvas-pad);
+    left: var(--canvas-pad);
+    color: var(--tribo-orange);
+  }
+  .reel-title {
+    position: absolute;
+    bottom: 280px;
+    left: var(--canvas-pad);
+    right: var(--canvas-pad);
+    max-width: 920px;
+  }
+  .reel-title h1 {
+    line-height: 1.05;
+    letter-spacing: -0.025em;
+  }
+  .reel-meta {
+    position: absolute;
+    bottom: 200px;
+    left: var(--canvas-pad);
+    font-size: 28px;
+    font-weight: var(--w-medium);
+    color: var(--tribo-white-dim);
+    letter-spacing: var(--tracking-wide);
+  }
+  /* Símbolo D ajustado pro story (canvas mais alto) */
+  .canvas--story .brand-symbol {
+    bottom: var(--canvas-pad);
+    right: var(--canvas-pad);
+  }
+  .canvas--story .brand-signature {
+    bottom: var(--canvas-pad);
+    left: var(--canvas-pad);
+    font-size: 30px;
+  }
+</style>
+</head>
+<body>
+<div class="preview-stage">
+
+  <div class="canvas canvas--story" data-format="reel-cover">
+
+    <span class="reel-eyebrow t-eyebrow" data-edit="pilar">Dor da PME</span>
+
+    <div class="reel-title">
+      <h1 class="t-h1" data-edit="titulo">
+        Sexta às 18h:<br>
+        ninguém sabe<br>
+        quanto fechou<br>
+        na <span class="t-orange">semana</span>.
+      </h1>
+    </div>
+
+    <div class="reel-meta" data-edit="meta">▶ Reel · 0:18</div>
+
+    <span class="brand-signature" data-edit="handle">@tribocrmoficial</span>
+    <img class="brand-symbol" src="../_assets/symbol-d.svg" alt="">
+
+  </div>
+
+</div>
+</body>
+</html>

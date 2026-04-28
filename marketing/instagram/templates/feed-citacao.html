@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>TriboCRM · Feed Citação</title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  .quote-block {
+    position: absolute;
+    top: 50%;
+    left: var(--canvas-pad);
+    right: var(--canvas-pad);
+    transform: translateY(-55%);
+    max-width: 920px;
+  }
+  .quote-mark {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 200px;
+    font-weight: var(--w-black);
+    color: var(--tribo-orange);
+    line-height: 0.5;
+    margin-bottom: var(--s-3);
+    letter-spacing: -0.05em;
+  }
+  .quote-text {
+    color: var(--tribo-white);
+    font-style: italic;
+    font-weight: var(--w-medium);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    margin-bottom: var(--s-5);
+  }
+  .quote-author {
+    font-size: 32px;
+    font-weight: var(--w-bold);
+    color: var(--tribo-white);
+    margin-top: var(--s-4);
+  }
+  .quote-role {
+    font-size: 26px;
+    font-weight: var(--w-medium);
+    color: var(--tribo-white-dim);
+    margin-top: var(--s-1);
+  }
+</style>
+</head>
+<body>
+<div class="preview-stage">
+
+  <div class="canvas canvas--feed" data-format="feed-citacao">
+
+    <div class="quote-block">
+      <div class="quote-mark">"</div>
+      <p class="quote-text t-h3" data-edit="citacao">
+        Voltei a dormir tranquilo. O pipeline parou de morar na minha cabeça.
+      </p>
+      <div class="quote-author" data-edit="autor">João Pedro</div>
+      <div class="quote-role" data-edit="cargo">Dono · Móveis Sob Encomenda · 6 vendedores</div>
+    </div>
+
+    <span class="brand-signature" data-edit="handle">@tribocrmoficial</span>
+    <img class="brand-symbol" src="../_assets/symbol-d.svg" alt="">
+
+  </div>
+
+</div>
+</body>
+</html>

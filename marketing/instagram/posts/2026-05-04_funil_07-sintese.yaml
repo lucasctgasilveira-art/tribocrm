@@ -1,0 +1,21 @@
+# --------------------------------------------------------
+# Pauta: Slide 7 (Síntese — Funil vira corredor)
+# Carrossel "Os 4 momentos do funil"
+# Calendário: SEG 04/05/2026 · Semana 1 · Mês 1
+# Pilar: MÉTODO
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-04_funil_07-sintese
+data:
+  pilar: "Método · O que acontece"
+  step-num: ""
+  titulo: ""
+  body-1: |
+    Sem esses 4 momentos,<br>
+    o funil <span class="miolo-emphasis">vira corredor</span>.
+  body-2: |
+    Lead entra rápido.<br>
+    Sai mais rápido.<br>
+    A gente perde no meio.
+  slide-number: "07 / 08"
+  handle: "@tribocrmoficial"

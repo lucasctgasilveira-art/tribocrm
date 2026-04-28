@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>TriboCRM · Carrossel Método · Capa</title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  .canvas--capa { padding: var(--canvas-pad); }
+  .capa-eyebrow {
+    position: absolute;
+    top: var(--canvas-pad);
+    left: var(--canvas-pad);
+    color: var(--tribo-orange);
+  }
+  .capa-title {
+    position: absolute;
+    top: 50%;
+    left: var(--canvas-pad);
+    right: var(--canvas-pad);
+    transform: translateY(-50%);
+    max-width: 880px;
+  }
+  .capa-arrow {
+    position: absolute;
+    bottom: calc(var(--canvas-pad) + 12px);
+    right: calc(var(--canvas-pad) + 130px);
+    font-size: 64px;
+    font-weight: var(--w-black);
+    color: var(--tribo-orange);
+    line-height: 1;
+  }
+</style>
+</head>
+<body>
+<div class="preview-stage">
+
+  <div class="canvas canvas--feed canvas--capa" data-format="carrossel-metodo-capa">
+
+    <span class="slide-number" data-edit="slide-number">01 / 08</span>
+
+    <span class="capa-eyebrow t-eyebrow" data-edit="pilar">Método</span>
+
+    <h1 class="capa-title t-h1" data-edit="titulo">
+      Os 4 momentos do funil<br>
+      que sua PME tá <span class="t-orange">pulando</span>.
+    </h1>
+
+    <span class="capa-arrow">→</span>
+
+    <span class="brand-signature" data-edit="handle">@tribocrmoficial</span>
+    <img class="brand-symbol" src="../_assets/symbol-d.svg" alt="">
+
+  </div>
+
+</div>
+</body>
+</html>

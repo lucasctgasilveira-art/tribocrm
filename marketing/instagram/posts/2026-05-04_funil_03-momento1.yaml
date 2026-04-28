@@ -1,0 +1,18 @@
+# --------------------------------------------------------
+# Pauta: Slide 3 (Momento 1) do carrossel "Os 4 momentos do funil"
+# Calendário: SEG 04/05/2026 · Semana 1 · Mês 1
+# Pilar: MÉTODO
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-04_funil_03-momento1
+data:
+  pilar: "Método · Momento 1"
+  step-num: "PASSO 1"
+  titulo: "Qualificação dura"
+  body-1: |
+    Lead bom merece tempo.<br>
+    Lead ruim merece <span class="miolo-emphasis">"boa sorte"</span>.
+  body-2: |
+    Sua PME tá tratando todo lead como se fosse o último.
+  slide-number: "03 / 08"
+  handle: "@tribocrmoficial"

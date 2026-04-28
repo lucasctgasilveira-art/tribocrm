@@ -1,0 +1,14 @@
+# --------------------------------------------------------
+# Pauta: Slide 1 (capa) do carrossel "Os 4 momentos do funil"
+# Calendário: SEG 04/05/2026 · Semana 1 · Mês 1
+# Pilar: MÉTODO
+# --------------------------------------------------------
+template: carrossel-metodo-capa
+slug: 2026-05-04_funil_01-capa
+data:
+  pilar: "Método"
+  titulo: |
+    Os 4 momentos do funil<br>
+    que sua PME tá <span class="t-orange">pulando</span>.
+  slide-number: "01 / 08"
+  handle: "@tribocrmoficial"

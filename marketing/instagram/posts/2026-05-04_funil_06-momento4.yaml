@@ -1,0 +1,21 @@
+# --------------------------------------------------------
+# Pauta: Slide 6 (Momento 4 — Forecast de quem fecha)
+# Carrossel "Os 4 momentos do funil"
+# Calendário: SEG 04/05/2026 · Semana 1 · Mês 1
+# Pilar: MÉTODO
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-04_funil_06-momento4
+data:
+  pilar: "Método · Momento 4"
+  step-num: "PASSO 4"
+  titulo: "Forecast de quem fecha"
+  body-1: |
+    Vendedor diz <span class="miolo-emphasis">"tá quente"</span>.<br>
+    Pipeline diz "75%".<br>
+    Final do mês diz "metade".
+  body-2: |
+    Quem mede o forecast contra o real,<br>
+    vira melhor a cada mês.
+  slide-number: "06 / 08"
+  handle: "@tribocrmoficial"

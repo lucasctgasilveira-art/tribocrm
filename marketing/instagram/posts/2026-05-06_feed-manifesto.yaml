@@ -1,0 +1,13 @@
+# --------------------------------------------------------
+# Pauta: Feed manifesto "Vender de verdade não é talento. É método."
+# Calendário: QUA 06/05/2026 · Semana 1 · Mês 1
+# Pilar: MANIFESTO
+# --------------------------------------------------------
+template: feed-manifesto
+slug: 2026-05-06_feed-manifesto
+data:
+  linha-1: "Vender de verdade"
+  linha-2: "não é talento."
+  linha-3: |
+    É <span class="t-orange">método</span>.
+  handle: "@tribocrmoficial"

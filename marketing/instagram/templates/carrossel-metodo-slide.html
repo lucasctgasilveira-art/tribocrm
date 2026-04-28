@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>TriboCRM · Carrossel Método · Slide miolo</title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  .miolo-eyebrow {
+    position: absolute;
+    top: var(--canvas-pad);
+    left: var(--canvas-pad);
+    color: var(--tribo-orange);
+  }
+  .miolo-content {
+    position: absolute;
+    top: 50%;
+    left: var(--canvas-pad);
+    right: var(--canvas-pad);
+    transform: translateY(-50%);
+    max-width: 900px;
+  }
+  .miolo-step-num {
+    font-size: 32px;
+    font-weight: var(--w-black);
+    color: var(--tribo-orange);
+    margin-bottom: var(--s-2);
+    letter-spacing: var(--tracking-wide);
+  }
+  .miolo-title {
+    margin-bottom: var(--s-4);
+  }
+  /* Esconde elementos vazios — pra slides sem step-num ou sem titulo (ex: dor, síntese) */
+  .miolo-step-num:empty,
+  .miolo-title:empty {
+    display: none;
+  }
+  .miolo-body {
+    color: var(--tribo-white-soft);
+    max-width: 850px;
+  }
+  .miolo-body + .miolo-body { margin-top: var(--s-3); }
+  .miolo-emphasis {
+    color: var(--tribo-white);
+    font-weight: var(--w-bold);
+  }
+</style>
+</head>
+<body>
+<div class="preview-stage">
+
+  <div class="canvas canvas--feed" data-format="carrossel-metodo-slide">
+
+    <span class="slide-number" data-edit="slide-number">03 / 08</span>
+
+    <span class="miolo-eyebrow t-eyebrow" data-edit="pilar">Método · Momento 1</span>
+
+    <div class="miolo-content">
+      <div class="miolo-step-num" data-edit="step-num">PASSO 1</div>
+      <h2 class="miolo-title t-h2" data-edit="titulo">Qualificação dura</h2>
+      <p class="miolo-body t-body-lg" data-edit="body-1">
+        Lead bom merece tempo.<br>
+        Lead ruim merece <span class="miolo-emphasis">"boa sorte"</span>.
+      </p>
+      <p class="miolo-body t-body" data-edit="body-2">
+        Sua PME tá tratando todo lead como se fosse o último.
+      </p>
+    </div>
+
+    <span class="brand-signature" data-edit="handle">@tribocrmoficial</span>
+    <img class="brand-symbol" src="../_assets/symbol-d.svg" alt="">
+
+  </div>
+
+</div>
+</body>
+</html>

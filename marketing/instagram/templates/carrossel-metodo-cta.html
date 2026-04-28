@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>TriboCRM · Carrossel Método · CTA</title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  .cta-content {
+    position: absolute;
+    top: 50%;
+    left: var(--canvas-pad);
+    right: var(--canvas-pad);
+    transform: translateY(-50%);
+    max-width: 920px;
+  }
+  .cta-title {
+    color: #0a0a0a;
+    margin-bottom: var(--s-3);
+  }
+  .cta-emoji {
+    display: inline-block;
+    font-size: 72px;
+    margin-left: var(--s-2);
+  }
+  .cta-direcional {
+    font-size: 40px;
+    font-weight: var(--w-semibold);
+    color: #0a0a0a;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    margin-bottom: var(--s-5);
+  }
+  .cta-direcional .acc {
+    font-weight: var(--w-bold);
+  }
+  .cta-handle {
+    font-size: 44px;
+    font-weight: var(--w-black);
+    color: #0a0a0a;
+    letter-spacing: -0.01em;
+  }
+  .cta-tagline {
+    font-size: 28px;
+    font-weight: var(--w-medium);
+    color: rgba(0,0,0,.75);
+    margin-top: var(--s-1);
+  }
+</style>
+</head>
+<body>
+<div class="preview-stage">
+
+  <div class="canvas canvas--feed canvas--cta" data-format="carrossel-metodo-cta">
+
+    <span class="slide-number" data-edit="slide-number">08 / 08</span>
+
+    <div class="cta-content">
+      <h2 class="cta-title t-h2" data-edit="titulo">
+        Salva pra rodar com seu time<br>
+        na próxima reunião comercial.
+        <span class="cta-emoji">🔥</span>
+      </h2>
+
+      <p class="cta-direcional" data-edit="direcional">
+        Quer ver no seu pipeline?<br>
+        <span class="acc">Link na bio · demo em 15 min.</span>
+      </p>
+
+      <div class="cta-handle" data-edit="handle">@tribocrmoficial</div>
+      <div class="cta-tagline" data-edit="tagline">Máquina de Vendas pra PMEs brasileiras</div>
+    </div>
+
+    <img class="brand-symbol brand-symbol--sm" src="../_assets/symbol-d-dark.svg" alt="">
+
+  </div>
+
+</div>
+</body>
+</html>

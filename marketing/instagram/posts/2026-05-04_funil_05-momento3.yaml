@@ -1,0 +1,19 @@
+# --------------------------------------------------------
+# Pauta: Slide 5 (Momento 3 — Validação de orçamento real)
+# Carrossel "Os 4 momentos do funil"
+# Calendário: SEG 04/05/2026 · Semana 1 · Mês 1
+# Pilar: MÉTODO
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-04_funil_05-momento3
+data:
+  pilar: "Método · Momento 3"
+  step-num: "PASSO 3"
+  titulo: "Validação de orçamento real"
+  body-1: |
+    Não é <span class="miolo-emphasis">"qual seu orçamento?"</span>.<br>
+    É "qual o impacto se isso não acontecer?".
+  body-2: |
+    Pergunta diferente, resposta diferente.
+  slide-number: "05 / 08"
+  handle: "@tribocrmoficial"

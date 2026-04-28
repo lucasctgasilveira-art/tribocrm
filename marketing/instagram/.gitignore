@@ -1,0 +1,10 @@
+node_modules/
+output/*.png
+output/*.jpg
+output/*.jpeg
+*.log
+
+# Secrets — NUNCA commitar
+.env
+.env.local
+.env.*.local

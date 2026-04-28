@@ -1,0 +1,235 @@
+/* ============================================================
+   TriboCRM — Design Tokens (Instagram)
+   ============================================================
+   Fonte da verdade do sistema visual. Todo template puxa daqui.
+   Não introduzir cores/tipografia fora destes tokens.
+   Construído sobre Brand Book aprovado em docs/brand/.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
+
+:root{
+  /* ---------- CORES ---------- */
+  --tribo-black: #0a0a0a;          /* fundo padrão de feed/story/reel */
+  --tribo-black-soft: #141414;     /* superfície elevada */
+  --tribo-orange: #f97316;         /* accent oficial — única cor de destaque */
+  --tribo-orange-deep: #ea580c;    /* gradient destination quando aplicável */
+  --tribo-white: #ffffff;          /* texto principal sobre preto */
+  --tribo-white-soft: rgba(255,255,255,.85);
+  --tribo-white-dim: rgba(255,255,255,.55);
+  --tribo-line: rgba(255,255,255,.08);
+
+  /* ---------- TIPOGRAFIA ---------- */
+  --tribo-font: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --w-regular: 400;
+  --w-medium: 500;
+  --w-semibold: 600;
+  --w-bold: 700;
+  --w-black: 800;
+
+  /* Escala tipográfica (px @ 1080×1350 / 1080×1920 nativo) */
+  --t-eyebrow: 28px;       /* meta superior — pilar, número de slide */
+  --t-body: 38px;          /* corpo geral em slide */
+  --t-body-lg: 48px;        /* corpo enfático */
+  --t-h3: 64px;             /* sub-frase em capa */
+  --t-h2: 88px;             /* frase de impacto média */
+  --t-h1: 116px;            /* manifesto, capa principal */
+  --t-h1-xl: 144px;         /* manifesto extra-grande */
+
+  --leading-tight: 1.05;
+  --leading-snug: 1.15;
+  --leading-normal: 1.4;
+  --leading-relaxed: 1.55;
+
+  --tracking-tight: -0.025em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.06em;
+
+  /* ---------- ESPAÇAMENTO ---------- */
+  --s-1: 8px;
+  --s-2: 16px;
+  --s-3: 24px;
+  --s-4: 32px;
+  --s-5: 48px;
+  --s-6: 64px;
+  --s-7: 96px;
+  --s-8: 128px;
+
+  /* ---------- CANVAS ---------- */
+  --canvas-feed-w: 1080px;
+  --canvas-feed-h: 1350px;       /* 4:5 — formato preferencial */
+  --canvas-square-w: 1080px;
+  --canvas-square-h: 1080px;
+  --canvas-story-w: 1080px;
+  --canvas-story-h: 1920px;      /* 9:16 story/reel */
+
+  /* Padding interno padrão dos cards */
+  --canvas-pad: 80px;
+  --canvas-pad-sm: 56px;
+
+  /* ---------- BORDA / RAIO ---------- */
+  --r-pill: 999px;
+  --r-md: 12px;
+  --r-lg: 24px;
+
+  /* ---------- ELEMENTOS DE MARCA ---------- */
+  --symbol-size: 88px;            /* símbolo D no canto inferior direito */
+  --symbol-size-sm: 64px;
+  --signature-size: 26px;         /* "@tribocrmoficial" assinatura */
+}
+
+/* ============================================================
+   RESET MÍNIMO
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  font-family: var(--tribo-font);
+  font-weight: var(--w-regular);
+  font-feature-settings: "ss01", "ss02", "kern";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  background: #1a1a1a;            /* fora do canvas — escuro neutro pra preview */
+  color: var(--tribo-white);
+}
+
+img, svg { display: block; max-width: 100%; }
+
+/* ============================================================
+   CANVAS — base de toda peça
+   ============================================================ */
+
+.canvas {
+  background: var(--tribo-black);
+  color: var(--tribo-white);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.canvas--feed {
+  width: var(--canvas-feed-w);
+  height: var(--canvas-feed-h);
+  padding: var(--canvas-pad);
+}
+
+.canvas--square {
+  width: var(--canvas-square-w);
+  height: var(--canvas-square-h);
+  padding: var(--canvas-pad);
+}
+
+.canvas--story {
+  width: var(--canvas-story-w);
+  height: var(--canvas-story-h);
+  padding: var(--canvas-pad);
+}
+
+/* Wrapper de preview no navegador — escala canvas pra caber na tela
+   sem alterar dimensões reais (Puppeteer ignora .preview-stage) */
+.preview-stage {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  background: #0d0d0d;
+}
+.preview-stage .canvas { transform: scale(0.45); transform-origin: center; }
+@media (min-width: 1300px) {
+  .preview-stage .canvas { transform: scale(0.55); }
+}
+
+/* ============================================================
+   ELEMENTOS DE MARCA — símbolo D + assinatura + numeração
+   ============================================================ */
+
+.brand-symbol {
+  position: absolute;
+  bottom: var(--canvas-pad);
+  right: var(--canvas-pad);
+  width: var(--symbol-size);
+  height: var(--symbol-size);
+}
+
+.brand-symbol--sm {
+  width: var(--symbol-size-sm);
+  height: var(--symbol-size-sm);
+}
+
+.brand-signature {
+  position: absolute;
+  bottom: var(--canvas-pad);
+  left: var(--canvas-pad);
+  font-size: var(--signature-size);
+  font-weight: var(--w-semibold);
+  color: var(--tribo-white-dim);
+  letter-spacing: var(--tracking-wide);
+}
+
+.slide-number {
+  position: absolute;
+  top: var(--canvas-pad);
+  right: var(--canvas-pad);
+  font-size: var(--t-eyebrow);
+  font-weight: var(--w-bold);
+  color: var(--tribo-white-dim);
+  letter-spacing: var(--tracking-wide);
+}
+
+.eyebrow {
+  font-size: var(--t-eyebrow);
+  font-weight: var(--w-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--tribo-orange);
+}
+
+.arrow-next {
+  position: absolute;
+  bottom: calc(var(--canvas-pad) + 8px);
+  right: calc(var(--canvas-pad) + 120px);
+  font-size: 72px;
+  font-weight: var(--w-black);
+  color: var(--tribo-orange);
+  line-height: 1;
+}
+
+/* ============================================================
+   UTILITÁRIOS DE TEXTO — usados em todos os templates
+   ============================================================ */
+
+.t-eyebrow   { font-size: var(--t-eyebrow);  font-weight: var(--w-bold);     text-transform: uppercase; letter-spacing: var(--tracking-wide); }
+.t-body      { font-size: var(--t-body);     font-weight: var(--w-regular);  line-height: var(--leading-relaxed); }
+.t-body-md   { font-size: var(--t-body);     font-weight: var(--w-medium);   line-height: var(--leading-relaxed); }
+.t-body-lg   { font-size: var(--t-body-lg);  font-weight: var(--w-semibold); line-height: var(--leading-snug); }
+.t-h3        { font-size: var(--t-h3);       font-weight: var(--w-bold);     line-height: var(--leading-snug);  letter-spacing: var(--tracking-tight); }
+.t-h2        { font-size: var(--t-h2);       font-weight: var(--w-black);    line-height: var(--leading-tight); letter-spacing: var(--tracking-tight); }
+.t-h1        { font-size: var(--t-h1);       font-weight: var(--w-black);    line-height: var(--leading-tight); letter-spacing: var(--tracking-tight); }
+.t-h1-xl     { font-size: var(--t-h1-xl);    font-weight: var(--w-black);    line-height: var(--leading-tight); letter-spacing: var(--tracking-tight); }
+
+.t-orange { color: var(--tribo-orange); }
+.t-dim    { color: var(--tribo-white-dim); }
+.t-soft   { color: var(--tribo-white-soft); }
+
+/* ============================================================
+   VARIANTES DE CTA (slide final de carrossel)
+   ============================================================ */
+
+.canvas--cta {
+  background: linear-gradient(135deg, var(--tribo-orange) 0%, var(--tribo-orange-deep) 100%);
+  color: var(--tribo-black);
+}
+.canvas--cta .brand-signature { color: rgba(0,0,0,.6); }
+.canvas--cta .slide-number    { color: rgba(0,0,0,.5); }
+
+/* ============================================================
+   PRINT — útil pra exportar via Ctrl+P, mas Puppeteer é o canal padrão
+   ============================================================ */
+
+@media print {
+  body, .preview-stage { background: #fff; padding: 0; min-height: auto; }
+  .preview-stage .canvas { transform: none; }
+}
