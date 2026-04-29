@@ -1,16 +1,12 @@
-# --------------------------------------------------------
-# Agendamento — Feed citação observacional · Dor da PME
-# --------------------------------------------------------
-status: "aprovado"
-aprovado_em: "2026-04-28"
-aprovado_por: "lucas"
+status: publicado
+aprovado_em: '2026-04-28'
+aprovado_por: lucas
 slot:
-  data: "2026-04-29"            # QUA
-  horario: "09:00 BRT"          # PME B2B abre o dia conferindo redes
+  data: '2026-04-29'
+  horario: 09:00 BRT
   justificativa: >
-    Quarta 09:00 BRT — pilar Dor encaixa bem no meio da semana, quando o
-    dono da PME já viu a previsão começar a furar e a peça espelha a dor
-    em hora de máxima ressonância.
+    Quarta 09:00 BRT — pilar Dor encaixa bem no meio da semana, quando o dono da PME já viu a previsão começar a furar e
+    a peça espelha a dor em hora de máxima ressonância.
 formato: feed-estatico
 slides: 1
 arquivos:
@@ -21,3 +17,6 @@ primeiro_comentario: null
 publicacao:
   metodo: instagram_graph_api
   acao_humana_necessaria: aprovacao_lucas_antes_de_postar
+published_at: '2026-04-29T12:52:50.286Z'
+media_id: '18004586603728612'
+permalink: https://www.instagram.com/p/DXt10foDw_h/
