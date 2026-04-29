@@ -1,0 +1,18 @@
+# --------------------------------------------------------
+# Pauta: Slide 2 (Contexto/Dor) · Carrossel pergunta
+# Calendário: QUI 30/04/2026
+# Pilar: MÉTODO
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-04-30_pergunta_02-contexto
+data:
+  pilar: "Método · O problema"
+  step-num: "O PROBLEMA"
+  titulo: "Vendedor faz pitch. Não faz pergunta."
+  body-1: |
+    A reunião vira monólogo da empresa<br>
+    explicando o produto pra <span class="miolo-emphasis">cliente que ainda não decidiu nada</span>.
+  body-2: |
+    Aí o follow-up morre. Porque ninguém sabe o que tá faltando.
+  slide-number: "02 / 04"
+  handle: "@tribocrmoficial"

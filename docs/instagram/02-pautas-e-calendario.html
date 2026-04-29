@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>TriboCRM no Instagram — Bloco 2: Pautas e Calendário</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
+
+  :root{
+    --bg:#0a0a0a;
+    --bg-elev:#141414;
+    --bg-card:#1a1a1a;
+    --border:#2a2a2a;
+    --border-strong:#3a3a3a;
+    --text:#fafafa;
+    --text-muted:#a3a3a3;
+    --text-soft:#737373;
+    --accent:#f97316;
+    --accent-soft:rgba(249,115,22,.12);
+    --accent-line:rgba(249,115,22,.35);
+    --p1:#f97316; --p1-soft:rgba(249,115,22,.12);
+    --p2:#ef4444; --p2-soft:rgba(239,68,68,.12);
+    --p3:#eab308; --p3-soft:rgba(234,179,8,.12);
+    --p4:#22c55e; --p4-soft:rgba(34,197,94,.12);
+    --p5:#a855f7; --p5-soft:rgba(168,85,247,.12);
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth;scroll-padding-top:24px}
+
+  body{
+    font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    background:var(--bg);color:var(--text);
+    font-size:15px;line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .layout{display:grid;grid-template-columns:260px 1fr;min-height:100vh}
+
+  /* SIDEBAR */
+  aside{
+    position:sticky;top:0;height:100vh;
+    background:var(--bg-elev);border-right:1px solid var(--border);
+    padding:28px 22px;overflow-y:auto;
+  }
+  .brand{display:flex;align-items:center;gap:12px;margin-bottom:28px}
+  .brand-mark{width:40px;height:40px;flex-shrink:0}
+  .brand-text{font-weight:800;font-size:18px;letter-spacing:-.01em}
+  .brand-text span{color:var(--accent);font-weight:800}
+  .brand-sub{font-size:11px;color:var(--text-soft);margin-top:2px;letter-spacing:.04em;text-transform:uppercase}
+  .nav-label{font-size:10px;color:var(--text-soft);text-transform:uppercase;letter-spacing:.12em;margin:18px 0 8px;font-weight:600}
+  nav a{
+    display:flex;align-items:center;gap:10px;
+    color:var(--text-muted);text-decoration:none;
+    padding:7px 10px;border-radius:6px;
+    font-size:13px;line-height:1.4;transition:all .15s;
+  }
+  nav a:hover{color:var(--text);background:rgba(255,255,255,.03)}
+  nav a .num{font-size:10px;color:var(--text-soft);background:var(--bg-card);padding:2px 6px;border-radius:4px;font-variant-numeric:tabular-nums}
+
+  .status-pill{
+    display:inline-flex;align-items:center;gap:6px;
+    background:var(--accent-soft);color:var(--accent);
+    padding:5px 10px;border-radius:999px;
+    font-size:11px;font-weight:600;
+    border:1px solid var(--accent-line);margin-top:14px;
+  }
+  .status-pill::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent)}
+
+  /* MAIN */
+  main{padding:48px 56px 120px;max-width:1040px}
+  .hero{margin-bottom:48px;padding-bottom:32px;border-bottom:1px solid var(--border)}
+  .breadcrumb{font-size:12px;color:var(--text-soft);margin-bottom:14px;letter-spacing:.04em;text-transform:uppercase}
+  .breadcrumb b{color:var(--accent);font-weight:600}
+  h1{font-size:40px;font-weight:800;letter-spacing:-.025em;line-height:1.1;margin-bottom:14px}
+  .lede{font-size:17px;color:var(--text-muted);max-width:720px;line-height:1.55}
+
+  section{margin:64px 0;scroll-margin-top:24px}
+  h2{font-size:24px;font-weight:700;letter-spacing:-.015em;margin-bottom:6px;display:flex;align-items:baseline;gap:14px}
+  h2 .num{font-size:13px;color:var(--accent);font-weight:600;background:var(--accent-soft);padding:4px 10px;border-radius:6px;border:1px solid var(--accent-line)}
+  h3{font-size:18px;font-weight:600;letter-spacing:-.005em;margin:28px 0 12px;color:var(--text)}
+  h4{font-size:15px;font-weight:600;margin:20px 0 8px}
+  .section-lead{color:var(--text-muted);margin-bottom:28px;max-width:720px}
+  p{margin:10px 0;color:var(--text-muted)}
+  strong{color:var(--text);font-weight:600}
+
+  /* HOOKS */
+  .pilar-block{
+    background:var(--bg-card);
+    border:1px solid var(--border);
+    border-left:4px solid;
+    border-radius:10px;
+    padding:24px 26px;
+    margin:18px 0;
+  }
+  .pilar-block.p1{border-left-color:var(--p1)}
+  .pilar-block.p2{border-left-color:var(--p2)}
+  .pilar-block.p3{border-left-color:var(--p3)}
+  .pilar-block.p4{border-left-color:var(--p4)}
+  .pilar-block.p5{border-left-color:var(--p5)}
+
+  .pilar-head{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+  .pilar-title{font-size:18px;font-weight:700}
+  .pilar-tag{font-size:11px;font-weight:600;padding:3px 9px;border-radius:6px;text-transform:uppercase;letter-spacing:.06em}
+  .pilar-block.p1 .pilar-tag{background:var(--p1-soft);color:var(--p1)}
+  .pilar-block.p2 .pilar-tag{background:var(--p2-soft);color:var(--p2)}
+  .pilar-block.p3 .pilar-tag{background:var(--p3-soft);color:var(--p3)}
+  .pilar-block.p4 .pilar-tag{background:var(--p4-soft);color:var(--p4)}
+  .pilar-block.p5 .pilar-tag{background:var(--p5-soft);color:var(--p5)}
+
+  .subgroup{font-size:11px;color:var(--text-soft);text-transform:uppercase;letter-spacing:.1em;font-weight:600;margin:14px 0 6px}
+  .hooks-list{list-style:none;padding:0;margin:0}
+  .hooks-list li{
+    color:var(--text);font-size:14px;
+    padding:8px 12px;border-radius:6px;
+    margin:3px 0;line-height:1.45;
+    display:flex;gap:10px;
+    transition:background .15s;
+  }
+  .hooks-list li:hover{background:rgba(255,255,255,.025)}
+  .hooks-list .hnum{color:var(--text-soft);font-variant-numeric:tabular-nums;font-size:12px;flex-shrink:0;min-width:22px;font-weight:600}
+
+  /* STRUCTURES */
+  .struct-card{
+    background:var(--bg-card);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:20px 24px;
+    margin:14px 0;
+  }
+  .struct-card h4{font-size:15px;font-weight:700;margin:0 0 6px;color:var(--text)}
+  .struct-card .meta{font-size:11px;color:var(--text-soft);text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px}
+  .struct-flow{
+    background:var(--bg-elev);
+    border-radius:6px;padding:14px 16px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:12px;line-height:1.7;color:var(--text-muted);
+    white-space:pre-wrap;
+  }
+  .struct-flow strong{color:var(--accent);font-weight:600}
+  .struct-rules{margin-top:10px;font-size:13px;color:var(--text-muted)}
+  .struct-rules li{margin:4px 0 4px 18px}
+
+  /* CALENDAR */
+  .week-block{
+    background:var(--bg-card);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:20px;
+    margin:14px 0;
+  }
+  .week-head{display:flex;align-items:baseline;gap:14px;margin-bottom:14px}
+  .week-num{font-size:11px;color:var(--accent);font-weight:700;background:var(--accent-soft);padding:3px 9px;border-radius:6px;letter-spacing:.06em}
+  .week-name{font-size:16px;font-weight:700}
+  .week-dates{font-size:12px;color:var(--text-soft);margin-left:auto}
+
+  .day-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+  .dcell{
+    background:var(--bg-elev);
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:10px 8px;
+    min-height:140px;
+    font-size:11px;
+    display:flex;flex-direction:column;
+  }
+  .dcell .dow{font-weight:700;color:var(--accent);letter-spacing:.06em;font-size:10px;margin-bottom:2px}
+  .dcell .date{color:var(--text-soft);font-size:11px;margin-bottom:8px;font-variant-numeric:tabular-nums}
+  .dcell .fmt{font-weight:700;color:var(--text);font-size:11px;margin-bottom:2px}
+  .dcell .pilar{display:inline-block;padding:1px 6px;border-radius:4px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;align-self:flex-start}
+  .dcell .pauta{color:var(--text-muted);font-size:10px;line-height:1.4;flex:1}
+  .dcell.p1 .pilar{background:var(--p1-soft);color:var(--p1)}
+  .dcell.p2 .pilar{background:var(--p2-soft);color:var(--p2)}
+  .dcell.p3 .pilar{background:var(--p3-soft);color:var(--p3)}
+  .dcell.p4 .pilar{background:var(--p4-soft);color:var(--p4)}
+  .dcell.p5 .pilar{background:var(--p5-soft);color:var(--p5)}
+  .dcell.off{opacity:.4}
+
+  /* SERIES (M2/M3) */
+  .series-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .series-card{
+    background:var(--bg-card);
+    border:1px solid var(--border);
+    border-radius:10px;padding:20px;
+  }
+  .series-num{font-size:11px;color:var(--accent);font-weight:700;letter-spacing:.06em;margin-bottom:6px}
+  .series-name{font-size:16px;font-weight:700;margin-bottom:12px}
+  .series-list{padding-left:18px;font-size:13px;color:var(--text-muted)}
+  .series-list li{margin:4px 0}
+
+  /* COPY MOCKUPS */
+  .copy-block{
+    background:var(--bg-card);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:28px;
+    margin:18px 0;
+  }
+  .copy-meta{font-size:11px;color:var(--accent);font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+  .copy-title{font-size:20px;font-weight:700;margin-bottom:18px}
+  .slides-rail{
+    display:flex;gap:14px;overflow-x:auto;padding:8px 0 18px;
+    margin:0 -8px;padding-left:8px;
+    scrollbar-color:var(--accent) var(--bg-elev);
+  }
+  .slides-rail::-webkit-scrollbar{height:8px}
+  .slides-rail::-webkit-scrollbar-track{background:var(--bg-elev);border-radius:4px}
+  .slides-rail::-webkit-scrollbar-thumb{background:var(--accent);border-radius:4px}
+
+  .slide{
+    flex-shrink:0;
+    width:240px;height:300px;  /* 4:5 ratio simulando 1080×1350 */
+    border-radius:10px;
+    background:#0a0a0a;
+    border:1px solid var(--border-strong);
+    padding:22px 20px;
+    display:flex;flex-direction:column;
+    position:relative;
+    font-family:'DM Sans',sans-serif;
+    overflow:hidden;
+  }
+  .slide-num{
+    position:absolute;top:10px;right:12px;
+    font-size:10px;color:var(--text-soft);
+    font-weight:700;letter-spacing:.06em;
+  }
+  .slide-d{
+    position:absolute;bottom:14px;right:14px;
+    width:24px;height:24px;
+  }
+  .slide-sig{
+    position:absolute;bottom:18px;left:22px;
+    font-size:9px;color:rgba(255,255,255,.5);
+    letter-spacing:.05em;font-weight:600;
+  }
+  .slide h5{
+    font-size:18px;font-weight:800;line-height:1.15;
+    color:#fff;letter-spacing:-.015em;
+    margin-top:10px;
+  }
+  .slide h5 .acc{color:var(--accent)}
+  .slide p{font-size:11px;color:rgba(255,255,255,.85);line-height:1.45;margin:6px 0}
+  .slide .body{flex:1;display:flex;flex-direction:column;justify-content:center;margin-top:14px}
+  .slide.cover .body{justify-content:flex-start;padding-top:14px}
+  .slide.cta{background:linear-gradient(135deg,#f97316,#ea580c)}
+  .slide.cta h5{color:#0a0a0a;font-size:20px}
+  .slide.cta p{color:rgba(0,0,0,.85)}
+  .slide.cta .slide-sig{color:rgba(0,0,0,.6)}
+  .slide.manifesto{justify-content:center;align-items:flex-start;text-align:left}
+  .slide.manifesto h5{font-size:26px;line-height:1.1;font-weight:800}
+  .arrow{font-size:24px;color:var(--accent);position:absolute;bottom:18px;right:50px;font-weight:800}
+
+  /* REEL MOCK */
+  .reel-mock{
+    width:240px;height:340px;  /* 9:16 simulando reel */
+    border-radius:10px;
+    background:#0a0a0a;border:1px solid var(--border-strong);
+    padding:20px;position:relative;overflow:hidden;
+    flex-shrink:0;
+  }
+  .reel-time{
+    position:absolute;top:14px;left:20px;
+    font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.06em;
+  }
+  .reel-cap{
+    position:absolute;bottom:80px;left:20px;right:20px;
+    font-size:14px;color:#fff;font-weight:700;line-height:1.3;
+  }
+  .reel-cap.punch{font-size:18px;font-weight:800}
+  .reel-cap .acc{color:var(--accent)}
+  .reel-d{position:absolute;bottom:14px;right:14px;width:22px;height:22px}
+  .reel-sig{position:absolute;bottom:18px;left:20px;font-size:9px;color:rgba(255,255,255,.5);font-weight:600;letter-spacing:.05em}
+
+  /* CAPTION */
+  .caption{
+    background:var(--bg-elev);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:16px 20px;
+    margin-top:16px;
+    font-size:13px;color:var(--text-muted);
+    line-height:1.55;white-space:pre-wrap;
+  }
+  .caption .meta{font-size:10px;color:var(--text-soft);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;font-weight:600}
+
+  /* CHECKLIST */
+  .checklist{background:var(--bg-card);border:1px solid var(--accent-line);border-radius:10px;padding:24px;margin:18px 0}
+  .check-item{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer}
+  .check-item:last-child{border-bottom:none}
+  .check-item input{
+    appearance:none;width:20px;height:20px;flex-shrink:0;
+    border:2px solid var(--border-strong);border-radius:4px;
+    cursor:pointer;background:var(--bg);margin-top:1px;
+    transition:all .15s;
+  }
+  .check-item input:checked{background:var(--accent);border-color:var(--accent)}
+  .check-item input:checked::after{content:"✓";display:flex;align-items:center;justify-content:center;height:100%;color:#000;font-weight:800;font-size:13px}
+  .check-item label{cursor:pointer;flex:1;color:var(--text-muted);font-size:14px;line-height:1.5}
+  .check-item input:checked + label{color:var(--text-soft);text-decoration:line-through}
+
+  .quote{
+    border-left:3px solid var(--accent);
+    padding:14px 22px;background:var(--accent-soft);
+    margin:18px 0;font-size:14px;color:var(--text);
+    border-radius:0 8px 8px 0;
+  }
+
+  .footnote{font-size:12px;color:var(--text-soft);margin-top:32px;padding-top:24px;border-top:1px solid var(--border)}
+
+  /* PRINT */
+  @media print{
+    body{background:#fff;color:#000;font-size:11pt}
+    aside{display:none}
+    .layout{grid-template-columns:1fr}
+    main{padding:24px;max-width:none}
+    .pilar-block,.struct-card,.week-block,.series-card,.copy-block,.checklist{background:#fff;border-color:#ccc;break-inside:avoid}
+    h1,h2,h3,h4,h5,p,td,li,strong{color:#000 !important}
+    .dcell{background:#fafafa;color:#000;border-color:#ccc}
+    .slide,.reel-mock{background:#0a0a0a;color:#fff}
+    .slide h5,.slide p,.reel-cap{color:#fff !important}
+    section{break-inside:avoid;page-break-inside:avoid}
+    h2{break-after:avoid}
+    .slides-rail{flex-wrap:wrap;overflow:visible}
+  }
+
+  @media (max-width:900px){
+    .layout{grid-template-columns:1fr}
+    aside{position:relative;height:auto}
+    main{padding:24px}
+    .day-grid{grid-template-columns:repeat(2,1fr)}
+    .series-grid{grid-template-columns:1fr}
+    h1{font-size:30px}
+  }
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <aside>
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <rect width="100" height="100" rx="14" fill="#f97316"/>
+        <rect x="22" y="26" width="56" height="13" fill="#fff"/>
+        <rect x="43" y="26" width="14" height="50" fill="#fff"/>
+        <circle cx="28" cy="32.5" r="4" fill="#f97316"/>
+        <circle cx="72" cy="32.5" r="4" fill="#f97316"/>
+      </svg>
+      <div>
+        <div class="brand-text">Tribo<span>CRM</span></div>
+        <div class="brand-sub">Plano Instagram</div>
+      </div>
+    </div>
+
+    <div class="status-pill">Bloco 2 · Em revisão</div>
+
+    <div class="nav-label">Navegação</div>
+    <nav>
+      <a href="#hooks"><span class="num">01</span> Banco de hooks</a>
+      <a href="#estruturas"><span class="num">02</span> Estruturas-padrão</a>
+      <a href="#mes1"><span class="num">03</span> Calendário Mês 1</a>
+      <a href="#mes2"><span class="num">04</span> Calendário Mês 2</a>
+      <a href="#mes3"><span class="num">05</span> Calendário Mês 3</a>
+      <a href="#copies"><span class="num">06</span> Copies prontas</a>
+      <a href="#aprovacao"><span class="num">07</span> Aprovação</a>
+    </nav>
+
+    <div class="nav-label" style="margin-top:32px">Status dos blocos</div>
+    <nav>
+      <a href="01-estrategia-canal.html"><span class="num">B1</span> Estratégia · ✅</a>
+      <a href="#" style="color:var(--accent)"><span class="num">B2</span> Pautas · 🟢</a>
+      <a href="#" style="opacity:.5;pointer-events:none"><span class="num">B3</span> Sistema visual</a>
+      <a href="#" style="opacity:.5;pointer-events:none"><span class="num">B4</span> Pipeline</a>
+      <a href="#" style="opacity:.5;pointer-events:none"><span class="num">B5</span> Operação</a>
+    </nav>
+  </aside>
+
+  <main>
+
+    <header class="hero">
+      <div class="breadcrumb">Plano de Comunicação · <b>Bloco 2 de 5</b> · Pautas e Calendário</div>
+      <h1>115 hooks. 8 estruturas. 90 dias mapeados. 3 copies prontas pra calibrar o tom.</h1>
+      <p class="lede">A esteira de produção começa aqui. Banco de pautas distribuído pelos 5 pilares na proporção 40/20/15/15/10, estruturas reutilizáveis por formato, calendário Mês 1 dia-a-dia e séries temáticas pros Meses 2 e 3. Tudo passa pelo teste do troca-nome.</p>
+    </header>
+
+    <!-- 1. HOOKS -->
+    <section id="hooks">
+      <h2><span class="num">01</span> Banco de hooks por pilar</h2>
+      <p class="section-lead">Use como ponto de partida pra cada pauta. Reescreva pra encaixar no contexto, mas mantenha a especificidade.</p>
+
+      <div class="pilar-block p1">
+        <div class="pilar-head">
+          <div class="pilar-title">Pilar 1 — Método</div>
+          <div class="pilar-tag">40% · 30 hooks</div>
+        </div>
+
+        <div class="subgroup">Funil e etapas</div>
+        <ul class="hooks-list">
+          <li><span class="hnum">01</span>Os 4 momentos do funil que sua PME provavelmente tá pulando</li>
+          <li><span class="hnum">02</span>A etapa do funil que ninguém ensina porque ninguém faz: a qualificação dura</li>
+          <li><span class="hnum">03</span>Por que o "lead quente" da segunda virou "lead morto" na sexta</li>
+          <li><span class="hnum">04</span>A diferença entre vendedor caçador e vendedor fazendeiro — e por que sua PME precisa dos dois</li>
+          <li><span class="hnum">05</span>Como saber em qual etapa do funil seu time tá vazando dinheiro</li>
+        </ul>
+
+        <div class="subgroup">Cadência e follow-up</div>
+        <ul class="hooks-list">
+          <li><span class="hnum">06</span>A cadência de 7 toques: o ritmo de follow-up que não vira perseguição</li>
+          <li><span class="hnum">07</span>O timing certo do segundo contato (não é 24h)</li>
+          <li><span class="hnum">08</span>Como retomar lead esquecido sem soar desesperado</li>
+          <li><span class="hnum">09</span>Por que a PME brasileira perde 30% das vendas no esquecimento</li>
+          <li><span class="hnum">10</span>A regra do "next step claro": sem isso, é lead morto</li>
+        </ul>
+
+        <div class="subgroup">Forecast e pipeline</div>
+        <ul class="hooks-list">
+          <li><span class="hnum">11</span>Forecast que você defende na reunião com o sócio</li>
+          <li><span class="hnum">12</span>A conta que você tem que fazer toda sexta (e quase ninguém faz)</li>
+          <li><span class="hnum">13</span>Pipeline limpo em 30 minutos: o ritual de sexta</li>
+          <li><span class="hnum">14</span>Como ler um pipeline em 5 minutos</li>
+          <li><span class="hnum">15</span>Por que sua taxa de conversão tá mentindo pra você</li>
+        </ul>
+
+        <div class="subgroup">Qualificação</div>
+        <ul class="hooks-list">
+          <li><span class="hnum">16</span>3 perguntas que separam lead de tempo perdido</li>
+          <li><span class="hnum">17</span>O método dos 3 "sims" antes da proposta</li>
+          <li><span class="hnum">18</span>Como qualificar lead sem ofender o cliente</li>
+          <li><span class="hnum">19</span>A pergunta que descobre orçamento sem perguntar valor</li>
+          <li><span class="hnum">20</span>Lead bom não responde "vou pensar". Sabe por quê?</li>
+        </ul>
+
+        <div class="subgroup">Processo e time</div>
+        <ul class="hooks-list">
+          <li><span class="hnum">21</span>Por que vendedor bom vende mal sem método (e não é talento que falta)</li>
+          <li><span class="hnum">22</span>Como passar o método pro time sem virar treinamento chato</li>
+          <li><span class="hnum">23</span>A reunião comercial de segunda em 30 minutos: o roteiro</li>
+          <li><span class="hnum">24</span>Como saber se sua reunião comercial virou terapia</li>
+          <li><span class="hnum">25</span>O ritual diário de 15 minutos que destrava equipe travada</li>
+        </ul>
+
+        <div class="subgroup">Métricas</div>
+        <ul class="hooks-list">
+          <li><span class="hnum">26</span>Tempo médio do ciclo de venda: a métrica que muda como você vende</li>
+          <li><span class="hnum">27</span>Taxa de conversão por etapa: o mapa que ninguém faz</li>
+          <li><span class="hnum">28</span>CAC pra PME brasileira: a conta que importa</li>
+          <li><span class="hnum">29</span>Ticket médio mentiroso: como ele tá te enganando</li>
+          <li><span class="hnum">30</span>As 4 métricas que cabem na sexta-feira do dono</li>
+        </ul>
+      </div>
+
+      <div class="pilar-block p2">
+        <div class="pilar-head">
+          <div class="pilar-title">Pilar 2 — Dor da PME</div>
+          <div class="pilar-tag">20% · 25 hooks</div>
+        </div>
+
+        <div class="subgroup">Caos da sexta-feira</div>
+        <ul class="hooks-list">
+          <li><span class="hnum">01</span>Sexta às 18h: ninguém sabe quanto fechou na semana</li>
+          <li><span class="hnum">02</span>Reunião de pipeline que vira reunião de desculpa</li>
+          <li><span class="hnum">03</span>"Tá fechando bem" — a frase que não diz nada</li>
+          <li><span class="hnum">04</span>O Excel da sexta que ninguém olha</li>
+          <li><span class="hnum">05</span>Quando o dono pergunta o forecast e silêncio responde</li>
+        </ul>
+
+        <div class="subgroup">Lead esquecido</div>
+        <ul class="hooks-list">
+          <li><span class="hnum">06</span>"Cadê aquele lead da semana passada?" — "Hum, deixa eu ver no WhatsApp"</li>
+          <li><span class="hnum">07</span>O grupo do WhatsApp 'Comercial' que ninguém respeita</li>
+          <li><span class="hnum">08</span>Quando o cliente liga e o vendedor não lembra do que falou</li>
+          <li><span class="hnum">09</span>Lead bom esquecido na caixa de entrada</li>
+          <li><span class="hnum">10</span>"Vou ligar amanhã" — e amanhã virou semana que vem</li>
+        </ul>
+
+        <div class="subgroup">Ferramentas que não funcionam</div>
+        <ul class="hooks-list">
+          <li><span class="hnum">11</span>Planilha de 47 abas pra gerenciar 12 vendedores</li>
+          <li><span class="hnum">12</span>O CRM que você pagou 3 anos e ninguém usa</li>
+          <li><span class="hnum">13</span>Quando "atualizar o CRM" virou tarefa do estagiário</li>
+          <li><span class="hnum">14</span>A planilha que só o gerente entende</li>
+          <li><span class="hnum">15</span>Sistema bonito que ninguém abre</li>
+        </ul>
+
+        <div class="subgroup">Pessoas</div>
+        <ul class="hooks-list">
+          <li><span class="hnum">16</span>Quando o melhor vendedor pede demissão e leva o pipeline na cabeça</li>
+          <li><span class="hnum">17</span>Quando o dono é o melhor vendedor (e não consegue sair)</li>
+          <li><span class="hnum">18</span>Vendedor que vende muito mas não conta nada pro time</li>
+          <li><span class="hnum">19</span>Time que cresce mas a venda não escala</li>
+          <li><span class="hnum">20</span>Contratei 3 vendedores e o resultado piorou — sabe por quê?</li>
+        </ul>
+
+        <div class="subgroup">Forecast e decisão</div>
+        <ul class="hooks-list">
+          <li><span class="hnum">21</span>Forecast no achismo: "acho que esse mês fecha bem"</li>
+          <li><span class="hnum">22</span>Decisão de contratar baseada em "fecha mês que vem"</li>
+          <li><span class="hnum">23</span>Quando a meta vira mistério e o time vira fatalista</li>
+          <li><span class="hnum">24</span>"Mês difícil" — frase de quem não tem método</li>
+          <li><span class="hnum">25</span>A reunião comercial que vira terapia: "tô correndo atrás"</li>
+        </ul>
+      </div>
+
+      <div class="pilar-block p3">
+        <div class="pilar-head">
+          <div class="pilar-title">Pilar 3 — Bastidor</div>
+          <div class="pilar-tag">15% · 20 hooks</div>
+        </div>
+        <ul class="hooks-list">
+          <li><span class="hnum">01</span>Decisão difícil dessa semana: como mostramos o pipeline mudou</li>
+          <li><span class="hnum">02</span>Cliente ligou agradecendo. Aí a gente parou pra escutar.</li>
+          <li><span class="hnum">03</span>A feature que a gente quase fez (e por que não fez)</li>
+          <li><span class="hnum">04</span>Reunião onde quase mudamos tudo</li>
+          <li><span class="hnum">05</span>Como a gente decide o que vai virar feature</li>
+          <li><span class="hnum">06</span>O dia que o cliente ensinou a gente a usar o próprio produto</li>
+          <li><span class="hnum">07</span>Anti-feature da semana: por que NÃO temos chat dentro do CRM</li>
+          <li><span class="hnum">08</span>Como nasceu a ideia da cadência de domingo</li>
+          <li><span class="hnum">09</span>Erro que a gente cometeu e custou caro</li>
+          <li><span class="hnum">10</span>Por que a gente fala "a gente" e não "nós"</li>
+          <li><span class="hnum">11</span>Bastidor de uma decisão de produto: por que mudamos a tela do funil</li>
+          <li><span class="hnum">12</span>A reunião de segunda interna: o que rola</li>
+          <li><span class="hnum">13</span>O que aprendemos com cliente que cancelou</li>
+          <li><span class="hnum">14</span>Por que demoramos pra lançar X (e não foi preguiça)</li>
+          <li><span class="hnum">15</span>O caderno de ideias que ninguém vai ver — exceto agora</li>
+          <li><span class="hnum">16</span>Como a gente testa coisa nova sem quebrar o produto</li>
+          <li><span class="hnum">17</span>A reunião que durou 4h e mudou o roadmap</li>
+          <li><span class="hnum">18</span>Por que escolhemos PME brasileira e não internacional</li>
+          <li><span class="hnum">19</span>O dia que falamos NÃO pra um cliente (e foi a melhor coisa)</li>
+          <li><span class="hnum">20</span>Por que a gente não cobra implementação</li>
+        </ul>
+      </div>
+
+      <div class="pilar-block p4" style="opacity:0.55;border:2px dashed #c00;background:rgba(255,200,0,.04)">
+        <div class="pilar-head">
+          <div class="pilar-title">Pilar 4 — Prova <span style="font-size:0.65em;background:#c00;color:#fff;padding:2px 8px;border-radius:4px;vertical-align:middle">🛑 SUSPENSO 28/04/2026</span></div>
+          <div class="pilar-tag">0% · banco preservado</div>
+        </div>
+        <p style="font-size:12px;color:var(--text-soft);margin-bottom:12px"><strong>Pilar suspenso até existirem clientes reais com permissão escrita.</strong> Os 20 hooks abaixo ficam preservados como banco — usar SOMENTE após reativação (≥3 clientes pagantes + autorização escrita + métrica concreta).</p>
+        <details>
+          <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--text-soft);margin-bottom:8px">Ver 20 hooks preservados (não publicar)</summary>
+          <ul class="hooks-list">
+            <li><span class="hnum">01</span>[Cliente, segmento]: de planilha pro pipeline em 2 semanas</li>
+            <li><span class="hnum">02</span>[Cliente] passou a fazer forecast com 90% de precisão. O método foi esse.</li>
+            <li><span class="hnum">03</span>[Cliente] rastreou a primeira venda no dia 11 do CRM</li>
+            <li><span class="hnum">04</span>Como [Cliente] reduziu o tempo médio de proposta de 4 dias pra 18h</li>
+            <li><span class="hnum">05</span>[Cliente] saiu do achismo e passou a defender forecast em reunião</li>
+            <li><span class="hnum">06</span>O que muda quando o dono vê o pipeline pela primeira vez</li>
+            <li><span class="hnum">07</span>Print do funil real do [Cliente], com permissão</li>
+            <li><span class="hnum">08</span>[Cliente] parou de perder lead no esquecimento</li>
+            <li><span class="hnum">09</span>Antes/depois: a sexta-feira do gestor da [empresa]</li>
+            <li><span class="hnum">10</span>[Cliente] dobrou de 4 pra 8 vendedores sem perder controle</li>
+            <li><span class="hnum">11</span>[Cliente]: como saiu do "tô correndo atrás" pra "tenho dado pra defender"</li>
+            <li><span class="hnum">12</span>A primeira reunião comercial de segunda do [Cliente] depois do método</li>
+            <li><span class="hnum">13</span>[Cliente]: do WhatsApp pro pipeline em 1 semana</li>
+            <li><span class="hnum">14</span>Como [Cliente] fez o sócio voltar a confiar no forecast</li>
+            <li><span class="hnum">15</span>[Cliente] reduziu ciclo de venda de 45 pra 22 dias</li>
+            <li><span class="hnum">16</span>Quando o time do [Cliente] começou a pedir o CRM (não foi imposto)</li>
+            <li><span class="hnum">17</span>[Cliente]: o vendedor que mais reclamou virou o que mais usa</li>
+            <li><span class="hnum">18</span>[Cliente]: a virada de chave foi numa reunião de domingo</li>
+            <li><span class="hnum">19</span>Depoimento de [nome do dono]: "voltei a dormir tranquilo"</li>
+            <li><span class="hnum">20</span>Print da reunião de pipeline do [Cliente] — 6 meses depois</li>
+          </ul>
+        </details>
+      </div>
+
+      <div class="pilar-block p5">
+        <div class="pilar-head">
+          <div class="pilar-title">Pilar 5 — Manifesto</div>
+          <div class="pilar-tag">10% · 20 frases</div>
+        </div>
+        <ul class="hooks-list">
+          <li><span class="hnum">01</span>Vender de verdade não é talento. É método.</li>
+          <li><span class="hnum">02</span>Toda venda perdida por desorganização vira passado.</li>
+          <li><span class="hnum">03</span>A gente não vende CRM. A gente faz Máquina de Vendas rodar.</li>
+          <li><span class="hnum">04</span>PME brasileira não precisa de Salesforce. Precisa de método.</li>
+          <li><span class="hnum">05</span>A planilha tá te servindo ou tá te escondendo?</li>
+          <li><span class="hnum">06</span>Pipeline limpo é decisão de domingo, não de quinta.</li>
+          <li><span class="hnum">07</span>Cowboy vende sozinho. Tribo vende todo dia.</li>
+          <li><span class="hnum">08</span>Forecast no achismo é venda perdida no calendário.</li>
+          <li><span class="hnum">09</span>Vender é ofício. Ofício precisa de ferramenta.</li>
+          <li><span class="hnum">10</span>CRM que ninguém usa é planilha cara.</li>
+          <li><span class="hnum">11</span>Sua PME não precisa de mais leads. Precisa de mais método.</li>
+          <li><span class="hnum">12</span>Quem mede vende. Quem acha negocia.</li>
+          <li><span class="hnum">13</span>Método não rouba a alma do vendedor. Devolve o tempo dele.</li>
+          <li><span class="hnum">14</span>A diferença entre vender e ter sorte é o processo.</li>
+          <li><span class="hnum">15</span>Reunião comercial sem dado é grupo de apoio.</li>
+          <li><span class="hnum">16</span>Vendedor sem método é guerreiro sem estratégia.</li>
+          <li><span class="hnum">17</span>Crescer sem método é sorte. Sorte acaba.</li>
+          <li><span class="hnum">18</span>Quem não escreve esquece. Quem esquece perde.</li>
+          <li><span class="hnum">19</span>A gente não vende pra todo mundo. Vende pra quem vende de verdade.</li>
+          <li><span class="hnum">20</span>Tribo é gente que vende todo dia, não todo mês.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 2. ESTRUTURAS -->
+    <section id="estruturas">
+      <h2><span class="num">02</span> Estruturas-padrão de copy</h2>
+      <p class="section-lead">Frameworks reutilizáveis. Formato → estrutura → regras. Vai virar template HTML no Bloco 3.</p>
+
+      <div class="struct-card">
+        <h4>Carrossel-MÉTODO (8-10 slides) · formato principal</h4>
+        <div class="meta">Salvamento como métrica primária</div>
+        <div class="struct-flow"><strong>SLIDE 1 · CAPA</strong>          → Hook + promessa específica + indicação de "arrasta"
+<strong>SLIDE 2 · DOR</strong>           → Por que isso importa (reconhecimento)
+<strong>SLIDE 3 · ERRO COMUM</strong>    → O que quase todo mundo faz errado
+<strong>SLIDE 4-7 · MÉTODO</strong>      → 1 passo por slide (com micro-exemplo)
+<strong>SLIDE 8 · TEMPLATE</strong>      → Mini-checklist ou template aplicável
+<strong>SLIDE 9 · ANCORAGEM</strong>     → Síntese, princípio ou número público (não case de cliente — Prova suspenso 28/04)
+<strong>SLIDE 10 · CTA</strong>          → "Salva pra rodar com seu time" + handle</div>
+        <ul class="struct-rules">
+          <li>Slide 1 e 10 carregam o post inteiro — caprichar</li>
+          <li>Cada slide ≤ 35 palavras</li>
+          <li>1 ideia por slide; sem subtópicos</li>
+          <li>Contraste tipográfico: frase-chave grande, contexto pequeno</li>
+        </ul>
+      </div>
+
+      <div class="struct-card" style="opacity:0.55;border:2px dashed #c00;background:rgba(255,200,0,.04)">
+        <h4>Carrossel-PROVA (6-8 slides) <span style="font-size:0.65em;background:#c00;color:#fff;padding:2px 8px;border-radius:4px">🛑 SUSPENSO</span></h4>
+        <div class="meta">Estrutura preservada — não usar até cliente real com permissão escrita</div>
+        <div class="struct-flow"><strong>SLIDE 1 · CAPA</strong>          → Nome do cliente + segmento + transformação
+<strong>SLIDE 2 · ESTADO ANTES</strong>  → Print/dado/cena vívida do "antes"
+<strong>SLIDE 3 · A VIRADA</strong>      → Qual decisão tomou (ato concreto)
+<strong>SLIDE 4-5 · O QUE MUDOU</strong> → Print do CRM, dashboard, número
+<strong>SLIDE 6 · FALA DO DONO</strong>  → Citação direta com aspas
+<strong>SLIDE 7-8 · LIÇÃO + CTA</strong> → "Quer ver isso rodando? Link na bio"</div>
+      </div>
+
+      <div class="struct-card">
+        <h4>Reel-DOR (15-30s · 3 atos)</h4>
+        <div class="meta">Alcance via reconhecimento</div>
+        <div class="struct-flow"><strong>0-3s</strong>   → GANCHO DE RECONHECIMENTO ("Sabe quando...")
+<strong>3-15s</strong>  → DESCRIÇÃO VÍVIDA da cena (real, específica)
+<strong>15-25s</strong> → PUNCH LINE (dar nome ao problema)
+<strong>25-30s</strong> → CTA SUAVE ("Comenta se já viveu")</div>
+        <ul class="struct-rules">
+          <li>Frase-impacto nos primeiros 3 segundos (sem isso, perdeu)</li>
+          <li>Cena específica vence comentário abstrato</li>
+          <li>Punch line dá NOME — vira termo que cliente repete</li>
+        </ul>
+      </div>
+
+      <div class="struct-card">
+        <h4>Reel-MÉTODO (30-60s)</h4>
+        <div class="meta">Educação em formato curto</div>
+        <div class="struct-flow"><strong>0-3s</strong>   → HOOK + PROMESSA
+<strong>3-15s</strong>  → O ERRO
+<strong>15-45s</strong> → MÉTODO EM 3 PASSOS (10s cada)
+<strong>45-60s</strong> → SÍNTESE DO MÉTODO + CTA "salva pra usar" (Prova suspenso · não usar case)</div>
+      </div>
+
+      <div class="struct-card">
+        <h4>Reel-BASTIDOR (30-90s)</h4>
+        <div class="meta">Pessoa Comum 70% · sem performance</div>
+        <div class="struct-flow"><strong>0-5s</strong>   → CONTEXTO ("Essa semana a gente teve uma decisão...")
+<strong>5-60s</strong>  → A HISTÓRIA (cena real)
+<strong>60-80s</strong> → O APRENDIZADO
+<strong>80-90s</strong> → CONVITE GENUÍNO ("Conta o que você acha")</div>
+      </div>
+
+      <div class="struct-card">
+        <h4>Feed-MANIFESTO (1080×1350)</h4>
+        <div class="meta">Manifesto ressoa, não converte direto</div>
+        <ul class="struct-rules">
+          <li>Frase única (5-12 palavras)</li>
+          <li>DM Sans 800, branco com palavra-chave em laranja</li>
+          <li>Símbolo D no canto inferior direito</li>
+          <li>Assinatura "TriboCRM" embaixo</li>
+          <li>Sem CTA</li>
+        </ul>
+      </div>
+
+      <div class="struct-card">
+        <h4>Feed-CITAÇÃO (1080×1350)</h4>
+        <ul class="struct-rules">
+          <li>Citação 1-2 frases (cliente, especialista, frase-chave)</li>
+          <li>Atribuição (nome + papel + segmento)</li>
+          <li>Símbolo D + assinatura</li>
+        </ul>
+      </div>
+
+      <div class="struct-card">
+        <h4>Story-ENQUETE / BASTIDOR / RECAP</h4>
+        <ul class="struct-rules">
+          <li><strong>Enquete:</strong> pergunta provocativa + binária A/B + resposta no story seguinte</li>
+          <li><strong>Bastidor:</strong> foto/vídeo crua + texto curto + convite a DM</li>
+          <li><strong>Recap:</strong> final de semana, 3-5 stories com prints da semana + sticker pra cada</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 3. CALENDÁRIO M1 -->
+    <section id="mes1">
+      <h2><span class="num">03</span> Calendário Mês 1 (dia-a-dia)</h2>
+      <p class="section-lead">Início assumido: <strong>segunda 04/05/2026</strong>. Cores indicam pilar — 🟧 Método · 🟥 Dor · 🟨 Bastidor · 🟪 Manifesto. <span style="opacity:0.6">(🟩 Prova suspenso 28/04 — sextas viram rotação Bastidor/Manifesto/Método)</span></p>
+
+      <div class="week-block">
+        <div class="week-head">
+          <div class="week-num">SEM 1</div>
+          <div class="week-name">Apresentação do método</div>
+          <div class="week-dates">04-10/05</div>
+        </div>
+        <div class="day-grid">
+          <div class="dcell p1"><div class="dow">SEG</div><div class="date">04/05</div><div class="fmt">Carrossel</div><span class="pilar">Método</span><div class="pauta">Os 4 momentos do funil que sua PME tá pulando</div></div>
+          <div class="dcell p2"><div class="dow">TER</div><div class="date">05/05</div><div class="fmt">Reel</div><span class="pilar">Dor</span><div class="pauta">Sexta às 18h: ninguém sabe quanto fechou na semana</div></div>
+          <div class="dcell p5"><div class="dow">QUA</div><div class="date">06/05</div><div class="fmt">Feed</div><span class="pilar">Manifesto</span><div class="pauta">"Vender de verdade não é talento. É método."</div></div>
+          <div class="dcell p3"><div class="dow">QUI</div><div class="date">07/05</div><div class="fmt">Reel</div><span class="pilar">Bastidor</span><div class="pauta">Por que a gente fala "a gente" e não "nós"</div></div>
+          <div class="dcell p3"><div class="dow">SEX</div><div class="date">08/05</div><div class="fmt">Carrossel</div><span class="pilar">Bastidor</span><div class="pauta">Como a gente decide o que NÃO entra no produto (3 anti-features)</div></div>
+          <div class="dcell"><div class="dow">SAB</div><div class="date">09/05</div><div class="fmt">Story</div><div class="pauta">Enquete: "Sua reunião comercial parece reunião ou terapia?"</div></div>
+          <div class="dcell off"><div class="dow">DOM</div><div class="date">10/05</div><div class="fmt">off</div></div>
+        </div>
+      </div>
+
+      <div class="week-block">
+        <div class="week-head">
+          <div class="week-num">SEM 2</div>
+          <div class="week-name">Cadência e esquecimento</div>
+          <div class="week-dates">11-17/05</div>
+        </div>
+        <div class="day-grid">
+          <div class="dcell p1"><div class="dow">SEG</div><div class="date">11/05</div><div class="fmt">Carrossel</div><span class="pilar">Método</span><div class="pauta">A cadência de 7 toques: ritmo que não vira perseguição</div></div>
+          <div class="dcell p2"><div class="dow">TER</div><div class="date">12/05</div><div class="fmt">Reel</div><span class="pilar">Dor</span><div class="pauta">Quando o melhor vendedor pede demissão e leva o pipeline na cabeça</div></div>
+          <div class="dcell p1"><div class="dow">QUA</div><div class="date">13/05</div><div class="fmt">Carrossel</div><span class="pilar">Método</span><div class="pauta">3 perguntas que separam lead de tempo perdido</div></div>
+          <div class="dcell p1"><div class="dow">QUI</div><div class="date">14/05</div><div class="fmt">Reel</div><span class="pilar">Método</span><div class="pauta">Forecast no achismo: como sair em 30 dias</div></div>
+          <div class="dcell p5"><div class="dow">SEX</div><div class="date">15/05</div><div class="fmt">Feed</div><span class="pilar">Manifesto</span><div class="pauta">"A planilha tá te servindo ou tá te escondendo?"</div></div>
+          <div class="dcell"><div class="dow">SAB</div><div class="date">16/05</div><div class="fmt">Story</div><div class="pauta">Bastidor: print de uma decisão de produto da semana</div></div>
+          <div class="dcell off"><div class="dow">DOM</div><div class="date">17/05</div><div class="fmt">off</div></div>
+        </div>
+      </div>
+
+      <div class="week-block">
+        <div class="week-head">
+          <div class="week-num">SEM 3</div>
+          <div class="week-name">Pipeline e forecast</div>
+          <div class="week-dates">18-24/05</div>
+        </div>
+        <div class="day-grid">
+          <div class="dcell p1"><div class="dow">SEG</div><div class="date">18/05</div><div class="fmt">Carrossel</div><span class="pilar">Método</span><div class="pauta">Pipeline limpo em 30 minutos: o ritual de sexta</div></div>
+          <div class="dcell p2"><div class="dow">TER</div><div class="date">19/05</div><div class="fmt">Reel</div><span class="pilar">Dor</span><div class="pauta">"Cadê aquele lead da semana passada?"</div></div>
+          <div class="dcell p5"><div class="dow">QUA</div><div class="date">20/05</div><div class="fmt">Feed</div><span class="pilar">Manifesto</span><div class="pauta">"A planilha tá te servindo ou tá te escondendo?"</div></div>
+          <div class="dcell p3"><div class="dow">QUI</div><div class="date">21/05</div><div class="fmt">Reel</div><span class="pilar">Bastidor</span><div class="pauta">A feature que a gente quase fez (e por que não fez)</div></div>
+          <div class="dcell p1"><div class="dow">SEX</div><div class="date">22/05</div><div class="fmt">Carrossel</div><span class="pilar">Método</span><div class="pauta">A conta de sexta: 30 min que limpam o pipeline da semana</div></div>
+          <div class="dcell"><div class="dow">SAB</div><div class="date">23/05</div><div class="fmt">Story</div><div class="pauta">Enquete: "Você sabe seu ticket médio sem olhar planilha?"</div></div>
+          <div class="dcell off"><div class="dow">DOM</div><div class="date">24/05</div><div class="fmt">off</div></div>
+        </div>
+      </div>
+
+      <div class="week-block">
+        <div class="week-head">
+          <div class="week-num">SEM 4</div>
+          <div class="week-name">Time e cultura</div>
+          <div class="week-dates">25-31/05</div>
+        </div>
+        <div class="day-grid">
+          <div class="dcell p1"><div class="dow">SEG</div><div class="date">25/05</div><div class="fmt">Carrossel</div><span class="pilar">Método</span><div class="pauta">Como passar o método pro time sem virar treinamento chato</div></div>
+          <div class="dcell p2"><div class="dow">TER</div><div class="date">26/05</div><div class="fmt">Reel</div><span class="pilar">Dor</span><div class="pauta">A reunião comercial que vira terapia: "tô correndo atrás"</div></div>
+          <div class="dcell p1"><div class="dow">QUA</div><div class="date">27/05</div><div class="fmt">Carrossel</div><span class="pilar">Método</span><div class="pauta">O ritual diário de 15 minutos que destrava equipe travada</div></div>
+          <div class="dcell p3"><div class="dow">QUI</div><div class="date">28/05</div><div class="fmt">Reel</div><span class="pilar">Bastidor</span><div class="pauta">O dia que o cliente ensinou a gente a usar o próprio produto</div></div>
+          <div class="dcell p3"><div class="dow">SEX</div><div class="date">29/05</div><div class="fmt">Reel</div><span class="pilar">Bastidor</span><div class="pauta">A reunião onde a gente quase mudou tudo (e por que não mudou)</div></div>
+          <div class="dcell"><div class="dow">SAB</div><div class="date">30/05</div><div class="fmt">Story</div><div class="pauta">Recap visual da semana + enquete</div></div>
+          <div class="dcell off"><div class="dow">DOM</div><div class="date">31/05</div><div class="fmt">off</div></div>
+        </div>
+      </div>
+
+      <div class="quote">
+        <strong>Totais Mês 1:</strong> 12 carrosséis · 8 reels · 4 feeds/stories ⨯ ~60 stories
+      </div>
+    </section>
+
+    <!-- 4. MÊS 2 -->
+    <section id="mes2">
+      <h2><span class="num">04</span> Calendário Mês 2 — séries temáticas</h2>
+      <p class="section-lead">Mudança de gear: cada semana ganha fio condutor. Lucas ajusta dia-a-dia com base nos dados de Mês 1.</p>
+
+      <div class="series-grid">
+        <div class="series-card">
+          <div class="series-num">SEMANA 5</div>
+          <div class="series-name">Funil em 4 partes</div>
+          <ul class="series-list">
+            <li>Carrossel: Atração</li>
+            <li>Carrossel: Qualificação</li>
+            <li>Carrossel: Proposta</li>
+            <li>Carrossel: Fechamento</li>
+            <li>Reel-dor amarrando a série</li>
+            <li>Feed-manifesto: "Funil sem método é corredor"</li>
+          </ul>
+        </div>
+
+        <div class="series-card">
+          <div class="series-num">SEMANA 6</div>
+          <div class="series-name">Cadência</div>
+          <ul class="series-list">
+            <li>Carrossel: Cadência inicial (primeiros 7 dias)</li>
+            <li>Carrossel: Cadência de ressuscitar (lead esquecido)</li>
+            <li>Carrossel: Cadência de fechamento</li>
+            <li>Reel-bastidor: "Como nasceu a cadência de domingo"</li>
+          </ul>
+        </div>
+
+        <div class="series-card">
+          <div class="series-num">SEMANA 7</div>
+          <div class="series-name">Forecast</div>
+          <ul class="series-list">
+            <li>Carrossel: Como medir forecast real</li>
+            <li>Carrossel: Como defender forecast com sócio</li>
+            <li>Carrossel: Como recuperar mês fraco</li>
+            <li>Feed-manifesto: "Quem mede vende. Quem acha negocia."</li>
+          </ul>
+        </div>
+
+        <div class="series-card">
+          <div class="series-num">SEMANA 8</div>
+          <div class="series-name">Reuniões</div>
+          <ul class="series-list">
+            <li>Carrossel: Reunião de segunda em 30 min</li>
+            <li>Carrossel: Pipeline review de sexta em 15 min</li>
+            <li>Carrossel: Mensal estratégico em 90 min</li>
+            <li>Reel-dor: "Reunião que vira grupo de apoio"</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. MÊS 3 -->
+    <section id="mes3">
+      <h2><span class="num">05</span> Calendário Mês 3 — séries de aprofundamento</h2>
+      <p class="section-lead">Repete formatos que mais salvaram em M1/M2 + drops temáticos.</p>
+
+      <div class="series-grid">
+        <div class="series-card">
+          <div class="series-num">SEMANA 9</div>
+          <div class="series-name">5 dores específicas</div>
+          <ul class="series-list">
+            <li>D1: Sexta sem dado</li>
+            <li>D2: Lead esquecido</li>
+            <li>D3: Vendedor que sai e leva pipeline</li>
+            <li>D4: CRM que ninguém usa</li>
+            <li>D5: Forecast no achismo</li>
+            <li><em>5 reels-dor consecutivos formando arco</em></li>
+          </ul>
+        </div>
+
+        <div class="series-card">
+          <div class="series-num">SEMANA 10</div>
+          <div class="series-name">Como decide a Tribo <span style="font-size:0.65em;opacity:0.7">(substitui "Cases" suspenso)</span></div>
+          <ul class="series-list">
+            <li>4 carrosséis-bastidor: como a Tribo toma decisão</li>
+            <li>D1 produto · D2 reunião comercial · D3 feature óbvia adiada · D4 cliente hipotético na cabeça</li>
+            <li>Reativar "Cases" só após cliente real com permissão escrita</li>
+          </ul>
+        </div>
+
+        <div class="series-card">
+          <div class="series-num">SEMANA 11</div>
+          <div class="series-name">Anti-features</div>
+          <ul class="series-list">
+            <li>3 carrosséis-bastidor: por que NÃO fazemos X</li>
+            <li>Chat embutido / Integração com Y / Dashboard custom</li>
+            <li>Anti-feature como filosofia</li>
+          </ul>
+        </div>
+
+        <div class="series-card">
+          <div class="series-num">SEMANA 12</div>
+          <div class="series-name">Manifesto</div>
+          <ul class="series-list">
+            <li>Drop diário de 5 frases-manifesto em feed estático</li>
+            <li>Sequência forma um discurso</li>
+            <li>Ideal pra encerrar trimestre</li>
+          </ul>
+        </div>
+
+        <div class="series-card" style="grid-column:1/-1">
+          <div class="series-num">SEMANA 13</div>
+          <div class="series-name">Recap + balanço</div>
+          <ul class="series-list">
+            <li>Carrossel: "90 dias depois — o que aprendemos no IG"</li>
+            <li>Reel-bastidor: "Como decidimos as próximas pautas"</li>
+            <li>Story-recap: enquete pra audiência escolher próximo tema</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. COPIES -->
+    <section id="copies">
+      <h2><span class="num">06</span> Copies prontas — calibração de tom</h2>
+      <p class="section-lead">3 peças escritas pra você validar o <strong>tom</strong> antes de escalar pro mês 1 inteiro. Os mockups visuais simulam o resultado final (proporção real).</p>
+
+      <!-- COPY 1: CARROSSEL -->
+      <div class="copy-block">
+        <div class="copy-meta">Copy 1 · Carrossel-Método · SEG 04/05</div>
+        <h3 class="copy-title">Os 4 momentos do funil que sua PME tá pulando</h3>
+
+        <div class="slides-rail">
+          <div class="slide cover">
+            <div class="slide-num">01/08</div>
+            <div class="body">
+              <h5>Os 4 momentos do funil que sua PME provavelmente tá <span class="acc">pulando</span>.</h5>
+            </div>
+            <div class="arrow">→</div>
+            <svg class="slide-d" viewBox="0 0 100 100"><rect width="100" height="100" rx="14" fill="#f97316"/><rect x="22" y="26" width="56" height="13" fill="#fff"/><rect x="43" y="26" width="14" height="50" fill="#fff"/><circle cx="28" cy="32.5" r="4" fill="#f97316"/><circle cx="72" cy="32.5" r="4" fill="#f97316"/></svg>
+          </div>
+
+          <div class="slide">
+            <div class="slide-num">02/08</div>
+            <div class="body">
+              <p>Vendedor anota lead. Faz o primeiro contato. Manda proposta. Espera resposta.</p>
+              <p style="margin-top:10px"><strong style="color:#fff">No meio disso, 4 momentos somem.</strong></p>
+              <p>Cada um custa venda.</p>
+            </div>
+            <div class="slide-sig">@tribocrmoficial</div>
+          </div>
+
+          <div class="slide">
+            <div class="slide-num">03/08</div>
+            <div class="body">
+              <h5 style="font-size:14px;color:var(--accent)">1. Qualificação dura</h5>
+              <p style="margin-top:8px">Lead bom merece tempo.<br>Lead ruim merece "boa sorte".</p>
+              <p>Sua PME tá tratando todo lead como se fosse o último.</p>
+            </div>
+            <div class="slide-sig">@tribocrmoficial</div>
+          </div>
+
+          <div class="slide">
+            <div class="slide-num">04/08</div>
+            <div class="body">
+              <h5 style="font-size:14px;color:var(--accent)">2. Next step combinado</h5>
+              <p style="margin-top:8px">Toda conversa termina com data clara.</p>
+              <p style="margin-top:8px">"Falo na sexta às 14h"<br>≠<br>"te procuro depois".</p>
+            </div>
+            <div class="slide-sig">@tribocrmoficial</div>
+          </div>
+
+          <div class="slide">
+            <div class="slide-num">05/08</div>
+            <div class="body">
+              <h5 style="font-size:14px;color:var(--accent)">3. Validação de orçamento real</h5>
+              <p style="margin-top:8px">Não é "qual seu orçamento?".<br>É "qual o impacto se isso não acontecer?".</p>
+              <p style="margin-top:8px">Pergunta diferente, resposta diferente.</p>
+            </div>
+            <div class="slide-sig">@tribocrmoficial</div>
+          </div>
+
+          <div class="slide">
+            <div class="slide-num">06/08</div>
+            <div class="body">
+              <h5 style="font-size:14px;color:var(--accent)">4. Forecast de quem fecha</h5>
+              <p style="margin-top:8px">Vendedor diz "tá quente". Pipeline diz "75%". Final do mês diz "metade".</p>
+              <p style="margin-top:8px">Quem mede contra o real, vira melhor a cada mês.</p>
+            </div>
+            <div class="slide-sig">@tribocrmoficial</div>
+          </div>
+
+          <div class="slide">
+            <div class="slide-num">07/08</div>
+            <div class="body">
+              <h5>Sem esses 4 momentos, o funil vira <span class="acc">corredor</span>.</h5>
+              <p style="margin-top:10px">Lead entra rápido. Sai mais rápido.</p>
+              <p>A gente perde no meio.</p>
+            </div>
+            <div class="slide-sig">@tribocrmoficial</div>
+          </div>
+
+          <div class="slide cta">
+            <div class="slide-num" style="color:rgba(0,0,0,.5)">08/08</div>
+            <div class="body" style="justify-content:center">
+              <h5>Salva pra rodar com seu time na próxima reunião comercial. 🔥</h5>
+              <p style="margin-top:14px;font-weight:600">@tribocrmoficial</p>
+              <p style="font-size:10px">Máquina de Vendas pra PMEs brasileiras</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="caption">
+          <div class="meta">Legenda</div>
+Vendedor bom não vende mal por falta de talento.
+Vende mal porque o método tem buraco.
+
+Esses 4 momentos são onde a PME brasileira mais perde dinheiro — e quase ninguém olha.
+
+Salva pra usar na próxima reunião de pipeline. 📈
+
+#TriboCRM #MáquinaDeVendas #VendasPME
+        </div>
+      </div>
+
+      <!-- COPY 2: REEL -->
+      <div class="copy-block">
+        <div class="copy-meta">Copy 2 · Reel-Dor · TER 05/05</div>
+        <h3 class="copy-title">Sexta às 18h: ninguém sabe quanto fechou</h3>
+
+        <div class="slides-rail">
+          <div class="reel-mock">
+            <div class="reel-time">0-3s</div>
+            <div class="reel-cap">"Sexta às 18h."</div>
+            <div class="reel-sig" style="position:absolute;top:50px">CENA: dono encarando<br>planilha no notebook</div>
+            <svg class="reel-d" viewBox="0 0 100 100"><rect width="100" height="100" rx="14" fill="#f97316"/><rect x="22" y="26" width="56" height="13" fill="#fff"/><rect x="43" y="26" width="14" height="50" fill="#fff"/><circle cx="28" cy="32.5" r="4" fill="#f97316"/><circle cx="72" cy="32.5" r="4" fill="#f97316"/></svg>
+          </div>
+
+          <div class="reel-mock">
+            <div class="reel-time">3-10s</div>
+            <div class="reel-cap">"Quanto a gente fechou essa semana?"</div>
+            <div class="reel-sig" style="position:absolute;top:50px">CENA: scroll no grupo<br>WhatsApp "Comercial"</div>
+            <svg class="reel-d" viewBox="0 0 100 100"><rect width="100" height="100" rx="14" fill="#f97316"/><rect x="22" y="26" width="56" height="13" fill="#fff"/><rect x="43" y="26" width="14" height="50" fill="#fff"/><circle cx="28" cy="32.5" r="4" fill="#f97316"/><circle cx="72" cy="32.5" r="4" fill="#f97316"/></svg>
+          </div>
+
+          <div class="reel-mock">
+            <div class="reel-time">10-15s</div>
+            <div class="reel-cap">"E vem 3 respostas diferentes em 3 lugares diferentes."</div>
+            <div class="reel-sig" style="position:absolute;top:50px">CENA: silêncio,<br>cara confusa</div>
+            <svg class="reel-d" viewBox="0 0 100 100"><rect width="100" height="100" rx="14" fill="#f97316"/><rect x="22" y="26" width="56" height="13" fill="#fff"/><rect x="43" y="26" width="14" height="50" fill="#fff"/><circle cx="28" cy="32.5" r="4" fill="#f97316"/><circle cx="72" cy="32.5" r="4" fill="#f97316"/></svg>
+          </div>
+
+          <div class="reel-mock" style="background:#0a0a0a">
+            <div class="reel-time">15-20s</div>
+            <div class="reel-cap punch" style="bottom:140px">Isso não é semana ruim.</div>
+            <div class="reel-cap punch" style="bottom:90px">É <span class="acc">time sem método</span>.</div>
+            <div class="reel-sig">@tribocrmoficial</div>
+            <svg class="reel-d" viewBox="0 0 100 100"><rect width="100" height="100" rx="14" fill="#f97316"/><rect x="22" y="26" width="56" height="13" fill="#fff"/><rect x="43" y="26" width="14" height="50" fill="#fff"/><circle cx="28" cy="32.5" r="4" fill="#f97316"/><circle cx="72" cy="32.5" r="4" fill="#f97316"/></svg>
+          </div>
+        </div>
+
+        <div class="caption">
+          <div class="meta">Legenda</div>
+Sabe aquela sensação de "tá fechando bem" sem dado pra defender? 📈
+
+A gente também já viveu. Por isso a gente fez o que faz.
+
+Comenta se sua sexta tá assim.
+        </div>
+      </div>
+
+      <!-- COPY 3: FEED MANIFESTO -->
+      <div class="copy-block">
+        <div class="copy-meta">Copy 3 · Feed-Manifesto · QUA 06/05</div>
+        <h3 class="copy-title">"Vender de verdade não é talento. É método."</h3>
+
+        <div class="slides-rail">
+          <div class="slide manifesto" style="width:280px;height:350px">
+            <div class="body" style="justify-content:flex-start;padding-top:20px">
+              <h5 style="font-size:30px;line-height:1.05">Vender de<br>verdade</h5>
+              <h5 style="font-size:30px;line-height:1.05;margin-top:8px">não é<br>talento.</h5>
+              <h5 style="font-size:30px;line-height:1.05;margin-top:18px">É <span class="acc">método</span>.</h5>
+            </div>
+            <div class="slide-sig">TriboCRM</div>
+            <svg class="slide-d" viewBox="0 0 100 100" style="width:32px;height:32px"><rect width="100" height="100" rx="14" fill="#f97316"/><rect x="22" y="26" width="56" height="13" fill="#fff"/><rect x="43" y="26" width="14" height="50" fill="#fff"/><circle cx="28" cy="32.5" r="4" fill="#f97316"/><circle cx="72" cy="32.5" r="4" fill="#f97316"/></svg>
+          </div>
+        </div>
+
+        <div class="caption">
+          <div class="meta">Legenda</div>
+Vendedor que vende todo dia sabe disso.
+O que muda não é talento — é o ritmo.
+
+A gente faz a Máquina de Vendas rodar pra que esse ritmo não dependa do humor da semana.
+
+#TriboCRM #MáquinaDeVendas
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. APROVAÇÃO -->
+    <section id="aprovacao">
+      <h2><span class="num">07</span> Aprovação do Bloco 2</h2>
+      <p class="section-lead">Marca os pontos validados. Aprovar destrava o <strong>Bloco 3 — Sistema Visual de Templates</strong>.</p>
+
+      <div class="checklist">
+        <h3 style="margin-top:0">Checklist</h3>
+        <div class="check-item"><input type="checkbox" id="c1"><label for="c1">Banco de hooks (115) cobre os 5 pilares com qualidade</label></div>
+        <div class="check-item"><input type="checkbox" id="c2"><label for="c2">Estruturas-padrão por formato fazem sentido (especialmente Carrossel-Método 8-10 slides)</label></div>
+        <div class="check-item"><input type="checkbox" id="c3"><label for="c3">Calendário Mês 1 tem o ritmo certo</label></div>
+        <div class="check-item"><input type="checkbox" id="c4"><label for="c4">Séries temáticas dos Meses 2 e 3 são as certas</label></div>
+        <div class="check-item"><input type="checkbox" id="c5"><label for="c5">Tom das 3 copies prontas soa como TriboCRM (PC 70% + Herói 30%)</label></div>
+        <div class="check-item"><input type="checkbox" id="c6"><label for="c6">Vocabulário oficial respeitado ("a gente", "Máquina de Vendas", emojis 🔥📈⚡✅)</label></div>
+        <div class="check-item"><input type="checkbox" id="c7"><label for="c7">Não falta nenhuma pauta-âncora importante</label></div>
+      </div>
+
+      <div class="quote">
+        <strong>Próximo passo:</strong> Bloco 3 já entregue — sistema atômico de templates HTML/CSS standalone com tokens de design + símbolo D/T + logo como SVGs reutilizáveis. Templates ativos: <code>carrossel-método (capa+miolo+CTA)</code>, <code>reel-cover</code>, <code>feed-manifesto</code>, <code>feed-citação (observacional)</code>, <code>story-enquete</code>. <span style="opacity:0.6">(<code>carrossel-prova-*</code> em <code>_inactive/</code> desde 28/04 enquanto Pilar PROVA suspenso.)</span>
+      </div>
+
+      <div class="footnote">
+        TriboCRM · Plano de Comunicação Instagram · Bloco 2/5 · 115 hooks · 8 estruturas · 90 dias mapeados · Abril/2026
+      </div>
+    </section>
+
+  </main>
+</div>
+</body>
+</html>

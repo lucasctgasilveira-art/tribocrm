@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>TriboCRM no Instagram — Bloco 3: Sistema Visual</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root{
+    --bg:#0a0a0a;
+    --bg-elev:#141414;
+    --bg-card:#1a1a1a;
+    --border:#2a2a2a;
+    --border-strong:#3a3a3a;
+    --text:#fafafa;
+    --text-muted:#a3a3a3;
+    --text-soft:#737373;
+    --accent:#f97316;
+    --accent-soft:rgba(249,115,22,.12);
+    --accent-line:rgba(249,115,22,.35);
+    --mono:'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth;scroll-padding-top:24px}
+  body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+
+  .layout{display:grid;grid-template-columns:260px 1fr;min-height:100vh}
+
+  /* SIDEBAR */
+  aside{position:sticky;top:0;height:100vh;background:var(--bg-elev);border-right:1px solid var(--border);padding:28px 22px;overflow-y:auto}
+  .brand{display:flex;align-items:center;gap:12px;margin-bottom:28px}
+  .brand-mark{width:40px;height:40px}
+  .brand-text{font-weight:800;font-size:18px;letter-spacing:-.01em}
+  .brand-text span{color:var(--accent)}
+  .brand-sub{font-size:11px;color:var(--text-soft);margin-top:2px;letter-spacing:.04em;text-transform:uppercase}
+  .nav-label{font-size:10px;color:var(--text-soft);text-transform:uppercase;letter-spacing:.12em;margin:18px 0 8px;font-weight:600}
+  nav a{display:flex;align-items:center;gap:10px;color:var(--text-muted);text-decoration:none;padding:7px 10px;border-radius:6px;font-size:13px;transition:all .15s}
+  nav a:hover{color:var(--text);background:rgba(255,255,255,.03)}
+  nav a .num{font-size:10px;color:var(--text-soft);background:var(--bg-card);padding:2px 6px;border-radius:4px;font-variant-numeric:tabular-nums}
+  .status-pill{display:inline-flex;align-items:center;gap:6px;background:var(--accent-soft);color:var(--accent);padding:5px 10px;border-radius:999px;font-size:11px;font-weight:600;border:1px solid var(--accent-line);margin-top:14px}
+  .status-pill::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent)}
+
+  /* MAIN */
+  main{padding:48px 56px 120px;max-width:1080px}
+  .hero{margin-bottom:48px;padding-bottom:32px;border-bottom:1px solid var(--border)}
+  .breadcrumb{font-size:12px;color:var(--text-soft);margin-bottom:14px;letter-spacing:.04em;text-transform:uppercase}
+  .breadcrumb b{color:var(--accent);font-weight:600}
+  h1{font-size:40px;font-weight:800;letter-spacing:-.025em;line-height:1.1;margin-bottom:14px}
+  .lede{font-size:17px;color:var(--text-muted);max-width:720px;line-height:1.55}
+
+  section{margin:64px 0;scroll-margin-top:24px}
+  h2{font-size:24px;font-weight:700;letter-spacing:-.015em;margin-bottom:6px;display:flex;align-items:baseline;gap:14px}
+  h2 .num{font-size:13px;color:var(--accent);font-weight:600;background:var(--accent-soft);padding:4px 10px;border-radius:6px;border:1px solid var(--accent-line)}
+  h3{font-size:18px;font-weight:600;letter-spacing:-.005em;margin:28px 0 12px}
+  h4{font-size:15px;font-weight:600;margin:20px 0 8px}
+  .section-lead{color:var(--text-muted);margin-bottom:28px;max-width:720px}
+  p{margin:10px 0;color:var(--text-muted)}
+  strong{color:var(--text);font-weight:600}
+  code{font-family:var(--mono);font-size:.92em;background:var(--bg-elev);padding:2px 7px;border-radius:4px;color:var(--accent)}
+  pre{background:var(--bg-elev);border:1px solid var(--border);border-radius:8px;padding:16px 20px;overflow-x:auto;font-size:13px;line-height:1.6;font-family:var(--mono);margin:12px 0;color:var(--text-muted)}
+  pre code{background:transparent;padding:0;color:inherit}
+
+  /* PRINCIPLES */
+  .princ-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin:14px 0}
+  .princ{
+    background:var(--bg-card);border:1px solid var(--border);
+    border-radius:10px;padding:18px 22px;
+    display:flex;gap:14px;align-items:flex-start;
+  }
+  .princ-num{
+    width:32px;height:32px;border-radius:50%;
+    background:var(--accent-soft);border:1px solid var(--accent-line);
+    color:var(--accent);font-weight:800;font-size:13px;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .princ-text{font-size:13.5px;line-height:1.55;color:var(--text)}
+
+  /* TOKENS */
+  .tokens-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:14px}
+  .token-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:20px}
+  .token-card h4{margin:0 0 14px}
+
+  .swatch{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+  .swatch:last-child{border:none}
+  .swatch-color{width:36px;height:36px;border-radius:6px;flex-shrink:0;border:1px solid var(--border-strong)}
+  .swatch-info{flex:1;display:flex;flex-direction:column;gap:2px}
+  .swatch-token{font-family:var(--mono);font-size:11px;color:var(--accent)}
+  .swatch-val{font-family:var(--mono);font-size:11px;color:var(--text-soft)}
+  .swatch-use{font-size:11px;color:var(--text-muted)}
+
+  .type-row{display:grid;grid-template-columns:80px 1fr;gap:14px;align-items:baseline;padding:10px 0;border-bottom:1px solid var(--border)}
+  .type-row:last-child{border:none}
+  .type-token{font-family:var(--mono);font-size:11px;color:var(--accent)}
+  .type-sample{font-family:'DM Sans',sans-serif;color:var(--text);line-height:1.1;letter-spacing:-.02em}
+  .type-meta{font-size:10px;color:var(--text-soft);font-family:var(--mono);margin-top:4px}
+
+  /* TEMPLATES GRID */
+  .tpl-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(380px, 1fr));
+    gap:24px;
+    margin:24px 0;
+  }
+  .tpl-card{
+    background:var(--bg-card);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:18px;
+    display:flex;flex-direction:column;
+    transition:border-color .15s;
+  }
+  .tpl-card:hover{border-color:var(--accent-line)}
+  .tpl-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px;gap:10px;flex-wrap:wrap}
+  .tpl-name{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--accent)}
+  .tpl-dim{font-size:10px;color:var(--text-soft);font-family:var(--mono);background:var(--bg-elev);padding:2px 7px;border-radius:4px}
+
+  .tpl-preview{
+    border-radius:8px;border:1px solid var(--border-strong);
+    background:#0d0d0d;
+    overflow:hidden;
+    position:relative;
+    margin-bottom:14px;
+  }
+  .tpl-preview.feed{height:432px}      /* 360 * 1.2 = 432 (4:5) */
+  .tpl-preview.story{height:600px}     /* 360 * 16/9 ≈ 640 (9:16) */
+  .tpl-preview iframe{
+    width:800px;
+    transform:scale(0.45);
+    transform-origin:top left;
+    border:none;
+    position:absolute;
+    top:0;left:0;
+    background:#0d0d0d;
+  }
+  .tpl-preview.feed iframe{height:1000px}      /* 800 * 5/4 = 1000 */
+  .tpl-preview.story iframe{height:1422px}     /* 800 * 16/9 = 1422 */
+
+  .tpl-meta{font-size:12px;color:var(--text-muted);line-height:1.5;margin-bottom:12px}
+  .tpl-meta strong{color:var(--text)}
+
+  .tpl-vars{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px}
+  .tpl-var{
+    font-family:var(--mono);font-size:10px;
+    background:var(--accent-soft);color:var(--accent);
+    padding:3px 7px;border-radius:4px;
+    border:1px solid var(--accent-line);
+  }
+
+  .tpl-actions{display:flex;gap:8px;margin-top:auto}
+  .tpl-link{
+    flex:1;text-align:center;
+    background:var(--bg-elev);border:1px solid var(--border-strong);
+    color:var(--text);text-decoration:none;
+    padding:8px 12px;border-radius:6px;
+    font-size:12px;font-weight:600;
+    transition:all .15s;
+  }
+  .tpl-link:hover{background:var(--accent);color:#0a0a0a;border-color:var(--accent)}
+
+  /* CHECKLIST */
+  .checklist{background:var(--bg-card);border:1px solid var(--accent-line);border-radius:10px;padding:24px;margin:18px 0}
+  .check-item{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer}
+  .check-item:last-child{border-bottom:none}
+  .check-item input{appearance:none;width:20px;height:20px;flex-shrink:0;border:2px solid var(--border-strong);border-radius:4px;cursor:pointer;background:var(--bg);margin-top:1px;transition:all .15s}
+  .check-item input:checked{background:var(--accent);border-color:var(--accent)}
+  .check-item input:checked::after{content:"✓";display:flex;align-items:center;justify-content:center;height:100%;color:#000;font-weight:800;font-size:13px}
+  .check-item label{cursor:pointer;flex:1;color:var(--text-muted);font-size:14px;line-height:1.5}
+  .check-item input:checked + label{color:var(--text-soft);text-decoration:line-through}
+
+  .quote{border-left:3px solid var(--accent);padding:14px 22px;background:var(--accent-soft);margin:18px 0;font-size:14px;color:var(--text);border-radius:0 8px 8px 0}
+
+  .footnote{font-size:12px;color:var(--text-soft);margin-top:32px;padding-top:24px;border-top:1px solid var(--border)}
+
+  @media (max-width:900px){
+    .layout{grid-template-columns:1fr}
+    aside{position:relative;height:auto}
+    main{padding:24px}
+    .princ-grid,.tokens-grid{grid-template-columns:1fr}
+    .tpl-grid{grid-template-columns:1fr}
+    h1{font-size:30px}
+  }
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <aside>
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 100 100">
+        <rect width="100" height="100" rx="14" fill="#f97316"/>
+        <rect x="22" y="26" width="56" height="13" fill="#fff"/>
+        <rect x="43" y="26" width="14" height="50" fill="#fff"/>
+        <circle cx="28" cy="32.5" r="4" fill="#f97316"/>
+        <circle cx="72" cy="32.5" r="4" fill="#f97316"/>
+      </svg>
+      <div>
+        <div class="brand-text">Tribo<span>CRM</span></div>
+        <div class="brand-sub">Plano Instagram</div>
+      </div>
+    </div>
+
+    <div class="status-pill">Bloco 3 · Em revisão</div>
+
+    <div class="nav-label">Navegação</div>
+    <nav>
+      <a href="#principios"><span class="num">01</span> Princípios</a>
+      <a href="#tokens"><span class="num">02</span> Tokens</a>
+      <a href="#templates"><span class="num">03</span> Os templates</a>
+      <a href="#data-edit"><span class="num">04</span> Convenção data-edit</a>
+      <a href="#pipeline"><span class="num">05</span> Como vira pipeline</a>
+      <a href="#aprovacao"><span class="num">06</span> Aprovação</a>
+    </nav>
+
+    <div class="nav-label" style="margin-top:32px">Status dos blocos</div>
+    <nav>
+      <a href="01-estrategia-canal.html"><span class="num">B1</span> Estratégia · ✅</a>
+      <a href="02-pautas-e-calendario.html"><span class="num">B2</span> Pautas · ✅</a>
+      <a href="#" style="color:var(--accent)"><span class="num">B3</span> Sistema visual · 🟢</a>
+      <a href="#" style="opacity:.5;pointer-events:none"><span class="num">B4</span> Pipeline</a>
+      <a href="#" style="opacity:.5;pointer-events:none"><span class="num">B5</span> Operação</a>
+    </nav>
+  </aside>
+
+  <main>
+
+    <header class="hero">
+      <div class="breadcrumb">Plano de Comunicação · <b>Bloco 3 de 5</b> · Sistema Visual</div>
+      <h1>7 templates HTML ativos, 1 design system, símbolo D em SVG. Pronto pro pipeline consumir.</h1>
+      <p class="lede">Sistema atômico em <code>marketing/instagram/</code>: tokens.css como fonte da verdade, símbolo D + logo como SVGs reutilizáveis, e 7 templates ativos cobrindo carrossel-método, feed-manifesto, feed-citação observacional (sem autor), reel-cover e story-enquete. Cada template abre direto no navegador e fica pronto pra Puppeteer renderizar PNG no Bloco 4. <span style="opacity:0.7">+ 3 templates de Prova preservados em <code>templates/_inactive/</code> enquanto Pilar PROVA estiver suspenso (28/04/2026).</span></p>
+    </header>
+
+    <!-- 1. PRINCÍPIOS -->
+    <section id="principios">
+      <h2><span class="num">01</span> Princípios do sistema</h2>
+      <p class="section-lead">As regras que mantêm o sistema coerente conforme a quantidade de peças cresce.</p>
+
+      <div class="princ-grid">
+        <div class="princ"><div class="princ-num">1</div><div class="princ-text"><strong>tokens.css é fonte única de verdade.</strong> Nenhum template hard-codeia cor ou tipografia.</div></div>
+        <div class="princ"><div class="princ-num">2</div><div class="princ-text"><strong>Cada template é standalone.</strong> Abre direto no navegador, sem build step.</div></div>
+        <div class="princ"><div class="princ-num">3</div><div class="princ-text"><strong>Conteúdo é editável via <code>data-edit</code>.</strong> Pipeline lê essas chaves e substitui.</div></div>
+        <div class="princ"><div class="princ-num">4</div><div class="princ-text"><strong>Símbolo D + assinatura sempre presentes.</strong> Convenção de marca não-negociável.</div></div>
+        <div class="princ"><div class="princ-num">5</div><div class="princ-text"><strong>DM Sans é a única tipografia.</strong> Pesos 400/500/600/700/800 — nada além disso.</div></div>
+        <div class="princ"><div class="princ-num">6</div><div class="princ-text"><strong>Paleta:</strong> preto <code>#0a0a0a</code> · laranja <code>#f97316</code> · branco <code>#ffffff</code>. Sem cinzas além de transparências.</div></div>
+      </div>
+    </section>
+
+    <!-- 2. TOKENS -->
+    <section id="tokens">
+      <h2><span class="num">02</span> Tokens de design</h2>
+      <p class="section-lead">Definidos em <code>marketing/instagram/tokens.css</code> e importados por todos os templates.</p>
+
+      <div class="tokens-grid">
+
+        <div class="token-card">
+          <h4>Cores</h4>
+          <div class="swatch">
+            <div class="swatch-color" style="background:#0a0a0a"></div>
+            <div class="swatch-info">
+              <span class="swatch-token">--tribo-black</span>
+              <span class="swatch-val">#0a0a0a</span>
+              <span class="swatch-use">Fundo padrão</span>
+            </div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-color" style="background:#141414"></div>
+            <div class="swatch-info">
+              <span class="swatch-token">--tribo-black-soft</span>
+              <span class="swatch-val">#141414</span>
+              <span class="swatch-use">Superfície elevada</span>
+            </div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-color" style="background:#f97316"></div>
+            <div class="swatch-info">
+              <span class="swatch-token">--tribo-orange</span>
+              <span class="swatch-val">#f97316</span>
+              <span class="swatch-use">Accent oficial</span>
+            </div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-color" style="background:#ea580c"></div>
+            <div class="swatch-info">
+              <span class="swatch-token">--tribo-orange-deep</span>
+              <span class="swatch-val">#ea580c</span>
+              <span class="swatch-use">Gradient destination</span>
+            </div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-color" style="background:#fff"></div>
+            <div class="swatch-info">
+              <span class="swatch-token">--tribo-white</span>
+              <span class="swatch-val">#ffffff</span>
+              <span class="swatch-use">Texto principal</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="token-card">
+          <h4>Tipografia · DM Sans</h4>
+          <div class="type-row">
+            <span class="type-token">--t-h1-xl</span>
+            <div>
+              <div class="type-sample" style="font-size:34px;font-weight:800">Manifesto</div>
+              <div class="type-meta">144px · weight 800</div>
+            </div>
+          </div>
+          <div class="type-row">
+            <span class="type-token">--t-h1</span>
+            <div>
+              <div class="type-sample" style="font-size:28px;font-weight:800">Capa principal</div>
+              <div class="type-meta">116px · weight 800</div>
+            </div>
+          </div>
+          <div class="type-row">
+            <span class="type-token">--t-h2</span>
+            <div>
+              <div class="type-sample" style="font-size:22px;font-weight:800">Frase de impacto</div>
+              <div class="type-meta">88px · weight 800</div>
+            </div>
+          </div>
+          <div class="type-row">
+            <span class="type-token">--t-h3</span>
+            <div>
+              <div class="type-sample" style="font-size:18px;font-weight:700">Sub-frase</div>
+              <div class="type-meta">64px · weight 700</div>
+            </div>
+          </div>
+          <div class="type-row">
+            <span class="type-token">--t-body-lg</span>
+            <div>
+              <div class="type-sample" style="font-size:16px;font-weight:600">Corpo enfático</div>
+              <div class="type-meta">48px · weight 600</div>
+            </div>
+          </div>
+          <div class="type-row">
+            <span class="type-token">--t-body</span>
+            <div>
+              <div class="type-sample" style="font-size:14px;font-weight:400">Corpo geral de slide</div>
+              <div class="type-meta">38px · weight 400</div>
+            </div>
+          </div>
+          <div class="type-row">
+            <span class="type-token">--t-eyebrow</span>
+            <div>
+              <div class="type-sample" style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#f97316">Pilar / meta</div>
+              <div class="type-meta">28px · weight 700 · uppercase</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 3. TEMPLATES -->
+    <section id="templates">
+      <h2><span class="num">03</span> Os templates (7 ativos · 3 suspensos)</h2>
+      <p class="section-lead">Cada preview abaixo é o template <strong>real</strong> escalado. Clica em "Abrir" pra ver na dimensão nativa.</p>
+
+      <div class="tpl-grid">
+
+        <!-- 1 -->
+        <div class="tpl-card">
+          <div class="tpl-head">
+            <div class="tpl-name">carrossel-metodo-capa</div>
+            <div class="tpl-dim">1080×1350</div>
+          </div>
+          <div class="tpl-preview feed"><iframe src="../../marketing/instagram/templates/carrossel-metodo-capa.html" loading="lazy"></iframe></div>
+          <div class="tpl-meta"><strong>Capa de carrossel didático.</strong> Pilar Método · slide 1 de 8 · arrow indicando arrasta.</div>
+          <div class="tpl-vars">
+            <span class="tpl-var">pilar</span>
+            <span class="tpl-var">titulo</span>
+            <span class="tpl-var">slide-number</span>
+            <span class="tpl-var">handle</span>
+          </div>
+          <div class="tpl-actions">
+            <a class="tpl-link" href="../../marketing/instagram/templates/carrossel-metodo-capa.html" target="_blank">Abrir template</a>
+          </div>
+        </div>
+
+        <!-- 2 -->
+        <div class="tpl-card">
+          <div class="tpl-head">
+            <div class="tpl-name">carrossel-metodo-slide</div>
+            <div class="tpl-dim">1080×1350</div>
+          </div>
+          <div class="tpl-preview feed"><iframe src="../../marketing/instagram/templates/carrossel-metodo-slide.html" loading="lazy"></iframe></div>
+          <div class="tpl-meta"><strong>Slide intermediário.</strong> Passo do método com número, título e 2 linhas de body.</div>
+          <div class="tpl-vars">
+            <span class="tpl-var">pilar</span>
+            <span class="tpl-var">step-num</span>
+            <span class="tpl-var">titulo</span>
+            <span class="tpl-var">body-1</span>
+            <span class="tpl-var">body-2</span>
+            <span class="tpl-var">slide-number</span>
+            <span class="tpl-var">handle</span>
+          </div>
+          <div class="tpl-actions">
+            <a class="tpl-link" href="../../marketing/instagram/templates/carrossel-metodo-slide.html" target="_blank">Abrir template</a>
+          </div>
+        </div>
+
+        <!-- 3 -->
+        <div class="tpl-card">
+          <div class="tpl-head">
+            <div class="tpl-name">carrossel-metodo-cta</div>
+            <div class="tpl-dim">1080×1350</div>
+          </div>
+          <div class="tpl-preview feed"><iframe src="../../marketing/instagram/templates/carrossel-metodo-cta.html" loading="lazy"></iframe></div>
+          <div class="tpl-meta"><strong>Slide final do carrossel.</strong> Gradient laranja · CTA "salva pra rodar com seu time" · handle + tagline.</div>
+          <div class="tpl-vars">
+            <span class="tpl-var">titulo</span>
+            <span class="tpl-var">handle</span>
+            <span class="tpl-var">tagline</span>
+            <span class="tpl-var">slide-number</span>
+          </div>
+          <div class="tpl-actions">
+            <a class="tpl-link" href="../../marketing/instagram/templates/carrossel-metodo-cta.html" target="_blank">Abrir template</a>
+          </div>
+        </div>
+
+        <!-- 4 — SUSPENSO -->
+        <div class="tpl-card" style="opacity:0.5;border:2px dashed #c00">
+          <div class="tpl-head">
+            <div class="tpl-name">carrossel-prova-capa <span style="font-size:0.7em;background:#c00;color:#fff;padding:1px 6px;border-radius:3px">🛑</span></div>
+            <div class="tpl-dim">1080×1350</div>
+          </div>
+          <div class="tpl-preview feed"><iframe src="../../marketing/instagram/templates/_inactive/carrossel-prova-capa.html" loading="lazy"></iframe></div>
+          <div class="tpl-meta"><strong>SUSPENSO em 28/04/2026.</strong> Capa de case real. Reativar com cliente real + permissão escrita. Movido pra <code>_inactive/</code>.</div>
+          <div class="tpl-vars">
+            <span class="tpl-var">pilar</span>
+            <span class="tpl-var">cliente</span>
+            <span class="tpl-var">segmento</span>
+            <span class="tpl-var">titulo</span>
+            <span class="tpl-var">contexto</span>
+            <span class="tpl-var">slide-number</span>
+            <span class="tpl-var">handle</span>
+          </div>
+          <div class="tpl-actions">
+            <a class="tpl-link" href="../../marketing/instagram/templates/_inactive/carrossel-prova-capa.html" target="_blank">Abrir (inativo)</a>
+          </div>
+        </div>
+
+        <!-- 5 — SUSPENSO -->
+        <div class="tpl-card" style="opacity:0.5;border:2px dashed #c00">
+          <div class="tpl-head">
+            <div class="tpl-name">carrossel-prova-slide <span style="font-size:0.7em;background:#c00;color:#fff;padding:1px 6px;border-radius:3px">🛑</span></div>
+            <div class="tpl-dim">1080×1350</div>
+          </div>
+          <div class="tpl-preview feed"><iframe src="../../marketing/instagram/templates/_inactive/carrossel-prova-slide.html" loading="lazy"></iframe></div>
+          <div class="tpl-meta"><strong>SUSPENSO em 28/04/2026.</strong> Slide de número grande (antes/depois). Movido pra <code>_inactive/</code>.</div>
+          <div class="tpl-vars">
+            <span class="tpl-var">estado</span>
+            <span class="tpl-var">numero</span>
+            <span class="tpl-var">unidade</span>
+            <span class="tpl-var">contexto</span>
+            <span class="tpl-var">slide-number</span>
+            <span class="tpl-var">handle</span>
+          </div>
+          <div class="tpl-actions">
+            <a class="tpl-link" href="../../marketing/instagram/templates/_inactive/carrossel-prova-slide.html" target="_blank">Abrir (inativo)</a>
+          </div>
+        </div>
+
+        <!-- 6 — SUSPENSO -->
+        <div class="tpl-card" style="opacity:0.5;border:2px dashed #c00">
+          <div class="tpl-head">
+            <div class="tpl-name">carrossel-prova-cta <span style="font-size:0.7em;background:#c00;color:#fff;padding:1px 6px;border-radius:3px">🛑</span></div>
+            <div class="tpl-dim">1080×1350</div>
+          </div>
+          <div class="tpl-preview feed"><iframe src="../../marketing/instagram/templates/_inactive/carrossel-prova-cta.html" loading="lazy"></iframe></div>
+          <div class="tpl-meta"><strong>SUSPENSO em 28/04/2026.</strong> CTA do carrossel-prova. Movido pra <code>_inactive/</code>.</div>
+          <div class="tpl-vars">
+            <span class="tpl-var">titulo</span>
+            <span class="tpl-var">subtitulo</span>
+            <span class="tpl-var">handle</span>
+            <span class="tpl-var">link</span>
+            <span class="tpl-var">slide-number</span>
+          </div>
+          <div class="tpl-actions">
+            <a class="tpl-link" href="../../marketing/instagram/templates/_inactive/carrossel-prova-cta.html" target="_blank">Abrir (inativo)</a>
+          </div>
+        </div>
+
+        <!-- 7 -->
+        <div class="tpl-card">
+          <div class="tpl-head">
+            <div class="tpl-name">feed-manifesto</div>
+            <div class="tpl-dim">1080×1350</div>
+          </div>
+          <div class="tpl-preview feed"><iframe src="../../marketing/instagram/templates/feed-manifesto.html" loading="lazy"></iframe></div>
+          <div class="tpl-meta"><strong>Frase única em DM Sans 800 (144px).</strong> Tipografia faz o trabalho — palavra-chave em laranja.</div>
+          <div class="tpl-vars">
+            <span class="tpl-var">linha-1</span>
+            <span class="tpl-var">linha-2</span>
+            <span class="tpl-var">linha-3</span>
+            <span class="tpl-var">handle</span>
+          </div>
+          <div class="tpl-actions">
+            <a class="tpl-link" href="../../marketing/instagram/templates/feed-manifesto.html" target="_blank">Abrir template</a>
+          </div>
+        </div>
+
+        <!-- 8 -->
+        <div class="tpl-card">
+          <div class="tpl-head">
+            <div class="tpl-name">feed-citacao</div>
+            <div class="tpl-dim">1080×1350</div>
+          </div>
+          <div class="tpl-preview feed"><iframe src="../../marketing/instagram/templates/feed-citacao.html" loading="lazy"></iframe></div>
+          <div class="tpl-meta"><strong>Citação com aspas grandes laranja.</strong> Texto em itálico · atribuição (nome, papel, segmento).</div>
+          <div class="tpl-vars">
+            <span class="tpl-var">citacao</span>
+            <span class="tpl-var">autor</span>
+            <span class="tpl-var">cargo</span>
+            <span class="tpl-var">handle</span>
+          </div>
+          <div class="tpl-actions">
+            <a class="tpl-link" href="../../marketing/instagram/templates/feed-citacao.html" target="_blank">Abrir template</a>
+          </div>
+        </div>
+
+        <!-- 9 -->
+        <div class="tpl-card">
+          <div class="tpl-head">
+            <div class="tpl-name">reel-cover</div>
+            <div class="tpl-dim">1080×1920</div>
+          </div>
+          <div class="tpl-preview story"><iframe src="../../marketing/instagram/templates/reel-cover.html" loading="lazy"></iframe></div>
+          <div class="tpl-meta"><strong>Capa de reel 9:16.</strong> Frase forte na parte de baixo · meta com tempo do reel · pilar no topo.</div>
+          <div class="tpl-vars">
+            <span class="tpl-var">pilar</span>
+            <span class="tpl-var">titulo</span>
+            <span class="tpl-var">meta</span>
+            <span class="tpl-var">handle</span>
+          </div>
+          <div class="tpl-actions">
+            <a class="tpl-link" href="../../marketing/instagram/templates/reel-cover.html" target="_blank">Abrir template</a>
+          </div>
+        </div>
+
+        <!-- 10 -->
+        <div class="tpl-card">
+          <div class="tpl-head">
+            <div class="tpl-name">story-enquete</div>
+            <div class="tpl-dim">1080×1920</div>
+          </div>
+          <div class="tpl-preview story"><iframe src="../../marketing/instagram/templates/story-enquete.html" loading="lazy"></iframe></div>
+          <div class="tpl-meta"><strong>Story de engajamento A vs B.</strong> Pergunta no topo · 2 opções com VS no meio · CTA pra DM.</div>
+          <div class="tpl-vars">
+            <span class="tpl-var">pilar</span>
+            <span class="tpl-var">pergunta</span>
+            <span class="tpl-var">opcao-a</span>
+            <span class="tpl-var">opcao-b</span>
+            <span class="tpl-var">cta</span>
+            <span class="tpl-var">handle</span>
+          </div>
+          <div class="tpl-actions">
+            <a class="tpl-link" href="../../marketing/instagram/templates/story-enquete.html" target="_blank">Abrir template</a>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 4. DATA-EDIT -->
+    <section id="data-edit">
+      <h2><span class="num">04</span> Convenção <code>data-edit</code></h2>
+      <p class="section-lead">Cada ponto editável é marcado com <code>data-edit="&lt;chave&gt;"</code>. Pipeline lê e substitui.</p>
+
+      <h3>No template HTML:</h3>
+      <pre><code>&lt;h1 class="t-h1" data-edit="titulo"&gt;Os 4 momentos do funil...&lt;/h1&gt;
+&lt;span class="brand-signature" data-edit="handle"&gt;@tribocrmoficial&lt;/span&gt;</code></pre>
+
+      <h3>No YAML de pauta (Bloco 4 vai consumir):</h3>
+      <pre><code>template: carrossel-metodo-capa
+data:
+  pilar: "Método"
+  titulo: "Os 4 momentos do funil que sua PME tá pulando"
+  slide-number: "01 / 08"
+  handle: "@tribocrmoficial"</code></pre>
+
+      <p>O pipeline injeta cada valor no <code>innerHTML</code> ou <code>textContent</code> do elemento marcado, antes de capturar o screenshot.</p>
+    </section>
+
+    <!-- 5. PIPELINE -->
+    <section id="pipeline">
+      <h2><span class="num">05</span> Como vira pipeline (preview do Bloco 4)</h2>
+      <p class="section-lead">O sistema visual ficou pronto pro próximo bloco consumir.</p>
+
+      <pre><code>[ posts/2026-05-04-funil-capa.yaml ]
+            ↓
+       template:
+       carrossel-metodo-capa.html
+            ↓
+       data-edit substitution
+            ↓
+       Puppeteer · headless Chrome
+            ↓
+       capture .canvas @ 1080×1350
+            ↓
+       output/2026-05-04-funil-capa.png</code></pre>
+
+      <p>CLI alvo:</p>
+      <pre><code>npm run post -- --pauta posts/2026-05-04-funil-capa.yaml</code></pre>
+
+      <div class="quote">
+        <strong>Bloco 4 vai entregar:</strong> <code>package.json</code> com Puppeteer + js-yaml · script Node <code>scripts/render-post.mjs</code> · estrutura <code>posts/</code> e <code>output/</code> · auto-detecção de tamanho via <code>data-format</code> · workflow ponta-a-ponta funcionando com 1+ peça do calendário Mês 1.
+      </div>
+    </section>
+
+    <!-- 6. APROVAÇÃO -->
+    <section id="aprovacao">
+      <h2><span class="num">06</span> Aprovação do Bloco 3</h2>
+      <p class="section-lead">Marca os pontos validados. Aprovar destrava o <strong>Bloco 4 — Pipeline de Automação</strong>.</p>
+
+      <div class="checklist">
+        <h3 style="margin-top:0">Checklist</h3>
+        <div class="check-item"><input type="checkbox" id="c1"><label for="c1">Hierarquia tipográfica funciona (h1 116px é forte? h2 88px lê bem?)</label></div>
+        <div class="check-item"><input type="checkbox" id="c2"><label for="c2">Paleta preto/laranja/branco resolve sem precisar de cinzas</label></div>
+        <div class="check-item"><input type="checkbox" id="c3"><label for="c3">Símbolo D no canto inferior direito tá no tamanho certo</label></div>
+        <div class="check-item"><input type="checkbox" id="c4"><label for="c4">Os 7 templates ativos cobrem os formatos do Bloco 2 (3 de Prova suspensos em <code>_inactive/</code> até cliente real com permissão)</label></div>
+        <div class="check-item"><input type="checkbox" id="c5"><label for="c5">Convenção <code>data-edit</code> é clara e fácil pro Bloco 4 consumir</label></div>
+        <div class="check-item"><input type="checkbox" id="c6"><label for="c6">CTA gradient laranja → laranja-deep funciona como slide final</label></div>
+        <div class="check-item"><input type="checkbox" id="c7"><label for="c7">Manifesto em h1-xl (144px) tem peso suficiente</label></div>
+        <div class="check-item"><input type="checkbox" id="c8"><label for="c8">Não falta tipo de template importante (story-bastidor? carrossel-dor? feed-com-foto?)</label></div>
+      </div>
+
+      <div class="quote">
+        <strong>Próximo passo:</strong> diz "Bora!" pra eu disparar o Bloco 4 — pipeline Puppeteer + CLI Node + estrutura de posts/output, com workflow ponta-a-ponta gerando PNG real a partir de pauta YAML.
+      </div>
+
+      <div class="footnote">
+        TriboCRM · Plano de Comunicação Instagram · Bloco 3/5 · 7 templates ativos (3 suspensos em <code>_inactive/</code>) · 1 design system · símbolo D + logo SVG · Abril/2026
+      </div>
+    </section>
+
+  </main>
+</div>
+</body>
+</html>

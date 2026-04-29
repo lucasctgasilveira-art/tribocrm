@@ -1,0 +1,26 @@
+# --------------------------------------------------------
+# Agendamento — Carrossel "1 pergunta que muda a reunião"
+# --------------------------------------------------------
+status: "aprovado"
+aprovado_em: "2026-04-28"
+aprovado_por: "lucas"
+slot:
+  data: "2026-04-30"            # QUI
+  horario: "09:00 BRT"
+  justificativa: >
+    Quinta 09:00 BRT — slot Método secundário da semana. Carrossel curto
+    (4 slides) com calibrated question pra reunião comercial. Caption no
+    slide 04 (CTA).
+formato: carrossel
+slides: 4
+arquivos:
+  - output/2026-04-30_pergunta_01-capa.png
+  - output/2026-04-30_pergunta_02-contexto.png
+  - output/2026-04-30_pergunta_03-pergunta.png
+  - output/2026-04-30_pergunta_04-cta.png
+caption_source: posts/2026-04-30_pergunta_04-cta.yaml#caption
+hashtags_inline_na_caption: true
+primeiro_comentario: null
+publicacao:
+  metodo: instagram_graph_api
+  acao_humana_necessaria: aprovacao_lucas_antes_de_postar

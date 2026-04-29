@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>TriboCRM no Instagram — Bloco 4: Pipeline de Automação</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --bg:#0a0a0a;
+    --bg-elev:#141414;
+    --bg-card:#1a1a1a;
+    --border:#2a2a2a;
+    --border-strong:#3a3a3a;
+    --text:#fafafa;
+    --text-muted:#a3a3a3;
+    --text-soft:#737373;
+    --accent:#f97316;
+    --accent-soft:rgba(249,115,22,.12);
+    --accent-line:rgba(249,115,22,.35);
+    --ok:#22c55e;
+    --ok-soft:rgba(34,197,94,.1);
+    --mono:'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth;scroll-padding-top:24px}
+  body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+
+  .layout{display:grid;grid-template-columns:260px 1fr;min-height:100vh}
+
+  /* SIDEBAR */
+  aside{position:sticky;top:0;height:100vh;background:var(--bg-elev);border-right:1px solid var(--border);padding:28px 22px;overflow-y:auto}
+  .brand{display:flex;align-items:center;gap:12px;margin-bottom:28px}
+  .brand-mark{width:40px;height:40px}
+  .brand-text{font-weight:800;font-size:18px;letter-spacing:-.01em}
+  .brand-text span{color:var(--accent)}
+  .brand-sub{font-size:11px;color:var(--text-soft);margin-top:2px;letter-spacing:.04em;text-transform:uppercase}
+  .nav-label{font-size:10px;color:var(--text-soft);text-transform:uppercase;letter-spacing:.12em;margin:18px 0 8px;font-weight:600}
+  nav a{display:flex;align-items:center;gap:10px;color:var(--text-muted);text-decoration:none;padding:7px 10px;border-radius:6px;font-size:13px;transition:all .15s}
+  nav a:hover{color:var(--text);background:rgba(255,255,255,.03)}
+  nav a .num{font-size:10px;color:var(--text-soft);background:var(--bg-card);padding:2px 6px;border-radius:4px;font-variant-numeric:tabular-nums}
+  .status-pill{display:inline-flex;align-items:center;gap:6px;background:var(--accent-soft);color:var(--accent);padding:5px 10px;border-radius:999px;font-size:11px;font-weight:600;border:1px solid var(--accent-line);margin-top:14px}
+  .status-pill::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent)}
+
+  /* MAIN */
+  main{padding:48px 56px 120px;max-width:1080px}
+  .hero{margin-bottom:48px;padding-bottom:32px;border-bottom:1px solid var(--border)}
+  .breadcrumb{font-size:12px;color:var(--text-soft);margin-bottom:14px;letter-spacing:.04em;text-transform:uppercase}
+  .breadcrumb b{color:var(--accent);font-weight:600}
+  h1{font-size:40px;font-weight:800;letter-spacing:-.025em;line-height:1.1;margin-bottom:14px}
+  .lede{font-size:17px;color:var(--text-muted);max-width:720px;line-height:1.55}
+
+  section{margin:64px 0;scroll-margin-top:24px}
+  h2{font-size:24px;font-weight:700;letter-spacing:-.015em;margin-bottom:6px;display:flex;align-items:baseline;gap:14px}
+  h2 .num{font-size:13px;color:var(--accent);font-weight:600;background:var(--accent-soft);padding:4px 10px;border-radius:6px;border:1px solid var(--accent-line)}
+  h3{font-size:18px;font-weight:600;letter-spacing:-.005em;margin:28px 0 12px}
+  h4{font-size:15px;font-weight:600;margin:20px 0 8px}
+  .section-lead{color:var(--text-muted);margin-bottom:28px;max-width:720px}
+  p{margin:10px 0;color:var(--text-muted)}
+  strong{color:var(--text);font-weight:600}
+  code{font-family:var(--mono);font-size:.92em;background:var(--bg-elev);padding:2px 7px;border-radius:4px;color:var(--accent)}
+  pre{background:var(--bg-elev);border:1px solid var(--border);border-radius:8px;padding:16px 20px;overflow-x:auto;font-size:13px;line-height:1.65;font-family:var(--mono);margin:12px 0;color:var(--text-muted)}
+  pre code{background:transparent;padding:0;color:inherit}
+  pre .c{color:var(--text-soft)}
+  pre .k{color:var(--accent);font-weight:600}
+  pre .s{color:var(--ok)}
+  pre .v{color:var(--text)}
+  pre .cmd{color:var(--accent);font-weight:600}
+
+  /* FLOW */
+  .flow{
+    background:var(--bg-card);border:1px solid var(--border);
+    border-radius:10px;padding:28px;margin:18px 0;
+    font-family:var(--mono);font-size:12.5px;line-height:1.85;
+    overflow-x:auto;
+  }
+  .flow-step{display:flex;align-items:center;gap:14px;padding:6px 0}
+  .flow-step .arrow{color:var(--accent);font-weight:bold}
+  .flow-box{
+    background:var(--bg-elev);border:1px solid var(--border-strong);
+    border-radius:6px;padding:6px 12px;
+    color:var(--text);font-weight:500;
+    font-family:var(--mono);font-size:12px;
+  }
+  .flow-box.in{border-color:var(--accent-line);color:var(--accent)}
+  .flow-box.out{background:var(--ok-soft);border-color:rgba(34,197,94,.3);color:var(--ok)}
+  .flow-conn{color:var(--text-soft);text-align:center;width:100%;font-size:11px;letter-spacing:.05em}
+
+  /* CMD BLOCKS */
+  .cmd-block{
+    background:#000;border:1px solid var(--border-strong);
+    border-radius:8px;padding:16px 20px;margin:12px 0;
+    font-family:var(--mono);font-size:13px;line-height:1.8;
+  }
+  .cmd-block .prompt{color:var(--accent);font-weight:600;margin-right:8px}
+  .cmd-block .out{color:var(--text-soft);font-size:12px}
+  .cmd-block .ok{color:var(--ok)}
+  .cmd-block .arrow{color:var(--accent)}
+
+  /* PAUTAS TABLE */
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px}
+  th,td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--border)}
+  th{background:var(--bg-elev);font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-soft);font-weight:600}
+  td{color:var(--text-muted)}
+  td strong{color:var(--text)}
+  td code{font-size:11px}
+
+  .pilar-tag{display:inline-block;padding:2px 9px;border-radius:5px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;background:var(--accent-soft);color:var(--accent)}
+
+  /* INTERNAL STEPS */
+  .steps{list-style:none;padding:0;counter-reset:step}
+  .steps li{
+    counter-increment:step;
+    background:var(--bg-card);border:1px solid var(--border);
+    border-radius:8px;padding:16px 20px 16px 60px;margin:8px 0;
+    position:relative;font-size:14px;color:var(--text-muted);
+  }
+  .steps li::before{
+    content:counter(step);
+    position:absolute;left:18px;top:50%;transform:translateY(-50%);
+    width:30px;height:30px;border-radius:50%;
+    background:var(--accent-soft);color:var(--accent);
+    border:1px solid var(--accent-line);
+    display:flex;align-items:center;justify-content:center;
+    font-weight:700;font-size:13px;font-family:var(--mono);
+  }
+  .steps li strong{color:var(--text)}
+  .steps li code{font-size:12px}
+
+  /* TROUBLESHOOTING */
+  .ts-item{
+    background:var(--bg-card);border-left:3px solid var(--accent);
+    border-radius:0 8px 8px 0;padding:14px 18px;margin:10px 0;
+  }
+  .ts-q{font-weight:600;color:var(--text);margin-bottom:6px;font-size:14px}
+  .ts-a{font-size:13px;color:var(--text-muted)}
+  .ts-a code{font-size:11px}
+
+  /* CHECKLIST */
+  .checklist{background:var(--bg-card);border:1px solid var(--accent-line);border-radius:10px;padding:24px;margin:18px 0}
+  .check-item{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer}
+  .check-item:last-child{border-bottom:none}
+  .check-item input{appearance:none;width:20px;height:20px;flex-shrink:0;border:2px solid var(--border-strong);border-radius:4px;cursor:pointer;background:var(--bg);margin-top:1px;transition:all .15s}
+  .check-item input:checked{background:var(--accent);border-color:var(--accent)}
+  .check-item input:checked::after{content:"✓";display:flex;align-items:center;justify-content:center;height:100%;color:#000;font-weight:800;font-size:13px}
+  .check-item label{cursor:pointer;flex:1;color:var(--text-muted);font-size:14px;line-height:1.5}
+  .check-item input:checked + label{color:var(--text-soft);text-decoration:line-through}
+
+  .quote{border-left:3px solid var(--accent);padding:14px 22px;background:var(--accent-soft);margin:18px 0;font-size:14px;color:var(--text);border-radius:0 8px 8px 0}
+
+  .footnote{font-size:12px;color:var(--text-soft);margin-top:32px;padding-top:24px;border-top:1px solid var(--border)}
+
+  @media (max-width:900px){
+    .layout{grid-template-columns:1fr}
+    aside{position:relative;height:auto}
+    main{padding:24px}
+    h1{font-size:30px}
+  }
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <aside>
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 100 100">
+        <rect width="100" height="100" rx="14" fill="#f97316"/>
+        <rect x="22" y="26" width="56" height="13" fill="#fff"/>
+        <rect x="43" y="26" width="14" height="50" fill="#fff"/>
+        <circle cx="28" cy="32.5" r="4" fill="#f97316"/>
+        <circle cx="72" cy="32.5" r="4" fill="#f97316"/>
+      </svg>
+      <div>
+        <div class="brand-text">Tribo<span>CRM</span></div>
+        <div class="brand-sub">Plano Instagram</div>
+      </div>
+    </div>
+
+    <div class="status-pill">Bloco 4 · Em revisão</div>
+
+    <div class="nav-label">Navegação</div>
+    <nav>
+      <a href="#arquitetura"><span class="num">01</span> Arquitetura</a>
+      <a href="#setup"><span class="num">02</span> Setup</a>
+      <a href="#cli"><span class="num">03</span> CLI</a>
+      <a href="#yaml"><span class="num">04</span> Anatomia do YAML</a>
+      <a href="#pautas"><span class="num">05</span> Pautas-exemplo</a>
+      <a href="#interno"><span class="num">06</span> Como funciona internamente</a>
+      <a href="#troubleshooting"><span class="num">07</span> Troubleshooting</a>
+      <a href="#aprovacao"><span class="num">08</span> Aprovação</a>
+    </nav>
+
+    <div class="nav-label" style="margin-top:32px">Status dos blocos</div>
+    <nav>
+      <a href="01-estrategia-canal.html"><span class="num">B1</span> Estratégia · ✅</a>
+      <a href="02-pautas-e-calendario.html"><span class="num">B2</span> Pautas · ✅</a>
+      <a href="03-sistema-visual.html"><span class="num">B3</span> Sistema visual · ✅</a>
+      <a href="#" style="color:var(--accent)"><span class="num">B4</span> Pipeline · 🟢</a>
+      <a href="#" style="opacity:.5;pointer-events:none"><span class="num">B5</span> Operação</a>
+    </nav>
+  </aside>
+
+  <main>
+
+    <header class="hero">
+      <div class="breadcrumb">Plano de Comunicação · <b>Bloco 4 de 5</b> · Pipeline de Automação</div>
+      <h1>Pauta YAML entra. PNG no tamanho nativo do Instagram sai. Em 1.4 segundos.</h1>
+      <p class="lede">Pipeline Node + Puppeteer em <code>marketing/instagram/</code>: lê YAML do calendário, carrega o template HTML certo, substitui os pontos editáveis e captura screenshot do <code>.canvas</code> em 1080×1350 ou 1080×1920. Veio com 5 pautas-exemplo do calendário Mês 1 prontas pra rodar.</p>
+    </header>
+
+    <!-- 1. ARQUITETURA -->
+    <section id="arquitetura">
+      <h2><span class="num">01</span> Arquitetura</h2>
+      <p class="section-lead">Fluxo end-to-end de uma pauta até virar PNG.</p>
+
+      <div class="flow">
+        <div class="flow-step"><span class="flow-box in">posts/2026-05-04_funil_01-capa.yaml</span></div>
+        <div class="flow-conn">↓ js-yaml.load</div>
+        <div class="flow-step"><span class="flow-box">template: <strong>carrossel-metodo-capa</strong></span></div>
+        <div class="flow-conn">↓ render-post.mjs</div>
+        <div class="flow-step"><span class="flow-box">templates/carrossel-metodo-capa.html</span></div>
+        <div class="flow-conn">↓ Chromium headless · page.goto(file://...)</div>
+        <div class="flow-step"><span class="flow-box">substitui <code>[data-edit="X"]</code> pelo valor de <code>data.X</code></span></div>
+        <div class="flow-conn">↓ document.fonts.ready</div>
+        <div class="flow-step"><span class="flow-box">canvas.screenshot()</span></div>
+        <div class="flow-conn">↓ no tamanho nativo · 1080×1350 ou 1080×1920</div>
+        <div class="flow-step"><span class="flow-box out">output/2026-05-04_funil_01-capa.png</span></div>
+      </div>
+    </section>
+
+    <!-- 2. SETUP -->
+    <section id="setup">
+      <h2><span class="num">02</span> Setup (uma vez)</h2>
+      <p class="section-lead">Instala Puppeteer (~150MB, baixa Chromium) + js-yaml.</p>
+
+      <div class="cmd-block">
+        <span class="prompt">$</span><span class="cmd">cd marketing/instagram</span><br>
+        <span class="prompt">$</span><span class="cmd">npm install</span>
+      </div>
+
+      <p>Engines: <strong>Node ≥ 18</strong> (usa <code>import</code>, <code>parseArgs</code> nativo, top-level <code>await</code>).</p>
+
+      <p>Dependências:</p>
+      <ul style="padding-left:20px;color:var(--text-muted);font-size:14px">
+        <li><code>puppeteer ^23.0.0</code> — Chromium headless + API de screenshot</li>
+        <li><code>js-yaml ^4.1.0</code> — parse dos YAMLs de pauta</li>
+      </ul>
+    </section>
+
+    <!-- 3. CLI -->
+    <section id="cli">
+      <h2><span class="num">03</span> CLI</h2>
+      <p class="section-lead">Dois comandos cobrem 100% do uso.</p>
+
+      <h3>Renderizar uma pauta</h3>
+      <div class="cmd-block">
+        <span class="prompt">$</span><span class="cmd">npm run post -- --pauta posts/2026-05-04_funil_01-capa.yaml</span><br><br>
+        <span class="arrow">▶</span> 2026-05-04_funil_01-capa.yaml<br>
+        <span class="ok">✓</span> carrossel-metodo-capa → 2026-05-04_funil_01-capa.png<br>
+        <span class="out">&nbsp;&nbsp;1080×1350 · 1.4s · output/2026-05-04_funil_01-capa.png</span>
+      </div>
+
+      <h3>Renderizar tudo em fila</h3>
+      <p>Reusa uma única instância do Chromium — muito mais rápido que N renders independentes.</p>
+      <div class="cmd-block">
+        <span class="prompt">$</span><span class="cmd">npm run posts:all</span><br><br>
+        <span class="arrow">▶</span> 5 pautas em fila<br>
+        <span class="out">&nbsp;&nbsp;<span class="ok">✓</span> 2026-05-04_funil_01-capa.yaml      → 1080×1350</span><br>
+        <span class="out">&nbsp;&nbsp;<span class="ok">✓</span> 2026-05-04_funil_03-momento1.yaml  → 1080×1350</span><br>
+        <span class="out">&nbsp;&nbsp;<span class="ok">✓</span> 2026-05-04_funil_08-cta.yaml       → 1080×1350</span><br>
+        <span class="out">&nbsp;&nbsp;<span class="ok">✓</span> 2026-05-05_reel-sexta-cover.yaml   → 1080×1920</span><br>
+        <span class="out">&nbsp;&nbsp;<span class="ok">✓</span> 2026-05-06_feed-manifesto.yaml     → 1080×1350</span><br><br>
+        <span class="out"><span class="ok">5 ok</span> · 0 falhas · 4.8s</span>
+      </div>
+
+      <h3>Renderizar diretório customizado</h3>
+      <div class="cmd-block">
+        <span class="prompt">$</span><span class="cmd">npm run posts:all -- --dir posts/2026-05</span>
+      </div>
+    </section>
+
+    <!-- 4. YAML -->
+    <section id="yaml">
+      <h2><span class="num">04</span> Anatomia de uma pauta YAML</h2>
+      <p class="section-lead">Estrutura mínima: <code>template</code> + <code>data</code>. <code>slug</code> é opcional (default: nome do arquivo YAML).</p>
+
+      <pre><code><span class="c"># Pauta: Slide 1 do carrossel "Os 4 momentos do funil"
+# Calendário: SEG 04/05/2026 · Pilar Método</span>
+<span class="k">template:</span> <span class="v">carrossel-metodo-capa</span>
+<span class="k">slug:</span> <span class="v">2026-05-04_funil_01-capa</span>
+<span class="k">data:</span>
+  <span class="k">pilar:</span> <span class="s">"Método"</span>
+  <span class="k">titulo:</span> |
+    Os 4 momentos do funil&lt;br&gt;
+    que sua PME tá &lt;span class="t-orange"&gt;pulando&lt;/span&gt;.
+  <span class="k">slide-number:</span> <span class="s">"01 / 08"</span>
+  <span class="k">handle:</span> <span class="s">"@tribocrmoficial"</span></code></pre>
+
+      <h3>Conteúdo HTML inline é permitido</h3>
+      <p>O pipeline usa <code>innerHTML</code>, então você pode incluir:</p>
+      <ul style="padding-left:20px;color:var(--text-muted);font-size:14px">
+        <li><code>&lt;br&gt;</code> pra quebra de linha</li>
+        <li><code>&lt;span class="t-orange"&gt;palavra&lt;/span&gt;</code> pra destacar palavra em laranja</li>
+        <li><code>&lt;span class="cta-emoji"&gt;🔥&lt;/span&gt;</code> pra emoji no CTA</li>
+        <li><code>&lt;strong&gt;</code> pra ênfase pontual</li>
+      </ul>
+
+      <p>YAML multilinha com <code>|</code> preserva quebras visuais e permite HTML limpo no editor.</p>
+    </section>
+
+    <!-- 5. PAUTAS -->
+    <section id="pautas">
+      <h2><span class="num">05</span> Pautas-exemplo entregues</h2>
+      <p class="section-lead">Cinco pautas reais do calendário Mês 1, prontas pra você renderizar agora mesmo.</p>
+
+      <table>
+        <thead>
+          <tr><th>Arquivo</th><th>Template</th><th>Pilar</th><th>Calendário</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>2026-05-04_funil_01-capa.yaml</code></td>
+            <td><code>carrossel-metodo-capa</code></td>
+            <td><span class="pilar-tag">Método</span></td>
+            <td>SEG 04/05 · slide 1</td>
+          </tr>
+          <tr>
+            <td><code>2026-05-04_funil_03-momento1.yaml</code></td>
+            <td><code>carrossel-metodo-slide</code></td>
+            <td><span class="pilar-tag">Método</span></td>
+            <td>SEG 04/05 · slide 3</td>
+          </tr>
+          <tr>
+            <td><code>2026-05-04_funil_08-cta.yaml</code></td>
+            <td><code>carrossel-metodo-cta</code></td>
+            <td><span class="pilar-tag">Método</span></td>
+            <td>SEG 04/05 · slide 8</td>
+          </tr>
+          <tr>
+            <td><code>2026-05-05_reel-sexta-cover.yaml</code></td>
+            <td><code>reel-cover</code></td>
+            <td><span class="pilar-tag">Dor</span></td>
+            <td>TER 05/05</td>
+          </tr>
+          <tr>
+            <td><code>2026-05-06_feed-manifesto.yaml</code></td>
+            <td><code>feed-manifesto</code></td>
+            <td><span class="pilar-tag">Manifesto</span></td>
+            <td>QUA 06/05</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p style="font-size:13px;color:var(--text-soft)"><em>Cobrem os principais formatos: capa de carrossel, slide miolo, CTA gradient laranja, reel 9:16 e feed manifesto 4:5.</em></p>
+    </section>
+
+    <!-- 6. INTERNO -->
+    <section id="interno">
+      <h2><span class="num">06</span> Como o pipeline funciona internamente</h2>
+      <p class="section-lead"><code>scripts/render-post.mjs</code> faz, por pauta:</p>
+
+      <ol class="steps">
+        <li><strong>Lê o YAML</strong> com <code>js-yaml.load</code>. Valida que tem <code>template</code> e <code>data</code>.</li>
+        <li><strong>Resolve o template</strong> em <code>templates/&lt;template&gt;.html</code>. Se não existir, falha.</li>
+        <li><strong>Lança Chromium</strong> headless via Puppeteer (viewport 1200×2000 — cobre feed e story).</li>
+        <li><strong>Carrega o template</strong> via <code>file://</code> URL com <code>waitUntil: 'networkidle0'</code>.</li>
+        <li><strong>Injeta CSS de produção</strong> que desabilita o <code>.preview-stage</code> scaling — canvas renderiza em tamanho nativo, não escalado.</li>
+        <li><strong>Substitui</strong> cada <code>[data-edit="X"]</code> pelo valor de <code>data.X</code> via <code>page.evaluate</code>.</li>
+        <li><strong>Espera fontes</strong> com <code>document.fonts.ready</code> — DM Sans precisa estar carregada antes do screenshot.</li>
+        <li><strong>Mede o <code>.canvas</code></strong> com <code>boundingBox()</code> pra reportar dimensão real.</li>
+        <li><strong>Captura screenshot</strong> do elemento <code>.canvas</code> (não da viewport inteira) → PNG limpo.</li>
+        <li><strong>Salva</strong> em <code>output/&lt;slug&gt;.png</code>.</li>
+      </ol>
+
+      <p><code>render-batch.mjs</code> faz o mesmo em loop, reusando a instância do browser.</p>
+    </section>
+
+    <!-- 7. TROUBLESHOOTING -->
+    <section id="troubleshooting">
+      <h2><span class="num">07</span> Troubleshooting</h2>
+
+      <div class="ts-item">
+        <div class="ts-q">"Failed to launch the browser process"</div>
+        <div class="ts-a">Puppeteer baixa o próprio Chromium na instalação. Se falhou, rode:<br>
+          <code>npx puppeteer browsers install chrome</code>
+        </div>
+      </div>
+
+      <div class="ts-item">
+        <div class="ts-q">Fonte DM Sans aparece como serif/Times</div>
+        <div class="ts-a">O <code>tokens.css</code> puxa Google Fonts via <code>@import</code>. O pipeline espera <code>document.fonts.ready</code>, mas em rede lenta pode não bastar — aumente o <code>setTimeout</code> em <code>render-post.mjs:90</code> (atualmente 250ms) pra 500-1000ms.</div>
+      </div>
+
+      <div class="ts-item">
+        <div class="ts-q">Símbolo D não aparece no PNG</div>
+        <div class="ts-a">Confirme que <code>_assets/symbol-d.svg</code> existe e o template referencia <code>../_assets/symbol-d.svg</code>.</div>
+      </div>
+
+      <div class="ts-item">
+        <div class="ts-q">Texto cortado / sobrando da peça</div>
+        <div class="ts-a">Conteúdo do YAML é maior que o template comporta. Reduz o texto ou ajusta o tamanho da tipografia no template via override de classe.</div>
+      </div>
+
+      <div class="ts-item">
+        <div class="ts-q">Como adicionar template novo</div>
+        <div class="ts-a">1. Cria <code>templates/&lt;novo&gt;.html</code> seguindo a convenção (link tokens.css + classe <code>.canvas</code> + elementos com <code>data-edit</code>).<br>
+        2. Cria YAML em <code>posts/</code> com <code>template: &lt;novo&gt;</code>.<br>
+        3. Renderiza. Não precisa tocar no <code>render-post.mjs</code> — ele é genérico.</div>
+      </div>
+    </section>
+
+    <!-- 8. APROVAÇÃO -->
+    <section id="aprovacao">
+      <h2><span class="num">08</span> Aprovação do Bloco 4</h2>
+      <p class="section-lead">Roda os comandos, abre os PNGs gerados e marca os pontos validados. Aprovar destrava o <strong>Bloco 5 — Operação e Medição</strong>.</p>
+
+      <div class="checklist">
+        <h3 style="margin-top:0">Checklist</h3>
+        <div class="check-item"><input type="checkbox" id="c1"><label for="c1"><code>npm install</code> em <code>marketing/instagram/</code> rodou sem erro</label></div>
+        <div class="check-item"><input type="checkbox" id="c2"><label for="c2"><code>npm run post -- --pauta posts/2026-05-04_funil_01-capa.yaml</code> gerou PNG</label></div>
+        <div class="check-item"><input type="checkbox" id="c3"><label for="c3">PNG da capa tem dimensão <strong>1080×1350</strong> e símbolo D no canto inferior direito</label></div>
+        <div class="check-item"><input type="checkbox" id="c4"><label for="c4">PNG do reel tem dimensão <strong>1080×1920</strong></label></div>
+        <div class="check-item"><input type="checkbox" id="c5"><label for="c5"><code>npm run posts:all</code> renderizou as 5 pautas em fila com sucesso</label></div>
+        <div class="check-item"><input type="checkbox" id="c6"><label for="c6">Convenção do YAML é fácil de escrever</label></div>
+        <div class="check-item"><input type="checkbox" id="c7"><label for="c7">Convenção <code>data-edit</code> aceita HTML inline (br, span class) corretamente</label></div>
+      </div>
+
+      <div class="quote">
+        <strong>Próximo passo:</strong> diz "Bora!" pra eu disparar o Bloco 5 — workflow operacional semanal · ferramenta de agendamento · dashboard de KPIs com as metas dos 90 dias · checklist de publicação anti-troca-nome / anti-coach / anti-emoji-proibido.
+      </div>
+
+      <div class="footnote">
+        TriboCRM · Plano de Comunicação Instagram · Bloco 4/5 · Puppeteer + js-yaml · 5 pautas-exemplo · Abril/2026
+      </div>
+    </section>
+
+  </main>
+</div>
+</body>
+</html>

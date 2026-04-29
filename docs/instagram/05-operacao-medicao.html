@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>TriboCRM no Instagram — Bloco 5: Operação e Medição</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --bg:#0a0a0a;
+    --bg-elev:#141414;
+    --bg-card:#1a1a1a;
+    --border:#2a2a2a;
+    --border-strong:#3a3a3a;
+    --text:#fafafa;
+    --text-muted:#a3a3a3;
+    --text-soft:#737373;
+    --accent:#f97316;
+    --accent-soft:rgba(249,115,22,.12);
+    --accent-line:rgba(249,115,22,.35);
+    --ok:#22c55e;
+    --ok-soft:rgba(34,197,94,.1);
+    --danger:#ef4444;
+    --danger-soft:rgba(239,68,68,.08);
+    --mono:'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth;scroll-padding-top:24px}
+  body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+
+  .layout{display:grid;grid-template-columns:260px 1fr;min-height:100vh}
+
+  /* SIDEBAR */
+  aside{position:sticky;top:0;height:100vh;background:var(--bg-elev);border-right:1px solid var(--border);padding:28px 22px;overflow-y:auto}
+  .brand{display:flex;align-items:center;gap:12px;margin-bottom:28px}
+  .brand-mark{width:40px;height:40px}
+  .brand-text{font-weight:800;font-size:18px;letter-spacing:-.01em}
+  .brand-text span{color:var(--accent)}
+  .brand-sub{font-size:11px;color:var(--text-soft);margin-top:2px;letter-spacing:.04em;text-transform:uppercase}
+  .nav-label{font-size:10px;color:var(--text-soft);text-transform:uppercase;letter-spacing:.12em;margin:18px 0 8px;font-weight:600}
+  nav a{display:flex;align-items:center;gap:10px;color:var(--text-muted);text-decoration:none;padding:7px 10px;border-radius:6px;font-size:13px;transition:all .15s}
+  nav a:hover{color:var(--text);background:rgba(255,255,255,.03)}
+  nav a .num{font-size:10px;color:var(--text-soft);background:var(--bg-card);padding:2px 6px;border-radius:4px;font-variant-numeric:tabular-nums}
+  .status-pill{display:inline-flex;align-items:center;gap:6px;background:var(--accent-soft);color:var(--accent);padding:5px 10px;border-radius:999px;font-size:11px;font-weight:600;border:1px solid var(--accent-line);margin-top:14px}
+  .status-pill::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent)}
+
+  /* MAIN */
+  main{padding:48px 56px 120px;max-width:1080px}
+  .hero{margin-bottom:48px;padding-bottom:32px;border-bottom:1px solid var(--border)}
+  .breadcrumb{font-size:12px;color:var(--text-soft);margin-bottom:14px;letter-spacing:.04em;text-transform:uppercase}
+  .breadcrumb b{color:var(--accent);font-weight:600}
+  h1{font-size:40px;font-weight:800;letter-spacing:-.025em;line-height:1.1;margin-bottom:14px}
+  .lede{font-size:17px;color:var(--text-muted);max-width:720px;line-height:1.55}
+
+  section{margin:64px 0;scroll-margin-top:24px}
+  h2{font-size:24px;font-weight:700;letter-spacing:-.015em;margin-bottom:6px;display:flex;align-items:baseline;gap:14px}
+  h2 .num{font-size:13px;color:var(--accent);font-weight:600;background:var(--accent-soft);padding:4px 10px;border-radius:6px;border:1px solid var(--accent-line)}
+  h3{font-size:18px;font-weight:600;letter-spacing:-.005em;margin:28px 0 12px}
+  h4{font-size:15px;font-weight:600;margin:20px 0 8px}
+  .section-lead{color:var(--text-muted);margin-bottom:28px;max-width:720px}
+  p{margin:10px 0;color:var(--text-muted)}
+  strong{color:var(--text);font-weight:600}
+  code{font-family:var(--mono);font-size:.92em;background:var(--bg-elev);padding:2px 7px;border-radius:4px;color:var(--accent)}
+  pre{background:var(--bg-elev);border:1px solid var(--border);border-radius:8px;padding:16px 20px;overflow-x:auto;font-size:13px;line-height:1.65;font-family:var(--mono);margin:12px 0;color:var(--text-muted)}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px}
+  th,td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--border)}
+  th{background:var(--bg-elev);font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-soft);font-weight:600}
+  td{color:var(--text-muted)}
+  td strong{color:var(--text)}
+
+  /* WEEKLY TIMELINE */
+  .timeline{
+    background:var(--bg-card);border:1px solid var(--border);
+    border-radius:10px;padding:24px;margin:18px 0;
+  }
+  .tl-row{
+    display:grid;grid-template-columns:120px 80px 1fr;
+    gap:16px;align-items:center;
+    padding:14px 0;border-bottom:1px solid var(--border);
+  }
+  .tl-row:last-child{border:none}
+  .tl-when{
+    font-family:var(--mono);font-size:11px;font-weight:700;
+    color:var(--accent);letter-spacing:.05em;
+    background:var(--accent-soft);padding:6px 10px;
+    border-radius:6px;text-align:center;
+    border:1px solid var(--accent-line);
+  }
+  .tl-time{
+    font-family:var(--mono);font-size:12px;
+    color:var(--text);text-align:center;
+    font-weight:600;
+  }
+  .tl-what{font-size:13.5px;color:var(--text);line-height:1.5}
+  .tl-what em{color:var(--text-soft);font-size:12px;font-style:normal}
+
+  .tl-total{
+    margin-top:16px;padding-top:16px;
+    border-top:2px solid var(--accent-line);
+    text-align:center;font-size:14px;color:var(--text);
+  }
+  .tl-total strong{color:var(--accent);font-weight:700}
+
+  /* PRODUCTION FLOW */
+  .prod-flow{
+    background:#000;border:1px solid var(--border-strong);
+    border-radius:8px;padding:18px 22px;margin:14px 0;
+    font-family:var(--mono);font-size:12.5px;line-height:2;
+  }
+  .prod-flow .time{color:var(--accent);font-weight:600;margin-right:12px;display:inline-block;width:60px}
+  .prod-flow .arrow{color:var(--accent)}
+
+  /* TOOL COMPARE */
+  .tools-compare{
+    background:var(--bg-card);border:1px solid var(--border);
+    border-radius:10px;overflow:hidden;margin:18px 0;
+  }
+  .tools-compare th{background:var(--bg-elev)}
+  .tools-compare td{font-size:12.5px}
+  .tools-compare .pick{color:var(--ok);font-weight:600}
+  .tools-compare .meh{color:var(--text-soft)}
+  .tools-compare .nope{color:var(--danger)}
+
+  .reco-card{
+    background:linear-gradient(135deg,var(--accent-soft),transparent);
+    border:1px solid var(--accent-line);border-radius:10px;
+    padding:22px 24px;margin:18px 0;
+  }
+  .reco-card h4{margin:0 0 8px;color:var(--accent);font-size:13px;text-transform:uppercase;letter-spacing:.08em;font-weight:700}
+  .reco-card p{color:var(--text);margin:6px 0}
+
+  /* KPI CARDS */
+  .kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:18px 0}
+  .kpi-card{
+    background:var(--bg-card);border:1px solid var(--border);
+    border-radius:10px;padding:18px 20px;
+    border-top:3px solid var(--accent);
+  }
+  .kpi-name{font-size:11px;color:var(--text-soft);text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:8px}
+  .kpi-targets{display:flex;gap:12px;align-items:baseline}
+  .kpi-month{flex:1;text-align:center}
+  .kpi-month-label{font-size:10px;color:var(--text-soft);font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+  .kpi-month-value{font-size:24px;font-weight:800;color:var(--accent);font-family:var(--mono);margin-top:4px}
+
+  /* SHEET MOCKUP */
+  .sheet{
+    background:var(--bg-card);border:1px solid var(--border);
+    border-radius:10px;overflow:hidden;margin:18px 0;
+  }
+  .sheet-tabs{display:flex;background:var(--bg-elev);border-bottom:1px solid var(--border)}
+  .sheet-tab{
+    padding:10px 16px;font-size:11px;font-weight:600;
+    color:var(--text-soft);text-transform:uppercase;letter-spacing:.06em;
+    border-right:1px solid var(--border);cursor:pointer;
+  }
+  .sheet-tab.active{background:var(--bg-card);color:var(--accent);border-bottom:2px solid var(--accent);margin-bottom:-1px}
+  .sheet-table{width:100%;border-collapse:collapse;font-size:11.5px;font-family:var(--mono)}
+  .sheet-table th{background:var(--bg-elev);padding:8px 10px;text-align:left;font-size:10px;color:var(--text-soft);font-weight:600;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)}
+  .sheet-table td{padding:7px 10px;border-bottom:1px solid var(--border);color:var(--text-muted)}
+  .sheet-table td:first-child{color:var(--text);font-weight:500}
+  .sheet-formula{color:var(--accent);font-style:italic}
+  .sheet-num{text-align:right;color:var(--text);font-weight:600}
+
+  /* CHECKLIST */
+  .check-block{
+    background:var(--bg-card);border:1px solid var(--border);
+    border-radius:10px;padding:22px 26px;margin:14px 0;
+    border-left:4px solid var(--accent);
+  }
+  .check-block.test{border-left-color:#eab308}
+  .check-block.legend{border-left-color:#22c55e}
+  .check-block h4{font-size:14px;font-weight:700;margin:0 0 14px;color:var(--text);text-transform:uppercase;letter-spacing:.06em}
+  .check-row{display:flex;align-items:flex-start;gap:11px;padding:6px 0;cursor:pointer;font-size:13.5px}
+  .check-row input{appearance:none;width:18px;height:18px;flex-shrink:0;border:2px solid var(--border-strong);border-radius:3px;cursor:pointer;background:var(--bg);margin-top:2px;transition:all .15s}
+  .check-row input:checked{background:var(--accent);border-color:var(--accent)}
+  .check-row input:checked::after{content:"✓";display:flex;align-items:center;justify-content:center;height:100%;color:#000;font-weight:800;font-size:11px}
+  .check-row label{flex:1;color:var(--text-muted);line-height:1.5;cursor:pointer}
+  .check-row input:checked + label{color:var(--text-soft);text-decoration:line-through}
+  .check-row .ok{color:var(--ok);font-weight:600}
+  .check-row .bad{color:var(--danger);font-weight:600}
+
+  /* CYCLE PHASES */
+  .phases{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin:18px 0}
+  .phase{
+    background:var(--bg-card);border:1px solid var(--border);
+    border-radius:10px;padding:20px;
+  }
+  .phase-num{
+    display:inline-block;font-family:var(--mono);font-size:11px;font-weight:700;
+    color:var(--accent);background:var(--accent-soft);padding:3px 9px;
+    border-radius:5px;letter-spacing:.06em;margin-bottom:10px;
+  }
+  .phase-name{font-size:16px;font-weight:700;margin-bottom:6px}
+  .phase-time{font-size:11px;color:var(--text-soft);margin-bottom:12px}
+  .phase-list{padding-left:18px;font-size:12.5px;color:var(--text-muted);line-height:1.55}
+  .phase-list li{margin:5px 0}
+
+  /* PIVÔ ALERT */
+  .pivot-alert{
+    background:var(--danger-soft);
+    border:1px solid rgba(239,68,68,.3);
+    border-radius:10px;padding:20px 24px;margin:18px 0;
+  }
+  .pivot-alert h4{color:var(--danger);font-size:13px;text-transform:uppercase;letter-spacing:.08em;margin:0 0 8px}
+  .pivot-alert p{color:var(--text);margin:6px 0;font-size:14px}
+  .pivot-alert ul{padding-left:20px;font-size:13.5px;color:var(--text-muted)}
+
+  /* CONCLUSION */
+  .blocks-summary{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:24px 0}
+  .block-sum{
+    background:var(--bg-card);border:1px solid var(--border);
+    border-radius:10px;padding:16px 14px;text-align:center;
+    transition:all .15s;text-decoration:none;
+    color:var(--text);
+  }
+  .block-sum:hover{border-color:var(--accent-line);background:var(--accent-soft)}
+  .block-sum-num{font-family:var(--mono);font-size:11px;color:var(--accent);font-weight:700;letter-spacing:.06em;margin-bottom:6px}
+  .block-sum-name{font-size:13px;font-weight:700;margin-bottom:6px}
+  .block-sum-desc{font-size:11px;color:var(--text-soft);line-height:1.4}
+  .block-sum-status{margin-top:10px;font-size:13px}
+
+  /* QUICK REF */
+  .quickref{display:grid;gap:8px;margin:14px 0}
+  .quickref-row{
+    display:grid;grid-template-columns:1fr 2fr;gap:14px;
+    background:var(--bg-card);border:1px solid var(--border);
+    border-radius:8px;padding:12px 16px;
+    align-items:center;
+  }
+  .quickref-task{font-size:13px;color:var(--text)}
+  .quickref-action{font-size:12px;color:var(--text-muted);font-family:var(--mono)}
+  .quickref-action a{color:var(--accent);text-decoration:none}
+  .quickref-action a:hover{text-decoration:underline}
+
+  /* FINAL APPROVAL */
+  .final-approval{
+    background:linear-gradient(135deg,var(--accent-soft),rgba(34,197,94,.05));
+    border:1px solid var(--accent-line);border-radius:12px;
+    padding:32px;margin:32px 0;text-align:center;
+  }
+  .final-approval h3{font-size:22px;color:var(--text);margin:0 0 8px}
+  .final-approval p{color:var(--text);margin:8px 0;font-size:15px}
+  .final-approval .stat{display:flex;justify-content:center;gap:32px;margin-top:24px;flex-wrap:wrap}
+  .final-stat{text-align:center}
+  .final-stat-num{font-size:36px;font-weight:800;color:var(--accent);font-family:var(--mono);line-height:1}
+  .final-stat-label{font-size:11px;color:var(--text-soft);text-transform:uppercase;letter-spacing:.08em;margin-top:6px}
+
+  .quote{border-left:3px solid var(--accent);padding:14px 22px;background:var(--accent-soft);margin:18px 0;font-size:14px;color:var(--text);border-radius:0 8px 8px 0}
+  .footnote{font-size:12px;color:var(--text-soft);margin-top:32px;padding-top:24px;border-top:1px solid var(--border)}
+
+  @media (max-width:900px){
+    .layout{grid-template-columns:1fr}
+    aside{position:relative;height:auto}
+    main{padding:24px}
+    h1{font-size:30px}
+    .kpi-grid,.phases,.blocks-summary{grid-template-columns:1fr}
+    .tl-row{grid-template-columns:1fr;gap:6px}
+  }
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <aside>
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 100 100">
+        <rect width="100" height="100" rx="14" fill="#f97316"/>
+        <rect x="22" y="26" width="56" height="13" fill="#fff"/>
+        <rect x="43" y="26" width="14" height="50" fill="#fff"/>
+        <circle cx="28" cy="32.5" r="4" fill="#f97316"/>
+        <circle cx="72" cy="32.5" r="4" fill="#f97316"/>
+      </svg>
+      <div>
+        <div class="brand-text">Tribo<span>CRM</span></div>
+        <div class="brand-sub">Plano Instagram</div>
+      </div>
+    </div>
+
+    <div class="status-pill">Bloco 5 · Em revisão</div>
+
+    <div class="nav-label">Navegação</div>
+    <nav>
+      <a href="#workflow"><span class="num">01</span> Workflow semanal</a>
+      <a href="#agendamento"><span class="num">02</span> Agendamento</a>
+      <a href="#kpis"><span class="num">03</span> Dashboard de KPIs</a>
+      <a href="#checklist"><span class="num">04</span> Checklist publicação</a>
+      <a href="#ciclo"><span class="num">05</span> Ciclo mensal</a>
+      <a href="#conclusao"><span class="num">06</span> Conclusão</a>
+      <a href="#referencia"><span class="num">07</span> Referência rápida</a>
+      <a href="#aprovacao"><span class="num">08</span> Aprovação</a>
+    </nav>
+
+    <div class="nav-label" style="margin-top:32px">Status dos blocos</div>
+    <nav>
+      <a href="01-estrategia-canal.html"><span class="num">B1</span> Estratégia · ✅</a>
+      <a href="02-pautas-e-calendario.html"><span class="num">B2</span> Pautas · ✅</a>
+      <a href="03-sistema-visual.html"><span class="num">B3</span> Sistema visual · ✅</a>
+      <a href="04-pipeline-automacao.html"><span class="num">B4</span> Pipeline · ✅</a>
+      <a href="#" style="color:var(--accent)"><span class="num">B5</span> Operação · 🟢</a>
+    </nav>
+  </aside>
+
+  <main>
+
+    <header class="hero">
+      <div class="breadcrumb">Plano de Comunicação · <b>Bloco 5 de 5</b> · Operação e Medição</div>
+      <h1>5-6h focadas por semana. 30 minutos pra olhar dado. 90 min no fim do mês pra decidir o próximo.</h1>
+      <p class="lede">Manual operacional pro plano rodar em PME real. Concentra produção numa janela de sexta, deixa publicação no automático, mantém presença humana ao vivo nas DMs e stories. Termina com ciclo mensal de revisão pra dado virar decisão — e critério claro pra pivotar se não funcionar.</p>
+    </header>
+
+    <!-- 1. WORKFLOW -->
+    <section id="workflow">
+      <h2><span class="num">01</span> Workflow semanal</h2>
+      <p class="section-lead">Cadência fixa que cabe em PME sem time de marketing. Tudo agendável é agendado. Tudo que precisa de presença é feito ao vivo.</p>
+
+      <div class="timeline">
+        <div class="tl-row">
+          <div class="tl-when">SEX</div>
+          <div class="tl-time">16-19h<br>3h</div>
+          <div class="tl-what"><strong>Janela de produção da próxima semana.</strong> Escolher pautas, escrever copies, renderizar PNGs (<code>npm run posts:all</code>), revisar.<br><em>Janela protegida — sem interrupção.</em></div>
+        </div>
+        <div class="tl-row">
+          <div class="tl-when">SAB / DOM</div>
+          <div class="tl-time">1-2h</div>
+          <div class="tl-what"><strong>Gravar/editar os 2 reels da próxima semana.</strong> Câmera de celular + iMovie/CapCut basta.</div>
+        </div>
+        <div class="tl-row">
+          <div class="tl-when">DOM</div>
+          <div class="tl-time">20-21h<br>1h</div>
+          <div class="tl-what"><strong>Carregar PNGs no agendador, programar horários, escrever legendas finais.</strong> Foco total no agendamento.</div>
+        </div>
+        <div class="tl-row">
+          <div class="tl-when">TER</div>
+          <div class="tl-time">9h<br>30min</div>
+          <div class="tl-what"><strong>Triagem de DMs qualificadas</strong> da semana anterior · respostas pessoais.<br><em>DM qualificada = pessoa que pergunta sobre método ou produto.</em></div>
+        </div>
+        <div class="tl-row">
+          <div class="tl-when">QUI</div>
+          <div class="tl-time">9h<br>30min</div>
+          <div class="tl-what"><strong>Olhar dashboard de KPI</strong> da semana anterior · anotar aprendizado.<br><em>Não é hora de mudar plano — só registrar.</em></div>
+        </div>
+        <div class="tl-row">
+          <div class="tl-when">DIÁRIO</div>
+          <div class="tl-time">15-20min</div>
+          <div class="tl-what"><strong>Stories ao vivo</strong> (manhã ou tarde) + responder comentários do dia.<br><em>Pode rodar enquanto toma café / no fim do expediente.</em></div>
+        </div>
+        <div class="tl-total">Total: <strong>~5-6h focadas</strong> + ~2h dispersas em stories/DMs = <strong>~8h/semana</strong></div>
+      </div>
+
+      <h3>Ordem dentro da janela de produção (SEX 16-19h)</h3>
+      <div class="prod-flow">
+        <div><span class="time">16:00</span><span class="arrow">→</span> Abrir <code>02-pautas-e-calendario.md</code> · ler pautas da próxima semana</div>
+        <div><span class="time">16:10</span><span class="arrow">→</span> Atualizar/criar 5 YAMLs em <code>marketing/instagram/posts/</code></div>
+        <div><span class="time">16:30</span><span class="arrow">→</span> <code>cd marketing/instagram &amp;&amp; npm run posts:all</code></div>
+        <div><span class="time">16:35</span><span class="arrow">→</span> Abrir <code>output/</code> · review visual · ajustar YAMLs · re-render</div>
+        <div><span class="time">17:15</span><span class="arrow">→</span> Escrever 5 legendas em texto (carrossel + reel + feed)</div>
+        <div><span class="time">18:15</span><span class="arrow">→</span> Passar checklist de publicação (§4) por cada peça</div>
+        <div><span class="time">18:45</span><span class="arrow">→</span> Salvar tudo em pasta da semana · arquivar nada que ficar fora</div>
+      </div>
+    </section>
+
+    <!-- 2. AGENDAMENTO -->
+    <section id="agendamento">
+      <h2><span class="num">02</span> Ferramenta de agendamento</h2>
+      <p class="section-lead">Comparação direta. Recomendação clara.</p>
+
+      <table class="tools-compare">
+        <thead>
+          <tr><th>Critério</th><th>Metricool</th><th>Postgrain</th><th>Buffer / Later</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Publica IG direto</strong></td><td class="pick">✅</td><td class="pick">✅</td><td class="meh">⚠️ depende plano</td></tr>
+          <tr><td><strong>Carrossel nativo</strong></td><td class="pick">✅</td><td class="pick">✅</td><td class="pick">✅</td></tr>
+          <tr><td><strong>Stories agendados</strong></td><td class="pick">✅</td><td class="pick">✅</td><td class="meh">⚠️</td></tr>
+          <tr><td><strong>Inbox unificado</strong></td><td class="pick">✅</td><td class="meh">⚠️ limitado</td><td class="meh">⚠️</td></tr>
+          <tr><td><strong>Analytics IG</strong></td><td class="pick">✅ robusto</td><td class="pick">✅ bom</td><td class="meh">⚠️</td></tr>
+          <tr><td><strong>Interface PT-BR</strong></td><td class="pick">✅</td><td class="pick">✅ nativo</td><td class="nope">❌</td></tr>
+          <tr><td><strong>Plano gratuito</strong></td><td class="pick">✅ generoso</td><td class="nope">❌ só trial</td><td class="meh">✅ limitado</td></tr>
+          <tr><td><strong>Plano pago</strong></td><td>~R$ 70/mês</td><td>~R$ 50/mês</td><td>~R$ 30/mês</td></tr>
+          <tr><td><strong>Suporte BR</strong></td><td class="pick">✅</td><td class="pick">✅ nativo</td><td class="nope">❌</td></tr>
+        </tbody>
+      </table>
+
+      <div class="reco-card">
+        <h4>Recomendação</h4>
+        <p><strong>Metricool</strong> como primeira escolha pelo combo plano gratuito robusto + inbox unificado + analytics IG decente. Permite começar grátis e migrar pra Starter quando o volume crescer.</p>
+        <p><strong>Postgrain</strong> como alternativa se você prefere ferramenta brasileira pura ou se preço importar mais.</p>
+        <p><strong>Não recomendo Buffer/Later</strong> pra esse caso — desenhados pra mercado US, suporte fraco em PT, analytics IG menos rico.</p>
+      </div>
+
+      <h3>Setup recomendado (Metricool)</h3>
+      <ol style="padding-left:20px;color:var(--text-muted);font-size:14px">
+        <li>Criar conta em metricool.com (plano gratuito)</li>
+        <li>Conectar perfil <code>@tribocrmoficial</code> via Meta Business</li>
+        <li>Criar pasta de projeto "TriboCRM IG"</li>
+        <li>Importar PNGs de <code>marketing/instagram/output/</code></li>
+        <li>Programar horários conforme calendário do B2</li>
+      </ol>
+
+      <h3>Horários recomendados (calibrar após 2 semanas)</h3>
+      <table>
+        <thead><tr><th>Dia</th><th>Horário primário</th><th>Horário backup</th></tr></thead>
+        <tbody>
+          <tr><td>SEG</td><td>7:00-8:00 <em>(antes do trabalho)</em></td><td>12:00-13:00</td></tr>
+          <tr><td>TER</td><td>7:00-8:00</td><td>18:00-19:00</td></tr>
+          <tr><td>QUA</td><td>12:00-13:00 <em>(almoço)</em></td><td>19:00-20:00</td></tr>
+          <tr><td>QUI</td><td>7:00-8:00</td><td>18:30-19:30</td></tr>
+          <tr><td>SEX</td><td>11:00-12:00 <em>(pré-almoço)</em></td><td>17:00-18:00</td></tr>
+          <tr><td>SAB</td><td>10:00-11:00 <em>(story)</em></td><td>16:00-17:00</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 3. KPIS -->
+    <section id="kpis">
+      <h2><span class="num">03</span> Dashboard de KPIs</h2>
+      <p class="section-lead">Estratégia híbrida: <strong>Metricool</strong> capta dado bruto automático, <strong>planilha mensal</strong> agrega + cruza com pilar/formato pra decisão.</p>
+
+      <h3>Metas dos 90 dias (lembrete do B1)</h3>
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-name">Saves / 1k alcance</div>
+          <div class="kpi-targets">
+            <div class="kpi-month"><div class="kpi-month-label">M1</div><div class="kpi-month-value">8</div></div>
+            <div class="kpi-month"><div class="kpi-month-label">M2</div><div class="kpi-month-value">14</div></div>
+            <div class="kpi-month"><div class="kpi-month-label">M3</div><div class="kpi-month-value">22</div></div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-name">DMs qualificadas / sem</div>
+          <div class="kpi-targets">
+            <div class="kpi-month"><div class="kpi-month-label">M1</div><div class="kpi-month-value">2</div></div>
+            <div class="kpi-month"><div class="kpi-month-label">M2</div><div class="kpi-month-value">5</div></div>
+            <div class="kpi-month"><div class="kpi-month-label">M3</div><div class="kpi-month-value">10</div></div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-name">Cliques link bio / sem</div>
+          <div class="kpi-targets">
+            <div class="kpi-month"><div class="kpi-month-label">M1</div><div class="kpi-month-value">15</div></div>
+            <div class="kpi-month"><div class="kpi-month-label">M2</div><div class="kpi-month-value">40</div></div>
+            <div class="kpi-month"><div class="kpi-month-label">M3</div><div class="kpi-month-value">80</div></div>
+          </div>
+        </div>
+      </div>
+
+      <h3>Estrutura da planilha (4 abas)</h3>
+      <div class="sheet">
+        <div class="sheet-tabs">
+          <div class="sheet-tab active">Posts</div>
+          <div class="sheet-tab">Semana</div>
+          <div class="sheet-tab">Mês</div>
+          <div class="sheet-tab">Pilares</div>
+        </div>
+        <table class="sheet-table">
+          <thead><tr><th>Data</th><th>Slug</th><th>Pilar</th><th>Formato</th><th>Alcance</th><th>Saves</th><th>Saves/1k</th><th>DMs</th><th>Cliques</th></tr></thead>
+          <tbody>
+            <tr><td>04/05</td><td>2026-05-04_funil_01-capa</td><td>Método</td><td>carrossel</td><td class="sheet-num">4.850</td><td class="sheet-num">78</td><td class="sheet-num sheet-formula">16,1</td><td class="sheet-num">2</td><td class="sheet-num">11</td></tr>
+            <tr><td>05/05</td><td>2026-05-05_reel-sexta-cover</td><td>Dor</td><td>reel</td><td class="sheet-num">8.200</td><td class="sheet-num">62</td><td class="sheet-num sheet-formula">7,6</td><td class="sheet-num">1</td><td class="sheet-num">4</td></tr>
+            <tr><td>06/05</td><td>2026-05-06_feed-manifesto</td><td>Manifesto</td><td>feed</td><td class="sheet-num">3.100</td><td class="sheet-num">29</td><td class="sheet-num sheet-formula">9,4</td><td class="sheet-num">0</td><td class="sheet-num">2</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="font-size:12px;color:var(--text-soft);margin-top:6px"><em>Aba "Posts": uma linha por peça publicada · "Semana": agregados · "Mês": meta vs realizado · "Pilares": pivot table cruzando pilar × performance.</em></p>
+
+      <h3>Cadência de atualização</h3>
+      <ul style="padding-left:20px;font-size:14px;color:var(--text-muted)">
+        <li><strong>Diário:</strong> não — não vale o tempo</li>
+        <li><strong>Semanal (QUI 9h):</strong> preencher linha de cada peça da semana, atualizar aba "Semana"</li>
+        <li><strong>Mensal (último dia útil):</strong> consolidar aba "Mês" e fazer ciclo de revisão (§5)</li>
+      </ul>
+    </section>
+
+    <!-- 4. CHECKLIST -->
+    <section id="checklist">
+      <h2><span class="num">04</span> Checklist de publicação</h2>
+      <p class="section-lead"><strong>Passar essa lista por CADA peça antes de publicar.</strong> Pegou um "não", volta e ajusta.</p>
+
+      <div class="check-block">
+        <h4>Visual</h4>
+        <div class="check-row"><input type="checkbox" id="v1"><label for="v1">Símbolo D no canto inferior direito · 88px · não cortado</label></div>
+        <div class="check-row"><input type="checkbox" id="v2"><label for="v2">Paleta respeitada (preto · laranja · branco) — sem cinzas</label></div>
+        <div class="check-row"><input type="checkbox" id="v3"><label for="v3">DM Sans usada em tudo</label></div>
+        <div class="check-row"><input type="checkbox" id="v4"><label for="v4">Dimensão correta: feed 1080×1350 · story/reel 1080×1920</label></div>
+        <div class="check-row"><input type="checkbox" id="v5"><label for="v5">Texto não corta nas bordas · espaçamento generoso preservado</label></div>
+        <div class="check-row"><input type="checkbox" id="v6"><label for="v6">Numeração de slide certa (carrossel)</label></div>
+        <div class="check-row"><input type="checkbox" id="v7"><label for="v7">Handle <code>@tribocrmoficial</code> (nunca <code>@tribocrm</code>)</label></div>
+      </div>
+
+      <div class="check-block">
+        <h4>Copy</h4>
+        <div class="check-row"><input type="checkbox" id="c1"><label for="c1"><span class="ok">USE:</span> "a gente" · "Máquina de Vendas" · "vender de verdade" · "sistema" · "ferramenta" · "cliente" · "vendedor" · "equipe"</label></div>
+        <div class="check-row"><input type="checkbox" id="c2"><label for="c2"><span class="bad">EVITE:</span> "solução" · "plataforma" · "empoderar" · "customer" · "squad" · "stakeholder"</label></div>
+        <div class="check-row"><input type="checkbox" id="c3"><label for="c3">Emojis usados: <strong>só</strong> 🔥 📈 ⚡ ✅</label></div>
+        <div class="check-row"><input type="checkbox" id="c4"><label for="c4"><span class="bad">PROIBIDOS:</span> 🚀 💎 🏆 💪 ✨ 🤖 🎯</label></div>
+        <div class="check-row"><input type="checkbox" id="c5"><label for="c5">Português correto · sem typos · "tá/pra" mantém acento</label></div>
+      </div>
+
+      <div class="check-block test">
+        <h4>Os dois testes do plano-mestre</h4>
+        <div class="check-row"><input type="checkbox" id="t1"><label for="t1"><strong>Teste do troca-nome:</strong> se trocar TriboCRM por HubSpot, AINDA funciona? Se sim → reescrever pra ficar específico</label></div>
+        <div class="check-row"><input type="checkbox" id="t2"><label for="t2"><strong>Teste do arquétipo:</strong> soa Pessoa Comum 70% + Herói 30%? Não virou guru/coach/mentor?</label></div>
+        <div class="check-row"><input type="checkbox" id="t3"><label for="t3">CTA específico (não "saiba mais", não "comente SIM", não "curta se concorda")</label></div>
+      </div>
+
+      <div class="check-block legend">
+        <h4>Legenda</h4>
+        <div class="check-row"><input type="checkbox" id="l1"><label for="l1">Hook na primeira linha (corta antes do "...mais")</label></div>
+        <div class="check-row"><input type="checkbox" id="l2"><label for="l2">Linguagem alinhada ao modo de voz do pilar (B1)</label></div>
+        <div class="check-row"><input type="checkbox" id="l3"><label for="l3">CTA específico no fim</label></div>
+        <div class="check-row"><input type="checkbox" id="l4"><label for="l4">5-7 hashtags relevantes (<code>#TriboCRM #MáquinaDeVendas</code> + 3-5 nicho)</label></div>
+        <div class="check-row"><input type="checkbox" id="l5"><label for="l5">Sem hashtag genérica clichê (#sucesso #empreendedorismo #motivação)</label></div>
+      </div>
+
+      <div class="check-block">
+        <h4>Pilar e cadência</h4>
+        <div class="check-row"><input type="checkbox" id="p1"><label for="p1">Peça pertence a um dos pilares ativos (B1) · não é genérica</label></div>
+        <div class="check-row"><input type="checkbox" id="p2"><label for="p2">Distribuição da semana respeita <strong>50/20/20/—/10</strong> (Método/Dor/Bastidor/Prova-suspenso/Manifesto)</label></div>
+        <div class="check-row"><input type="checkbox" id="p2b"><label for="p2b"><strong>Zero ficção:</strong> peça não atribui frase, depoimento, nome ou case a pessoa/empresa fictícia (regra dura · 28/04/2026)</label></div>
+        <div class="check-row"><input type="checkbox" id="p3"><label for="p3">Horário de publicação alinhado com o recomendado (§2)</label></div>
+      </div>
+    </section>
+
+    <!-- 5. CICLO -->
+    <section id="ciclo">
+      <h2><span class="num">05</span> Ciclo de revisão mensal</h2>
+      <p class="section-lead"><strong>Último dia útil de cada mês · sessão de 90-120min.</strong> Análise → Recalibragem → Ações concretas.</p>
+
+      <div class="phases">
+        <div class="phase">
+          <span class="phase-num">FASE 1</span>
+          <div class="phase-name">Análise</div>
+          <div class="phase-time">45 minutos</div>
+          <ol class="phase-list">
+            <li>Aba "Posts" · ordenar por Saves/1k · ver top 5 e bottom 5</li>
+            <li>Aba "Pilares" · qual puxou? Qual custou volume sem retorno?</li>
+            <li>Cruzar formato × performance: carrossel vence reel?</li>
+            <li>Olhar horários: qual janela converteu mais?</li>
+            <li>Ler DMs do mês: que pergunta veio mais vez?</li>
+          </ol>
+        </div>
+
+        <div class="phase">
+          <span class="phase-num">FASE 2</span>
+          <div class="phase-name">Recalibragem</div>
+          <div class="phase-time">45 minutos</div>
+          <p style="font-size:12px;color:var(--text-soft);margin:0 0 8px"><em>Pra cada eixo: manter · ajustar · cortar</em></p>
+          <ol class="phase-list">
+            <li>Distribuição por pilar: se um vencer claro, +5pp</li>
+            <li>Cadência semanal: produção apertada → cortar 1 carrossel</li>
+            <li>Pautas: top 5 voltam, bottom 5 saem</li>
+            <li>Hooks fracos: reescrever ou aposentar</li>
+            <li>Pautas novas: a partir das DMs/comentários</li>
+          </ol>
+        </div>
+
+        <div class="phase">
+          <span class="phase-num">FASE 3</span>
+          <div class="phase-name">Ações concretas</div>
+          <div class="phase-time">30 minutos</div>
+          <ol class="phase-list">
+            <li>Atualizar B2 com aprendizados</li>
+            <li>Reescrever 5-10 hooks fracos</li>
+            <li>Adicionar 5-10 pautas novas</li>
+            <li>Considerar formato novo (story-bastidor?)</li>
+            <li>Anotar na aba "Mês": 3 aprendizados + 1 hipótese pra próximo mês</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="pivot-alert">
+        <h4>Critério de pivô</h4>
+        <p>Se ao fim do <strong>Mês 2</strong> as metas estiverem <strong>menos de 50%</strong> atingidas, fazer <strong>revisão profunda</strong> em vez de incremental:</p>
+        <ul>
+          <li><strong>Persona errada?</strong> Voltar a B1 §2 e reavaliar</li>
+          <li><strong>Pilares errados?</strong> Reabrir B1 §4 — mas não muda antes de 60 dias completos</li>
+          <li><strong>Tom errado?</strong> Comparar copy publicada com B1 §5 (modos de voz)</li>
+          <li><strong>Visual errado?</strong> Auditar com B3 §1 (princípios)</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 6. CONCLUSÃO -->
+    <section id="conclusao">
+      <h2><span class="num">06</span> Conclusão do plano</h2>
+      <p class="section-lead">Os 5 blocos completam a esteira de comunicação do TriboCRM no Instagram.</p>
+
+      <div class="blocks-summary">
+        <a class="block-sum" href="01-estrategia-canal.html">
+          <div class="block-sum-num">B1</div>
+          <div class="block-sum-name">Estratégia</div>
+          <div class="block-sum-desc">POR QUE existe? Pra quem? Como mede?</div>
+          <div class="block-sum-status">✅</div>
+        </a>
+        <a class="block-sum" href="02-pautas-e-calendario.html">
+          <div class="block-sum-num">B2</div>
+          <div class="block-sum-name">Pautas</div>
+          <div class="block-sum-desc">O QUE publicar nos próximos 90 dias?</div>
+          <div class="block-sum-status">✅</div>
+        </a>
+        <a class="block-sum" href="03-sistema-visual.html">
+          <div class="block-sum-num">B3</div>
+          <div class="block-sum-name">Sistema visual</div>
+          <div class="block-sum-desc">COMO cada peça fica visualmente?</div>
+          <div class="block-sum-status">✅</div>
+        </a>
+        <a class="block-sum" href="04-pipeline-automacao.html">
+          <div class="block-sum-num">B4</div>
+          <div class="block-sum-name">Pipeline</div>
+          <div class="block-sum-desc">COMO produzir sem virar trabalho manual?</div>
+          <div class="block-sum-status">✅</div>
+        </a>
+        <a class="block-sum" href="#" style="background:var(--accent-soft);border-color:var(--accent-line)">
+          <div class="block-sum-num">B5</div>
+          <div class="block-sum-name">Operação</div>
+          <div class="block-sum-desc">COMO rodar semana após semana?</div>
+          <div class="block-sum-status">🟢</div>
+        </a>
+      </div>
+
+      <h3>Próximos passos sugeridos (fora do escopo dos 5 blocos)</h3>
+      <p>Quando o plano rodar por 60-90 dias, naturalmente surgem extensões:</p>
+      <ol style="padding-left:20px;color:var(--text-muted);font-size:14px">
+        <li><strong>Vídeo curto vertical (TikTok / Shorts)</strong> — repurpose dos reels com cortes próprios</li>
+        <li><strong>Newsletter</strong> — captura de email pra construir lista própria, menos dependente do algoritmo</li>
+        <li><strong>Mídia paga</strong> — depois de identificar 3-5 peças vencedoras orgânicas, escalar com Meta Ads</li>
+        <li><strong>LinkedIn paralelo</strong> — adaptar pilares Método e Bastidor pra audiência B2B mais formal (Prova entra quando reativar)</li>
+        <li><strong>Podcast / vídeos longos</strong> — se Bastidor ou Manifesto bombarem, considerar formato longo</li>
+      </ol>
+    </section>
+
+    <!-- 7. REFERÊNCIA RÁPIDA -->
+    <section id="referencia">
+      <h2><span class="num">07</span> Referência rápida</h2>
+      <p class="section-lead">Atalhos pros lugares mais usados do plano.</p>
+
+      <div class="quickref">
+        <div class="quickref-row">
+          <div class="quickref-task">Lembrar dos pilares ativos e pesos (50/20/20/—/10 · Prova suspenso 28/04)</div>
+          <div class="quickref-action"><a href="01-estrategia-canal.html#pilares">B1 §4 · Pilares</a></div>
+        </div>
+        <div class="quickref-row">
+          <div class="quickref-task">Pegar hook pronto pra escrever</div>
+          <div class="quickref-action"><a href="02-pautas-e-calendario.html#hooks">B2 §1 · Banco de hooks</a></div>
+        </div>
+        <div class="quickref-row">
+          <div class="quickref-task">Saber estrutura de carrossel</div>
+          <div class="quickref-action"><a href="02-pautas-e-calendario.html#estruturas">B2 §2 · Estruturas</a></div>
+        </div>
+        <div class="quickref-row">
+          <div class="quickref-task">Ver pauta da próxima semana</div>
+          <div class="quickref-action"><a href="02-pautas-e-calendario.html#mes1">B2 §3 · Calendário Mês 1</a></div>
+        </div>
+        <div class="quickref-row">
+          <div class="quickref-task">Editar template visual</div>
+          <div class="quickref-action"><code>marketing/instagram/templates/</code></div>
+        </div>
+        <div class="quickref-row">
+          <div class="quickref-task">Ajustar tokens (cor/tipo)</div>
+          <div class="quickref-action"><code>marketing/instagram/tokens.css</code></div>
+        </div>
+        <div class="quickref-row">
+          <div class="quickref-task">Renderizar uma peça</div>
+          <div class="quickref-action"><code>npm run post -- --pauta posts/&lt;arq&gt;.yaml</code></div>
+        </div>
+        <div class="quickref-row">
+          <div class="quickref-task">Renderizar a semana toda</div>
+          <div class="quickref-action"><code>npm run posts:all</code></div>
+        </div>
+        <div class="quickref-row">
+          <div class="quickref-task">Checklist antes de publicar</div>
+          <div class="quickref-action"><a href="#checklist">B5 §4 · Checklist</a></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. APROVAÇÃO -->
+    <section id="aprovacao">
+      <h2><span class="num">08</span> Aprovação do Bloco 5</h2>
+      <p class="section-lead">Esse era o último bloco. Aprovação fecha o plano completo.</p>
+
+      <div class="check-block">
+        <h4>Checklist final</h4>
+        <div class="check-row"><input type="checkbox" id="f1"><label for="f1">Workflow semanal (5-6h focadas + 15min/dia) é executável agora?</label></div>
+        <div class="check-row"><input type="checkbox" id="f2"><label for="f2">Recomendação Metricool faz sentido — ou prefere testar Postgrain primeiro?</label></div>
+        <div class="check-row"><input type="checkbox" id="f3"><label for="f3">Estrutura da planilha de KPI (4 abas) cobre o que precisa medir?</label></div>
+        <div class="check-row"><input type="checkbox" id="f4"><label for="f4">Checklist de publicação é completo o bastante pra evitar erros?</label></div>
+        <div class="check-row"><input type="checkbox" id="f5"><label for="f5">Ciclo de revisão mensal (90-120min, último dia útil) cabe na agenda?</label></div>
+        <div class="check-row"><input type="checkbox" id="f6"><label for="f6">Critério de pivô em M2 (&lt;50% das metas) é razoável?</label></div>
+      </div>
+
+      <div class="final-approval">
+        <h3>Plano completo pronto pra execução</h3>
+        <p>5 blocos · 1 design system · 10 templates · 115 hooks · 90 dias mapeados · 1 pipeline automatizado · 1 manual operacional</p>
+        <div class="stat">
+          <div class="final-stat">
+            <div class="final-stat-num">5</div>
+            <div class="final-stat-label">Blocos</div>
+          </div>
+          <div class="final-stat">
+            <div class="final-stat-num">115</div>
+            <div class="final-stat-label">Hooks</div>
+          </div>
+          <div class="final-stat">
+            <div class="final-stat-num">10</div>
+            <div class="final-stat-label">Templates</div>
+          </div>
+          <div class="final-stat">
+            <div class="final-stat-num">90</div>
+            <div class="final-stat-label">Dias mapeados</div>
+          </div>
+          <div class="final-stat">
+            <div class="final-stat-num">~6h</div>
+            <div class="final-stat-label">Por semana</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="quote">
+        A partir daqui é <strong>execução</strong>. Quando começar a rodar e tiver dado real (após 30 dias do M1), volta pra atualizar B2 com aprendizados, B5 com horários calibrados, e a gente ajusta o curso. Boa Tribo. 🔥
+      </div>
+
+      <div class="footnote">
+        TriboCRM · Plano de Comunicação Instagram · Bloco 5/5 · <strong>Plano completo</strong> · Abril/2026
+      </div>
+    </section>
+
+  </main>
+</div>
+</body>
+</html>

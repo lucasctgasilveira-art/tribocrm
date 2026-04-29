@@ -1,0 +1,19 @@
+# --------------------------------------------------------
+# Pauta: Slide 3 (A Pergunta) · Carrossel pergunta
+# Calendário: QUI 30/04/2026
+# Pilar: MÉTODO
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-04-30_pergunta_03-pergunta
+data:
+  pilar: "Método · A pergunta"
+  step-num: "A PERGUNTA"
+  titulo: |
+    "O que precisa acontecer<br>
+    aí dentro pra fechar?"
+  body-1: |
+    Ela força o cliente a <span class="miolo-emphasis">verbalizar o processo interno dele</span> — quem decide, o que falta, qual prazo.
+  body-2: |
+    O que a resposta revela é o teu próximo passo de cobrança. Sem achismo.
+  slide-number: "03 / 04"
+  handle: "@tribocrmoficial"

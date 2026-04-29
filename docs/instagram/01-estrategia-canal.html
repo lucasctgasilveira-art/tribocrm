@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>TriboCRM no Instagram — Bloco 1: Estratégia de Canal</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
+
+  :root{
+    --bg:#0a0a0a;
+    --bg-elev:#141414;
+    --bg-card:#1a1a1a;
+    --border:#2a2a2a;
+    --border-strong:#3a3a3a;
+    --text:#fafafa;
+    --text-muted:#a3a3a3;
+    --text-soft:#737373;
+    --accent:#f97316;
+    --accent-soft:rgba(249,115,22,.12);
+    --accent-line:rgba(249,115,22,.35);
+    --danger:#ef4444;
+    --danger-soft:rgba(239,68,68,.08);
+    --ok:#22c55e;
+    --ok-soft:rgba(34,197,94,.1);
+    --shadow:0 1px 3px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.5);
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+
+  html{scroll-behavior:smooth;scroll-padding-top:24px}
+
+  body{
+    font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    font-size:15px;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .layout{display:grid;grid-template-columns:260px 1fr;min-height:100vh}
+
+  /* SIDEBAR */
+  aside{
+    position:sticky;top:0;
+    height:100vh;
+    background:var(--bg-elev);
+    border-right:1px solid var(--border);
+    padding:28px 22px;
+    overflow-y:auto;
+  }
+  .brand{display:flex;align-items:center;gap:12px;margin-bottom:28px}
+  .brand-mark{width:40px;height:40px;flex-shrink:0}
+  .brand-text{font-weight:800;font-size:18px;letter-spacing:-.01em}
+  .brand-text span{color:var(--accent);font-weight:800}
+  .brand-sub{font-size:11px;color:var(--text-soft);margin-top:2px;letter-spacing:.04em;text-transform:uppercase}
+
+  .nav-label{
+    font-size:10px;color:var(--text-soft);text-transform:uppercase;
+    letter-spacing:.12em;margin:18px 0 8px;font-weight:600;
+  }
+  nav a{
+    display:flex;align-items:center;gap:10px;
+    color:var(--text-muted);text-decoration:none;
+    padding:7px 10px;border-radius:6px;
+    font-size:13px;line-height:1.4;
+    transition:all .15s;
+    border-left:2px solid transparent;
+  }
+  nav a:hover{color:var(--text);background:rgba(255,255,255,.03)}
+  nav a .num{
+    font-size:10px;color:var(--text-soft);
+    background:var(--bg-card);padding:2px 6px;border-radius:4px;
+    font-variant-numeric:tabular-nums;
+  }
+
+  .status-pill{
+    display:inline-flex;align-items:center;gap:6px;
+    background:var(--accent-soft);color:var(--accent);
+    padding:5px 10px;border-radius:999px;
+    font-size:11px;font-weight:600;
+    border:1px solid var(--accent-line);
+    margin-top:14px;
+  }
+  .status-pill::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent)}
+
+  /* MAIN */
+  main{padding:48px 56px 120px;max-width:920px}
+
+  .hero{margin-bottom:48px;padding-bottom:32px;border-bottom:1px solid var(--border)}
+  .breadcrumb{font-size:12px;color:var(--text-soft);margin-bottom:14px;letter-spacing:.04em;text-transform:uppercase}
+  .breadcrumb b{color:var(--accent);font-weight:600}
+  h1{font-size:42px;font-weight:800;letter-spacing:-.025em;line-height:1.1;margin-bottom:14px}
+  .lede{font-size:17px;color:var(--text-muted);max-width:680px;line-height:1.55}
+
+  section{margin:64px 0;scroll-margin-top:24px}
+  h2{
+    font-size:24px;font-weight:700;letter-spacing:-.015em;
+    margin-bottom:6px;
+    display:flex;align-items:baseline;gap:14px;
+  }
+  h2 .num{
+    font-size:13px;color:var(--accent);font-weight:600;
+    background:var(--accent-soft);padding:4px 10px;border-radius:6px;
+    border:1px solid var(--accent-line);
+  }
+  h3{font-size:16px;font-weight:600;letter-spacing:-.005em;margin:24px 0 10px;color:var(--text)}
+  .section-lead{color:var(--text-muted);margin-bottom:28px;max-width:680px}
+
+  p{margin:10px 0;color:var(--text-muted)}
+  strong{color:var(--text);font-weight:600}
+
+  /* CARDS */
+  .card{
+    background:var(--bg-card);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:22px;
+    margin:14px 0;
+  }
+  .card-grid{display:grid;gap:14px}
+  .card-grid.cols-2{grid-template-columns:1fr 1fr}
+
+  .card h4{font-size:15px;font-weight:700;margin-bottom:10px;color:var(--text)}
+  .card .meta{font-size:11px;color:var(--text-soft);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px}
+  .card ul{margin:8px 0 0;padding-left:18px}
+  .card ul li{margin:5px 0;color:var(--text-muted);font-size:14px}
+
+  /* FUNNEL */
+  .funnel{display:flex;gap:10px;margin:20px 0;flex-wrap:wrap}
+  .funnel-step{
+    flex:1;min-width:130px;
+    background:var(--bg-card);border:1px solid var(--border);
+    border-radius:10px;padding:16px;
+    position:relative;
+  }
+  .funnel-step .stage{font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:.1em;font-weight:700;margin-bottom:6px}
+  .funnel-step .name{font-size:15px;font-weight:600;margin-bottom:4px}
+  .funnel-step .how{font-size:12px;color:var(--text-soft)}
+  .funnel-step::after{
+    content:"→";position:absolute;right:-15px;top:50%;transform:translateY(-50%);
+    color:var(--accent);font-size:18px;font-weight:700;z-index:2;
+  }
+  .funnel-step:last-child::after{display:none}
+
+  /* PILARES */
+  .pilar{
+    background:var(--bg-card);border:1px solid var(--border);
+    border-radius:10px;padding:24px;margin:14px 0;
+    display:grid;grid-template-columns:64px 1fr;gap:20px;
+  }
+  .pilar-num{
+    width:56px;height:56px;border-radius:8px;
+    background:var(--accent-soft);border:1px solid var(--accent-line);
+    display:flex;align-items:center;justify-content:center;
+    font-size:24px;font-weight:800;color:var(--accent);
+  }
+  .pilar-head{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px}
+  .pilar-name{font-size:18px;font-weight:700}
+  .pilar-weight{
+    font-size:12px;color:var(--accent);font-weight:700;
+    background:var(--accent-soft);padding:3px 9px;border-radius:6px;
+  }
+  .pilar-bar{height:6px;background:var(--bg-elev);border-radius:3px;margin:10px 0 14px;overflow:hidden}
+  .pilar-bar > div{height:100%;background:var(--accent);border-radius:3px}
+  .pilar-row{display:grid;grid-template-columns:120px 1fr;gap:8px;margin:6px 0;font-size:13px}
+  .pilar-row .key{color:var(--text-soft);font-weight:500}
+  .pilar-row .val{color:var(--text)}
+  .pilar-pautas{margin-top:12px}
+  .pilar-pautas li{font-size:13px;color:var(--text-muted);margin:4px 0}
+
+  /* TABLE */
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px}
+  th,td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--border)}
+  th{
+    background:var(--bg-elev);font-size:11px;
+    text-transform:uppercase;letter-spacing:.08em;
+    color:var(--text-soft);font-weight:600;
+  }
+  td{color:var(--text-muted)}
+  td strong{color:var(--text)}
+  tr:hover td{background:rgba(255,255,255,.015)}
+  .tnum{font-variant-numeric:tabular-nums;text-align:right;color:var(--text);font-weight:600}
+
+  /* WEEK GRID */
+  .week{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin:18px 0}
+  .day{
+    background:var(--bg-card);border:1px solid var(--border);
+    border-radius:8px;padding:14px 10px;text-align:center;min-height:130px;
+    display:flex;flex-direction:column;
+  }
+  .day .dow{font-size:11px;color:var(--accent);font-weight:700;letter-spacing:.08em;margin-bottom:8px}
+  .day .slot{font-size:11px;color:var(--text);font-weight:600;margin:3px 0}
+  .day .slot-sub{font-size:10px;color:var(--text-soft)}
+  .day.off{opacity:.5}
+
+  /* DON'T DO */
+  .dont-list{
+    background:var(--danger-soft);border:1px solid rgba(239,68,68,.25);
+    border-radius:10px;padding:22px 22px 22px 26px;
+  }
+  .dont-list li{margin:8px 0;color:var(--text-muted);font-size:14px;list-style:none;position:relative;padding-left:22px}
+  .dont-list li::before{
+    content:"×";position:absolute;left:0;top:0;
+    color:var(--danger);font-weight:800;font-size:16px;
+  }
+  .dont-list li strong{color:var(--text)}
+
+  /* BIO MOCKUP */
+  .bio{
+    background:#000;border:1px solid var(--border);border-radius:14px;
+    padding:24px;margin:14px 0;
+    font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+    max-width:380px;
+  }
+  .bio-head{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+  .bio-avatar{width:64px;height:64px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .bio-avatar svg{width:44px;height:44px}
+  .bio-name{font-weight:700;font-size:16px}
+  .bio-handle{font-size:12px;color:var(--text-soft)}
+  .bio-text{font-size:13px;line-height:1.5;color:var(--text)}
+  .bio-link{color:var(--accent);font-size:12px;font-weight:600;margin-top:8px;display:block}
+
+  .highlights{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:14px 0;max-width:520px}
+  .hl{
+    text-align:center;
+  }
+  .hl-circle{
+    width:60px;height:60px;border-radius:50%;
+    background:var(--bg-card);border:2px solid var(--accent);
+    display:flex;align-items:center;justify-content:center;
+    margin:0 auto 6px;
+    font-size:18px;
+  }
+  .hl-name{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+
+  /* CHECKLIST */
+  .checklist{
+    background:var(--bg-card);border:1px solid var(--accent-line);
+    border-radius:10px;padding:24px;margin:18px 0;
+  }
+  .checklist h3{margin-top:0}
+  .check-item{
+    display:flex;align-items:flex-start;gap:12px;
+    padding:12px 0;border-bottom:1px solid var(--border);
+    cursor:pointer;
+  }
+  .check-item:last-child{border-bottom:none}
+  .check-item input{
+    appearance:none;width:20px;height:20px;flex-shrink:0;
+    border:2px solid var(--border-strong);border-radius:4px;
+    cursor:pointer;background:var(--bg);
+    margin-top:1px;
+    transition:all .15s;
+  }
+  .check-item input:checked{background:var(--accent);border-color:var(--accent)}
+  .check-item input:checked::after{
+    content:"✓";display:flex;align-items:center;justify-content:center;
+    height:100%;color:#000;font-weight:800;font-size:13px;
+  }
+  .check-item label{cursor:pointer;flex:1;color:var(--text-muted);font-size:14px;line-height:1.5}
+  .check-item input:checked + label{color:var(--text-soft);text-decoration:line-through}
+
+  .cta{
+    background:linear-gradient(135deg,var(--accent),#ea580c);
+    color:#0a0a0a;font-weight:700;font-size:14px;
+    padding:14px 28px;border-radius:8px;border:none;
+    margin-top:20px;cursor:pointer;
+    letter-spacing:-.005em;
+  }
+  .cta:hover{filter:brightness(1.05)}
+
+  /* QUOTE */
+  .quote{
+    border-left:3px solid var(--accent);
+    padding:14px 22px;
+    background:var(--accent-soft);
+    margin:18px 0;
+    font-size:14px;color:var(--text);
+    border-radius:0 8px 8px 0;
+  }
+
+  .footnote{
+    font-size:12px;color:var(--text-soft);
+    margin-top:32px;padding-top:24px;
+    border-top:1px solid var(--border);
+  }
+
+  /* PRINT */
+  @media print{
+    body{background:#fff;color:#000;font-size:11pt}
+    aside{display:none}
+    .layout{grid-template-columns:1fr}
+    main{padding:24px;max-width:none}
+    .card,.pilar,.checklist,.bio{background:#fff;border-color:#ccc;break-inside:avoid}
+    .pilar-num,.status-pill,.cta,.bio-avatar{background:#f97316;color:#000}
+    h1,h2,h3,h4,p,td,li,strong{color:#000 !important}
+    .dont-list{background:#fff5f5;border-color:#fecaca}
+    .day{background:#fafafa;border-color:#ccc;color:#000}
+    .day .dow{color:#c2410c}
+    section{break-inside:avoid;page-break-inside:avoid}
+    h2{break-after:avoid}
+  }
+
+  @media (max-width:900px){
+    .layout{grid-template-columns:1fr}
+    aside{position:relative;height:auto}
+    main{padding:24px}
+    .card-grid.cols-2{grid-template-columns:1fr}
+    .funnel-step::after{display:none}
+    .week{grid-template-columns:repeat(2,1fr)}
+    .pilar{grid-template-columns:1fr}
+    h1{font-size:32px}
+  }
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <aside>
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="Conceito D — TriboCRM">
+        <rect width="100" height="100" rx="14" fill="#f97316"/>
+        <rect x="22" y="26" width="56" height="13" fill="#fff"/>
+        <rect x="43" y="26" width="14" height="50" fill="#fff"/>
+        <circle cx="28" cy="32.5" r="4" fill="#f97316"/>
+        <circle cx="72" cy="32.5" r="4" fill="#f97316"/>
+      </svg>
+      <div>
+        <div class="brand-text">Tribo<span>CRM</span></div>
+        <div class="brand-sub">Plano Instagram</div>
+      </div>
+    </div>
+
+    <div class="status-pill">Bloco 1 · Em revisão</div>
+
+    <div class="nav-label">Navegação</div>
+    <nav>
+      <a href="#objetivo"><span class="num">01</span> Objetivo do canal</a>
+      <a href="#persona"><span class="num">02</span> Persona</a>
+      <a href="#kpis"><span class="num">03</span> KPIs e metas</a>
+      <a href="#pilares"><span class="num">04</span> Os 5 pilares</a>
+      <a href="#voz"><span class="num">05</span> Voz por formato</a>
+      <a href="#cadencia"><span class="num">06</span> Cadência semanal</a>
+      <a href="#nao"><span class="num">07</span> O que NÃO fazer</a>
+      <a href="#visual"><span class="num">08</span> Identidade visual</a>
+      <a href="#bio"><span class="num">09</span> Bio + highlights</a>
+      <a href="#aprovacao"><span class="num">10</span> Aprovação</a>
+    </nav>
+
+    <div class="nav-label" style="margin-top:32px">Próximos blocos</div>
+    <nav>
+      <a href="#" style="opacity:.5;pointer-events:none"><span class="num">B2</span> Pautas e calendário</a>
+      <a href="#" style="opacity:.5;pointer-events:none"><span class="num">B3</span> Sistema visual</a>
+      <a href="#" style="opacity:.5;pointer-events:none"><span class="num">B4</span> Pipeline de automação</a>
+      <a href="#" style="opacity:.5;pointer-events:none"><span class="num">B5</span> Operação e medição</a>
+    </nav>
+  </aside>
+
+  <main>
+
+    <header class="hero">
+      <div class="breadcrumb">Plano de Comunicação · <b>Bloco 1 de 5</b> · Estratégia de Canal</div>
+      <h1>O TriboCRM no Instagram não vai vender CRM. Vai provar que sabe como PME brasileira vende.</h1>
+      <p class="lede">Bloco fundacional: define POR QUE o canal existe, PRA QUEM fala, COMO mede e QUAIS pilares dão a estrutura. Tudo daqui é base pros próximos 4 blocos. Mudar algo aqui exige refazer os blocos seguintes.</p>
+    </header>
+
+    <!-- 1. OBJETIVO -->
+    <section id="objetivo">
+      <h2><span class="num">01</span> Objetivo primário do canal</h2>
+      <p class="section-lead">O CRM entra como <strong>cúmplice</strong> ("a ferramenta que faz o método rodar todo dia"), nunca como protagonista. Conteúdo educa, produto fecha.</p>
+
+      <div class="funnel">
+        <div class="funnel-step">
+          <div class="stage">Topo</div>
+          <div class="name">Alcance</div>
+          <div class="how">Reels + hooks fortes</div>
+        </div>
+        <div class="funnel-step">
+          <div class="stage">Meio</div>
+          <div class="name">Engajamento</div>
+          <div class="how">Carrosséis salvos</div>
+        </div>
+        <div class="funnel-step">
+          <div class="stage">Fundo</div>
+          <div class="name">Consideração</div>
+          <div class="how">DMs + comentários</div>
+        </div>
+        <div class="funnel-step">
+          <div class="stage">Conversão</div>
+          <div class="name">Demo</div>
+          <div class="how">Link bio → 15min</div>
+        </div>
+      </div>
+
+      <div class="card-grid cols-2">
+        <div class="card">
+          <h4>Conversão primária</h4>
+          <p>Demo agendada via DM ou link na bio</p>
+        </div>
+        <div class="card">
+          <h4>Conversão secundária</h4>
+          <p>Lead na newsletter / lista de espera</p>
+        </div>
+      </div>
+
+      <div class="quote"><strong>Não-objetivo:</strong> vanity metrics (likes, seguidor por seguidor sem perfil ICP).</div>
+    </section>
+
+    <!-- 2. PERSONA -->
+    <section id="persona">
+      <h2><span class="num">02</span> Persona do canal</h2>
+      <p class="section-lead">O Brand Book já define o ICP do produto. Aqui afunilamos quem <strong>consome IG</strong> dentro desse ICP.</p>
+
+      <div class="card-grid cols-2">
+        <div class="card">
+          <div class="meta">Persona primária</div>
+          <h4>Caio · 38 · Dono de PME</h4>
+          <ul>
+            <li>Faturamento R$ 500k–5M/ano</li>
+            <li>Equipe comercial de 2-8 vendedores</li>
+            <li>Já usou planilha + WhatsApp; talvez tentou HubSpot/Pipedrive e abandonou</li>
+            <li><strong>Salva</strong> conteúdo de gestão e vendas (mesmo no IG)</li>
+            <li>Dor latente: "meu time vende no achismo, não consigo escalar"</li>
+            <li>Linguagem pragmática · suspeita de guru de venda</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="meta">Persona secundária</div>
+          <h4>Bruna · 32 · Gestora comercial</h4>
+          <ul>
+            <li>Coordenadora ou diretora comercial dentro de PME</li>
+            <li>Influencia a decisão; não decide sozinha</li>
+            <li>Consome conteúdo de método, processo, dashboards</li>
+            <li><strong>Compartilha posts via DM</strong> com o dono como argumento</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>Quem NÃO é nossa persona no IG</h3>
+      <div class="card">
+        <ul style="padding-left:20px">
+          <li><strong>Vendedor cowboy</strong> que se acha autossuficiente — é o vilão da marca, não a audiência</li>
+          <li><strong>Empresa enterprise</strong> — Salesforce/HubSpot mata melhor</li>
+          <li><strong>Solopreneur sem time</strong> — não tem dor de gestão</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 3. KPIS -->
+    <section id="kpis">
+      <h2><span class="num">03</span> KPIs e metas</h2>
+      <p class="section-lead">KPIs são <strong>medidos</strong>; vanity metrics são ignoradas.</p>
+
+      <h3>KPIs primários (semanais)</h3>
+      <div class="card-grid cols-2">
+        <div class="card">
+          <div class="meta">Proxy de utilidade</div>
+          <h4>Salvamentos / 1.000 alcance</h4>
+          <p>Mede se o conteúdo é útil o bastante pra ser guardado e revisitado.</p>
+        </div>
+        <div class="card">
+          <div class="meta">Proxy de intenção</div>
+          <h4>DMs qualificadas / semana</h4>
+          <p>Pessoa que pergunta sobre método ou produto — não emoji solto.</p>
+        </div>
+      </div>
+
+      <h3>KPIs secundários</h3>
+      <p>Comentários qualificados (com contexto: "tenho 4 vendedores e..."), cliques no link da bio (UTM), compartilhamentos, crescimento de seguidores qualificados (cruzar com bio/profissão).</p>
+
+      <h3>Ignorados</h3>
+      <p>Likes brutos · view-through rate · seguidor por seguidor sem perfil ICP.</p>
+
+      <h3>Meta inicial — primeiros 90 dias</h3>
+      <table>
+        <thead>
+          <tr><th>KPI</th><th class="tnum">Mês 1</th><th class="tnum">Mês 2</th><th class="tnum">Mês 3</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Salvamentos / 1k alcance</strong></td><td class="tnum">8</td><td class="tnum">14</td><td class="tnum">22</td></tr>
+          <tr><td><strong>DMs qualificadas/sem</strong></td><td class="tnum">2</td><td class="tnum">5</td><td class="tnum">10</td></tr>
+          <tr><td><strong>Cliques link bio/sem</strong></td><td class="tnum">15</td><td class="tnum">40</td><td class="tnum">80</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:12px;color:var(--text-soft)">Metas conservadoras. Validar com dados reais após 30 dias e recalibrar.</p>
+    </section>
+
+    <!-- 4. PILARES -->
+    <section id="pilares">
+      <h2><span class="num">04</span> Os pilares de conteúdo</h2>
+      <p class="section-lead">Cada peça <strong>tem que pertencer a um pilar ativo</strong>. Se não couber, vira pauta nova ou descarta. Distribuição atual: <strong>50% / 20% / 20% / — / 10%</strong> (Prova suspenso 28/04/2026 até cliente real com permissão).</p>
+
+      <div class="pilar">
+        <div class="pilar-num">01</div>
+        <div>
+          <div class="pilar-head">
+            <div class="pilar-name">Método</div>
+            <div class="pilar-weight">50% do volume <span style="font-size:0.7em;opacity:0.7">(era 40%, +10pp pela suspensão de Prova)</span></div>
+          </div>
+          <div class="pilar-bar"><div style="width:50%"></div></div>
+          <div class="pilar-row"><div class="key">Objetivo</div><div class="val">Ensinar como funciona Máquina de Vendas</div></div>
+          <div class="pilar-row"><div class="key">Modo de voz</div><div class="val">MARKETING (50/50 Pessoa Comum + Herói)</div></div>
+          <div class="pilar-row"><div class="key">Formato</div><div class="val">Carrossel didático (8-10 slides)</div></div>
+          <div class="pilar-row"><div class="key">Estrutura</div><div class="val">Promessa → Erro comum → Como faz certo → Mini-passo → CTA</div></div>
+          <div class="pilar-row"><div class="key">CTA típico</div><div class="val">"Salva pra rodar com seu time" / "Marca um vendedor"</div></div>
+          <div class="pilar-pautas">
+            <div class="meta" style="margin-top:10px">Exemplos de pauta</div>
+            <ul>
+              <li>Os 4 momentos do funil que sua PME provavelmente está pulando</li>
+              <li>Por que vendedor bom vende mal sem método (e não é falta de talento)</li>
+              <li>Como definir cadência de follow-up que não vira perseguição</li>
+              <li>Pipeline limpo: a conta que você tem que fazer toda sexta</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="pilar">
+        <div class="pilar-num">02</div>
+        <div>
+          <div class="pilar-head">
+            <div class="pilar-name">Dor da PME</div>
+            <div class="pilar-weight">20% do volume</div>
+          </div>
+          <div class="pilar-bar"><div style="width:20%"></div></div>
+          <div class="pilar-row"><div class="key">Objetivo</div><div class="val">Dar nome ao caos — fazer dono se reconhecer</div></div>
+          <div class="pilar-row"><div class="key">Modo de voz</div><div class="val">MARKETING com lado Herói mais forte (causa)</div></div>
+          <div class="pilar-row"><div class="key">Vilão</div><div class="val">Achismo do vendedor cowboy</div></div>
+          <div class="pilar-row"><div class="key">Formato</div><div class="val">Reel curto (15-30s) ou feed estático com frase forte</div></div>
+          <div class="pilar-row"><div class="key">CTA típico</div><div class="val">"Comenta se já viveu" / "Compartilha com quem precisa"</div></div>
+          <div class="pilar-pautas">
+            <div class="meta" style="margin-top:10px">Exemplos de pauta</div>
+            <ul>
+              <li>Quando o melhor vendedor sai e leva o pipeline na cabeça dele</li>
+              <li>A reunião comercial que vira terapia: "tô correndo atrás"</li>
+              <li>Sexta às 18h: ninguém sabe quanto fechou na semana</li>
+              <li>Forecast no achismo: "acho que esse mês fecha bem"</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="pilar">
+        <div class="pilar-num">03</div>
+        <div>
+          <div class="pilar-head">
+            <div class="pilar-name">Bastidor</div>
+            <div class="pilar-weight">20% do volume <span style="font-size:0.7em;opacity:0.7">(era 15%, +5pp pela suspensão de Prova)</span></div>
+          </div>
+          <div class="pilar-bar"><div style="width:20%"></div></div>
+          <div class="pilar-row"><div class="key">Objetivo</div><div class="val">Humanizar a Tribo — Pessoa Comum, gente que constrói</div></div>
+          <div class="pilar-row"><div class="key">Modo de voz</div><div class="val">CORE (Pessoa Comum 70%)</div></div>
+          <div class="pilar-row"><div class="key">Formato</div><div class="val">Reel câmera-na-mão · carrossel-foto · story</div></div>
+          <div class="pilar-row"><div class="key">CTA típico</div><div class="val">"Conta pra gente o que você acha" (genuíno)</div></div>
+          <div class="pilar-pautas">
+            <div class="meta" style="margin-top:10px">Exemplos de pauta</div>
+            <ul>
+              <li>Decisão de produto que tomamos essa semana e por quê</li>
+              <li>Cliente que ligou agradecendo (com permissão)</li>
+              <li>Reunião interna onde quase mudamos tudo</li>
+              <li>Por que escolhemos NÃO fazer X (anti-feature como filosofia)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="pilar" style="opacity:0.55;border-left:4px solid #999;padding-left:16px;background:rgba(255,200,0,.05)">
+        <div class="pilar-num">04</div>
+        <div>
+          <div class="pilar-head">
+            <div class="pilar-name">Prova <span style="font-size:0.6em;background:#c00;color:#fff;padding:2px 8px;border-radius:4px;vertical-align:middle">🛑 SUSPENSO</span></div>
+            <div class="pilar-weight">0% — suspenso em 28/04/2026</div>
+          </div>
+          <div class="pilar-bar"><div style="width:0%"></div></div>
+          <div class="pilar-row"><div class="key">Status</div><div class="val"><strong>Pilar suspenso até existirem clientes reais com permissão escrita.</strong> TriboCRM ainda não tem clientes pagantes; qualquer "case" ou "depoimento" produzido seria ficção (propaganda enganosa CONAR/CDC + queima de credibilidade).</div></div>
+          <div class="pilar-row"><div class="key">Realocação</div><div class="val">15pp redistribuídos: +10pp pra Método (40→50%), +5pp pra Bastidor (15→20%)</div></div>
+          <div class="pilar-row"><div class="key">Templates</div><div class="val"><code>carrossel-prova-*.html</code> movidos pra <code>marketing/instagram/templates/_inactive/</code> — preservados, não deletados</div></div>
+          <div class="pilar-row"><div class="key">Reativar quando</div><div class="val">(1) ≥3 clientes pagantes usando TriboCRM · (2) autorização escrita pra usar nome/segmento/dashboard/depoimento · (3) métrica concreta documentada</div></div>
+        </div>
+      </div>
+
+      <div class="pilar">
+        <div class="pilar-num">05</div>
+        <div>
+          <div class="pilar-head">
+            <div class="pilar-name">Manifesto / Cultura</div>
+            <div class="pilar-weight">10% do volume</div>
+          </div>
+          <div class="pilar-bar"><div style="width:10%"></div></div>
+          <div class="pilar-row"><div class="key">Objetivo</div><div class="val">Construir identidade de tribo</div></div>
+          <div class="pilar-row"><div class="key">Modo de voz</div><div class="val">MARKETING com Herói forte (sem sair de Pessoa Comum)</div></div>
+          <div class="pilar-row"><div class="key">Formato</div><div class="val">Feed estático com frase + assinatura "TriboCRM"</div></div>
+          <div class="pilar-row"><div class="key">CTA típico</div><div class="val">Nenhum. Manifesto é pra ressoar.</div></div>
+          <div class="pilar-pautas">
+            <div class="meta" style="margin-top:10px">Exemplos de pauta</div>
+            <ul>
+              <li>"Vender de verdade não é talento. É método."</li>
+              <li>"Toda venda perdida por desorganização vira passado."</li>
+              <li>"A gente não vende CRM. A gente faz Máquina de Vendas rodar."</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. VOZ -->
+    <section id="voz">
+      <h2><span class="num">05</span> Voz adaptada por formato</h2>
+      <p class="section-lead">Os 4 modos de voz do brand book aplicados a cada situação do IG.</p>
+
+      <table>
+        <thead><tr><th>Formato</th><th>Modo dominante</th><th>Notas</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Carrossel-método</strong></td><td>MARKETING (50/50)</td><td>Pode usar 🔥 📈 ⚡ ✅ · nunca os proibidos</td></tr>
+          <tr><td><strong>Reel hook</strong></td><td>MARKETING + Herói</td><td>Frase de impacto nos 3 primeiros segundos</td></tr>
+          <tr><td><strong>Feed manifesto</strong></td><td>MARKETING + Herói</td><td>Tipografia faz o trabalho · pouco emoji</td></tr>
+          <tr><td><strong>Bastidor</strong></td><td>CORE (PC 70%)</td><td>"A gente" sempre · sem performance</td></tr>
+          <tr><td><strong>Story enquete</strong></td><td>CORE</td><td>Casual · errar de propósito é OK</td></tr>
+          <tr><td><strong>Resposta a comentário</strong></td><td>CORE</td><td>Calmo · didático</td></tr>
+          <tr><td><strong>Resposta a crítica</strong></td><td>SUPORTE (90% PC)</td><td>Sem defensiva · sem emoji</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 6. CADENCIA -->
+    <section id="cadencia">
+      <h2><span class="num">06</span> Cadência semanal</h2>
+      <p class="section-lead">Distribuição que cabe em PME real, sem time dedicado, e ainda alimenta o algoritmo.</p>
+
+      <div class="week">
+        <div class="day">
+          <div class="dow">SEG</div>
+          <div class="slot">Carrossel</div>
+          <div class="slot-sub">MÉTODO</div>
+          <div class="slot-sub" style="margin-top:auto;font-style:italic">Slot principal — onde mais salva</div>
+        </div>
+        <div class="day">
+          <div class="dow">TER</div>
+          <div class="slot">Reel</div>
+          <div class="slot-sub">DOR DA PME</div>
+          <div class="slot-sub" style="margin-top:auto;font-style:italic">Alcance</div>
+        </div>
+        <div class="day">
+          <div class="dow">QUA</div>
+          <div class="slot">Feed</div>
+          <div class="slot-sub">MANIFESTO ou MÉTODO leve</div>
+        </div>
+        <div class="day">
+          <div class="dow">QUI</div>
+          <div class="slot">Reel</div>
+          <div class="slot-sub">BASTIDOR ou MÉTODO</div>
+        </div>
+        <div class="day">
+          <div class="dow">SEX</div>
+          <div class="slot">Bastidor / Manifesto / Método</div>
+          <div class="slot-sub">rotação <span style="opacity:0.6">(era PROVA, suspenso 28/04)</span></div>
+        </div>
+        <div class="day">
+          <div class="dow">SAB</div>
+          <div class="slot">Story-only</div>
+          <div class="slot-sub">enquete · recap · bastidor</div>
+        </div>
+        <div class="day off">
+          <div class="dow">DOM</div>
+          <div class="slot">Off</div>
+          <div class="slot-sub">ou story casual</div>
+        </div>
+      </div>
+
+      <div class="card-grid cols-2">
+        <div class="card">
+          <div class="meta">Stories</div>
+          <h4>Mín. 3 slots/dia útil</h4>
+          <p>Mix de enquete + bastidor + resposta a DM com permissão.</p>
+        </div>
+        <div class="card">
+          <div class="meta">Volume mensal</div>
+          <h4>~25 peças + ~60 stories</h4>
+          <p>12-13 carrosséis · 8-9 reels · 4 feeds estáticos · ~60 stories.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. NÃO -->
+    <section id="nao">
+      <h2><span class="num">07</span> O que NÃO vamos fazer</h2>
+      <p class="section-lead">A lista do que <strong>não</strong> entra é tão estratégica quanto a do que entra.</p>
+
+      <ul class="dont-list">
+        <li><strong>"5 dicas pra vender mais"</strong> sem método específico — falha o teste do troca-nome</li>
+        <li><strong>Frases de coach</strong> ("acredite em você", "saia da zona de conforto")</li>
+        <li><strong>Comparativos com concorrente</strong> (HubSpot, Pipedrive) — energia errada, não somos challenger barato</li>
+        <li><strong>Conteúdo de produto puro</strong> ("conheça nossa nova feature") — produto entra como meio</li>
+        <li><strong>Trend dance / áudio viral</strong> sem encaixe — tribal de fora pra dentro nunca</li>
+        <li><strong>Engajamento performático</strong> ("comente SIM se concorda") — usa CTAs de utilidade</li>
+        <li><strong>Emojis proibidos:</strong> 🚀 💎 🏆 💪 ✨ 🤖 🎯</li>
+      </ul>
+    </section>
+
+    <!-- 8. VISUAL -->
+    <section id="visual">
+      <h2><span class="num">08</span> Identidade visual no IG</h2>
+      <p class="section-lead">Resumo executivo. O detalhamento técnico é o Bloco 3.</p>
+
+      <div class="card-grid cols-2">
+        <div class="card">
+          <h4>Sistema</h4>
+          <ul>
+            <li>Paleta: preto fundo · laranja <code style="color:#f97316">#f97316</code> · branco</li>
+            <li>Tipografia: DM Sans (400 corpo · 800 destaque)</li>
+            <li>Símbolo: Conceito D sempre presente — capa, lower-third, assinatura</li>
+            <li>Logo: "Tribo" branco 400 + "CRM" laranja 800</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>Tom visual</h4>
+          <ul>
+            <li>Denso de informação, alto contraste</li>
+            <li>Sem stock photo</li>
+            <li>Tipografia faz o peso, não fundo gradiente</li>
+          </ul>
+          <h4 style="margin-top:14px">Aspect ratios</h4>
+          <ul>
+            <li>Feed: 1080×1350 (4:5 ocupa mais tela)</li>
+            <li>Story: 1080×1920</li>
+            <li>Reel cover: 1080×1920</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. BIO -->
+    <section id="bio">
+      <h2><span class="num">09</span> Bio + highlights</h2>
+      <p class="section-lead">Primeira proposta — provavelmente quer iterar.</p>
+
+      <h3>Bio sugerida</h3>
+      <div class="bio">
+        <div class="bio-head">
+          <div class="bio-avatar">
+            <svg viewBox="0 0 100 100"><rect width="100" height="100" rx="14" fill="#f97316"/><rect x="22" y="26" width="56" height="13" fill="#fff"/><rect x="43" y="26" width="14" height="50" fill="#fff"/><circle cx="28" cy="32.5" r="4" fill="#f97316"/><circle cx="72" cy="32.5" r="4" fill="#f97316"/></svg>
+          </div>
+          <div>
+            <div class="bio-name">TriboCRM</div>
+            <div class="bio-handle">@tribocrmoficial</div>
+          </div>
+        </div>
+        <div class="bio-text">
+          Máquina de Vendas. Pra quem vende de verdade. 🔥<br>
+          ↳ Método + ferramenta pra PME brasileira parar de vender no achismo<br>
+          📈 Pipeline limpo · cadência que funciona · forecast real<br>
+          👇 Demo em 15 min
+          <span class="bio-link">tribocrm.com.br/demo</span>
+        </div>
+      </div>
+
+      <h3>6 highlights fixos</h3>
+      <div class="highlights">
+        <div class="hl"><div class="hl-circle">📚</div><div class="hl-name">Método</div></div>
+        <div class="hl"><div class="hl-circle">😤</div><div class="hl-name">Dor</div></div>
+        <div class="hl"><div class="hl-circle">🛠</div><div class="hl-name">Bastidor</div></div>
+        <div class="hl"><div class="hl-circle">🔥</div><div class="hl-name">Tribo</div></div>
+        <div class="hl"><div class="hl-circle">⚡</div><div class="hl-name">Demo</div></div>
+        <div class="hl"><div class="hl-circle">✅</div><div class="hl-name">FAQ</div></div>
+      </div>
+    </section>
+
+    <!-- 10. APROVAÇÃO -->
+    <section id="aprovacao">
+      <h2><span class="num">10</span> Aprovação do Bloco 1</h2>
+      <p class="section-lead">Marca os pontos validados. Aprovar este bloco destrava o <strong>Bloco 2 — Pautas e Calendário</strong>.</p>
+
+      <div class="checklist">
+        <h3>Checklist</h3>
+        <div class="check-item">
+          <input type="checkbox" id="c1">
+          <label for="c1">Objetivo primário (autoridade no método → DM/demo) está alinhado</label>
+        </div>
+        <div class="check-item">
+          <input type="checkbox" id="c2">
+          <label for="c2">Persona Caio + Bruna refletem o ICP real</label>
+        </div>
+        <div class="check-item">
+          <input type="checkbox" id="c3">
+          <label for="c3">KPIs (saves/1k + DMs qualificadas) fazem sentido</label>
+        </div>
+        <div class="check-item">
+          <input type="checkbox" id="c4">
+          <label for="c4">Os 5 pilares e a distribuição (40/20/15/15/10) batem</label>
+        </div>
+        <div class="check-item">
+          <input type="checkbox" id="c5">
+          <label for="c5">Cadência semanal (3 carrosséis + 2 reels + stories diários) é executável agora</label>
+        </div>
+        <div class="check-item">
+          <input type="checkbox" id="c6">
+          <label for="c6">Lista do que NÃO fazer está completa</label>
+        </div>
+        <div class="check-item">
+          <input type="checkbox" id="c7">
+          <label for="c7">Bio + highlights propostos são uma boa base</label>
+        </div>
+      </div>
+
+      <div class="quote">
+        <strong>Próximo passo:</strong> diz "Bora!" pra eu disparar o Bloco 2 — produzo 90 dias de pautas distribuídas pelos 5 pilares, banco de hooks por pilar, estruturas-padrão de copy por formato e calendário do mês 1 preenchido.
+      </div>
+
+      <div class="footnote">
+        TriboCRM · Plano de Comunicação Instagram · Bloco 1/5 · Construído sobre Brand Book aprovado em <code>docs/brand/</code> · Abril/2026
+      </div>
+    </section>
+
+  </main>
+</div>
+
+</body>
+</html>

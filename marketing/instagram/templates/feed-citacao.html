@@ -2,15 +2,21 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>TriboCRM · Feed Citação</title>
+<title>TriboCRM · Feed Citação Observacional</title>
 <link rel="stylesheet" href="../tokens.css">
 <style>
+  /*
+    REGRA DURA: este template NÃO atribui a pessoa real ou fictícia.
+    Usado pra citações observacionais (frases que a marca tipifica) ou
+    declarações da própria TriboCRM. Nunca colocar nome, cargo ou empresa
+    de cliente — pra isso só com case real e permissão escrita.
+  */
   .quote-block {
     position: absolute;
     top: 50%;
     left: var(--canvas-pad);
     right: var(--canvas-pad);
-    transform: translateY(-55%);
+    transform: translateY(-50%);
     max-width: 920px;
   }
   .quote-mark {
@@ -30,17 +36,13 @@
     letter-spacing: -0.02em;
     margin-bottom: var(--s-5);
   }
-  .quote-author {
-    font-size: 32px;
-    font-weight: var(--w-bold);
-    color: var(--tribo-white);
-    margin-top: var(--s-4);
-  }
-  .quote-role {
+  .quote-fonte {
     font-size: 26px;
     font-weight: var(--w-medium);
     color: var(--tribo-white-dim);
-    margin-top: var(--s-1);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    margin-top: var(--s-4);
   }
 </style>
 </head>
@@ -52,10 +54,9 @@
     <div class="quote-block">
       <div class="quote-mark">"</div>
       <p class="quote-text t-h3" data-edit="citacao">
-        Voltei a dormir tranquilo. O pipeline parou de morar na minha cabeça.
+        Pipeline cheio virou medalha de participação.
       </p>
-      <div class="quote-author" data-edit="autor">João Pedro</div>
-      <div class="quote-role" data-edit="cargo">Dono · Móveis Sob Encomenda · 6 vendedores</div>
+      <div class="quote-fonte" data-edit="fonte">Observação · Comercial brasileiro</div>
     </div>
 
     <span class="brand-signature" data-edit="handle">@tribocrmoficial</span>

@@ -1,0 +1,15 @@
+# --------------------------------------------------------
+# Pauta: Slide 1 (Capa) · Carrossel "1 pergunta que muda a reunião"
+# Calendário: QUI 30/04/2026
+# Pilar: MÉTODO (50% — dominante após realocação 28/04)
+# --------------------------------------------------------
+template: carrossel-metodo-capa
+slug: 2026-04-30_pergunta_01-capa
+data:
+  pilar: "Método · Reunião comercial"
+  titulo: |
+    1 pergunta que muda a<br>
+    <span class="t-orange">reunião comercial.</span><br>
+    (E que quase ninguém faz.)
+  slide-number: "01 / 04"
+  handle: "@tribocrmoficial"
