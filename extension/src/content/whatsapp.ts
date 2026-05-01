@@ -28,11 +28,16 @@ import {
   isViewportTooNarrow,
   onViewportResize
 } from './whatsapp-layout';
+import { captureHintFromUrl, consumePhoneHint } from './whatsapp-phone-hint';
 import { createLogger } from '@shared/utils/logger';
 
 const log = createLogger('whatsapp');
 
 log.info('Content script injetado em', window.location.hostname);
+
+// Lê o hint da URL ANTES de qualquer redirect interno do WhatsApp Web.
+// O hint é "consumido" depois pelo primeiro 'needs-phone' que aparecer.
+captureHintFromUrl();
 
 interface AppState {
   chatInfo: ChatInfo;
@@ -142,6 +147,22 @@ async function boot() {
     });
 
     onActiveChatChange((chatInfo) => {
+      // Promove needs-phone → detected se houver hint vindo do CRM.
+      // Caso típico: vendedor clicou em "WhatsApp" no app.tribocrm.com.br
+      // e caiu numa conversa cujo contato está salvo na agenda do
+      // WhatsApp (header mostra nome, não número). O CRM já passou o
+      // telefone via hash; usamos esse pra identificar o lead.
+      if (chatInfo.kind === 'needs-phone') {
+        const hint = consumePhoneHint();
+        if (hint) {
+          log.info('Promovendo needs-phone → detected via hint do CRM:', hint);
+          chatInfo = {
+            kind: 'detected',
+            contact: { displayName: chatInfo.detectedName, phone: hint }
+          };
+        }
+      }
+
       state.chatInfo = chatInfo;
       switch (chatInfo.kind) {
         case 'detected':
