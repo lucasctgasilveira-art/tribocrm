@@ -315,6 +315,12 @@ export async function getLead(req: Request, res: Response): Promise<void> {
       include: {
         stage: { select: { id: true, name: true, color: true, type: true } },
         responsible: { select: { id: true, name: true } },
+        // pipeline e obrigatorio pra extensao Chrome — o painel acessa
+        // lead.pipeline.id (Marcar Venda/Perda) e lead.pipeline.name
+        // (aba Dados). Sem isso o Preact crasha em runtime com
+        // "Cannot read properties of undefined (reading 'name')",
+        // travando a UI inteira (setState posteriores nao pintam).
+        pipeline: { select: { id: true, name: true } },
         interactions: {
           orderBy: { createdAt: 'desc' },
           take: 20,
