@@ -297,6 +297,11 @@ export function Panel({ chatInfo, isOpen, isNarrow, onClose }: PanelProps) {
                 onCreated={reload}
                 onLinked={reload}
                 onToast={showToast}
+                onBack={
+                  manualPhone
+                    ? () => setManualPhoneFor(null)
+                    : undefined
+                }
               />
             )}
           </>
@@ -2501,12 +2506,19 @@ function LeadNotFoundView({
   contact,
   onCreated,
   onLinked,
-  onToast
+  onToast,
+  onBack
 }: {
   contact: WhatsAppContactInfo;
   onCreated: () => void;
   onLinked: () => void;
   onToast: (msg: string) => void;
+  /**
+   * Quando definido, mostra um botão "← voltar" que retorna ao
+   * estado anterior. Usado quando o usuário chegou aqui digitando
+   * um telefone manualmente (precisa poder corrigir o número).
+   */
+  onBack?: () => void;
 }) {
   const [mode, setMode] = useState<'view' | 'linking'>('view');
   const [showForm, setShowForm] = useState(false);
@@ -2555,6 +2567,16 @@ function LeadNotFoundView({
   if (!showForm) {
     return (
       <div class="tribocrm-empty">
+        {onBack && (
+          <button
+            type="button"
+            class="tribocrm-link-back"
+            onClick={onBack}
+            style={{ alignSelf: 'flex-start' }}
+          >
+            ← voltar
+          </button>
+        )}
         <div class="tribocrm-empty-icon">
           <IconUser size={24} />
         </div>
