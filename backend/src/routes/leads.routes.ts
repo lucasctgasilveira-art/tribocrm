@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import multer from 'multer'
+import { Prisma } from '@prisma/client'
 import { authMiddleware } from '../middleware/auth.middleware'
 import { tenantStatusGuard } from '../middleware/tenant-status.middleware'
 import {
@@ -34,6 +35,70 @@ router.post('/import', upload.single('file'), importLeads)
 router.get('/export', exportLeads)
 router.get('/loss-reasons', getLossReasons)
 router.patch('/bulk', bulkUpdateLeads)
+
+// Busca de leads por nome (parcial, case-insensitive). Usado pela
+// extensao Chrome quando detecta um contato salvo na agenda do
+// WhatsApp (cujo numero esta escondido no DOM) — busca leads cujo
+// nome contenha o nome do contato detectado.
+//
+// Filtros aplicados:
+//   - tenant scope (tenantId)
+//   - sellerScope (SELLER ve so seus leads)
+//   - pipeline access (esconde leads de pipelines sem acesso)
+//   - status NAO LOST/ARCHIVED (so ACTIVE+WON aparecem)
+// Limite: 5 (configuravel via ?limit=N, max 10).
+router.get('/search-by-name', async (req, res) => {
+  try {
+    const { prisma } = await import('../lib/prisma')
+    const q = String(req.query.q ?? '').trim()
+    const limit = Math.min(10, Math.max(1, parseInt(String(req.query.limit ?? '5')) || 5))
+    const tenantId = req.user!.tenantId
+    const role = req.user!.role
+    const userId = req.user!.userId
+
+    if (q.length < 2) {
+      res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'q precisa de pelo menos 2 caracteres' },
+      })
+      return
+    }
+
+    const where: Prisma.LeadWhereInput = {
+      tenantId,
+      deletedAt: null,
+      name: { contains: q, mode: 'insensitive' },
+      status: { in: ['ACTIVE', 'WON'] },
+      ...sellerScope(role, userId),
+    }
+
+    if (role !== 'OWNER' && role !== 'SUPER_ADMIN') {
+      where.pipeline = { userAccesses: { some: { userId } } }
+    }
+
+    const leads = await prisma.lead.findMany({
+      where,
+      take: limit,
+      orderBy: [
+        { status: 'asc' },
+        { updatedAt: 'desc' },
+      ],
+      include: {
+        stage: { select: { id: true, name: true, color: true, type: true } },
+        responsible: { select: { id: true, name: true } },
+        pipeline: { select: { id: true, name: true } },
+      },
+    })
+
+    res.json({ success: true, data: leads })
+  } catch (error: any) {
+    console.error('[Leads] searchByName error:', error)
+    res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: error.message },
+    })
+  }
+})
 
 // Lookup por telefone principal (phone, whatsapp ou altPhones) com
 // busca tolerante: gera variações do número (com/sem nono dígito,
