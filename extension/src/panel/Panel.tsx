@@ -101,6 +101,13 @@ export function Panel({ chatInfo, isOpen, isNarrow, onClose }: PanelProps) {
   const [manualPhoneFor, setManualPhoneFor] = useState<
     { chatKey: string; phone: string } | null
   >(null);
+  // Flag de opt-out da busca automatica por nome, associada ao chatKey
+  // atual. Quando o vendedor clica "← Não é esse lead?" ou "Buscar por
+  // telefone", marcamos opt-out aqui pra que o reload (que dispara em
+  // toda re-render por causa da chatInfo nova ref vinda do whatsapp.ts)
+  // PULE a busca por nome e va direto pra manual-phone-input. Sem isso,
+  // o setState do botao e revertido instantaneamente pelo proximo reload.
+  const [nameSearchOptOutFor, setNameSearchOptOutFor] = useState<string | null>(null);
 
   const chatKey =
     chatInfo.kind === 'detected'
@@ -111,6 +118,7 @@ export function Panel({ chatInfo, isOpen, isNarrow, onClose }: PanelProps) {
 
   const manualPhone =
     manualPhoneFor?.chatKey === chatKey ? manualPhoneFor.phone : null;
+  const nameSearchOptedOut = nameSearchOptOutFor === chatKey;
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -185,6 +193,15 @@ export function Panel({ chatInfo, isOpen, isNarrow, onClose }: PanelProps) {
     } else if (chatInfo.kind === 'detected') {
       effectiveContact = chatInfo.contact;
     } else if (chatInfo.kind === 'needs-phone') {
+      // Vendedor optou explicitamente por sair da identificacao automatica
+      // por nome (clicou "← Não é esse lead?" ou "Buscar por telefone").
+      // Vai direto pra manual-phone-input — sem essa checagem, o setState
+      // do botao seria revertido instantaneamente pela busca por nome.
+      if (nameSearchOptedOut) {
+        setState({ kind: 'manual-phone-input', detectedName: chatInfo.detectedName });
+        return;
+      }
+
       // Antes de cair em manual-phone-input, tenta identificar o lead
       // pelo NOME do contato detectado no header do WhatsApp:
       //   1. Cache local: nome ja foi vinculado a algum leadId? Se sim,
@@ -286,7 +303,7 @@ export function Panel({ chatInfo, isOpen, isNarrow, onClose }: PanelProps) {
       const message = err instanceof Error ? err.message : 'Erro ao buscar lead';
       setState({ kind: 'error', message });
     }
-  }, [chatInfo, manualPhone]);
+  }, [chatInfo, manualPhone, nameSearchOptedOut]);
 
   useEffect(() => {
     if (isOpen && !isNarrow) reload();
@@ -346,10 +363,10 @@ export function Panel({ chatInfo, isOpen, isNarrow, onClose }: PanelProps) {
                   await setMappedLeadId(state.detectedName, lead.id);
                   reload();
                 }}
-                onSearchByPhone={() => setState({
-                  kind: 'manual-phone-input',
-                  detectedName: state.detectedName
-                })}
+                onSearchByPhone={() => {
+                  setNameSearchOptOutFor(chatKey);
+                  setState({ kind: 'manual-phone-input', detectedName: state.detectedName });
+                }}
               />
             )}
             {state.kind === 'lead-found' && (
@@ -361,11 +378,14 @@ export function Panel({ chatInfo, isOpen, isNarrow, onClose }: PanelProps) {
                 onUnlink={
                   // Aparece quando lead foi identificado por nome (sem telefone
                   // detectado no DOM e sem entrada manual). Limpa o cache do
-                  // nome e cai em manual-phone-input pra ele digitar o número
-                  // correto ou re-buscar.
+                  // nome, marca opt-out da busca por nome pra essa conversa
+                  // (caso contrario o reload re-faria a busca e voltaria pra
+                  // lead-found instantaneamente), e cai em manual-phone-input
+                  // pra o vendedor digitar o número correto.
                   chatInfo.kind === 'needs-phone' && !manualPhone
                     ? async () => {
                         await clearMappedLeadId(chatInfo.detectedName);
+                        setNameSearchOptOutFor(chatKey);
                         setState({
                           kind: 'manual-phone-input',
                           detectedName: chatInfo.detectedName,

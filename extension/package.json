@@ -1,6 +1,6 @@
 {
   "name": "tribocrm-extension",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "TriboCRM — Extensão Chrome pro WhatsApp Web",
   "private": true,
   "type": "module",
