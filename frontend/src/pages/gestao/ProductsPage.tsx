@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { Plus, MoreHorizontal, Search, Loader2 } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
-import { getProducts, updateProduct } from '../../services/products.service'
+import { getProducts, updateProduct, createProduct } from '../../services/products.service'
+import ProductModal, { type EditingProduct, type ProductFormData } from '../../components/shared/ProductModal/ProductModal'
 
 // ── Types ──
 
@@ -42,6 +43,8 @@ export default function ProductsPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [activeF, setActiveF] = useState('')
   const [openMenu, setOpenMenu] = useState<string | null>(null)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editingProduct, setEditingProduct] = useState<EditingProduct | null>(null)
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const handleSearch = useCallback((value: string) => {
@@ -75,6 +78,43 @@ export default function ProductsPage() {
     } catch { /* ignore */ }
   }
 
+  function openCreateModal() {
+    setEditingProduct(null)
+    setModalOpen(true)
+  }
+
+  function openEditModal(p: Product) {
+    setEditingProduct({
+      id: p.id,
+      name: p.name,
+      description: p.description,
+      category: p.category,
+      price: p.price,
+      allowsDiscount: p.allowsDiscount,
+      maxDiscount: p.maxDiscount,
+      approvalType: p.approvalType,
+    })
+    setOpenMenu(null)
+    setModalOpen(true)
+  }
+
+  async function handleSubmitProduct(data: ProductFormData) {
+    const payload = {
+      name: data.name,
+      description: data.description || undefined,
+      price: data.price,
+      category: data.category || undefined,
+      maxDiscount: data.maxDiscount,
+      ...(data.approvalType ? { approvalType: data.approvalType } : {}),
+    }
+    if (editingProduct) {
+      await updateProduct(editingProduct.id, payload)
+    } else {
+      await createProduct(payload)
+    }
+    await loadProducts()
+  }
+
   const stats = useMemo(() => {
     const total = products.length
     const active = products.filter(p => p.isActive).length
@@ -88,7 +128,7 @@ export default function ProductsPage() {
     <AppLayout menuItems={gestaoMenuItems}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Produtos</h1>
-        <button style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+        <button onClick={openCreateModal} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
           <Plus size={15} strokeWidth={2} /> Novo Produto
         </button>
       </div>
@@ -127,12 +167,12 @@ export default function ProductsPage() {
       ) : products.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-muted)', fontSize: 14 }}>Nenhum produto cadastrado</div>
       ) : (
-        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12 }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: 'var(--bg)' }}>
-                {['Produto', 'Valor', 'Desconto máx.', 'Aprovação', 'Status', 'Ações'].map(h => (
-                  <th key={h} style={{ padding: '12px 20px', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, textAlign: 'left' }}>{h}</th>
+                {['Produto', 'Valor', 'Desconto máx.', 'Aprovação', 'Status', 'Ações'].map((h, i, arr) => (
+                  <th key={h} style={{ padding: '12px 20px', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, textAlign: 'left', borderTopLeftRadius: i === 0 ? 12 : 0, borderTopRightRadius: i === arr.length - 1 ? 12 : 0 }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -169,15 +209,16 @@ export default function ProductsPage() {
                         <MoreHorizontal size={14} strokeWidth={1.5} />
                       </button>
                       {openMenu === p.id && (
-                        <div style={{ position: 'absolute', right: 20, top: 48, zIndex: 20, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', minWidth: 140, padding: '4px 0' }}>
+                        <div style={{ position: 'absolute', right: 20, top: 48, zIndex: 20, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: 'var(--shadow-dropdown)', minWidth: 140, padding: '4px 0' }}>
                           {menuOpts.map(opt => (
                             <div key={opt}
                               onClick={() => {
                                 if (opt === 'Desativar') handleDeactivate(p.id)
+                                else if (opt === 'Editar') openEditModal(p)
                                 else setOpenMenu(null)
                               }}
-                              style={{ padding: '8px 14px', fontSize: 13, color: opt === 'Desativar' ? '#ef4444' : 'var(--text-primary)', cursor: 'pointer' }}
-                              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+                              style={{ padding: '8px 14px', fontSize: 13, color: opt === 'Desativar' ? 'var(--red)' : 'var(--text-primary)', cursor: 'pointer' }}
+                              onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)' }}
                               onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>{opt}</div>
                           ))}
                         </div>
@@ -190,6 +231,13 @@ export default function ProductsPage() {
           </table>
         </div>
       )}
+
+      <ProductModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSubmit={handleSubmitProduct}
+        editing={editingProduct}
+      />
     </AppLayout>
   )
 }
