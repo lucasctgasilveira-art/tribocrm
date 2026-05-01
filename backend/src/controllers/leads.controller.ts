@@ -161,31 +161,33 @@ export async function findLeadByPhone(
   if (variations.length === 0) return null
 
   const sellerFilter = role === 'SELLER'
-    ? Prisma.sql`AND "responsibleId" = ${userId}`
+    ? Prisma.sql`AND responsible_id = ${userId}::uuid`
     : Prisma.empty
 
   // Query raw: normaliza phone/whatsapp do DB pra dígitos puros e
   // compara com qualquer variação. altPhones já é guardado em dígitos
   // puros pela extensão, mas regexp_replace cobre casos legados.
   //
-  // Detalhe importante: Prisma 5 nao parametriza array JS diretamente
-  // em template literal de $queryRaw. Precisa usar Prisma.sql + Prisma.join
-  // pra interpolar a lista. ANY(...) virou IN (...) com Prisma.join.
+  // ATENCAO: nomes de tabela e coluna sao do Postgres (snake_case
+  // segundo @@map e @map do schema.prisma), nao os do model Prisma.
+  // tenantId/userId/leadId sao UUID no schema → cast explicito ::uuid
+  // pra evitar erro de tipo em parametros bindados como text.
+  // alt_phones ja e jsonb (migration 20260428010000_add_lead_alt_phones).
   const variationsList = Prisma.join(variations)
   const query = Prisma.sql`
-    SELECT id FROM "Lead"
-    WHERE "tenantId" = ${tenantId}
-      AND "deletedAt" IS NULL
+    SELECT id FROM leads
+    WHERE tenant_id = ${tenantId}::uuid
+      AND deleted_at IS NULL
       ${sellerFilter}
       AND (
         regexp_replace(COALESCE(phone, ''), '[^0-9]', '', 'g') IN (${variationsList})
         OR regexp_replace(COALESCE(whatsapp, ''), '[^0-9]', '', 'g') IN (${variationsList})
         OR EXISTS (
-          SELECT 1 FROM jsonb_array_elements_text(COALESCE("altPhones"::jsonb, '[]'::jsonb)) AS p
+          SELECT 1 FROM jsonb_array_elements_text(COALESCE(alt_phones, '[]'::jsonb)) AS p
           WHERE regexp_replace(p, '[^0-9]', '', 'g') IN (${variationsList})
         )
       )
-    ORDER BY "updatedAt" DESC
+    ORDER BY updated_at DESC
     LIMIT 1
   `
   const rows = await prismaClient.$queryRaw<{ id: string }[]>(query)
