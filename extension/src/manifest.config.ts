@@ -41,8 +41,21 @@ export default defineManifest((env) => {
     // Content scripts declarativos: nenhum.
     // O content script do WhatsApp é buildado separadamente (vite.config.whatsapp.ts)
     // como IIFE monolítico e injetado pelo scripts/patch-manifest.mjs no pós-build.
-    // Stubs de LinkedIn/Gmail foram desanexados — ver src/content/linkedin.ts e gmail.ts.
+    // O content script da ponte CRM (crm-bridge.ts) tambem e buildado
+    // separadamente (vite.config.crm-bridge.ts) e adicionado ao manifest
+    // pelo mesmo patch-manifest. Stubs de LinkedIn/Gmail foram desanexados.
     content_scripts: [],
+
+    // Permite que o frontend do CRM (app.tribocrm.com.br) envie
+    // mensagens pra extensao via chrome.runtime.sendMessage. Usado pelo
+    // botao WhatsApp no CRM pra passar phone+leadId direto pra
+    // extensao, sem depender de URL/hash que pode ser dropado.
+    externally_connectable: {
+      matches: [
+        'https://app.tribocrm.com.br/*',
+        ...(isDev ? ['http://localhost:3000/*'] : [])
+      ]
+    },
 
     // Recursos acessíveis via URL (fontes, ícones, assets dentro do painel)
     web_accessible_resources: [
