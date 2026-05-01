@@ -15,6 +15,62 @@ router.post('/', createPipeline)
 router.patch('/:id', updatePipeline)
 
 /**
+ * GET /pipelines/:pipelineId/stages
+ *
+ * Retorna as stages do pipeline ordenadas por sortOrder.
+ * Filtra ativas por padrao (isActive=true). Inclui stages fixas
+ * (WON/LOST) — necessarias pra extensao Chrome resolver "Marcar
+ * venda/perda" sem listar o pipeline inteiro.
+ *
+ * Por que existir, ja que o GET /pipelines /:id/kanban e GET /pipelines
+ * tambem trazem stages embutidas?
+ *   A extensao Chrome ja tinha contrato com esse endpoint dedicado
+ *   (extension/src/shared/api/leads.service.ts:57). Sem ele, o handler
+ *   resolveOutcomeStage caia em 404 silencioso e o "Marcar venda" nao
+ *   persistia. Endpoint dedicado tambem e mais barato — sem JOIN com
+ *   leads (kanban) nem retorno de toda a lista de pipelines.
+ */
+router.get('/:pipelineId/stages', async (req: Request, res: Response) => {
+  try {
+    const pipelineId = req.params.pipelineId as string
+    const tenantId = req.user!.tenantId
+
+    const pipeline = await prisma.pipeline.findFirst({
+      where: { id: pipelineId, tenantId, isActive: true },
+      select: { id: true },
+    })
+    if (!pipeline) {
+      res.status(404).json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Pipeline nao encontrado' },
+      })
+      return
+    }
+
+    const stages = await prisma.pipelineStage.findMany({
+      where: { pipelineId, tenantId, isActive: true },
+      orderBy: { sortOrder: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        color: true,
+        type: true,
+        sortOrder: true,
+        isFixed: true,
+      },
+    })
+
+    res.json({ success: true, data: stages })
+  } catch (error: any) {
+    console.error('[Pipelines] getStages error:', error)
+    res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: error.message },
+    })
+  }
+})
+
+/**
  * PUT /pipelines/:pipelineId/stages
  *
  * Bulk replace of the pipeline's stages, used by the gestor's
