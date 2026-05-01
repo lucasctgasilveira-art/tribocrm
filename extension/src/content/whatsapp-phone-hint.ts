@@ -7,10 +7,11 @@
  *   https://web.whatsapp.com/send?phone=5533999317423#tribocrm-phone=5533999317423
  *
  * O WhatsApp Web ignora o hash e redireciona internamente pra conversa.
- * Este módulo captura o hash logo no boot (antes de o redirect remover),
- * guarda em memória e expõe consumo único pra promover o estado
- * `needs-phone` (contato salvo na agenda do WhatsApp, sem número visível
- * no DOM) pra `detected` automaticamente.
+ * Este módulo captura o hash em tres momentos diferentes pra ser robusto:
+ *
+ *   1. No boot do content script (URL inicial)
+ *   2. Em qualquer hashchange (navegacao SPA com fragment)
+ *   3. Apos popstate (navegacao SPA sem fragment)
  *
  * Por que "consumo único":
  *   se o vendedor trocar de chat manualmente depois, o hint não pode
@@ -26,33 +27,32 @@ const log = createLogger('whatsapp-phone-hint');
 const HASH_KEY = 'tribocrm-phone';
 
 let pendingHint: string | null = null;
-let captured = false;
 
 /**
  * Lê hash e query da URL atual, captura o phone hint se presente,
  * e remove o marcador da URL (cosmético — evita confusão em refreshes).
  *
- * Idempotente: chamadas seguintes não fazem nada além de retornar o
- * hint já capturado (se ainda não foi consumido).
+ * Idempotente: pode ser chamada várias vezes. Se já tem um hint
+ * pendente, mantém. Se vier um novo hint da URL, sobrescreve (caso
+ * o vendedor abra varios links do CRM em sequencia).
  */
 export function captureHintFromUrl(): string | null {
-  if (captured) return pendingHint;
-  captured = true;
-
   const url = new URL(window.location.href);
+  log.info('Lendo URL pra hint:', url.toString());
+
   const fromHash = parseFromHash(url.hash);
   const fromQuery = url.searchParams.get(HASH_KEY);
   const raw = fromHash ?? fromQuery;
 
   if (!raw) {
-    log.info('Sem hint na URL.');
-    return null;
+    if (!pendingHint) log.info('Sem hint na URL.');
+    return pendingHint;
   }
 
   const normalized = normalizePhone(raw);
   if (!normalized) {
     log.warn('Hint inválido, ignorando:', raw);
-    return null;
+    return pendingHint;
   }
 
   pendingHint = normalized;
@@ -77,6 +77,28 @@ export function captureHintFromUrl(): string | null {
   }
 
   return pendingHint;
+}
+
+/**
+ * Inicia listeners pra re-capturar hint quando a URL muda dentro
+ * da SPA do WhatsApp Web. Isso cobre o caso onde o usuario ja tem
+ * o WhatsApp Web aberto e clica no botao do CRM em outra aba —
+ * a aba do CRM dispara window.open que pode reusar a aba existente
+ * (ou se o redirect do wa.me dropou o hash, o hint chega via
+ * popstate quando navega).
+ */
+export function watchUrlForHint(): () => void {
+  const handler = () => {
+    captureHintFromUrl();
+  };
+
+  window.addEventListener('hashchange', handler);
+  window.addEventListener('popstate', handler);
+
+  return () => {
+    window.removeEventListener('hashchange', handler);
+    window.removeEventListener('popstate', handler);
+  };
 }
 
 /**

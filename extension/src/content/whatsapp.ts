@@ -28,7 +28,7 @@ import {
   isViewportTooNarrow,
   onViewportResize
 } from './whatsapp-layout';
-import { captureHintFromUrl, consumePhoneHint } from './whatsapp-phone-hint';
+import { captureHintFromUrl, consumePhoneHint, watchUrlForHint } from './whatsapp-phone-hint';
 import { createLogger } from '@shared/utils/logger';
 
 const log = createLogger('whatsapp');
@@ -36,8 +36,11 @@ const log = createLogger('whatsapp');
 log.info('Content script injetado em', window.location.hostname);
 
 // Lê o hint da URL ANTES de qualquer redirect interno do WhatsApp Web.
+// Tambem assina hashchange/popstate pra recapturar quando a URL muda
+// dentro da SPA do WhatsApp Web (caso o hash inicial nao tenha chegado).
 // O hint é "consumido" depois pelo primeiro 'needs-phone' que aparecer.
 captureHintFromUrl();
+watchUrlForHint();
 
 interface AppState {
   chatInfo: ChatInfo;
