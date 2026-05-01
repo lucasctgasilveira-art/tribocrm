@@ -579,6 +579,24 @@ export async function updateLead(req: Request, res: Response): Promise<void> {
     if (temperature !== undefined) data.temperature = temperature
     if (status !== undefined) data.status = status
     if (notes !== undefined) data.notes = notes
+
+    // Quando o cliente muda stageId mas NAO informa status explicito,
+    // derivamos status do stage.type pra manter o kanban consistente:
+    //   - stage.type WON  → status='WON'  (lead aparece na coluna Finalizado)
+    //   - stage.type LOST → status='LOST' (lead aparece na coluna Perdido)
+    //   - demais          → status='ACTIVE'
+    // Sem isso, leads movidos pra coluna WON/LOST via API que nao manda
+    // status (ex: extensao Chrome usando outcome.service) somem do kanban
+    // porque o filtro do getKanban e por status, nao por stage.type.
+    if (stageId !== undefined && status === undefined) {
+      const stage = await prisma.pipelineStage.findFirst({
+        where: { id: stageId, tenantId },
+        select: { type: true },
+      })
+      if (stage) {
+        data.status = stage.type === 'WON' ? 'WON' : stage.type === 'LOST' ? 'LOST' : 'ACTIVE'
+      }
+    }
     if (responsibleId !== undefined) data.responsible = { connect: { id: responsibleId } }
     if (lossReasonId !== undefined) data.lossReasonId = lossReasonId || null
     if (closedValue !== undefined) {
