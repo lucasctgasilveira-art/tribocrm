@@ -80,5 +80,17 @@ export const leadsService = {
    */
   async search(query: string): Promise<Lead[]> {
     return http.get<Lead[]>(`/leads?q=${encodeURIComponent(query)}&limit=10`);
+  },
+
+  /**
+   * Busca leads cujo nome contenha o termo informado (parcial,
+   * case-insensitive). Backend escopa por sellerScope + pipeline access
+   * e exclui leads LOST/ARCHIVED. Limite default 5 (configurável).
+   *
+   * Usado quando o vendedor abre conversa direto no WhatsApp Web e o
+   * contato esta salvo na agenda — extensao busca pelo nome do header.
+   */
+  async searchByName(name: string, limit: number = 5): Promise<Lead[]> {
+    return http.get<Lead[]>(`/leads/search-by-name?q=${encodeURIComponent(name)}&limit=${limit}`);
   }
 };

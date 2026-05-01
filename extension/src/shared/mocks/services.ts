@@ -180,6 +180,14 @@ export const mockLeadsService = {
     );
 
     return matches.slice(0, 10);
+  },
+
+  async searchByName(name: string, limit: number = 5): Promise<Lead[]> {
+    await delay(150);
+    const q = normalizeForSearch(name.trim());
+    if (q.length < 2) return [];
+    const matches = leadsDb.filter((l) => normalizeForSearch(l.name).includes(q));
+    return matches.slice(0, limit);
   }
 };
 

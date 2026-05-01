@@ -25,6 +25,7 @@ import type {
 import type { ComponentChildren } from 'preact';
 import { sendMessage } from '@shared/utils/messaging';
 import { normalizePhone } from '@shared/utils/phone';
+import { getMappedLeadId, setMappedLeadId, clearMappedLeadId } from '@shared/utils/name-to-lead-map';
 import {
   type Theme,
   getInitialTheme,
@@ -80,6 +81,7 @@ type PanelState =
   | { kind: 'onboarding' }
   | { kind: 'no-chat' }
   | { kind: 'manual-phone-input'; detectedName: string }
+  | { kind: 'name-match-list'; detectedName: string; matches: Lead[] }
   | { kind: 'lead-found'; lead: Lead; interactions: Interaction[] }
   | { kind: 'lead-not-found'; contact: WhatsAppContactInfo }
   | { kind: 'error'; message: string };
@@ -183,6 +185,59 @@ export function Panel({ chatInfo, isOpen, isNarrow, onClose }: PanelProps) {
     } else if (chatInfo.kind === 'detected') {
       effectiveContact = chatInfo.contact;
     } else if (chatInfo.kind === 'needs-phone') {
+      // Antes de cair em manual-phone-input, tenta identificar o lead
+      // pelo NOME do contato detectado no header do WhatsApp:
+      //   1. Cache local: nome ja foi vinculado a algum leadId? Se sim,
+      //      busca esse lead direto e cai em lead-found.
+      //   2. Backend: busca leads cujo nome contenha o detectedName
+      //      (parcial, case-insensitive, max 5).
+      //      - 0 matches → manual-phone-input (comportamento atual)
+      //      - 1 match  → vai direto pra lead-found e grava no cache
+      //      - 2+ match → mostra lista name-match-list pro vendedor escolher
+      try {
+        const cachedLeadId = await getMappedLeadId(chatInfo.detectedName);
+        if (cachedLeadId) {
+          const cachedLead = await sendMessage({
+            type: 'LEAD_FIND_BY_ID',
+            payload: { leadId: cachedLeadId }
+          });
+          if (cachedLead) {
+            const interactions = await sendMessage({
+              type: 'INTERACTION_LIST',
+              payload: { leadId: cachedLead.id }
+            });
+            setState({ kind: 'lead-found', lead: cachedLead, interactions });
+            return;
+          }
+          // Cache estava orfao (lead deletado) — limpa e segue pro backend
+          await clearMappedLeadId(chatInfo.detectedName);
+        }
+
+        const matches = await sendMessage({
+          type: 'LEAD_SEARCH_BY_NAME',
+          payload: { name: chatInfo.detectedName, limit: 5 }
+        });
+
+        if (matches.length === 1) {
+          const lead = matches[0]!;
+          await setMappedLeadId(chatInfo.detectedName, lead.id);
+          const interactions = await sendMessage({
+            type: 'INTERACTION_LIST',
+            payload: { leadId: lead.id }
+          });
+          setState({ kind: 'lead-found', lead, interactions });
+          return;
+        }
+
+        if (matches.length > 1) {
+          setState({ kind: 'name-match-list', detectedName: chatInfo.detectedName, matches });
+          return;
+        }
+      } catch (err) {
+        // Falha silenciosa — segue pro fluxo manual-phone-input
+        console.warn('[TriboCRM] Falha na busca por nome:', err);
+      }
+
       setState({ kind: 'manual-phone-input', detectedName: chatInfo.detectedName });
       return;
     }
@@ -283,12 +338,41 @@ export function Panel({ chatInfo, isOpen, isNarrow, onClose }: PanelProps) {
                 onSubmit={handleManualPhoneSubmit}
               />
             )}
+            {state.kind === 'name-match-list' && (
+              <NameMatchListView
+                detectedName={state.detectedName}
+                matches={state.matches}
+                onSelect={async (lead) => {
+                  await setMappedLeadId(state.detectedName, lead.id);
+                  reload();
+                }}
+                onSearchByPhone={() => setState({
+                  kind: 'manual-phone-input',
+                  detectedName: state.detectedName
+                })}
+              />
+            )}
             {state.kind === 'lead-found' && (
               <LeadFoundView
                 lead={state.lead}
                 interactions={state.interactions}
                 onUpdate={reload}
                 onToast={showToast}
+                onUnlink={
+                  // Aparece quando lead foi identificado por nome (sem telefone
+                  // detectado no DOM e sem entrada manual). Limpa o cache do
+                  // nome e cai em manual-phone-input pra ele digitar o número
+                  // correto ou re-buscar.
+                  chatInfo.kind === 'needs-phone' && !manualPhone
+                    ? async () => {
+                        await clearMappedLeadId(chatInfo.detectedName);
+                        setState({
+                          kind: 'manual-phone-input',
+                          detectedName: chatInfo.detectedName,
+                        });
+                      }
+                    : undefined
+                }
               />
             )}
             {state.kind === 'lead-not-found' && (
@@ -505,13 +589,90 @@ type LeadFoundProps = {
   interactions: Interaction[];
   onUpdate: () => void;
   onToast: (msg: string) => void;
+  /**
+   * Quando definido, mostra um link "← Não é esse lead?" no topo.
+   * Usado quando o lead foi identificado pelo NOME (cache local ou
+   * match único do backend), pra dar saída ao vendedor caso o
+   * vínculo automático esteja errado.
+   */
+  onUnlink?: () => void;
 };
 
 type Tab = 'dados' | 'notas' | 'tarefas' | 'produtos' | 'historico';
 
 type OutcomeModalKind = 'sell' | 'lose' | 'details' | null;
 
-function LeadFoundView({ lead, interactions, onUpdate, onToast }: LeadFoundProps) {
+// ── Visão: lista de leads que casaram pelo nome ────────────────
+//
+// Usada quando o vendedor abre uma conversa direto no WhatsApp Web
+// e o backend encontrou 2+ leads cujo nome contém o nome do contato
+// (busca parcial case-insensitive, max 5). Vendedor escolhe qual é
+// o lead correto; a escolha fica gravada no chrome.storage pra que
+// da próxima vez seja automática.
+function NameMatchListView({
+  detectedName,
+  matches,
+  onSelect,
+  onSearchByPhone
+}: {
+  detectedName: string;
+  matches: Lead[];
+  onSelect: (lead: Lead) => void;
+  onSearchByPhone: () => void;
+}) {
+  return (
+    <div class="tribocrm-name-match">
+      <div class="tribocrm-empty-icon">
+        <IconUser size={24} />
+      </div>
+      <div class="tribocrm-name-match-title">
+        Encontrei {matches.length} {matches.length === 1 ? 'lead' : 'leads'} com o nome
+        <strong>"{detectedName}"</strong>
+        no CRM.
+      </div>
+      <div class="tribocrm-name-match-subtitle">Qual é esse contato?</div>
+
+      <div class="tribocrm-link-results" style={{ marginTop: 8 }}>
+        {matches.map((lead) => (
+          <button
+            key={lead.id}
+            type="button"
+            class="tribocrm-link-result-item"
+            onClick={() => onSelect(lead)}
+          >
+            <div class="tribocrm-link-result-name">{lead.name}</div>
+            <div class="tribocrm-link-result-meta">
+              {lead.company && <span>{lead.company}</span>}
+              <span
+                class="tribocrm-link-result-stage"
+                style={{
+                  background: `${lead.stage.color ?? '#888'}22`,
+                  color: lead.stage.color ?? '#888'
+                }}
+              >
+                {lead.stage.name}
+              </span>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      <div class="tribocrm-name-match-fallback">
+        <div class="tribocrm-name-match-fallback-divider" />
+        <div class="tribocrm-name-match-fallback-text">Nenhum desses?</div>
+        <button
+          type="button"
+          class="tribocrm-btn tribocrm-btn-ghost tribocrm-btn-full"
+          onClick={onSearchByPhone}
+        >
+          Buscar por telefone
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function LeadFoundView({ lead, interactions, onUpdate, onToast, onUnlink }: LeadFoundProps) {
   const [tab, setTab] = useState<Tab>('dados');
   const [outcome, setOutcome] = useState<LeadOutcome | null | undefined>(undefined);
   const [modal, setModal] = useState<OutcomeModalKind>(null);
@@ -547,6 +708,17 @@ function LeadFoundView({ lead, interactions, onUpdate, onToast }: LeadFoundProps
 
   return (
     <>
+      {onUnlink && (
+        <button
+          type="button"
+          class="tribocrm-link-back"
+          onClick={onUnlink}
+          style={{ alignSelf: 'flex-start', marginBottom: 4 }}
+          title="Esse não é o lead certo? Desfaz o vínculo automático"
+        >
+          ← Não é esse lead?
+        </button>
+      )}
       <div
         class={`tribocrm-lead-mini ${
           outcomeLoaded ? 'tribocrm-lead-mini--with-outcome' : ''

@@ -102,6 +102,11 @@ export interface SearchLeadsRequest {
   payload: { query: string };
 }
 
+export interface SearchLeadsByNameRequest {
+  type: 'LEAD_SEARCH_BY_NAME';
+  payload: { name: string; limit?: number };
+}
+
 // ── Mensagens de templates / mensagens agendadas ───────────────────
 
 export interface ListTemplatesRequest {
@@ -283,6 +288,7 @@ export type ExtensionMessage =
   | ListLossReasonsRequest
   | FindLeadByIdRequest
   | SearchLeadsRequest
+  | SearchLeadsByNameRequest
   | AltPhoneLinkRequest
   | AltPhoneUnlinkRequest
   | AltPhoneFindLeadIdRequest;
@@ -325,6 +331,7 @@ export interface MessageResponseMap {
   LOSS_REASONS_LIST: LossReason[];
   LEAD_FIND_BY_ID: Lead | null;
   LEAD_SEARCH: Lead[];
+  LEAD_SEARCH_BY_NAME: Lead[];
   ALT_PHONE_LINK: null;
   ALT_PHONE_UNLINK: null;
   ALT_PHONE_FIND_LEAD_ID: string | null;

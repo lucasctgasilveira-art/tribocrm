@@ -642,6 +642,53 @@
   text-align: left;
 }
 
+/* ── Lista de matches por nome (cenário B do item 6) ────────── */
+
+.tribocrm-name-match {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px;
+  gap: 8px;
+  text-align: center;
+}
+
+.tribocrm-name-match-title {
+  font-size: 13px;
+  color: var(--tribocrm-text-primary);
+  line-height: 1.5;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tribocrm-name-match-title strong {
+  color: var(--tribocrm-accent);
+  font-weight: 600;
+}
+
+.tribocrm-name-match-subtitle {
+  font-size: 12px;
+  color: var(--tribocrm-text-muted);
+  margin-bottom: 4px;
+}
+
+.tribocrm-name-match-fallback {
+  width: 100%;
+  margin-top: 12px;
+}
+
+.tribocrm-name-match-fallback-divider {
+  border-top: 1px solid var(--tribocrm-border);
+  margin: 4px 0 12px;
+}
+
+.tribocrm-name-match-fallback-text {
+  font-size: 12px;
+  color: var(--tribocrm-text-muted);
+  margin-bottom: 6px;
+}
+
 /* ── Onboarding (aceite de termos) ───────────────────────────── */
 
 .tribocrm-onboarding {

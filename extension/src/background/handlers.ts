@@ -143,6 +143,10 @@ export const handlers: HandlerMap = {
     return api.leads.search(payload.query);
   },
 
+  LEAD_SEARCH_BY_NAME: async (payload) => {
+    return api.leads.searchByName(payload.name, payload.limit ?? 5);
+  },
+
   LEAD_CREATE: async (payload) => {
     return api.leads.create(payload);
   },
