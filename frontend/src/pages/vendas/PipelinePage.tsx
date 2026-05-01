@@ -89,7 +89,7 @@ export default function VendasPipelinePage() {
   // Lista de pipelines disponíveis ao vendedor (vem filtrada do backend
   // pelo controle de acesso por usuario). Quando length > 1, o dropdown
   // aparece pra o vendedor trocar de pipeline.
-  const [pipelinesList, setPipelinesList] = useState<{ id: string; name: string }[]>([])
+  const [pipelinesList, setPipelinesList] = useState<Array<{ id: string; name: string; stages?: Array<{ id: string; name: string; sortOrder?: number; type?: string }> }>>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [hoveredCard, setHoveredCard] = useState<string | null>(null)
@@ -133,7 +133,7 @@ export default function VendasPipelinePage() {
       setLoading(true)
       try {
         const pipelinesData = await getPipelines()
-        setPipelinesList(pipelinesData.map((p: { id: string; name: string }) => ({ id: p.id, name: p.name })))
+        setPipelinesList(pipelinesData.map((p: { id: string; name: string; stages?: Array<{ id: string; name: string; sortOrder?: number; type?: string }> }) => ({ id: p.id, name: p.name, stages: p.stages ?? [] })))
         if (pipelinesData.length > 0) {
           const pid = pipelineId || pipelinesData[0].id
           setPipelineId(pid)
@@ -224,8 +224,9 @@ export default function VendasPipelinePage() {
 
   async function handleNewLead(data: NewLeadData) {
     const tempMap: Record<string, Lead['temperature']> = { Quente: 'HOT', Morno: 'WARM', Frio: 'COLD' }
-    const stageObj = stages.find(s => s.name === data.stage)
-    if (!stageObj || !pipelineId) return
+    // Pipeline e etapa vem ja selecionados pelo usuario no modal
+    // (data.pipelineId / data.stageId sao UUIDs reais).
+    if (!data.pipelineId || !data.stageId) return
 
     try {
       const { data: res } = await api.post('/leads', {
@@ -234,8 +235,8 @@ export default function VendasPipelinePage() {
         email: data.email || null,
         phone: data.phone || null,
         expectedValue: parseInt(data.value) || null,
-        stageId: stageObj.id,
-        pipelineId,
+        stageId: data.stageId,
+        pipelineId: data.pipelineId,
         temperature: tempMap[data.temperature] ?? 'WARM',
       })
       if (res.success) {
@@ -396,7 +397,7 @@ export default function VendasPipelinePage() {
         setLeads(prev => prev.map(l => l.id === leadId ? { ...l, ...changes } : l))
         setSelectedLead(prev => prev && prev.id === leadId ? { ...prev, ...changes } : prev)
       }} />}
-      <NewLeadModal open={modalOpen} onClose={() => setModalOpen(false)} onSubmit={handleNewLead} defaultStage={modalStage} />
+      <NewLeadModal open={modalOpen} onClose={() => setModalOpen(false)} onSubmit={handleNewLead} defaultStage={modalStage} defaultPipelineId={pipelineId} pipelines={pipelinesList.map(p => ({ id: p.id, name: p.name, stages: p.stages ?? [] }))} />
       {wonLostDrop && <WonLostConfirm drop={wonLostDrop} lossReasons={lossReasons} onClose={() => setWonLostDrop(null)} onDone={(leadId, stageId, stageName, type, patchPayload) => {
         const body = { stageId, ...patchPayload }
         console.log('[Pipeline] WonLost PATCH body:', JSON.stringify(body))

@@ -8,6 +8,10 @@ export interface PhoneEntry { ddi: string; number: string }
 export interface NewLeadData {
   name: string; company: string; position: string; email: string
   phones: PhoneEntry[]; cpf: string; cnpj: string; pipeline: string; stage: string
+  // pipelineId/stageId sao os UUIDs reais — usar esses no createLead
+  // do backend. pipeline/stage continuam como strings (nome) so pra
+  // compat reversa com clientes antigos que ainda mapeavam por nome.
+  pipelineId: string; stageId: string
   value: string; responsible: string; responsibleId: string; source: string; temperature: string; notes: string
   // compat
   phone: string; phoneDdi: string
@@ -16,12 +20,25 @@ export interface NewLeadData {
 export interface UserOption { id: string; name: string }
 export type DistributionType = 'MANUAL' | 'ROUND_ROBIN_ALL' | 'ROUND_ROBIN_TEAM' | 'SPECIFIC_USER'
 
+export interface PipelineOption {
+  id: string
+  name: string
+  stages: Array<{ id: string; name: string; sortOrder?: number; type?: string }>
+}
+
 interface Props {
   open: boolean
   onClose: () => void
   onSubmit: (data: NewLeadData) => void
   defaultStage?: string
+  defaultPipelineId?: string
   users?: UserOption[]
+  /**
+   * Lista de pipelines que o usuário tem acesso (já filtradas pelo
+   * backend via getPipelines). Quando vazia/undefined, o select
+   * de pipeline mostra "Carregando..." e desabilita o submit.
+   */
+  pipelines?: PipelineOption[]
   pipelineDistribution?: DistributionType
 }
 type FieldStatus = 'idle' | 'valid' | 'error'
@@ -67,7 +84,6 @@ function findCountry(ddi: string): Country { return countries.find(c => c.ddi ==
 
 // ── Config ──
 
-const stageOpts = ['Sem Contato', 'Em Contato', 'Negociando', 'Proposta Enviada']
 const respOpts = ['Ana Souza', 'Pedro Gomes', 'Lucas Castro', 'Mariana Reis', 'Thiago Bastos']
 const sourceOpts = ['Instagram', 'LinkedIn', 'Indicação', 'Site', 'WhatsApp', 'Cold Call', 'Outro']
 const tempOpts = ['Quente', 'Morno', 'Frio']
@@ -214,7 +230,7 @@ function PhoneInput({ entry, onChange, onRemove, showRemove }: { entry: PhoneEnt
 
 // ── Main Component ──
 
-export default function NewLeadModal({ open, onClose, onSubmit, defaultStage, users, pipelineDistribution = 'MANUAL' }: Props) {
+export default function NewLeadModal({ open, onClose, onSubmit, defaultStage, defaultPipelineId, users, pipelines, pipelineDistribution = 'MANUAL' }: Props) {
   const [saving, setSaving] = useState(false)
   const [name, setName] = useState('')
   const [company, setCompany] = useState('')
@@ -223,8 +239,8 @@ export default function NewLeadModal({ open, onClose, onSubmit, defaultStage, us
   const [phones, setPhones] = useState<PhoneEntry[]>([{ ddi: '+55', number: '' }])
   const [cpf, setCpf] = useState('')
   const [cnpj, setCnpj] = useState('')
-  const [pipeline] = useState('Pipeline Principal')
-  const [stage, setStage] = useState(defaultStage ?? 'Sem Contato')
+  const [pipelineId, setPipelineId] = useState<string>('')
+  const [stageId, setStageId] = useState<string>('')
   const [value, setValue] = useState('')
   // When a real users list is provided, the dropdown stores a UUID; otherwise
   // (legacy callers without props) it falls back to the hardcoded mock list.
@@ -247,12 +263,35 @@ export default function NewLeadModal({ open, onClose, onSubmit, defaultStage, us
   useEffect(() => {
     if (open) {
       setName(''); setCompany(''); setPosition(''); setEmail(''); setPhones([{ ddi: '+55', number: '' }])
-      setCpf(''); setCnpj(''); setStage(defaultStage ?? 'Sem Contato'); setValue(''); setSource(''); setNotes('')
+      setCpf(''); setCnpj(''); setValue(''); setSource(''); setNotes('')
       setResponsible(respOpts[0] ?? ''); setResponsibleId(''); setTemperature('Morno')
       setSaving(false); setEmailStatus('idle'); setEmailErr(''); setCpfStatus('idle'); setCpfErr(''); setCnpjStatus('idle'); setCnpjErr('')
+      // Pipeline default: defaultPipelineId (se passado) → primeira da lista.
+      // Stage default: defaultStage matched por nome → primeira da pipeline.
+      const list = pipelines ?? []
+      const pid = defaultPipelineId && list.some(p => p.id === defaultPipelineId)
+        ? defaultPipelineId
+        : (list[0]?.id ?? '')
+      setPipelineId(pid)
+      const pickedPipeline = list.find(p => p.id === pid)
+      const matchedStage = defaultStage ? pickedPipeline?.stages.find(s => s.name === defaultStage) : undefined
+      setStageId(matchedStage?.id ?? pickedPipeline?.stages[0]?.id ?? '')
       setTimeout(() => nameRef.current?.focus(), 100)
     }
-  }, [open, defaultStage])
+  }, [open, defaultStage, defaultPipelineId, pipelines])
+
+  // Quando trocar pipeline, reseta etapa pra primeira da nova pipeline
+  // (etapa anterior pode nao existir na pipeline nova).
+  function handlePipelineChange(newId: string) {
+    setPipelineId(newId)
+    const p = (pipelines ?? []).find(x => x.id === newId)
+    setStageId(p?.stages[0]?.id ?? '')
+  }
+
+  const currentPipeline = (pipelines ?? []).find(p => p.id === pipelineId)
+  const currentStages = currentPipeline?.stages ?? []
+  const pipelineName = currentPipeline?.name ?? ''
+  const stageName = currentStages.find(s => s.id === stageId)?.name ?? ''
 
   const flashValid = useCallback((setter: (s: FieldStatus) => void) => { setter('valid'); setTimeout(() => setter('idle'), 1000) }, [])
 
@@ -279,7 +318,7 @@ export default function NewLeadModal({ open, onClose, onSubmit, defaultStage, us
 
   const hasErr = (email.length > 0 && emailStatus === 'error') || (cpf.replace(/\D/g, '').length > 0 && cpfStatus === 'error') || (cnpj.replace(/\D/g, '').length > 0 && cnpjStatus === 'error')
   const responsibleOk = isAutoDistribution || (useRealUsers ? true : !!responsible)
-  const canSubmit = name.trim() && email.trim() && emailRe.test(email) && responsibleOk && !hasErr && !saving
+  const canSubmit = name.trim() && email.trim() && emailRe.test(email) && responsibleOk && !hasErr && !!pipelineId && !!stageId && !saving
 
   if (!open) return null
 
@@ -287,7 +326,7 @@ export default function NewLeadModal({ open, onClose, onSubmit, defaultStage, us
     if (!canSubmit) return
     setSaving(true)
     setTimeout(() => {
-      onSubmit({ name, company, position, email, phones, phone: phones[0]?.number ?? '', phoneDdi: phones[0]?.ddi ?? '+55', cpf, cnpj, pipeline, stage, value, responsible, responsibleId, source, temperature, notes })
+      onSubmit({ name, company, position, email, phones, phone: phones[0]?.number ?? '', phoneDdi: phones[0]?.ddi ?? '+55', cpf, cnpj, pipeline: pipelineName, stage: stageName, pipelineId, stageId, value, responsible, responsibleId, source, temperature, notes })
       setSaving(false); onClose()
     }, 400)
   }
@@ -352,8 +391,28 @@ export default function NewLeadModal({ open, onClose, onSubmit, defaultStage, us
 
           <SectionLabel style={{ marginTop: 20 }}>Dados da negociação</SectionLabel>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <Field label="Pipeline" required><select value={pipeline} disabled style={{ ...baseInput, appearance: 'none' as const, cursor: 'default', opacity: 0.7 }}><option>Pipeline Principal</option></select></Field>
-            <Field label="Etapa" required><select value={stage} onChange={e => setStage(e.target.value)} style={{ ...baseInput, appearance: 'none' as const, cursor: 'pointer' }} onFocus={focusEv} onBlur={blurEv}>{stageOpts.map(s => <option key={s}>{s}</option>)}</select></Field>
+            <Field label="Pipeline" required>
+              {!pipelines || pipelines.length === 0 ? (
+                <select disabled style={{ ...baseInput, appearance: 'none' as const, cursor: 'default', opacity: 0.7 }}>
+                  <option>{!pipelines ? 'Carregando...' : 'Nenhum pipeline'}</option>
+                </select>
+              ) : (
+                <select value={pipelineId} onChange={e => handlePipelineChange(e.target.value)} style={{ ...baseInput, appearance: 'none' as const, cursor: 'pointer' }} onFocus={focusEv} onBlur={blurEv} required>
+                  {pipelines.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              )}
+            </Field>
+            <Field label="Etapa" required>
+              {currentStages.length === 0 ? (
+                <select disabled style={{ ...baseInput, appearance: 'none' as const, cursor: 'default', opacity: 0.7 }}>
+                  <option>—</option>
+                </select>
+              ) : (
+                <select value={stageId} onChange={e => setStageId(e.target.value)} style={{ ...baseInput, appearance: 'none' as const, cursor: 'pointer' }} onFocus={focusEv} onBlur={blurEv} required>
+                  {currentStages.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              )}
+            </Field>
             <Field label="Valor esperado (R$)"><input type="number" value={value} onChange={e => setValue(e.target.value)} placeholder="0" style={baseInput} onFocus={focusEv} onBlur={blurEv} /></Field>
             <Field label="Responsável" required={!isAutoDistribution}>
               {isAutoDistribution ? (

@@ -247,11 +247,9 @@ export default function GestaoLeadsPage() {
 
   async function handleNewLead(data: NewLeadData) {
     try {
-      const selectedPipeline = pipelines[0]
-      if (!selectedPipeline) return
-
-      const stage = selectedPipeline.stages?.find(s => s.name === data.stage) ?? selectedPipeline.stages?.[0]
-      if (!stage) return
+      // Pipeline e etapa vem ja selecionados pelo usuario no modal
+      // (data.pipelineId / data.stageId sao UUIDs reais).
+      if (!data.pipelineId || !data.stageId) return
 
       const tempMap: Record<string, string> = { Quente: 'HOT', Morno: 'WARM', Frio: 'COLD' }
 
@@ -261,8 +259,8 @@ export default function GestaoLeadsPage() {
         email: data.email || undefined,
         phone: data.phone || undefined,
         expectedValue: parseInt(data.value) || undefined,
-        pipelineId: selectedPipeline.id,
-        stageId: stage.id,
+        pipelineId: data.pipelineId,
+        stageId: data.stageId,
         temperature: tempMap[data.temperature] ?? 'WARM',
         responsibleId: data.responsibleId || undefined,
       })
@@ -520,6 +518,7 @@ export default function GestaoLeadsPage() {
         onClose={() => setModalOpen(false)}
         onSubmit={handleNewLead}
         users={usersList}
+        pipelines={pipelines.map(p => ({ id: p.id, name: p.name, stages: (p.stages ?? []).map(s => ({ id: s.id, name: s.name })) }))}
         pipelineDistribution={pipelines[0]?.distributionType ?? 'MANUAL'}
       />
       <ImportLeadsModal
