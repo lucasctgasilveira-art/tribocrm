@@ -201,10 +201,12 @@ export default function LeadDrawer({ lead, onClose, stageColor, instance = 'gest
     const num = cleanPhone(lead.phone)
     if (!num) { showToast('Lead sem WhatsApp cadastrado'); return }
     const full = num.length <= 11 ? `55${num}` : num
-    // web.whatsapp.com/send abre direto na conversa (sem redirect intermediario
-    // do wa.me que estava dropando o fragment). O hash chega intacto na URL
-    // pra extensao Chrome capturar via captureHintFromUrl().
-    window.open(`https://web.whatsapp.com/send?phone=${full}#tribocrm-phone=${full}`, '_blank')
+    // wa.me e a opcao mais robusta — web.whatsapp.com/send dava tela cinza
+    // em algumas combinacoes WhatsApp Business desktop + Chrome. Sem hash
+    // o painel da extensao perde o hint e o vendedor cai em busca manual,
+    // que ja esta funcionando. A solucao definitiva (passo 2) sera passar
+    // o phone via externally_connectable, sem depender de URL.
+    window.open(`https://wa.me/${full}`, '_blank')
     // Fire-and-forget interaction log. Failures are swallowed so a flaky
     // network never blocks or surfaces on the contact flow.
     api.post(`/leads/${lead.id}/interactions`, {

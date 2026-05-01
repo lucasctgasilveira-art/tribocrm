@@ -108,9 +108,9 @@ export default function LeadDetailView({ menuItems, instance }: LeadDetailViewPr
     const phone = (lead.whatsapp || lead.phone || '').replace(/\D/g, '')
     if (phone) {
       const full = phone.length <= 11 ? `55${phone}` : phone
-      // web.whatsapp.com/send sem redirect: garante que o hash chega
-      // intacto na URL final pra extensao Chrome capturar.
-      window.open(`https://web.whatsapp.com/send?phone=${full}#tribocrm-phone=${full}`, '_blank')
+      // wa.me robusto — web.whatsapp.com/send dava tela cinza em alguns
+      // setups. Hint do CRM virá via externally_connectable (passo 2).
+      window.open(`https://wa.me/${full}`, '_blank')
       api.post(`/leads/${id}/interactions`, { type: 'WHATSAPP', notes: 'Contato via WhatsApp' }).catch(() => {})
     }
   }

@@ -349,7 +349,7 @@ export default function VendasPipelinePage() {
                         <div style={{ marginTop: 10, borderTop: '1px solid var(--border)', paddingTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                           {lead.lastContact && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{lead.lastContact}</span>}
                           <div style={{ display: 'flex', gap: 2, marginLeft: 'auto' }}>
-                            <ActBtn color="#25d166" onClick={() => { const p = lead.phone.replace(/\D/g, ''); if (p && p !== '') { const full = p.length <= 11 ? `55${p}` : p; window.open(`https://web.whatsapp.com/send?phone=${full}#tribocrm-phone=${full}`, '_blank'); api.post(`/leads/${lead.id}/interactions`, { type: 'WHATSAPP', notes: 'Contato via WhatsApp' }).catch(() => {}) } }}><MessageCircle size={14} strokeWidth={1.5} /></ActBtn>
+                            <ActBtn color="#25d166" onClick={() => { const p = lead.phone.replace(/\D/g, ''); if (p && p !== '') { const full = p.length <= 11 ? `55${p}` : p; window.open(`https://wa.me/${full}`, '_blank'); api.post(`/leads/${lead.id}/interactions`, { type: 'WHATSAPP', notes: 'Contato via WhatsApp' }).catch(() => {}) } }}><MessageCircle size={14} strokeWidth={1.5} /></ActBtn>
                             <ActBtn color="#3b82f6" onClick={() => { openEmailForLead(lead) }}><Mail size={14} strokeWidth={1.5} /></ActBtn>
                             <ActBtn color="#f97316" onClick={() => { const p = lead.phone.replace(/\D/g, ''); if (p && p !== '') { window.open(`tel:${p}`); api.post(`/leads/${lead.id}/interactions`, { type: 'CALL', notes: 'Ligação realizada' }).catch(() => {}) } }}><Phone size={14} strokeWidth={1.5} /></ActBtn>
                           </div>
