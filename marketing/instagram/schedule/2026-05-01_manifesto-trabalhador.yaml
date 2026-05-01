@@ -1,17 +1,13 @@
-# --------------------------------------------------------
-# Agendamento — Feed-manifesto · Dia do Trabalhador
-# --------------------------------------------------------
-status: "aprovado"
-aprovado_em: "2026-04-28"
-aprovado_por: "lucas"
+status: publicado
+aprovado_em: '2026-04-28'
+aprovado_por: lucas
 slot:
-  data: "2026-05-01"            # SEX · Feriado nacional
-  horario: "08:00 BRT"          # mais cedo no feriado
+  data: '2026-05-01'
+  horario: 08:00 BRT
   justificativa: >
-    Sexta 01/05 08:00 BRT — Dia do Trabalhador. Hora mais cedo porque em
-    feriado as pessoas conferem rede no início do dia (antes de qualquer
-    programa). Manifesto cúmplice, sem motivacional clichê e sem
-    desconto/oferta — coerente com Pilar Manifesto.
+    Sexta 01/05 08:00 BRT — Dia do Trabalhador. Hora mais cedo porque em feriado as pessoas conferem rede no início do
+    dia (antes de qualquer programa). Manifesto cúmplice, sem motivacional clichê e sem desconto/oferta — coerente com
+    Pilar Manifesto.
 formato: feed-estatico
 slides: 1
 arquivos:
@@ -22,3 +18,6 @@ primeiro_comentario: null
 publicacao:
   metodo: instagram_graph_api
   acao_humana_necessaria: aprovacao_lucas_antes_de_postar
+published_at: '2026-05-01T11:43:39.220Z'
+media_id: '18064848338700913'
+permalink: https://www.instagram.com/p/DXy3fbMFO8T/
