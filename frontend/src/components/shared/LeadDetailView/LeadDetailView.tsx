@@ -9,6 +9,7 @@ import AppLayout from '../AppLayout/AppLayout'
 import { SendEmailModal, ConnectGmailModal } from '../EmailModal/EmailModal'
 import { getLead } from '../../../services/leads.service'
 import api from '../../../services/api'
+import { notifyExtensionPhoneHint } from '../../../utils/extensionBridge'
 
 // ── Config ──
 
@@ -108,8 +109,8 @@ export default function LeadDetailView({ menuItems, instance }: LeadDetailViewPr
     const phone = (lead.whatsapp || lead.phone || '').replace(/\D/g, '')
     if (phone) {
       const full = phone.length <= 11 ? `55${phone}` : phone
-      // wa.me robusto — web.whatsapp.com/send dava tela cinza em alguns
-      // setups. Hint do CRM virá via externally_connectable (passo 2).
+      // Notifica a extensao Chrome (se instalada) via runtime.sendMessage.
+      void notifyExtensionPhoneHint({ phone: full, leadId: lead.id })
       window.open(`https://wa.me/${full}`, '_blank')
       api.post(`/leads/${id}/interactions`, { type: 'WHATSAPP', notes: 'Contato via WhatsApp' }).catch(() => {})
     }

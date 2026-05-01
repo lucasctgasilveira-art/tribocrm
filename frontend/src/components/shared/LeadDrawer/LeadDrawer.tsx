@@ -5,6 +5,7 @@ import {
   Check, ExternalLink, Loader2, Pencil,
 } from 'lucide-react'
 import api from '../../../services/api'
+import { notifyExtensionPhoneHint } from '../../../utils/extensionBridge'
 import { SendEmailModal, ConnectGmailModal } from '../EmailModal/EmailModal'
 import { NewManagerialTaskModal } from '../TasksView/TasksView'
 import { getUsers, getAdminTeam } from '../../../services/users.service'
@@ -201,11 +202,10 @@ export default function LeadDrawer({ lead, onClose, stageColor, instance = 'gest
     const num = cleanPhone(lead.phone)
     if (!num) { showToast('Lead sem WhatsApp cadastrado'); return }
     const full = num.length <= 11 ? `55${num}` : num
-    // wa.me e a opcao mais robusta — web.whatsapp.com/send dava tela cinza
-    // em algumas combinacoes WhatsApp Business desktop + Chrome. Sem hash
-    // o painel da extensao perde o hint e o vendedor cai em busca manual,
-    // que ja esta funcionando. A solucao definitiva (passo 2) sera passar
-    // o phone via externally_connectable, sem depender de URL.
+    // Notifica a extensao Chrome (se instalada) com phone+leadId via
+    // chrome.runtime.sendMessage — sem depender de URL. Fire-and-forget,
+    // continua o fluxo mesmo se a extensao nao estiver instalada.
+    void notifyExtensionPhoneHint({ phone: full, leadId: lead.id })
     window.open(`https://wa.me/${full}`, '_blank')
     // Fire-and-forget interaction log. Failures are swallowed so a flaky
     // network never blocks or surfaces on the contact flow.

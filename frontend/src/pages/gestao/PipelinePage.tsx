@@ -8,6 +8,7 @@ import NewLeadModal, { type NewLeadData } from '../../components/shared/NewLeadM
 import { SendEmailModal, ConnectGmailModal } from '../../components/shared/EmailModal/EmailModal'
 import { getPipelines, getKanban } from '../../services/pipeline.service'
 import api from '../../services/api'
+import { notifyExtensionPhoneHint } from '../../utils/extensionBridge'
 
 // ── Types ──
 
@@ -565,6 +566,7 @@ export default function PipelinePage() {
                               const p = lead.phone.replace(/\D/g, '')
                               if (!p) return
                               const full = p.length <= 11 ? '55' + p : p
+                              void notifyExtensionPhoneHint({ phone: full, leadId: lead.id })
                               window.open(`https://wa.me/${full}`, '_blank')
                               api.post(`/leads/${lead.id}/interactions`, { type: 'WHATSAPP', notes: 'Contato iniciado pelo CRM' }).catch(() => {})
                             }}><MessageCircle size={14} strokeWidth={1.5} /></ActionBtn>
