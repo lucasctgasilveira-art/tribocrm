@@ -2719,10 +2719,52 @@ function LeadNotFoundView({
   const [company, setCompany] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Pipeline + etapa: backend exige pipelineId+stageId no body do
+  // POST /leads (controller validation). Carregamos pipelines do
+  // user (filtradas por acesso no backend) e default = primeira
+  // pipeline + primeira etapa (sortOrder asc, ja vem ordenado do backend).
+  const [pipelines, setPipelines] = useState<Array<{ id: string; name: string; stages: Stage[] }> | null>(null);
+  const [pipelineId, setPipelineId] = useState<string>('');
+  const [stageId, setStageId] = useState<string>('');
+
+  // Carrega pipelines so quando o vendedor abre o formulario (showForm)
+  // pra evitar request desnecessaria pra quem so vai vincular.
+  useEffect(() => {
+    if (!showForm || pipelines !== null) return;
+    let cancelled = false;
+    sendMessage({ type: 'PIPELINE_LIST' })
+      .then((list) => {
+        if (cancelled) return;
+        setPipelines(list);
+        if (list.length > 0) {
+          const first = list[0]!;
+          setPipelineId(first.id);
+          if (first.stages.length > 0) setStageId(first.stages[0]!.id);
+        }
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setPipelines([]);
+        setError(err instanceof Error ? err.message : 'Erro ao carregar pipelines');
+      });
+    return () => { cancelled = true; };
+  }, [showForm, pipelines]);
+
+  // Quando o vendedor muda Pipeline, recalcula etapas e seta a primeira
+  // etapa da nova pipeline como default (etapa anterior pode nao existir
+  // na pipeline nova).
+  function handlePipelineChange(newId: string) {
+    setPipelineId(newId);
+    const p = pipelines?.find((x) => x.id === newId);
+    if (p && p.stages.length > 0) setStageId(p.stages[0]!.id);
+    else setStageId('');
+  }
+
+  const currentStages = pipelines?.find((p) => p.id === pipelineId)?.stages ?? [];
 
   async function submit(e: Event) {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || !pipelineId || !stageId) return;
     setSaving(true);
     setError(null);
     try {
@@ -2733,7 +2775,9 @@ function LeadNotFoundView({
           phone: contact.phone,
           whatsapp: contact.phone,
           email: email.trim() || undefined,
-          company: company.trim() || undefined
+          company: company.trim() || undefined,
+          pipelineId,
+          stageId
         }
       });
       onToast('Lead cadastrado!');
@@ -2833,6 +2877,44 @@ function LeadNotFoundView({
         />
       </div>
 
+      <div class="tribocrm-field">
+        <label class="tribocrm-field-label">Pipeline *</label>
+        {pipelines === null ? (
+          <div class="tribocrm-input" style={{ color: 'var(--tribocrm-text-muted)' }}>Carregando...</div>
+        ) : pipelines.length === 0 ? (
+          <div class="tribocrm-input" style={{ color: 'var(--tribocrm-text-muted)' }}>Nenhum pipeline disponível</div>
+        ) : (
+          <select
+            class="tribocrm-input"
+            value={pipelineId}
+            onChange={(e) => handlePipelineChange((e.target as HTMLSelectElement).value)}
+            required
+          >
+            {pipelines.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+        )}
+      </div>
+
+      <div class="tribocrm-field">
+        <label class="tribocrm-field-label">Etapa *</label>
+        {currentStages.length === 0 ? (
+          <div class="tribocrm-input" style={{ color: 'var(--tribocrm-text-muted)' }}>—</div>
+        ) : (
+          <select
+            class="tribocrm-input"
+            value={stageId}
+            onChange={(e) => setStageId((e.target as HTMLSelectElement).value)}
+            required
+          >
+            {currentStages.map((s) => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </select>
+        )}
+      </div>
+
       <div class="tribocrm-btn-group">
         <button
           type="button"
@@ -2845,7 +2927,7 @@ function LeadNotFoundView({
         <button
           type="submit"
           class="tribocrm-btn tribocrm-btn-primary"
-          disabled={saving || !name.trim()}
+          disabled={saving || !name.trim() || !pipelineId || !stageId}
         >
           {saving ? 'Salvando...' : 'Cadastrar'}
         </button>

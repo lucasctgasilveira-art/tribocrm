@@ -1,5 +1,12 @@
 import { http, ApiHttpError } from './http';
-import type { Lead, CreateTaskDTO, Interaction, Stage } from '@shared/types/domain';
+import type { Lead, CreateTaskDTO, Interaction, Stage, Pipeline } from '@shared/types/domain';
+
+// Pipeline com stages embutidas — formato retornado pelo backend em
+// GET /pipelines (que ja faz include stages). Usado nos dropdowns
+// de cadastro de lead na extensao.
+export interface PipelineWithStages extends Pipeline {
+  stages: Stage[];
+}
 
 export interface CreateLeadInput {
   name: string;
@@ -56,6 +63,16 @@ export const leadsService = {
 
   async listStages(pipelineId: string): Promise<Stage[]> {
     return http.get<Stage[]>(`/pipelines/${pipelineId}/stages`);
+  },
+
+  /**
+   * Lista pipelines do tenant que o usuario tem acesso (backend
+   * filtra automaticamente via getPipelines). Vem com stages
+   * embutidas — uma unica chamada e suficiente pra montar
+   * dropdowns Pipeline + Etapa no formulario de cadastro.
+   */
+  async listPipelines(): Promise<PipelineWithStages[]> {
+    return http.get<PipelineWithStages[]>(`/pipelines`);
   },
 
   /**

@@ -107,6 +107,10 @@ export interface SearchLeadsByNameRequest {
   payload: { name: string; limit?: number };
 }
 
+export interface ListPipelinesRequest {
+  type: 'PIPELINE_LIST';
+}
+
 // ── Mensagens de templates / mensagens agendadas ───────────────────
 
 export interface ListTemplatesRequest {
@@ -289,6 +293,7 @@ export type ExtensionMessage =
   | FindLeadByIdRequest
   | SearchLeadsRequest
   | SearchLeadsByNameRequest
+  | ListPipelinesRequest
   | AltPhoneLinkRequest
   | AltPhoneUnlinkRequest
   | AltPhoneFindLeadIdRequest;
@@ -332,6 +337,7 @@ export interface MessageResponseMap {
   LEAD_FIND_BY_ID: Lead | null;
   LEAD_SEARCH: Lead[];
   LEAD_SEARCH_BY_NAME: Lead[];
+  PIPELINE_LIST: Array<{ id: string; name: string; stages: Stage[] }>;
   ALT_PHONE_LINK: null;
   ALT_PHONE_UNLINK: null;
   ALT_PHONE_FIND_LEAD_ID: string | null;

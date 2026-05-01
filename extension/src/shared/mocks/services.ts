@@ -146,6 +146,11 @@ export const mockLeadsService = {
     return MOCK_STAGES;
   },
 
+  async listPipelines() {
+    await delay(150);
+    return [{ id: 'mock-pipeline', name: 'Pipeline Principal', stages: MOCK_STAGES }];
+  },
+
   async findById(leadId: string): Promise<Lead | null> {
     await delay(150);
     return leadsDb.find((l) => l.id === leadId) ?? null;
