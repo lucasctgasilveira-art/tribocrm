@@ -1,4 +1,4 @@
-﻿# Normalização automática de fim de linha
+# Normalização automática de fim de linha
 # - Arquivos de texto: LF no repositório, checkout do sistema
 # - Binários: sem modificação
 * text=auto eol=lf
