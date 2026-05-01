@@ -565,7 +565,7 @@ export default function PipelinePage() {
                               const p = lead.phone.replace(/\D/g, '')
                               if (!p) return
                               const full = p.length <= 11 ? '55' + p : p
-                              window.open(`https://web.whatsapp.com/send?phone=${full}#tribocrm-phone=${full}`, '_blank')
+                              window.open(`https://wa.me/${full}#tribocrm-phone=${full}`, '_blank')
                               api.post(`/leads/${lead.id}/interactions`, { type: 'WHATSAPP', notes: 'Contato iniciado pelo CRM' }).catch(() => {})
                             }}><MessageCircle size={14} strokeWidth={1.5} /></ActionBtn>
                             <ActionBtn color="#3b82f6" onClick={() => { openEmailForLead(lead) }}><Mail size={14} strokeWidth={1.5} /></ActionBtn>

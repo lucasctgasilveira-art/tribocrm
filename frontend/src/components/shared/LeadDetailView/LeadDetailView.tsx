@@ -108,9 +108,9 @@ export default function LeadDetailView({ menuItems, instance }: LeadDetailViewPr
     const phone = (lead.whatsapp || lead.phone || '').replace(/\D/g, '')
     if (phone) {
       const full = phone.length <= 11 ? `55${phone}` : phone
-      // web.whatsapp.com/send + hash sobrevive pro content script da
-      // extensão Chrome identificar o lead na conversa aberta.
-      window.open(`https://web.whatsapp.com/send?phone=${full}#tribocrm-phone=${full}`, '_blank')
+      // wa.me + hash: o fragment sobrevive ao redirect pro web.whatsapp.com,
+      // permitindo que a extensao Chrome leia o telefone do hash final.
+      window.open(`https://wa.me/${full}#tribocrm-phone=${full}`, '_blank')
       api.post(`/leads/${id}/interactions`, { type: 'WHATSAPP', notes: 'Contato via WhatsApp' }).catch(() => {})
     }
   }
