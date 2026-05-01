@@ -44,7 +44,9 @@ app.use(cors({
       'http://localhost:3002',
       'chrome-extension://pgfegmelobfejcgccmdofmpljidffpga',
     ]
-    if (!origin || allowed.includes(origin)) {
+    // chrome-extension://* — aceita qualquer ID de 32 chars (Chrome Web Store + builds dev locais)
+    const chromeExtensionPattern = /^chrome-extension:\/\/[a-z]{32}$/
+    if (!origin || allowed.includes(origin) || chromeExtensionPattern.test(origin)) {
       callback(null, true)
     } else {
       callback(new Error('Not allowed by CORS'))
