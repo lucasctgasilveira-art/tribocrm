@@ -63,6 +63,7 @@ router.get('/by-phone/:phone', async (req, res) => {
       include: {
         stage: { select: { id: true, name: true, color: true, type: true } },
         responsible: { select: { id: true, name: true } },
+        pipeline: { select: { id: true, name: true } },
       },
     })
 
