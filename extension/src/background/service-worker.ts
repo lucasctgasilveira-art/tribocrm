@@ -77,6 +77,52 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendRe
   return true; // mantém o canal aberto
 });
 
+// ── Mensagens externas (CRM web app) ─────────────────────────────
+//
+// O frontend de https://app.tribocrm.com.br/* (declarado em
+// externally_connectable no manifest) envia phone+leadId quando o
+// vendedor clica num botao de WhatsApp. Guardamos em chrome.storage
+// pra que o content script do WhatsApp Web leia no boot e identifique
+// o lead automaticamente — sem depender de URL/hash.
+//
+// Storage shape: { 'crm-phone-hint': { phone, leadId, ts } }
+// TTL implicito de 5 min — leituras antigas sao ignoradas pra evitar
+// vazar hint pra conversas nao relacionadas se o vendedor demorar.
+
+const CRM_HINT_KEY = 'crm-phone-hint';
+
+chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => {
+  log.info('Mensagem externa recebida', { type: message?.type, origin: sender.origin });
+
+  if (!message || message.type !== 'CRM_PHONE_HINT') {
+    sendResponse({ ok: false, error: 'Tipo de mensagem desconhecido' });
+    return false;
+  }
+
+  const phone = String(message.phone ?? '').replace(/\D/g, '');
+  const leadId = message.leadId ? String(message.leadId) : null;
+
+  if (!phone) {
+    sendResponse({ ok: false, error: 'phone obrigatorio' });
+    return false;
+  }
+
+  chrome.storage.local.set(
+    { [CRM_HINT_KEY]: { phone, leadId, ts: Date.now() } },
+    () => {
+      const err = chrome.runtime.lastError;
+      if (err) {
+        log.error('Falha ao gravar hint do CRM', err);
+        sendResponse({ ok: false, error: err.message });
+      } else {
+        log.info('Hint do CRM gravado', { phone, leadId });
+        sendResponse({ ok: true });
+      }
+    }
+  );
+  return true; // mantem porta aberta pro callback async
+});
+
 // ── Alarms de tarefa → notificações locais ───────────────────────
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {

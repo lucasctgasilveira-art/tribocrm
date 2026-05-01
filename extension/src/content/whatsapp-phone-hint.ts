@@ -1,22 +1,21 @@
 /**
- * Phone hint vindo do CRM via URL.
+ * Phone hint vindo do CRM.
  *
- * Quando o vendedor clica em "WhatsApp" dentro do TriboCRM, o frontend
- * abre uma URL com o telefone embutido no hash:
+ * Duas fontes possiveis, em ordem de prioridade:
  *
- *   https://web.whatsapp.com/send?phone=5533999317423#tribocrm-phone=5533999317423
+ *   1. chrome.storage.local key 'crm-phone-hint' — gravado pelo
+ *      service worker quando o frontend do CRM envia mensagem via
+ *      chrome.runtime.sendMessage(extId, ...). E o caminho ROBUSTO,
+ *      independente de URL/hash. TTL de 5 min — hints antigos sao
+ *      ignorados pra nao vazar pra conversas nao relacionadas.
  *
- * O WhatsApp Web ignora o hash e redireciona internamente pra conversa.
- * Este módulo captura o hash em tres momentos diferentes pra ser robusto:
+ *   2. window.location (hash ou query) — fallback caso o vendedor
+ *      use uma versao antiga do frontend ou a mensagem nao tenha
+ *      chegado em tempo. Padrao: ?tribocrm-phone= ou #tribocrm-phone=
  *
- *   1. No boot do content script (URL inicial)
- *   2. Em qualquer hashchange (navegacao SPA com fragment)
- *   3. Apos popstate (navegacao SPA sem fragment)
- *
- * Por que "consumo único":
- *   se o vendedor trocar de chat manualmente depois, o hint não pode
- *   vazar pra próxima conversa — sem isso o painel mostraria o número
- *   errado pra um contato diferente.
+ * Em ambos os casos, "consumo unico": apos consumePhoneHint() o
+ * hint e descartado, evitando vazar pra proxima conversa que o
+ * vendedor abrir manualmente.
  */
 
 import { createLogger } from '@shared/utils/logger';
@@ -25,8 +24,11 @@ import { normalizePhone } from '@shared/utils/phone';
 const log = createLogger('whatsapp-phone-hint');
 
 const HASH_KEY = 'tribocrm-phone';
+const STORAGE_KEY = 'crm-phone-hint';
+const HINT_TTL_MS = 5 * 60 * 1000; // 5 min
 
 let pendingHint: string | null = null;
+let pendingLeadId: string | null = null;
 
 /**
  * Lê hash e query da URL atual, captura o phone hint se presente,
@@ -102,6 +104,81 @@ export function watchUrlForHint(): () => void {
 }
 
 /**
+ * Le hint do chrome.storage.local (gravado pelo service worker
+ * quando o CRM envia mensagem via externally_connectable).
+ *
+ * Aplica TTL de 5 min: hints mais antigos sao descartados e a
+ * chave e limpa do storage. Isso evita que um hint de horas atras
+ * apareça quando o vendedor abre o WhatsApp Web pra outra finalidade.
+ *
+ * Idempotente: pode ser chamada varias vezes. Se houver hint valido,
+ * pendingHint e atualizado; senao, mantem o que tinha.
+ */
+export async function captureHintFromStorage(): Promise<string | null> {
+  return new Promise((resolve) => {
+    try {
+      chrome.storage.local.get(STORAGE_KEY, (data) => {
+        const entry = data?.[STORAGE_KEY] as
+          | { phone: string; leadId: string | null; ts: number }
+          | undefined;
+
+        if (!entry) {
+          if (!pendingHint) log.info('Sem hint no storage.');
+          resolve(pendingHint);
+          return;
+        }
+
+        const age = Date.now() - (entry.ts ?? 0);
+        if (age > HINT_TTL_MS) {
+          log.info('Hint do storage expirado (>' + HINT_TTL_MS + 'ms), descartando.');
+          chrome.storage.local.remove(STORAGE_KEY);
+          resolve(pendingHint);
+          return;
+        }
+
+        const normalized = normalizePhone(entry.phone);
+        if (!normalized) {
+          log.warn('Hint do storage invalido:', entry.phone);
+          resolve(pendingHint);
+          return;
+        }
+
+        pendingHint = normalized;
+        pendingLeadId = entry.leadId ?? null;
+        log.info('Hint capturado do storage:', normalized, '(leadId:', pendingLeadId, ')');
+
+        // Consome do storage pra nao reaplicar em outras conversas
+        chrome.storage.local.remove(STORAGE_KEY);
+        resolve(pendingHint);
+      });
+    } catch (err) {
+      log.warn('Falha ao ler storage:', err);
+      resolve(pendingHint);
+    }
+  });
+}
+
+/**
+ * Assina mudancas no chrome.storage pra capturar hints novos em
+ * tempo real — caso o vendedor clique no CRM com WA Web ja aberto.
+ */
+export function watchStorageForHint(): () => void {
+  const listener = (
+    changes: { [key: string]: chrome.storage.StorageChange },
+    areaName: string
+  ) => {
+    if (areaName !== 'local') return;
+    if (!changes[STORAGE_KEY]) return;
+    if (!changes[STORAGE_KEY].newValue) return;
+    log.info('Mudanca detectada no storage — recapturando hint');
+    void captureHintFromStorage();
+  };
+
+  chrome.storage.onChanged.addListener(listener);
+  return () => chrome.storage.onChanged.removeListener(listener);
+}
+
+/**
  * Devolve o hint pendente E marca como consumido (próximas chamadas
  * retornam null). Usado pelo classifier no momento de promover
  * needs-phone → detected.
@@ -109,6 +186,7 @@ export function watchUrlForHint(): () => void {
 export function consumePhoneHint(): string | null {
   const hint = pendingHint;
   pendingHint = null;
+  pendingLeadId = null;
   return hint;
 }
 
@@ -117,6 +195,15 @@ export function consumePhoneHint(): string | null {
  */
 export function peekPhoneHint(): string | null {
   return pendingHint;
+}
+
+/**
+ * Retorna o leadId associado ao hint pendente (se veio do CRM).
+ * Util pra otimizacao futura — pular busca por phone e usar leadId
+ * direto.
+ */
+export function peekHintLeadId(): string | null {
+  return pendingLeadId;
 }
 
 // O hash do WhatsApp Web pode aparecer como

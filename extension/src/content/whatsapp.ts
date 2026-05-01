@@ -28,19 +28,28 @@ import {
   isViewportTooNarrow,
   onViewportResize
 } from './whatsapp-layout';
-import { captureHintFromUrl, consumePhoneHint, watchUrlForHint } from './whatsapp-phone-hint';
+import {
+  captureHintFromUrl,
+  captureHintFromStorage,
+  consumePhoneHint,
+  watchUrlForHint,
+  watchStorageForHint
+} from './whatsapp-phone-hint';
 import { createLogger } from '@shared/utils/logger';
 
 const log = createLogger('whatsapp');
 
 log.info('Content script injetado em', window.location.hostname);
 
-// Lê o hint da URL ANTES de qualquer redirect interno do WhatsApp Web.
-// Tambem assina hashchange/popstate pra recapturar quando a URL muda
-// dentro da SPA do WhatsApp Web (caso o hash inicial nao tenha chegado).
-// O hint é "consumido" depois pelo primeiro 'needs-phone' que aparecer.
+// Captura o hint imediatamente — duas fontes em paralelo:
+//   - URL (hash/query) pra fallback de versoes antigas do CRM
+//   - chrome.storage.local pra mensagens do CRM via externally_connectable
+// E assina mudancas em ambos pra recapturar quando o vendedor
+// clica no botao do CRM com WA Web ja aberto.
 captureHintFromUrl();
+void captureHintFromStorage();
 watchUrlForHint();
+watchStorageForHint();
 
 interface AppState {
   chatInfo: ChatInfo;
