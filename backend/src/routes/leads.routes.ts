@@ -5,7 +5,7 @@ import { tenantStatusGuard } from '../middleware/tenant-status.middleware'
 import {
   getLeads, getLead, createLead, updateLead, deleteLead,
   importLeads, getImportTemplate, exportLeads, bulkUpdateLeads,
-  getLossReasons, sellerScope, findLeadByAltPhone,
+  getLossReasons, sellerScope, findLeadByAltPhone, findLeadByPhone,
 } from '../controllers/leads.controller'
 
 const router = Router()
@@ -34,6 +34,47 @@ router.post('/import', upload.single('file'), importLeads)
 router.get('/export', exportLeads)
 router.get('/loss-reasons', getLossReasons)
 router.patch('/bulk', bulkUpdateLeads)
+
+// Lookup por telefone principal (phone, whatsapp ou altPhones) com
+// busca tolerante: gera variações do número (com/sem nono dígito,
+// com/sem DDI 55) e normaliza máscaras do DB pra comparar dígitos
+// puros. Declarado ANTES de /:id pra não cair na rota dinâmica.
+// Usado pela extensão Chrome quando detecta o telefone do WhatsApp
+// (automático ou digitado pelo vendedor) e quer carregar o lead.
+router.get('/by-phone/:phone', async (req, res) => {
+  try {
+    const { prisma } = await import('../lib/prisma')
+    const phone = req.params.phone as string
+    const tenantId = req.user!.tenantId
+    const role = req.user!.role
+    const userId = req.user!.userId
+
+    const found = await findLeadByPhone(prisma, tenantId, phone, role, userId)
+    if (!found) {
+      res.status(404).json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Lead não encontrado' },
+      })
+      return
+    }
+
+    const lead = await prisma.lead.findFirst({
+      where: { id: found.id, tenantId, deletedAt: null, ...sellerScope(role, userId) },
+      include: {
+        stage: { select: { id: true, name: true, color: true, type: true } },
+        responsible: { select: { id: true, name: true } },
+      },
+    })
+
+    res.json({ success: true, data: lead })
+  } catch (error: any) {
+    console.error('[Leads] findLeadByPhone error:', error)
+    res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: error.message },
+    })
+  }
+})
 
 // Lookup reverso por alt-phone — declarado ANTES de /:id pra
 // não cair na rota dinâmica. Usado pela extensão Chrome quando

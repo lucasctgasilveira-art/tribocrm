@@ -95,6 +95,99 @@ export async function findLeadByAltPhone(
   return lead ? { leadId: lead.id } : null
 }
 
+// Gera variações de um telefone brasileiro pra busca tolerante.
+// O nono dígito do celular foi adicionado em 2012; usuários antigos
+// ainda guardam contatos sem ele. Esta função retorna todas as formas
+// equivalentes do mesmo número pra que a query bata independente de
+// como o vendedor digitou.
+//
+// Entrada: qualquer formato com dígitos ("+55 33 99931-7423", "33999317423", etc.)
+// Saída: lista única de variações (sem prefixo '+'), por exemplo:
+//   "33999317423"  → ["33999317423", "3399317423", "5533999317423", "553399317423"]
+//   "5533999317423" → ["33999317423", "3399317423", "5533999317423", "553399317423"]
+export function generatePhoneVariations(input: string): string[] {
+  const digits = String(input ?? '').replace(/\D/g, '')
+  if (digits.length < 10) return digits ? [digits] : []
+
+  // Remove DDI 55 se presente (precisa ter 12-13 dígitos pra evitar
+  // confundir com fixo+DDD que começa por 55, ex.: 5511 4xxx-xxxx).
+  let local = digits
+  if ((digits.length === 12 || digits.length === 13) && digits.startsWith('55')) {
+    local = digits.slice(2)
+  }
+
+  const variations = new Set<string>()
+  variations.add(local)
+
+  // Celular com nono dígito (DDD + 9 + 8 dígitos = 11) → variação sem o 9
+  if (local.length === 11 && local[2] === '9') {
+    variations.add(local.slice(0, 2) + local.slice(3))
+  }
+
+  // Telefone de 10 dígitos (DDD + 8 dígitos) → variação com 9 inserido
+  // entre DDD e o resto (caso seja celular antigo). Pra fixo gera um
+  // número que não existe — sem falso positivo desde que ninguém
+  // tenha esse número fictício cadastrado.
+  if (local.length === 10) {
+    variations.add(local.slice(0, 2) + '9' + local.slice(2))
+  }
+
+  // Adiciona prefixo 55 em cada variação local
+  const withCountryCode = Array.from(variations).map(v => '55' + v)
+  withCountryCode.forEach(v => variations.add(v))
+
+  return Array.from(variations)
+}
+
+// Busca um lead pelo telefone aplicando variações brasileiras (com/sem
+// nono dígito, com/sem DDI 55) em phone, whatsapp e altPhones.
+// Retorna o primeiro match. Respeita tenant + sellerScope.
+//
+// Por que SQL raw em vez de Prisma where?
+//   Os campos phone/whatsapp são salvos com máscara ("(33) 99931-7423")
+//   pelo formulário do frontend. Comparação exata ou contains não bate
+//   com variações em dígitos puros. regexp_replace no Postgres remove
+//   tudo que não é dígito antes de comparar — robusto a qualquer máscara.
+//
+// Função extraída pra permitir teste unitário com Prisma mockado.
+export async function findLeadByPhone(
+  prismaClient: typeof prisma,
+  tenantId: string,
+  phone: string,
+  role: string,
+  userId: string,
+): Promise<{ id: string } | null> {
+  const variations = generatePhoneVariations(phone)
+  if (variations.length === 0) return null
+
+  const sellerFilter = role === 'SELLER'
+    ? Prisma.sql`AND "responsibleId" = ${userId}`
+    : Prisma.empty
+
+  // Query raw: normaliza phone/whatsapp do DB pra dígitos puros e
+  // compara com qualquer variação. altPhones já é guardado em dígitos
+  // puros pela extensão, mas regexp_replace cobre casos legados.
+  const rows = await prismaClient.$queryRaw<{ id: string }[]>`
+    SELECT id FROM "Lead"
+    WHERE "tenantId" = ${tenantId}
+      AND "deletedAt" IS NULL
+      ${sellerFilter}
+      AND (
+        regexp_replace(COALESCE(phone, ''), '[^0-9]', '', 'g') = ANY(${variations}::text[])
+        OR regexp_replace(COALESCE(whatsapp, ''), '[^0-9]', '', 'g') = ANY(${variations}::text[])
+        OR EXISTS (
+          SELECT 1 FROM jsonb_array_elements_text(COALESCE("altPhones"::jsonb, '[]'::jsonb)) AS p
+          WHERE regexp_replace(p, '[^0-9]', '', 'g') = ANY(${variations}::text[])
+        )
+      )
+    ORDER BY "updatedAt" DESC
+    LIMIT 1
+  `
+
+  if (rows.length === 0) return null
+  return { id: rows[0]!.id }
+}
+
 export async function getLossReasons(req: Request, res: Response): Promise<void> {
   try {
     const tenantId = req.user!.tenantId
