@@ -201,7 +201,10 @@ export default function LeadDrawer({ lead, onClose, stageColor, instance = 'gest
     const num = cleanPhone(lead.phone)
     if (!num) { showToast('Lead sem WhatsApp cadastrado'); return }
     const full = num.length <= 11 ? `55${num}` : num
-    window.open(`https://wa.me/${full}`, '_blank')
+    // web.whatsapp.com/send abre direto na conversa (sem o redirect do
+    // wa.me que perderia a query string) e o hash #tribocrm-phone=
+    // sobrevive pra extensão Chrome ler e identificar o lead automaticamente.
+    window.open(`https://web.whatsapp.com/send?phone=${full}#tribocrm-phone=${full}`, '_blank')
     // Fire-and-forget interaction log. Failures are swallowed so a flaky
     // network never blocks or surfaces on the contact flow.
     api.post(`/leads/${lead.id}/interactions`, {
