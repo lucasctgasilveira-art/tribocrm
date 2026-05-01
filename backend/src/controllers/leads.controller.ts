@@ -167,22 +167,28 @@ export async function findLeadByPhone(
   // Query raw: normaliza phone/whatsapp do DB pra dígitos puros e
   // compara com qualquer variação. altPhones já é guardado em dígitos
   // puros pela extensão, mas regexp_replace cobre casos legados.
-  const rows = await prismaClient.$queryRaw<{ id: string }[]>`
+  //
+  // Detalhe importante: Prisma 5 nao parametriza array JS diretamente
+  // em template literal de $queryRaw. Precisa usar Prisma.sql + Prisma.join
+  // pra interpolar a lista. ANY(...) virou IN (...) com Prisma.join.
+  const variationsList = Prisma.join(variations)
+  const query = Prisma.sql`
     SELECT id FROM "Lead"
     WHERE "tenantId" = ${tenantId}
       AND "deletedAt" IS NULL
       ${sellerFilter}
       AND (
-        regexp_replace(COALESCE(phone, ''), '[^0-9]', '', 'g') = ANY(${variations}::text[])
-        OR regexp_replace(COALESCE(whatsapp, ''), '[^0-9]', '', 'g') = ANY(${variations}::text[])
+        regexp_replace(COALESCE(phone, ''), '[^0-9]', '', 'g') IN (${variationsList})
+        OR regexp_replace(COALESCE(whatsapp, ''), '[^0-9]', '', 'g') IN (${variationsList})
         OR EXISTS (
           SELECT 1 FROM jsonb_array_elements_text(COALESCE("altPhones"::jsonb, '[]'::jsonb)) AS p
-          WHERE regexp_replace(p, '[^0-9]', '', 'g') = ANY(${variations}::text[])
+          WHERE regexp_replace(p, '[^0-9]', '', 'g') IN (${variationsList})
         )
       )
     ORDER BY "updatedAt" DESC
     LIMIT 1
   `
+  const rows = await prismaClient.$queryRaw<{ id: string }[]>(query)
 
   if (rows.length === 0) return null
   return { id: rows[0]!.id }
