@@ -3,7 +3,8 @@ import { Plus, Search, Loader2, X, CheckCircle2, AlertTriangle, MoreHorizontal }
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
 import { useNavigate } from 'react-router-dom'
-import { getUsers, updateUser, createUser, getTeams, resetUserPassword, type CreateUserResult } from '../../services/users.service'
+import { getUsers, updateUser, createUser, getTeams, resetUserPassword, getUserPipelines, type CreateUserResult } from '../../services/users.service'
+import { getPipelines } from '../../services/pipeline.service'
 import { bulkUpdateLeads } from '../../services/leads.service'
 
 // ── Types ──
@@ -331,16 +332,28 @@ function NewUserModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
   const [role, setRole] = useState('SELLER')
   const [teamId, setTeamId] = useState('')
   const [teams, setTeams] = useState<{ id: string; name: string }[]>([])
+  const [pipelines, setPipelines] = useState<{ id: string; name: string }[]>([])
+  const [pipelineIds, setPipelineIds] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [planLimitReached, setPlanLimitReached] = useState(false)
 
   useEffect(() => {
     getTeams().then((data: Array<{ id: string; name: string }>) => setTeams(data ?? [])).catch(() => setTeams([]))
+    getPipelines().then((data: Array<{ id: string; name: string }>) => setPipelines(data ?? [])).catch(() => setPipelines([]))
   }, [])
 
+  function togglePipeline(id: string) {
+    setPipelineIds(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id])
+  }
+
   const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  const canSave = name.trim().length >= 2 && emailRe.test(email) && !saving
+  // OWNER nao precisa selecionar pipelines (ve tudo). Demais roles
+  // exigem pelo menos 1 pipeline pra evitar usuario "preso" sem acesso.
+  const isOwner = role === 'OWNER'
+  const pipelinesRequired = !isOwner
+  const hasPipelineSelected = pipelineIds.length > 0
+  const canSave = name.trim().length >= 2 && emailRe.test(email) && !saving && (!pipelinesRequired || hasPipelineSelected)
 
   async function handleSave() {
     if (!canSave) return
@@ -351,6 +364,7 @@ function NewUserModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
         email: email.trim().toLowerCase(),
         role,
         teamId: teamId || undefined,
+        pipelineIds: isOwner ? undefined : pipelineIds,
         // password is intentionally omitted — backend generates a temporary one
       })
       onCreated(result)
@@ -400,6 +414,24 @@ function NewUserModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
               {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
           </div>
+          {!isOwner && (
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Pipelines com acesso <span style={{ color: '#f97316' }}>*</span></label>
+              {pipelines.length === 0 ? (
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8 }}>Nenhum pipeline disponível</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, border: '1px solid var(--border)', borderRadius: 8, padding: 8, maxHeight: 160, overflowY: 'auto' }}>
+                  {pipelines.map(p => (
+                    <label key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 6px', cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)', borderRadius: 4 }}>
+                      <input type="checkbox" checked={pipelineIds.includes(p.id)} onChange={() => togglePipeline(p.id)} />
+                      <span>{p.name}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>O usuário só verá leads e pipelines marcados acima.</div>
+            </div>
+          )}
           <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: 12, fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
             Uma senha temporária será gerada automaticamente e enviada por e-mail ao usuário com instruções de acesso.
           </div>
@@ -439,12 +471,23 @@ function EditUserInlineModal({ user, onClose, onSaved }: { user: User; onClose: 
   const [role, setRole] = useState(user.role)
   const [teamId, setTeamId] = useState(user.teams[0]?.id ?? '')
   const [teams, setTeams] = useState<{ id: string; name: string }[]>([])
+  const [pipelines, setPipelines] = useState<{ id: string; name: string }[]>([])
+  const [pipelineIds, setPipelineIds] = useState<string[]>([])
+  const [pipelinesLoaded, setPipelinesLoaded] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  const isOwner = role === 'OWNER'
 
   // Load teams + full user data (phone, cpf, birthday are in the API response)
   useEffect(() => {
     getTeams().then((d: Array<{ id: string; name: string }>) => setTeams(d ?? [])).catch(() => {})
+    getPipelines().then((d: Array<{ id: string; name: string }>) => setPipelines(d ?? [])).catch(() => setPipelines([]))
+    // Carrega os acessos atuais do usuario pra pre-marcar checkboxes.
+    // Pra OWNER vem com isOwner:true e a lista nao e usada (UI esconde).
+    getUserPipelines(user.id)
+      .then(res => { setPipelineIds(res.pipelineIds ?? []); setPipelinesLoaded(true) })
+      .catch(() => { setPipelineIds([]); setPipelinesLoaded(true) })
     // The user object from the list already has phone, cpf etc if the select includes them
     // They're typed loosely — set from whatever we have
     const u = user as User & { phone?: string; cpf?: string; birthday?: string }
@@ -453,12 +496,20 @@ function EditUserInlineModal({ user, onClose, onSaved }: { user: User; onClose: 
     setBirthday(u.birthday ? String(u.birthday).slice(0, 10) : '')
   }, [user])
 
-  const canSave = name.trim().length >= 2 && email.includes('@') && !saving
+  function togglePipeline(id: string) {
+    setPipelineIds(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id])
+  }
+
+  const pipelinesRequired = !isOwner
+  const hasPipelineSelected = pipelineIds.length > 0
+  const canSave = name.trim().length >= 2 && email.includes('@') && !saving && (!pipelinesRequired || hasPipelineSelected)
 
   async function handleSave() {
     if (!canSave) return
     setSaving(true); setError('')
     try {
+      // Atualiza dados gerais (inclui pipelineIds quando nao-OWNER —
+      // backend faz replace transacional no PATCH /users/:id).
       await updateUser(user.id, {
         name: name.trim(),
         email: email.trim().toLowerCase(),
@@ -467,6 +518,7 @@ function EditUserInlineModal({ user, onClose, onSaved }: { user: User; onClose: 
         birthday: birthday || null,
         role,
         teamId: teamId || null,
+        pipelineIds: isOwner ? undefined : pipelineIds,
       } as Record<string, unknown>)
       onSaved()
     } catch (e: any) { setError(e?.response?.data?.error?.message ?? 'Erro ao salvar'); setSaving(false) }
@@ -497,6 +549,26 @@ function EditUserInlineModal({ user, onClose, onSaved }: { user: User; onClose: 
               {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
           </div>
+          {!isOwner && (
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Pipelines com acesso <span style={{ color: '#f97316' }}>*</span></label>
+              {!pipelinesLoaded ? (
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8 }}>Carregando...</div>
+              ) : pipelines.length === 0 ? (
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8 }}>Nenhum pipeline disponível</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, border: '1px solid var(--border)', borderRadius: 8, padding: 8, maxHeight: 160, overflowY: 'auto' }}>
+                  {pipelines.map(p => (
+                    <label key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 6px', cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)', borderRadius: 4 }}>
+                      <input type="checkbox" checked={pipelineIds.includes(p.id)} onChange={() => togglePipeline(p.id)} />
+                      <span>{p.name}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>O usuário só verá leads e pipelines marcados acima.</div>
+            </div>
+          )}
           {error && <div style={{ gridColumn: '1 / -1', fontSize: 12, color: '#ef4444' }}>{error}</div>}
         </div>
         <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>

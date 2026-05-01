@@ -15,6 +15,7 @@ export interface CreateUserPayload {
   cpf?: string
   birthday?: string
   teamId?: string
+  pipelineIds?: string[]
 }
 
 export interface CreateUserResult {
@@ -74,4 +75,20 @@ export async function updateTeam(id: string, payload: Record<string, unknown>) {
   return response.data.data
 }
 
-export default { getUsers, createUser, updateUser, resetUserPassword, getTeams, createTeam, updateTeam }
+// Pipeline access por usuario.
+export interface UserPipelineAccessResult {
+  pipelineIds: string[]
+  isOwner: boolean
+}
+
+export async function getUserPipelines(userId: string): Promise<UserPipelineAccessResult> {
+  const response = await api.get(`/users/${userId}/pipelines`)
+  return response.data.data
+}
+
+export async function setUserPipelines(userId: string, pipelineIds: string[]): Promise<UserPipelineAccessResult> {
+  const response = await api.put(`/users/${userId}/pipelines`, { pipelineIds })
+  return response.data.data
+}
+
+export default { getUsers, createUser, updateUser, resetUserPassword, getTeams, createTeam, updateTeam, getUserPipelines, setUserPipelines }

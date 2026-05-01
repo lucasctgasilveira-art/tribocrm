@@ -85,6 +85,10 @@ export default function VendasPipelinePage() {
   const [stages, setStages] = useState<StageConfig[]>([])
   const [leads, setLeads] = useState<Lead[]>([])
   const [pipelineId, setPipelineId] = useState<string>('')
+  // Lista de pipelines disponíveis ao vendedor (vem filtrada do backend
+  // pelo controle de acesso por usuario). Quando length > 1, o dropdown
+  // aparece pra o vendedor trocar de pipeline.
+  const [pipelinesList, setPipelinesList] = useState<{ id: string; name: string }[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [hoveredCard, setHoveredCard] = useState<string | null>(null)
@@ -128,6 +132,7 @@ export default function VendasPipelinePage() {
       setLoading(true)
       try {
         const pipelinesData = await getPipelines()
+        setPipelinesList(pipelinesData.map((p: { id: string; name: string }) => ({ id: p.id, name: p.name })))
         if (pipelinesData.length > 0) {
           const pid = pipelineId || pipelinesData[0].id
           setPipelineId(pid)
@@ -143,7 +148,13 @@ export default function VendasPipelinePage() {
       finally { setLoading(false) }
     }
     load()
-  }, [showArchived]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [showArchived, pipelineId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handlePipelineChange(newPid: string) {
+    if (newPid === pipelineId) return
+    setPipelineId(newPid)
+    // O efeito acima recarrega o kanban quando pipelineId muda.
+  }
 
   const filtered = leads.filter(l => {
     if (!search) return true
@@ -263,7 +274,21 @@ export default function VendasPipelinePage() {
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexShrink: 0 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Meu Pipeline</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Meu Pipeline</h1>
+          {pipelinesList.length > 1 && (
+            <select
+              value={pipelineId}
+              onChange={(e) => handlePipelineChange(e.target.value)}
+              title="Trocar de pipeline"
+              style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', cursor: 'pointer', appearance: 'none' }}
+            >
+              {pipelinesList.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          )}
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 0, fontSize: 13 }}>
           <span style={{ color: 'var(--text-muted)' }}>Meus leads</span><span style={{ color: 'var(--text-primary)', fontWeight: 700, marginLeft: 4 }}>{stats.total}</span>
           <span style={{ color: 'var(--border)', margin: '0 10px' }}>|</span>
