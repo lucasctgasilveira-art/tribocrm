@@ -2,10 +2,29 @@ import { Request, Response } from 'express'
 import { Prisma } from '@prisma/client'
 import { prisma } from '../lib/prisma'
 
+// OWNER e SUPER_ADMIN sempre veem todas as pipelines do tenant.
+// MANAGER, TEAM_LEADER e SELLER sao filtrados pela tabela
+// user_pipeline_access (configurada pelo OWNER no cadastro/edicao
+// de usuarios). Usuarios sem nenhuma linha de acesso recebem lista
+// vazia — comportamento intencional pra forcar o OWNER a configurar.
+function shouldFilterByPipelineAccess(role: string): boolean {
+  return role !== 'OWNER' && role !== 'SUPER_ADMIN'
+}
+
 export async function getPipelines(req: Request, res: Response): Promise<void> {
   try {
+    const tenantId = req.user!.tenantId
+    const role = req.user!.role
+    const userId = req.user!.userId
+
+    const where: Prisma.PipelineWhereInput = { tenantId, isActive: true }
+
+    if (shouldFilterByPipelineAccess(role)) {
+      where.userAccesses = { some: { userId } }
+    }
+
     const pipelines = await prisma.pipeline.findMany({
-      where: { tenantId: req.user!.tenantId, isActive: true },
+      where,
       include: { stages: { orderBy: { sortOrder: 'asc' } } },
     })
 
@@ -17,6 +36,32 @@ export async function getPipelines(req: Request, res: Response): Promise<void> {
       error: { code: 'INTERNAL_ERROR', message: 'Erro interno do servidor' },
     })
   }
+}
+
+// Helper exportado pra outros controllers (leads.controller, by-phone)
+// validarem se o usuario tem acesso a um pipelineId especifico.
+// OWNER/SUPER_ADMIN sempre tem acesso. Demais consultam a tabela.
+export async function userHasPipelineAccess(
+  prismaClient: typeof prisma,
+  userId: string,
+  role: string,
+  pipelineId: string,
+  tenantId: string,
+): Promise<boolean> {
+  if (!shouldFilterByPipelineAccess(role)) {
+    // OWNER/SUPER_ADMIN: confirma so que pipeline existe no tenant.
+    const exists = await prismaClient.pipeline.findFirst({
+      where: { id: pipelineId, tenantId, isActive: true },
+      select: { id: true },
+    })
+    return exists != null
+  }
+
+  const access = await prismaClient.userPipelineAccess.findUnique({
+    where: { userId_pipelineId: { userId, pipelineId } },
+    select: { id: true },
+  })
+  return access != null
 }
 
 export async function getKanban(req: Request, res: Response): Promise<void> {

@@ -78,7 +78,7 @@ export async function getUsers(req: Request, res: Response): Promise<void> {
 export async function createUser(req: Request, res: Response): Promise<void> {
   try {
     const tenantId = req.user!.tenantId
-    const { name, email, password, role, cpf, birthday, teamId } = req.body
+    const { name, email, password, role, cpf, birthday, teamId, pipelineIds } = req.body
 
     if (!name || !email || !role) {
       res.status(400).json({
@@ -87,6 +87,12 @@ export async function createUser(req: Request, res: Response): Promise<void> {
       })
       return
     }
+
+    // pipelineIds e opcional pra OWNER (que ve tudo) e obrigatorio
+    // — mas pode ser array vazio — pra demais roles. Frontend deve
+    // sempre enviar. Aceitamos undefined como [] pra nao quebrar
+    // compatibilidade reversa com clientes antigos.
+    const pipelineIdsArr: string[] = Array.isArray(pipelineIds) ? pipelineIds : []
 
     const existing = await prisma.user.findFirst({
       where: { tenantId, email: email.toLowerCase(), deletedAt: null },
@@ -175,6 +181,24 @@ export async function createUser(req: Request, res: Response): Promise<void> {
       })
     }
 
+    // Pipeline access: OWNER ve tudo (sem precisar de linhas); demais
+    // recebem as linhas de pipelineIds. Valida que cada pipelineId
+    // existe no tenant antes de gravar — qualquer id invalido aborta
+    // o create-related (mas o user ja foi criado; aceitamos isso pra
+    // simplicidade — gestor pode ajustar pelo PUT).
+    if (role !== 'OWNER' && pipelineIdsArr.length > 0) {
+      const validPipelines = await prisma.pipeline.findMany({
+        where: { id: { in: pipelineIdsArr }, tenantId, isActive: true },
+        select: { id: true },
+      })
+      if (validPipelines.length > 0) {
+        await prisma.userPipelineAccess.createMany({
+          data: validPipelines.map(p => ({ tenantId, userId: user.id, pipelineId: p.id })),
+          skipDuplicates: true,
+        })
+      }
+    }
+
     // Welcome email — uses tradeName when available, falls back to name
     const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
@@ -256,7 +280,7 @@ export async function updateUser(req: Request, res: Response): Promise<void> {
       return
     }
 
-    const { name, email, phone, cpf, birthday, role, isActive, userStatus, teamId } = req.body
+    const { name, email, phone, cpf, birthday, role, isActive, userStatus, teamId, pipelineIds } = req.body
 
     const data: Prisma.UserUpdateInput = {}
     if (name !== undefined) data.name = name
@@ -302,6 +326,27 @@ export async function updateUser(req: Request, res: Response): Promise<void> {
       // Add new one if provided
       if (teamId) {
         await prisma.teamMember.create({ data: { tenantId, teamId, userId: id } })
+      }
+    }
+
+    // Handle pipeline access change when pipelineIds is provided.
+    // Replace transacional: deleta tudo e recria. OWNER e ignorado
+    // (vê tudo por padrao). Replace tambem trata caso de role mudou
+    // pra OWNER (linhas viram irrelevantes — limpamos).
+    if (pipelineIds !== undefined) {
+      const finalRole = (data.role as string | undefined) ?? existing.role
+      await prisma.userPipelineAccess.deleteMany({ where: { userId: id, tenantId } })
+      if (finalRole !== 'OWNER' && Array.isArray(pipelineIds) && pipelineIds.length > 0) {
+        const validPipelines = await prisma.pipeline.findMany({
+          where: { id: { in: pipelineIds }, tenantId, isActive: true },
+          select: { id: true },
+        })
+        if (validPipelines.length > 0) {
+          await prisma.userPipelineAccess.createMany({
+            data: validPipelines.map(p => ({ tenantId, userId: id, pipelineId: p.id })),
+            skipDuplicates: true,
+          })
+        }
       }
     }
 

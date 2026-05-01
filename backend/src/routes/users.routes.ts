@@ -62,6 +62,116 @@ router.post('/users', createUser)
 router.patch('/users/:id', updateUser)
 router.patch('/users/:id/reset-password', resetUserPassword)
 
+// Acesso a pipelines por usuario.
+// GET retorna lista de pipelineIds que o usuario tem acesso.
+// PUT substitui o conjunto inteiro (estilo replace, mais simples
+// que add/remove individual). OWNER e SUPER_ADMIN ignoram a tabela
+// — os endpoints retornam vazio/no-op pra eles.
+router.get('/users/:id/pipelines', async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user!.tenantId
+    const userId = req.params.id as string
+
+    const user = await prisma.user.findFirst({
+      where: { id: userId, tenantId, deletedAt: null },
+      select: { id: true, role: true },
+    })
+    if (!user) {
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Usuario nao encontrado' } })
+      return
+    }
+
+    if (user.role === 'OWNER') {
+      // OWNER ve todas — devolve todas as pipelines ativas do tenant
+      // pra UI mostrar "todas" sem precisar de logica especial.
+      const all = await prisma.pipeline.findMany({
+        where: { tenantId, isActive: true },
+        select: { id: true },
+        orderBy: { createdAt: 'asc' },
+      })
+      res.json({ success: true, data: { pipelineIds: all.map(p => p.id), isOwner: true } })
+      return
+    }
+
+    const accesses = await prisma.userPipelineAccess.findMany({
+      where: { userId, tenantId },
+      select: { pipelineId: true },
+    })
+    res.json({ success: true, data: { pipelineIds: accesses.map(a => a.pipelineId), isOwner: false } })
+  } catch (error: any) {
+    console.error('[Users] GET /users/:id/pipelines error:', error)
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } })
+  }
+})
+
+router.put('/users/:id/pipelines', async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user!.tenantId
+    const callerRole = req.user!.role
+    const userId = req.params.id as string
+    const { pipelineIds } = req.body ?? {}
+
+    // So OWNER/SUPER_ADMIN podem alterar acessos. MANAGER nao
+    // configura outros usuarios.
+    if (callerRole !== 'OWNER' && callerRole !== 'SUPER_ADMIN') {
+      res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Apenas OWNER pode configurar acessos' } })
+      return
+    }
+
+    if (!Array.isArray(pipelineIds)) {
+      res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'pipelineIds deve ser array' } })
+      return
+    }
+
+    const user = await prisma.user.findFirst({
+      where: { id: userId, tenantId, deletedAt: null },
+      select: { id: true, role: true },
+    })
+    if (!user) {
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Usuario nao encontrado' } })
+      return
+    }
+
+    if (user.role === 'OWNER') {
+      // OWNER ve tudo por padrao. Sem necessidade de gravar linhas
+      // — retornamos sucesso sem mexer.
+      res.json({ success: true, data: { pipelineIds, isOwner: true } })
+      return
+    }
+
+    // Valida que todas as pipelineIds informadas existem no tenant.
+    const validPipelines = await prisma.pipeline.findMany({
+      where: { id: { in: pipelineIds }, tenantId, isActive: true },
+      select: { id: true },
+    })
+    const validIds = new Set(validPipelines.map(p => p.id))
+    const invalidIds = pipelineIds.filter((id: string) => !validIds.has(id))
+    if (invalidIds.length > 0) {
+      res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: `Pipelines invalidos: ${invalidIds.join(', ')}` },
+      })
+      return
+    }
+
+    // Replace transacional: deleta acessos existentes do user e insere
+    // os novos. Mais simples e idempotente que add/remove diff.
+    await prisma.$transaction(async (tx) => {
+      await tx.userPipelineAccess.deleteMany({ where: { userId, tenantId } })
+      if (pipelineIds.length > 0) {
+        await tx.userPipelineAccess.createMany({
+          data: pipelineIds.map((pid: string) => ({ tenantId, userId, pipelineId: pid })),
+        })
+      }
+    })
+
+    res.json({ success: true, data: { pipelineIds, isOwner: false } })
+  } catch (error: any) {
+    console.error('[Users] PUT /users/:id/pipelines error:', error)
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } })
+  }
+})
+
 // Teams
 router.get('/teams', getTeams)
 router.post('/teams', createTeam)

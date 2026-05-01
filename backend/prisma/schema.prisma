@@ -495,8 +495,28 @@ model User {
   // creation. Keep it logical.
   managerialTasksCreated ManagerialTask[] @relation("ManagerialTaskCreatedBy")
   notifications   Notification[]
+  pipelineAccesses UserPipelineAccess[]
   @@unique([tenantId, email])
   @@map("users")
+}
+
+// Acesso de usuario a pipelines do tenant. Many-to-many entre User e
+// Pipeline. OWNER nao precisa de linhas aqui (vê tudo por padrao via
+// shortcut no controller). MANAGER/TEAM_LEADER/SELLER sao filtrados
+// por essa tabela.
+model UserPipelineAccess {
+  id         String    @id @default(uuid()) @db.Uuid
+  tenantId   String    @map("tenant_id") @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  pipelineId String    @map("pipeline_id") @db.Uuid
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pipeline   Pipeline  @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, pipelineId])
+  @@index([tenantId])
+  @@map("user_pipeline_access")
 }
 
 model UserPermission {
@@ -552,6 +572,7 @@ model Pipeline {
   leads              Lead[]
   automations        Automation[]
   goals              Goal[]
+  userAccesses       UserPipelineAccess[]
   @@map("pipelines")
 }
 

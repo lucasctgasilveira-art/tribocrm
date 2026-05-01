@@ -3,6 +3,7 @@ import ExcelJS from 'exceljs'
 import { prisma } from '../lib/prisma'
 import { Prisma } from '@prisma/client'
 import { resolveTenantId } from '../lib/platformTenant'
+import { userHasPipelineAccess } from './pipeline.controller'
 
 // ── Helpers for import ──
 
@@ -164,6 +165,15 @@ export async function findLeadByPhone(
     ? Prisma.sql`AND responsible_id = ${userId}::uuid`
     : Prisma.empty
 
+  // Filtro de pipeline access: OWNER/SUPER_ADMIN passam direto;
+  // demais roles so podem ver leads de pipelines que tem acesso
+  // (linha em user_pipeline_access).
+  const pipelineAccessFilter = (role === 'OWNER' || role === 'SUPER_ADMIN')
+    ? Prisma.empty
+    : Prisma.sql`AND pipeline_id IN (
+        SELECT pipeline_id FROM user_pipeline_access WHERE user_id = ${userId}::uuid
+      )`
+
   // Query raw: normaliza phone/whatsapp do DB pra dígitos puros e
   // compara com qualquer variação. altPhones já é guardado em dígitos
   // puros pela extensão, mas regexp_replace cobre casos legados.
@@ -179,6 +189,7 @@ export async function findLeadByPhone(
     WHERE tenant_id = ${tenantId}::uuid
       AND deleted_at IS NULL
       ${sellerFilter}
+      ${pipelineAccessFilter}
       AND (
         regexp_replace(COALESCE(phone, ''), '[^0-9]', '', 'g') IN (${variationsList})
         OR regexp_replace(COALESCE(whatsapp, ''), '[^0-9]', '', 'g') IN (${variationsList})
@@ -433,6 +444,17 @@ export async function createLead(req: Request, res: Response): Promise<void> {
       res.status(400).json({
         success: false,
         error: { code: 'VALIDATION_ERROR', message: 'Nome, stageId e pipelineId são obrigatórios' },
+      })
+      return
+    }
+
+    // Valida acesso a pipeline. OWNER/SUPER_ADMIN passam direto;
+    // demais roles precisam ter linha em user_pipeline_access.
+    const hasAccess = await userHasPipelineAccess(prisma, userId, role, pipelineId, tenantId)
+    if (!hasAccess) {
+      res.status(403).json({
+        success: false,
+        error: { code: 'PIPELINE_ACCESS_DENIED', message: 'Você não tem acesso a este pipeline' },
       })
       return
     }
