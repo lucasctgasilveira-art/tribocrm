@@ -2,6 +2,7 @@ import { Request, Response } from 'express'
 import { prisma } from '../lib/prisma'
 import { Prisma } from '@prisma/client'
 import { resolveTenantId } from '../lib/platformTenant'
+import { replaceVars } from '../services/automation.service'
 
 // ── Lead Tasks ──
 
@@ -89,12 +90,19 @@ export async function getTasks(req: Request, res: Response): Promise<void> {
   }
 }
 
+// Limite de caracteres pra mensagem WhatsApp custom (sem template).
+// Decisao de produto: mensagens curtas tem maior taxa de leitura.
+const WHATSAPP_CUSTOM_MAX = 150
+
 export async function createTask(req: Request, res: Response): Promise<void> {
   try {
     const tenantId = await resolveTenantId(req.user!.tenantId)
     const userId = req.user!.userId
 
-    const { leadId, type, title, description, dueDate, responsibleId } = req.body
+    const {
+      leadId, type, title, description, dueDate, responsibleId,
+      whatsappTemplateId, whatsappMessageBody, reminderMinutes,
+    } = req.body
 
     if (!leadId || !type || !title) {
       res.status(400).json({
@@ -116,6 +124,47 @@ export async function createTask(req: Request, res: Response): Promise<void> {
       return
     }
 
+    // Resolve mensagem final do WhatsApp (snapshot) — so quando type=WHATSAPP
+    // E vendedor escolheu template OU digitou mensagem custom E definiu
+    // dueDate. Sem dueDate, e tarefa-lembrete normal (nao agenda envio).
+    let finalMessageBody: string | null = null
+    let finalTemplateId: string | null = null
+    let finalSendStatus: string | null = null
+
+    if (type === 'WHATSAPP' && dueDate && (whatsappTemplateId || whatsappMessageBody)) {
+      if (whatsappTemplateId) {
+        // Template salvo: busca, valida tenant, expande variaveis NA HORA do
+        // agendamento (snapshot). Se template for deletado depois, a mensagem
+        // ja gravada continua valida (FK SET NULL preserva a tarefa).
+        const template = await prisma.whatsappTemplate.findFirst({
+          where: { id: whatsappTemplateId, tenantId, isActive: true },
+        })
+        if (!template) {
+          res.status(400).json({
+            success: false,
+            error: { code: 'VALIDATION_ERROR', message: 'Template não encontrado' },
+          })
+          return
+        }
+        finalTemplateId = template.id
+        finalMessageBody = await replaceVars(template.body, lead, prisma)
+      } else if (whatsappMessageBody) {
+        const body = String(whatsappMessageBody).trim()
+        if (body.length > WHATSAPP_CUSTOM_MAX) {
+          res.status(400).json({
+            success: false,
+            error: {
+              code: 'VALIDATION_ERROR',
+              message: `Mensagem custom não pode passar de ${WHATSAPP_CUSTOM_MAX} caracteres`,
+            },
+          })
+          return
+        }
+        finalMessageBody = body
+      }
+      finalSendStatus = 'PENDING'
+    }
+
     const task = await prisma.task.create({
       data: {
         tenantId,
@@ -126,6 +175,10 @@ export async function createTask(req: Request, res: Response): Promise<void> {
         dueDate: dueDate ? new Date(dueDate) : null,
         responsibleId: responsibleId || userId,
         createdBy: userId,
+        whatsappTemplateId: finalTemplateId,
+        whatsappMessageBody: finalMessageBody,
+        sendStatus: finalSendStatus,
+        reminderMinutes: reminderMinutes != null ? Number(reminderMinutes) : null,
       },
       include: {
         lead: { select: { id: true, name: true, company: true } },
@@ -262,6 +315,191 @@ export async function deleteTask(req: Request, res: Response): Promise<void> {
     res.json({ success: true, data: null })
   } catch (error) {
     console.error('[Tasks] deleteTask error:', error)
+    res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Erro interno do servidor' },
+    })
+  }
+}
+
+// ── WhatsApp scheduled send (extensao Chrome consome) ──
+//
+// Fluxo:
+//   1. Vendedor cria task type='WHATSAPP' + dueDate + (template OU custom)
+//      → backend marca sendStatus='PENDING'
+//   2. Extensao Chrome (scheduler.ts roda chrome.alarms a cada 1 min):
+//      - Chama GET /tasks/pending-whatsapp pra pegar fila
+//      - Pra cada uma: navega WhatsApp Web pra conversa, injeta texto,
+//        dispara Enter
+//   3. Apos envio:
+//      - Sucesso → POST /tasks/:id/whatsapp-sent → marca isDone=true,
+//        sendStatus='SENT', sentAt=now
+//      - Falha → POST /tasks/:id/whatsapp-failed → sendStatus='FAILED',
+//        sendError=msg, cria Notification no CRM pra vendedor saber
+//   4. Vendedor pode reenfileirar via POST /tasks/:id/whatsapp-retry
+//      → reseta sendStatus='PENDING', limpa sendError
+
+// Lista tarefas WhatsApp pendentes de envio cuja due_date ja passou.
+// Escopa por responsibleId (vendedor so envia as proprias) — proximo
+// ciclo do scheduler da extensao pega essa fila.
+export async function getPendingWhatsappTasks(req: Request, res: Response): Promise<void> {
+  try {
+    const tenantId = await resolveTenantId(req.user!.tenantId)
+    const userId = req.user!.userId
+    const now = new Date()
+
+    const tasks = await prisma.task.findMany({
+      where: {
+        tenantId,
+        responsibleId: userId,
+        type: 'WHATSAPP',
+        sendStatus: 'PENDING',
+        isDone: false,
+        dueDate: { lte: now, not: null },
+      },
+      include: {
+        lead: { select: { id: true, name: true, phone: true, whatsapp: true } },
+      },
+      orderBy: { dueDate: 'asc' },
+      take: 20,
+    })
+
+    res.json({ success: true, data: tasks })
+  } catch (error) {
+    console.error('[Tasks] getPendingWhatsappTasks error:', error)
+    res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Erro interno do servidor' },
+    })
+  }
+}
+
+// Marca tarefa WhatsApp como enviada com sucesso.
+// Decisao de produto (Lucas confirmou): sendStatus='SENT' tambem
+// marca a tarefa como concluida (isDone=true) — vendedor nao precisa
+// fechar manualmente.
+export async function markWhatsappSent(req: Request, res: Response): Promise<void> {
+  try {
+    const tenantId = await resolveTenantId(req.user!.tenantId)
+    const userId = req.user!.userId
+    const id = req.params.id as string
+
+    const task = await prisma.task.findFirst({
+      where: { id, tenantId, responsibleId: userId, type: 'WHATSAPP' },
+    })
+    if (!task) {
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Tarefa não encontrada' } })
+      return
+    }
+
+    const updated = await prisma.task.update({
+      where: { id },
+      data: {
+        sendStatus: 'SENT',
+        sentAt: new Date(),
+        sendError: null,
+        isDone: true,
+        doneAt: new Date(),
+      },
+    })
+
+    res.json({ success: true, data: updated })
+  } catch (error) {
+    console.error('[Tasks] markWhatsappSent error:', error)
+    res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Erro interno do servidor' },
+    })
+  }
+}
+
+// Marca tarefa WhatsApp como falha de envio. Cria Notification pro
+// vendedor saber e poder retentar manualmente pelo CRM.
+export async function markWhatsappFailed(req: Request, res: Response): Promise<void> {
+  try {
+    const tenantId = await resolveTenantId(req.user!.tenantId)
+    const userId = req.user!.userId
+    const id = req.params.id as string
+    const errorMessage = String(req.body?.error ?? 'Erro desconhecido').slice(0, 500)
+
+    const task = await prisma.task.findFirst({
+      where: { id, tenantId, responsibleId: userId, type: 'WHATSAPP' },
+      include: { lead: { select: { name: true } } },
+    })
+    if (!task) {
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Tarefa não encontrada' } })
+      return
+    }
+
+    const updated = await prisma.task.update({
+      where: { id },
+      data: {
+        sendStatus: 'FAILED',
+        sendError: errorMessage,
+      },
+    })
+
+    // Notificacao pro sininho do CRM. Tipo WHATSAPP_FAILED ja existe no enum.
+    try {
+      await prisma.notification.create({
+        data: {
+          tenantId,
+          userId,
+          type: 'WHATSAPP_FAILED',
+          title: 'Falha ao enviar WhatsApp agendado',
+          body: `Não consegui enviar a mensagem para ${task.lead.name}. Motivo: ${errorMessage}`,
+          link: `/vendas/tarefas?taskId=${id}`,
+        },
+      })
+    } catch (e) {
+      // Falha na notificacao nao deve bloquear o markFailed em si
+      console.error('[Tasks] Notificacao WHATSAPP_FAILED falhou:', e)
+    }
+
+    res.json({ success: true, data: updated })
+  } catch (error) {
+    console.error('[Tasks] markWhatsappFailed error:', error)
+    res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Erro interno do servidor' },
+    })
+  }
+}
+
+// Retentar envio: reseta sendStatus='PENDING' pra que o scheduler
+// pegue de novo no proximo ciclo. Botao "Enviar de novo" no CRM.
+export async function retryWhatsappSend(req: Request, res: Response): Promise<void> {
+  try {
+    const tenantId = await resolveTenantId(req.user!.tenantId)
+    const userId = req.user!.userId
+    const id = req.params.id as string
+
+    const task = await prisma.task.findFirst({
+      where: { id, tenantId, responsibleId: userId, type: 'WHATSAPP' },
+    })
+    if (!task) {
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Tarefa não encontrada' } })
+      return
+    }
+    if (!task.whatsappMessageBody) {
+      res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Tarefa não tem mensagem WhatsApp pra reenviar' },
+      })
+      return
+    }
+
+    const updated = await prisma.task.update({
+      where: { id },
+      data: {
+        sendStatus: 'PENDING',
+        sendError: null,
+      },
+    })
+
+    res.json({ success: true, data: updated })
+  } catch (error) {
+    console.error('[Tasks] retryWhatsappSend error:', error)
     res.status(500).json({
       success: false,
       error: { code: 'INTERNAL_ERROR', message: 'Erro interno do servidor' },

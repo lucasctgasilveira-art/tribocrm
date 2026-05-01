@@ -711,6 +711,17 @@ model Task {
   dueDate       DateTime? @map("due_date")
   isDone        Boolean   @default(false) @map("is_done")
   doneAt        DateTime? @map("done_at")
+  // Campos pra agendamento de mensagem WhatsApp via Tarefa.
+  // Quando type='WHATSAPP' + dueDate + (whatsappTemplateId OU
+  // whatsappMessageBody), backend marca sendStatus='PENDING' e a
+  // extensao Chrome envia automaticamente no horario agendado.
+  // Tarefas-lembrete normais tem todos esses campos NULL.
+  whatsappTemplateId  String?           @map("whatsapp_template_id") @db.Uuid
+  whatsappMessageBody String?           @map("whatsapp_message_body") @db.Text
+  sendStatus          String?           @map("send_status") @db.VarChar(20)
+  sentAt              DateTime?         @map("sent_at")
+  sendError           String?           @map("send_error") @db.Text
+  reminderMinutes     Int?              @map("reminder_minutes")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
   lead          Lead      @relation(fields: [leadId], references: [id])
@@ -719,6 +730,8 @@ model Task {
   // req.user.userId (regular users) or lead.responsibleId
   // (automation), both guaranteed to exist in users.
   createdByUser User      @relation("TaskCreatedBy", fields: [createdBy], references: [id])
+  whatsappTemplate WhatsappTemplate? @relation(fields: [whatsappTemplateId], references: [id])
+  @@index([sendStatus, dueDate])
   @@map("tasks")
 }
 
@@ -791,6 +804,7 @@ model WhatsappTemplate {
   createdBy         String             @map("created_by") @db.Uuid
   createdAt         DateTime           @default(now()) @map("created_at")
   scheduledMessages ScheduledMessage[]
+  tasks             Task[]
   @@map("whatsapp_templates")
 }
 

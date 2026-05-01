@@ -13,6 +13,10 @@ import {
   createManagerialTask,
   updateManagerialTask,
   completeManagerialTask,
+  getPendingWhatsappTasks,
+  markWhatsappSent,
+  markWhatsappFailed,
+  retryWhatsappSend,
 } from '../controllers/tasks.controller'
 
 const router = Router()
@@ -110,6 +114,16 @@ router.get('/managerial', getManagerialTasks)
 router.post('/managerial', createManagerialTask)
 router.patch('/managerial/:id/complete', completeManagerialTask)
 router.patch('/managerial/:id', updateManagerialTask)
+
+// ── WhatsApp scheduled send ──
+//
+// MUST come before /:id routes — senão "/pending-whatsapp" cai na
+// rota dinâmica /:id/whatsapp-X. Idem padrão das demais rotas
+// estaticas declaradas acima.
+router.get('/pending-whatsapp', getPendingWhatsappTasks)
+router.post('/:id/whatsapp-sent', markWhatsappSent)
+router.post('/:id/whatsapp-failed', markWhatsappFailed)
+router.post('/:id/whatsapp-retry', retryWhatsappSend)
 
 // ── Lead tasks ──
 

@@ -1,7 +1,9 @@
 import type { PrismaClient } from '@prisma/client'
 import { sendMail } from './mailer.service'
 
-type TxClient = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>
+// Exportado: usado por consumidores externos (tasks.controller) que
+// precisam chamar replaceVars com tipo compatível.
+export type TxClient = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>
 
 interface AutomationRecord {
   id: string
@@ -10,7 +12,8 @@ interface AutomationRecord {
   actionConfig: any
 }
 
-interface LeadRecord {
+// Exportado pelo mesmo motivo de TxClient.
+export interface LeadRecord {
   id: string
   tenantId: string
   pipelineId: string
@@ -30,7 +33,11 @@ type ActionResult = 'SUCCESS' | 'FAILED' | 'SKIPPED'
  * Replace template variables in a string.
  * Supported: {{nome_lead}}, {{empresa_lead}}, {{nome_vendedor}}, {{nome_empresa}}
  */
-async function replaceVars(
+// Exportada pra ser reutilizada por outros lugares que precisam expandir
+// variaveis de template — ex: tasks.controller.createTask agendando
+// mensagem WhatsApp expande aqui no momento do agendamento (snapshot).
+// Sem export precisaria duplicar a logica.
+export async function replaceVars(
   text: string,
   lead: LeadRecord,
   tx: TxClient,
