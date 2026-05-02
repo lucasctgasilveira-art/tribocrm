@@ -8,6 +8,7 @@ import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
 import { getAutomations, createAutomation, updateAutomation, deleteAutomation } from '../../services/automations.service'
 import { getPipelines } from '../../services/pipeline.service'
+import { getEmailTemplates, getWhatsappTemplates } from '../../services/templates.service'
 
 // ── Types ──
 
@@ -348,10 +349,30 @@ function BuilderView({ template: tmpl, pipelines, onBack, onSave }: {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
+  // Template selector — só relevante pras 2 ações que enviam mensagem.
+  // Para os demais actionTypes (CREATE_TASK, MOVE_STAGE, NOTIFY_USER etc.),
+  // os states ficam vazios e a UI não aparece.
+  const needsTemplate = tmpl.actionType === 'SEND_EMAIL' || tmpl.actionType === 'SEND_WHATSAPP'
+  const [templates, setTemplates] = useState<{ id: string; name: string }[]>([])
+  const [templateId, setTemplateId] = useState('')
+  const [loadingTemplates, setLoadingTemplates] = useState(false)
+
+  useEffect(() => {
+    if (!needsTemplate) return
+    let cancelled = false
+    setLoadingTemplates(true)
+    const loader = tmpl.actionType === 'SEND_EMAIL' ? getEmailTemplates : getWhatsappTemplates
+    loader({ isActive: 'true' })
+      .then(list => { if (!cancelled) setTemplates(list ?? []) })
+      .catch(() => { if (!cancelled) setTemplates([]) })
+      .finally(() => { if (!cancelled) setLoadingTemplates(false) })
+    return () => { cancelled = true }
+  }, [needsTemplate, tmpl.actionType])
+
   const selectedPipeline = pipelines.find(p => p.id === pipelineId)
   const stages = selectedPipeline?.stages ?? []
   const TIcon = tmpl.triggerIcon; const AIcon = tmpl.actionIcon
-  const canSave = name.trim() && !saving
+  const canSave = name.trim() && !saving && (!needsTemplate || !!templateId)
 
   async function handleSave() {
     if (!canSave) return
@@ -361,6 +382,10 @@ function BuilderView({ template: tmpl, pipelines, onBack, onSave }: {
       if (stageId) triggerConfig.stageId = stageId
       if (tmpl.triggerType === 'INACTIVE_DAYS') triggerConfig.days = parseInt(days)
       const actionConfig: Record<string, unknown> = { type: tmpl.configType }
+      // Backend (automation.service.ts) lê actionConfig.templateId pra
+      // resolver template e expandir variáveis nas ações SEND_EMAIL e
+      // SEND_WHATSAPP. Sem isso, a ação retorna FAILED.
+      if (needsTemplate) actionConfig.templateId = templateId
       await onSave({ name, pipelineId, triggerType: tmpl.triggerType, triggerConfig, actionType: tmpl.actionType, actionConfig })
     } catch (e: any) {
       setError(e.response?.data?.error?.message ?? 'Erro ao salvar automação')
@@ -409,10 +434,28 @@ function BuilderView({ template: tmpl, pipelines, onBack, onSave }: {
 
         <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 10, padding: 16, marginBottom: 16 }}>
           <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 10, fontWeight: 600 }}>Então fazer isso — Ação</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: needsTemplate ? 12 : 0 }}>
             <AIcon size={16} color={tmpl.actionColor} strokeWidth={1.5} />
             <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{tmpl.actionTitle}</span>
           </div>
+          {needsTemplate && (
+            loadingTemplates ? (
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: '8px 0' }}>Carregando modelos...</div>
+            ) : templates.length === 0 ? (
+              <div style={{ fontSize: 12, color: '#f59e0b', background: 'rgba(245,158,11,0.08)', borderRadius: 6, padding: '8px 12px', lineHeight: 1.4 }}>
+                Você ainda não tem modelos de {tmpl.actionType === 'SEND_EMAIL' ? 'e-mail' : 'WhatsApp'} cadastrados.<br />
+                Crie um em <strong>Modelos → {tmpl.actionType === 'SEND_EMAIL' ? 'E-mail' : 'WhatsApp'}</strong> e volte aqui.
+              </div>
+            ) : (
+              <>
+                <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Modelo de mensagem <span style={{ color: '#f97316' }}>*</span></label>
+                <select value={templateId} onChange={e => setTemplateId(e.target.value)} style={{ ...inputS, appearance: 'none' as const, cursor: 'pointer' }}>
+                  <option value="">Selecione um modelo...</option>
+                  {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+              </>
+            )
+          )}
         </div>
 
         <div style={{ marginBottom: 20 }}>
