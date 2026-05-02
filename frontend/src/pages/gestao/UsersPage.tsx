@@ -7,6 +7,7 @@ import { getUsers, updateUser, createUser, getTeams, resetUserPassword, getUserP
 import { getPipelines } from '../../services/pipeline.service'
 import { bulkUpdateLeads } from '../../services/leads.service'
 import { getRampingMonthOptions, isoDateToMonth, ensureCurrentValueInOptions } from '../../utils/rampingMonths'
+import InfoTooltip from '../../components/shared/InfoTooltip/InfoTooltip'
 
 // ── Types ──
 
@@ -425,7 +426,16 @@ function NewUserModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
           </div>
           {(role === 'SELLER' || role === 'TEAM_LEADER') && (
             <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Quando entra na divisão de metas?</label>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
+                Quando entra na divisão de metas?
+                <InfoTooltip>
+                  <strong>Rampagem</strong> é o período em que um vendedor novo não conta na divisão da meta da equipe.
+                  <br /><br />
+                  Útil pra dar tempo de adaptação sem prejudicar a meta dos demais vendedores.
+                  <br /><br />
+                  Escolha o mês a partir do qual ele passa a participar da divisão.
+                </InfoTooltip>
+              </label>
               <select value={rampingStartsAt} onChange={e => setRampingStartsAt(e.target.value)} style={{ ...inputS, appearance: 'none', cursor: 'pointer' }}>
                 <option value="">Já participa (sem rampagem)</option>
                 {rampingOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -585,7 +595,16 @@ function EditUserInlineModal({ user, onClose, onSaved }: { user: User; onClose: 
           </div>
           {(role === 'SELLER' || role === 'TEAM_LEADER') && (
             <div style={{ gridColumn: '1 / -1' }}>
-              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Quando entra na divisão de metas?</label>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
+                Quando entra na divisão de metas?
+                <InfoTooltip>
+                  <strong>Rampagem</strong> é o período em que um vendedor novo não conta na divisão da meta da equipe.
+                  <br /><br />
+                  Útil pra dar tempo de adaptação sem prejudicar a meta dos demais vendedores.
+                  <br /><br />
+                  Escolha o mês a partir do qual ele passa a participar da divisão.
+                </InfoTooltip>
+              </label>
               <select value={rampingStartsAt} onChange={e => setRampingStartsAt(e.target.value)} style={{ ...editInputS, appearance: 'none', cursor: 'pointer' }}>
                 <option value="">Já participa (sem rampagem)</option>
                 {rampingOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
