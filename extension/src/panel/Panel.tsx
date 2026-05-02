@@ -1511,6 +1511,8 @@ function TasksTab({
     description: string;
     type: LeadTaskType;
     dueAt: string;
+    whatsappTemplateId?: string;
+    whatsappMessageBody?: string;
   }) {
     try {
       const created = await sendMessage({
@@ -1826,6 +1828,8 @@ function TaskForm({
     description: string;
     type: LeadTaskType;
     dueAt: string;
+    whatsappTemplateId?: string;
+    whatsappMessageBody?: string;
   }) => void | Promise<void>;
 }) {
   const [title, setTitle] = useState(initial?.title ?? '');
@@ -1835,6 +1839,36 @@ function TaskForm({
   const [customOpen, setCustomOpen] = useState(!!initial);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Template WhatsApp — só relevante quando type='whatsapp' E dueAt definido.
+  // Limites e regras espelham o que o CRM faz na Fase 3.
+  const WHATSAPP_CUSTOM_MAX = 150;
+  const [waTemplates, setWaTemplates] = useState<{ id: string; name: string }[]>([]);
+  const [waTemplateId, setWaTemplateId] = useState<string>('');
+  const [waCustomMessage, setWaCustomMessage] = useState<string>('');
+  const [loadingWaTemplates, setLoadingWaTemplates] = useState(false);
+
+  const isScheduledWhatsapp = type === 'whatsapp' && !!dueAt;
+
+  useEffect(() => {
+    if (!isScheduledWhatsapp) return;
+    let cancelled = false;
+    setLoadingWaTemplates(true);
+    sendMessage({ type: 'TEMPLATE_LIST' })
+      .then((list) => {
+        if (cancelled) return;
+        setWaTemplates(
+          (list ?? []).map((t: { id: string; name: string }) => ({ id: t.id, name: t.name }))
+        );
+      })
+      .catch(() => { if (!cancelled) setWaTemplates([]); })
+      .finally(() => { if (!cancelled) setLoadingWaTemplates(false); });
+    return () => { cancelled = true; };
+  }, [isScheduledWhatsapp]);
+
+  const customOverLimit =
+    isScheduledWhatsapp && waTemplateId === '__custom' &&
+    waCustomMessage.length > WHATSAPP_CUSTOM_MAX;
 
   async function submit(e: Event) {
     e.preventDefault();
@@ -1847,14 +1881,26 @@ function TaskForm({
       setError('Escolha data e hora');
       return;
     }
+    if (customOverLimit) {
+      setError(`Mensagem custom: ${WHATSAPP_CUSTOM_MAX} caracteres no máximo`);
+      return;
+    }
     setSaving(true);
     setError(null);
+
+    // Resolve campos do agendamento WhatsApp. Se nada selecionado,
+    // tarefa segue como lembrete normal (backend não dispara scheduler).
+    const useTemplate = isScheduledWhatsapp && waTemplateId && waTemplateId !== '__custom';
+    const useCustom = isScheduledWhatsapp && waTemplateId === '__custom' && waCustomMessage.trim().length > 0;
+
     try {
       await onSubmit({
         title: trimmed,
         description: description.trim(),
         type,
-        dueAt
+        dueAt,
+        whatsappTemplateId: useTemplate ? waTemplateId : undefined,
+        whatsappMessageBody: useCustom ? waCustomMessage.trim() : undefined,
       });
     } catch {
       setSaving(false);
@@ -1922,6 +1968,63 @@ function TaskForm({
           placeholder="Opcional"
         />
       </div>
+
+      {isScheduledWhatsapp && (
+        <div class="tribocrm-field">
+          <label class="tribocrm-field-label">Mensagem agendada (WhatsApp)</label>
+          {loadingWaTemplates ? (
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: '6px 0' }}>
+              Carregando modelos...
+            </div>
+          ) : (
+            <>
+              <select
+                class="tribocrm-select"
+                value={waTemplateId}
+                onChange={(e) => setWaTemplateId((e.target as HTMLSelectElement).value)}
+              >
+                <option value="">Sem mensagem (só lembrete)</option>
+                {waTemplates.map((t) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+                <option value="__custom">Personalizada</option>
+              </select>
+              {waTemplateId === '__custom' && (
+                <>
+                  <textarea
+                    class="tribocrm-textarea"
+                    style={{ marginTop: 6 }}
+                    value={waCustomMessage}
+                    onInput={(e) => setWaCustomMessage((e.target as HTMLTextAreaElement).value)}
+                    placeholder="Mensagem que vai pro WhatsApp do lead"
+                    maxLength={WHATSAPP_CUSTOM_MAX}
+                  />
+                  <div style={{
+                    fontSize: 11,
+                    color: customOverLimit ? '#ef4444' : 'var(--text-muted)',
+                    marginTop: 2,
+                    textAlign: 'right'
+                  }}>
+                    {waCustomMessage.length}/{WHATSAPP_CUSTOM_MAX}
+                  </div>
+                </>
+              )}
+              {waTemplateId && waTemplateId !== '' && (
+                <div style={{
+                  fontSize: 11,
+                  color: '#3b82f6',
+                  marginTop: 6,
+                  background: 'rgba(59,130,246,0.08)',
+                  borderRadius: 6,
+                  padding: '6px 10px'
+                }}>
+                  No horário agendado, você recebe uma notificação pra revisar e enviar.
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       <div class="tribocrm-btn-group">
         <button

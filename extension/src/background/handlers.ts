@@ -233,7 +233,12 @@ export const handlers: HandlerMap = {
       notified: isPast
     };
 
-    const saved = await api.tasks.addTask(payload.leadId, task);
+    // Repassa campos da Fase 1 (mensagem WhatsApp agendada). Backend ignora
+    // se type !== 'WHATSAPP' ou se dueDate ausente.
+    const saved = await api.tasks.addTask(payload.leadId, task, {
+      whatsappTemplateId: payload.whatsappTemplateId,
+      whatsappMessageBody: payload.whatsappMessageBody,
+    });
     if (!isPast) {
       await scheduleTaskAlarm(saved);
     }

@@ -82,17 +82,28 @@ export const tasksService = {
     return Promise.all(tasks.map(fromBackend));
   },
 
-  async addTask(leadId: string, task: LeadTask): Promise<LeadTask> {
+  async addTask(
+    leadId: string,
+    task: LeadTask,
+    extra?: { whatsappTemplateId?: string; whatsappMessageBody?: string }
+  ): Promise<LeadTask> {
     // O id do `task` vem gerado pelo handler via crypto.randomUUID, mas
     // o backend gera próprio UUID e devolve no response. O id do client
     // é descartado.
-    const created = await http.post<BackendTask>('/tasks', {
+    const body: Record<string, unknown> = {
       leadId,
       type: task.type.toUpperCase(),
       title: task.title,
       description: task.description || undefined,
       dueDate: task.dueAt || undefined,
-    });
+    };
+    // Campos opcionais — backend Fase 1 grava sendStatus='PENDING' quando
+    // type='WHATSAPP' + dueDate + (whatsappTemplateId OU whatsappMessageBody),
+    // ativando o scheduler. Sem isso, vira tarefa-lembrete normal.
+    if (extra?.whatsappTemplateId) body.whatsappTemplateId = extra.whatsappTemplateId;
+    if (extra?.whatsappMessageBody) body.whatsappMessageBody = extra.whatsappMessageBody;
+
+    const created = await http.post<BackendTask>('/tasks', body);
     const result = await fromBackend(created);
     // Se o handler marcou notified=true (caso dueAt já passado),
     // persistimos a flag local.

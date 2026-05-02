@@ -206,6 +206,11 @@ export interface CreateLeadTaskRequest {
     description: string;
     type: LeadTaskType;
     dueAt: string;
+    // Campos da Fase 1 (mensagem WhatsApp agendada via Tarefa).
+    // Quando type='whatsapp' + dueAt + (whatsappTemplateId OU whatsappMessageBody),
+    // backend grava sendStatus='PENDING' e scheduler da extensão notifica.
+    whatsappTemplateId?: string;
+    whatsappMessageBody?: string;
   };
 }
 
