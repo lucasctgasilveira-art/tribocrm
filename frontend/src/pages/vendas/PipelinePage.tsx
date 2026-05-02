@@ -9,6 +9,7 @@ import NewLeadModal, { type NewLeadData } from '../../components/shared/NewLeadM
 import { SendEmailModal, ConnectGmailModal } from '../../components/shared/EmailModal/EmailModal'
 import { getPipelines, getKanban } from '../../services/pipeline.service'
 import { notifyExtensionPhoneHint } from '../../utils/extensionBridge'
+import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus'
 
 // ── Types ──
 
@@ -106,6 +107,10 @@ export default function VendasPipelinePage() {
   // page level so the modal lives outside the individual card loop.
   const [emailLead, setEmailLead] = useState<Lead | null>(null)
   const [emailNeedsConnect, setEmailNeedsConnect] = useState(false)
+  // Bumpa quando o vendedor volta pra aba — força reload do kanban pra
+  // refletir mudanças feitas via extensão Chrome (etapa, outcome etc.)
+  const [refreshKey, setRefreshKey] = useState(0)
+  useRefreshOnFocus(() => setRefreshKey(k => k + 1))
   // Drives the "Mostrar arquivados" checkbox. When true, getKanban
   // passes ?includeArchived=true so leads ARCHIVED by the monthly
   // cron job reappear in the Venda Realizada column.
@@ -149,7 +154,7 @@ export default function VendasPipelinePage() {
       finally { setLoading(false) }
     }
     load()
-  }, [showArchived, pipelineId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [showArchived, pipelineId, refreshKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handlePipelineChange(newPid: string) {
     if (newPid === pipelineId) return

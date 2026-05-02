@@ -9,6 +9,7 @@ import { SendEmailModal, ConnectGmailModal } from '../../components/shared/Email
 import { getPipelines, getKanban } from '../../services/pipeline.service'
 import api from '../../services/api'
 import { notifyExtensionPhoneHint } from '../../utils/extensionBridge'
+import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus'
 
 // ── Types ──
 
@@ -179,6 +180,10 @@ export default function PipelinePage() {
   // board whenever it flips, so archived leads (from the monthly
   // wonCardsArchiver cron) reappear in the Venda Realizada column.
   const [showArchived, setShowArchived] = useState(false)
+  // Bumpa quando gestor volta pra aba — força reload do kanban pra
+  // refletir mudanças feitas em outra aba/extensão.
+  const [refreshKey, setRefreshKey] = useState(0)
+  useRefreshOnFocus(() => setRefreshKey(k => k + 1))
 
   async function openEmailForLead(lead: Lead) {
     if (!lead.email || lead.email === '—') return
@@ -224,7 +229,7 @@ export default function PipelinePage() {
       }
     }
     load()
-  }, [showArchived]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [showArchived, refreshKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Switch pipeline
   async function handlePipelineChange(pipelineId: string) {

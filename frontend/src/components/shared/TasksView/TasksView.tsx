@@ -20,6 +20,7 @@ import {
 } from '../../../services/tasks.service'
 import { getUsers, getAdminTeam } from '../../../services/users.service'
 import api from '../../../services/api'
+import { useRefreshOnFocus } from '../../../hooks/useRefreshOnFocus'
 
 // ── Calendar setup (react-big-calendar + date-fns pt-BR) ──
 
@@ -387,6 +388,10 @@ export default function TasksView({ menuItems, managerialOnly = false }: TasksVi
   const [newTaskModal, setNewTaskModal] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
   const [availableUsers, setAvailableUsers] = useState<{ id: string; name: string }[]>([])
+
+  // Refresh quando volta pra aba (ex: tarefa criada/concluída via extensão
+  // no WhatsApp Web). Reusa o reloadKey existente.
+  useRefreshOnFocus(() => setReloadKey(k => k + 1))
 
   useEffect(() => {
     const stored = JSON.parse(localStorage.getItem('user') ?? '{}') as { role?: string }

@@ -7,6 +7,7 @@ import { getLeads } from '../../services/leads.service'
 import { getPipelines } from '../../services/pipeline.service'
 import NewLeadModal, { type NewLeadData } from '../../components/shared/NewLeadModal/NewLeadModal'
 import api from '../../services/api'
+import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus'
 
 // ── Types ──
 
@@ -56,6 +57,10 @@ export default function VendasLeadsPage() {
   const [reloadKey, setReloadKey] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [toast, setToast] = useState('')
+
+  // Refresh quando vendedor volta pra aba (ex: depois de mudar etapa
+  // ou criar tarefa via extensão Chrome no WhatsApp Web).
+  useRefreshOnFocus(() => setReloadKey(k => k + 1))
   const [pipelineData, setPipelineData] = useState<{ id: string; stages: { id: string; name: string }[] } | null>(null)
 
   useEffect(() => {
