@@ -549,15 +549,25 @@ export default function TasksView({ menuItems, managerialOnly = false }: TasksVi
     navigate(`${instancePrefix}/leads/${leadId}`)
   }
 
-  async function handleCreateTask(payload: { title: string; typeId: string; description?: string; dueDate?: string; participantIds?: string[]; responsibleId?: string; dueTime?: string; reminderMinutes?: number; taskMode?: string; leadId?: string }) {
+  async function handleCreateTask(payload: { title: string; typeId: string; description?: string; dueDate?: string; participantIds?: string[]; responsibleId?: string; dueTime?: string; reminderMinutes?: number; taskMode?: string; leadId?: string; whatsappTemplateId?: string; whatsappMessageBody?: string }) {
     if (payload.taskMode === 'lead') {
       if (!payload.leadId) {
         setToast('Selecione um lead para criar a tarefa')
         setTimeout(() => setToast(''), 3000)
         return
       }
-      console.log('[TasksView] creating lead task:', { leadId: payload.leadId, type: payload.typeId, title: payload.title })
-      await createLeadTask({ leadId: payload.leadId, type: payload.typeId, title: payload.title, description: payload.description, dueDate: payload.dueDate, responsibleId: payload.responsibleId })
+      console.log('[TasksView] creating lead task:', { leadId: payload.leadId, type: payload.typeId, title: payload.title, hasWhatsappBody: !!payload.whatsappMessageBody, hasWhatsappTemplate: !!payload.whatsappTemplateId })
+      await createLeadTask({
+        leadId: payload.leadId,
+        type: payload.typeId,
+        title: payload.title,
+        description: payload.description,
+        dueDate: payload.dueDate,
+        responsibleId: payload.responsibleId,
+        whatsappTemplateId: payload.whatsappTemplateId,
+        whatsappMessageBody: payload.whatsappMessageBody,
+        reminderMinutes: payload.reminderMinutes,
+      })
       setNewTaskModal(false)
       setCategory('leads')
       setReloadKey(k => k + 1)
@@ -1118,7 +1128,7 @@ function SummaryCard({ label, value, color }: { label: string; value: string; co
 export function NewManagerialTaskModal({ users, onClose, onSave, managerialOnly = false, lockedLead }: {
   users: { id: string; name: string }[]
   onClose: () => void
-  onSave: (p: { title: string; typeId: string; description?: string; dueDate?: string; participantIds?: string[]; responsibleId?: string; dueTime?: string; reminderMinutes?: number; taskMode?: string; leadId?: string }) => Promise<void> | void
+  onSave: (p: { title: string; typeId: string; description?: string; dueDate?: string; participantIds?: string[]; responsibleId?: string; dueTime?: string; reminderMinutes?: number; taskMode?: string; leadId?: string; whatsappTemplateId?: string; whatsappMessageBody?: string }) => Promise<void> | void
   managerialOnly?: boolean
   // When set, the modal opens pre-scoped to this lead: mode toggle is
   // hidden, the lead picker is replaced by a read-only pill, and the
@@ -1222,7 +1232,14 @@ export function NewManagerialTaskModal({ users, onClose, onSave, managerialOnly 
   // When a date is set, time is now mandatory (and vice-versa). Users can
   // still save a task without any deadline by leaving both blank.
   const dueDateTimeValid = (!dueDate && !dueTime) || (!!dueDate && !!dueTime)
-  const canSave = title.trim().length > 0 && effectiveTypeId.length > 0 && !saving && (taskMode !== 'lead' || !!selectedLeadId) && dueDateTimeValid
+  // Mensagem custom do WhatsApp tem limite de 150 caracteres (decisão de
+  // produto na Fase 1). Backend valida também — manter aqui é UX, não
+  // segurança. Não vale para mensagens vindas de template.
+  const WHATSAPP_CUSTOM_MAX = 150
+  const customMessageOverLimit =
+    taskMode === 'lead' && typeId === 'WHATSAPP' && selectedTemplate === '__custom' &&
+    customMessage.length > WHATSAPP_CUSTOM_MAX
+  const canSave = title.trim().length > 0 && effectiveTypeId.length > 0 && !saving && (taskMode !== 'lead' || !!selectedLeadId) && dueDateTimeValid && !customMessageOverLimit
 
   function toggleParticipant(id: string) {
     setParticipantIds(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id])
@@ -1240,11 +1257,33 @@ export function NewManagerialTaskModal({ users, onClose, onSave, managerialOnly 
       const parsed = new Date(`${dueDate}T${dueTime}:00`)
       fullDueDate = Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString()
     }
+    // Campos específicos de WhatsApp agendado: só fazem sentido quando
+    // type='WHATSAPP' + temos dueDate (sem data não vai pra fila do scheduler
+    // da extensão — vira lembrete normal). Template real → manda templateId
+    // (backend resolve e expande variáveis). Custom → manda body direto.
+    const isScheduledWhatsapp =
+      taskMode === 'lead' && typeId === 'WHATSAPP' && !!fullDueDate &&
+      (selectedTemplate === '__custom' ? customMessage.trim().length > 0 : selectedTemplate.length > 0)
+
+    const whatsappTemplateId = isScheduledWhatsapp && selectedTemplate !== '__custom'
+      ? selectedTemplate
+      : undefined
+    const whatsappMessageBody = isScheduledWhatsapp && selectedTemplate === '__custom'
+      ? customMessage.trim()
+      : undefined
+
+    // Description só recebe template/custom quando NÃO é WhatsApp agendado.
+    // Pra WhatsApp agendado, mensagem vai pelos campos próprios e a
+    // description fica vazia (evita duplicação no banco e na UI da listagem).
+    const descriptionToSend = isScheduledWhatsapp
+      ? undefined
+      : ((selectedTemplate === '__custom' ? customMessage : description) || undefined)
+
     try {
       await onSave({
         title,
         typeId: effectiveTypeId,
-        description: (selectedTemplate === '__custom' ? customMessage : description) || undefined,
+        description: descriptionToSend,
         dueDate: fullDueDate,
         participantIds: isSeller ? undefined : (participantIds.length > 0 ? participantIds : undefined),
         responsibleId: isSeller ? userId : responsibleId,
@@ -1252,6 +1291,8 @@ export function NewManagerialTaskModal({ users, onClose, onSave, managerialOnly 
         reminderMinutes,
         taskMode,
         leadId: taskMode === 'lead' ? selectedLeadId : undefined,
+        whatsappTemplateId,
+        whatsappMessageBody,
       })
     } catch (e: any) {
       setError(e.response?.data?.error?.message ?? 'Erro ao criar tarefa. Tente novamente.')
@@ -1362,9 +1403,17 @@ export function NewManagerialTaskModal({ users, onClose, onSave, managerialOnly 
                 <option value="__custom">Personalizado</option>
               </select>
               {selectedTemplate === '__custom' && (
-                <textarea rows={3} value={customMessage} onChange={e => setCustomMessage(e.target.value)}
-                  placeholder={typeId === 'EMAIL' ? 'Conteúdo do e-mail...' : 'Mensagem do WhatsApp...'}
-                  style={{ ...inputS, resize: 'none', marginTop: 8 } as React.CSSProperties} />
+                <>
+                  <textarea rows={3} value={customMessage} onChange={e => setCustomMessage(e.target.value)}
+                    placeholder={typeId === 'EMAIL' ? 'Conteúdo do e-mail...' : 'Mensagem do WhatsApp...'}
+                    maxLength={typeId === 'WHATSAPP' ? WHATSAPP_CUSTOM_MAX : undefined}
+                    style={{ ...inputS, resize: 'none', marginTop: 8 } as React.CSSProperties} />
+                  {typeId === 'WHATSAPP' && (
+                    <div style={{ fontSize: 11, color: customMessageOverLimit ? '#ef4444' : 'var(--text-muted)', marginTop: 4, textAlign: 'right' }}>
+                      {customMessage.length}/{WHATSAPP_CUSTOM_MAX}
+                    </div>
+                  )}
+                </>
               )}
               <div style={{ fontSize: 11, color: '#3b82f6', marginTop: 6, background: 'rgba(59,130,246,0.08)', borderRadius: 6, padding: '6px 10px' }}>
                 {typeId === 'EMAIL'

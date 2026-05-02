@@ -390,6 +390,10 @@ export default function LeadDrawer({ lead, onClose, stageColor, instance = 'gest
             // aren't part of POST /tasks today — matches the existing
             // Nova Tarefa behaviour on the tasks page (parity is the
             // whole point of this reuse).
+            //
+            // whatsappTemplateId/whatsappMessageBody/reminderMinutes vêm
+            // preenchidos quando o vendedor escolhe agendar mensagem WhatsApp
+            // (Fase 3). Backend ignora se type != 'WHATSAPP' ou sem dueDate.
             await api.post('/tasks', {
               leadId: lead.id,
               title: p.title,
@@ -397,6 +401,9 @@ export default function LeadDrawer({ lead, onClose, stageColor, instance = 'gest
               description: p.description,
               dueDate: p.dueDate,
               responsibleId: p.responsibleId,
+              whatsappTemplateId: p.whatsappTemplateId,
+              whatsappMessageBody: p.whatsappMessageBody,
+              reminderMinutes: p.reminderMinutes,
             })
             setTaskModal(false)
             setReloadKey(k => k + 1)

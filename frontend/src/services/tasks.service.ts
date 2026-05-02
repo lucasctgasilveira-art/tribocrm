@@ -16,6 +16,12 @@ export interface TaskPayload {
   description?: string
   dueDate?: string
   responsibleId?: string
+  // Campos da Fase 1 (mensagem WhatsApp agendada via Tarefa).
+  // Quando type='WHATSAPP' + dueDate + (whatsappTemplateId OU whatsappMessageBody),
+  // o backend grava sendStatus='PENDING' e a extensão passa a notificar.
+  whatsappTemplateId?: string
+  whatsappMessageBody?: string
+  reminderMinutes?: number
 }
 
 export interface ManagerialTaskPayload {
