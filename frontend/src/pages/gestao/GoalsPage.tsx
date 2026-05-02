@@ -5,6 +5,7 @@ import { gestaoMenuItems } from '../../config/gestaoMenu'
 import { getGoalDashboard, getGoals, createGoal, updateGoal } from '../../services/goals.service'
 import { getPipelines } from '../../services/pipeline.service'
 import { getUsers, getTeams } from '../../services/users.service'
+import InfoTooltip from '../../components/shared/InfoTooltip/InfoTooltip'
 
 // ── Types ──
 
@@ -231,20 +232,40 @@ export default function GoalsPage() {
                         <td style={tdS}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--border)', fontSize: 10, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{ini(ug.user.name)}</div>
-                            <div>
+                            <div style={{ display: 'inline-flex', alignItems: 'center' }}>
                               <span>{ug.user.name}</span>
-                              {ug.isRamping && <span style={{ marginLeft: 6, background: 'rgba(168,85,247,0.12)', color: '#a855f7', borderRadius: 4, padding: '1px 6px', fontSize: 10, fontWeight: 500 }}>Rampagem</span>}
+                              {ug.isRamping && (
+                                <>
+                                  <span style={{ marginLeft: 6, background: 'rgba(168,85,247,0.12)', color: '#a855f7', borderRadius: 4, padding: '1px 6px', fontSize: 10, fontWeight: 500 }}>Rampagem</span>
+                                  <InfoTooltip>
+                                    Vendedor em rampagem não conta na divisão da meta da equipe deste período. A meta total é dividida apenas entre os demais ativos.
+                                  </InfoTooltip>
+                                </>
+                              )}
                             </div>
                           </div>
                         </td>
-                        <td style={tdS}>{fmt(ug.revenueGoal)}</td>
-                        <td style={{ ...tdS, fontWeight: 700, color: '#22c55e' }}>{fmt(ug.current)}</td>
-                        <td style={{ ...tdS, fontWeight: 700, color: barColor(ug.percentage) }}>{ug.percentage}%</td>
-                        <td style={{ ...tdS, width: 100 }}>
-                          <div style={{ background: 'var(--border)', borderRadius: 3, height: 6 }}>
-                            <div style={{ width: `${Math.min(ug.percentage, 100)}%`, height: '100%', background: barColor(ug.percentage), borderRadius: 3 }} />
-                          </div>
-                        </td>
+                        {ug.isRamping ? (
+                          <>
+                            <td style={{ ...tdS, color: 'var(--text-muted)' }}>—</td>
+                            <td style={{ ...tdS, fontWeight: 700, color: '#22c55e' }}>{fmt(ug.current)}</td>
+                            <td style={{ ...tdS, color: 'var(--text-muted)' }}>—</td>
+                            <td style={{ ...tdS, width: 100 }}>
+                              <div style={{ fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic' }}>Em rampagem</div>
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td style={tdS}>{fmt(ug.revenueGoal)}</td>
+                            <td style={{ ...tdS, fontWeight: 700, color: '#22c55e' }}>{fmt(ug.current)}</td>
+                            <td style={{ ...tdS, fontWeight: 700, color: barColor(ug.percentage) }}>{ug.percentage}%</td>
+                            <td style={{ ...tdS, width: 100 }}>
+                              <div style={{ background: 'var(--border)', borderRadius: 3, height: 6 }}>
+                                <div style={{ width: `${Math.min(ug.percentage, 100)}%`, height: '100%', background: barColor(ug.percentage), borderRadius: 3 }} />
+                              </div>
+                            </td>
+                          </>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -270,7 +291,14 @@ export default function GoalsPage() {
 
               <div style={{ height: 1, background: 'var(--border)', margin: '20px 0' }} />
 
-              <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8 }}>Vendedores em rampagem</div>
+              <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8, display: 'inline-flex', alignItems: 'center' }}>
+                Vendedores em rampagem
+                <InfoTooltip>
+                  <strong>Rampagem</strong> é o período em que o vendedor não conta na divisão da meta da equipe.
+                  <br /><br />
+                  Configurada no cadastro de cada vendedor em <strong>Equipe → Usuários</strong>.
+                </InfoTooltip>
+              </div>
               {userGoals.filter(ug => ug.isRamping).length === 0 ? (
                 <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: 16, textAlign: 'center' }}>
                   <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 10 }}>Nenhum vendedor em rampagem</div>
