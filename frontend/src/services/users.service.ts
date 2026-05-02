@@ -64,6 +64,28 @@ export async function resetUserPassword(id: string, newPassword: string) {
   return response.data.data
 }
 
+// ── Inativação com saldo de meta (Bug 4 Fase C) ──
+
+export interface InactivationImpact {
+  hasActiveGoal: boolean
+  goalId?: string
+  periodReference?: string
+  revenueGoal?: number
+  currentRevenue?: number
+  balance?: number
+  otherActiveCount?: number
+}
+
+export async function getInactivationImpact(userId: string): Promise<InactivationImpact> {
+  const response = await api.get(`/users/${userId}/inactivation-impact`)
+  return response.data.data
+}
+
+export async function inactivateUserWithGoal(userId: string, redistribute: boolean) {
+  const response = await api.post(`/users/${userId}/inactivate-with-goal`, { redistribute })
+  return response.data.data
+}
+
 export async function getTeams() {
   const response = await api.get('/teams')
   return response.data.data

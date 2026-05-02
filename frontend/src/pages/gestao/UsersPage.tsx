@@ -3,7 +3,7 @@ import { Plus, Search, Loader2, X, CheckCircle2, AlertTriangle, MoreHorizontal }
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
 import { useNavigate } from 'react-router-dom'
-import { getUsers, updateUser, createUser, getTeams, resetUserPassword, getUserPipelines, type CreateUserResult } from '../../services/users.service'
+import { getUsers, updateUser, createUser, getTeams, resetUserPassword, getUserPipelines, getInactivationImpact, inactivateUserWithGoal, type CreateUserResult, type InactivationImpact } from '../../services/users.service'
 import { getPipelines } from '../../services/pipeline.service'
 import { bulkUpdateLeads } from '../../services/leads.service'
 import { getRampingMonthOptions, isoDateToMonth, ensureCurrentValueInOptions } from '../../utils/rampingMonths'
@@ -73,6 +73,10 @@ export default function UsersPage() {
   const [statusF, setStatusF] = useState('')
   const [openMenu, setOpenMenu] = useState<string | null>(null)
   const [vacationModal, setVacationModal] = useState<User | null>(null)
+  // Modal de inativação com saldo de meta. Aberto apenas quando o
+  // vendedor tem goal mensal ativa com saldo > 0. Se não tem, fluxo
+  // de updateUser segue direto sem modal.
+  const [inactivationModal, setInactivationModal] = useState<{ user: User; impact: InactivationImpact } | null>(null)
   const [editUserModal, setEditUserModal] = useState<User | null>(null)
   const [resetPwdResult, setResetPwdResult] = useState<{ name: string; password: string } | null>(null)
   const [toast, setToast] = useState('')
@@ -129,6 +133,20 @@ export default function UsersPage() {
       // Open vacation modal to optionally redistribute leads
       setVacationModal(user)
       return
+    }
+    // Inativação: se vendedor tem meta mensal ativa com saldo > 0, abre
+    // modal pra gestor decidir se redistribui o saldo. Caso contrário,
+    // segue fluxo direto (mesma lógica de antes).
+    if (newStatus === 'INACTIVE' && (user.role === 'SELLER' || user.role === 'TEAM_LEADER')) {
+      try {
+        const impact = await getInactivationImpact(user.id)
+        if (impact.hasActiveGoal && (impact.balance ?? 0) > 0 && (impact.otherActiveCount ?? 0) > 0) {
+          setInactivationModal({ user, impact })
+          return
+        }
+      } catch {
+        // Falha em buscar impacto não bloqueia inativação — segue fluxo legado
+      }
     }
     try {
       await updateUser(user.id, { userStatus: newStatus })
@@ -304,6 +322,14 @@ export default function UsersPage() {
           user={vacationModal}
           onClose={() => setVacationModal(null)}
           onDone={(msg) => { setVacationModal(null); showToast(msg); loadUsers() }}
+        />
+      )}
+      {inactivationModal && (
+        <InactivationModal
+          user={inactivationModal.user}
+          impact={inactivationModal.impact}
+          onClose={() => setInactivationModal(null)}
+          onDone={(msg) => { setInactivationModal(null); showToast(msg); loadUsers() }}
         />
       )}
       {editUserModal && (
@@ -781,6 +807,116 @@ function VacationModal({ user, onClose, onDone }: { user: User; onClose: () => v
           <button onClick={handleConfirm} disabled={saving || (redistribute && distType === 'SPECIFIC_USER' && !distUserId) || (redistribute && distType === 'ROUND_ROBIN_TEAM' && !distTeamId)}
             style={{ background: '#eab308', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 22px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: saving ? 0.7 : 1 }}>
             {saving && <Loader2 size={14} className="animate-spin" />}{saving ? 'Processando...' : 'Confirmar férias'}
+          </button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ── Inactivation Modal (Bug 4 Fase C — redistribuição de saldo) ──
+//
+// Aparece só quando o vendedor tem meta mensal ativa com saldo > 0 e há
+// outros vendedores ativos pra absorver o saldo. Demais casos (sem meta
+// ativa, sem saldo, ou sem demais ativos) caem no fluxo legado direto.
+
+function InactivationModal({
+  user,
+  impact,
+  onClose,
+  onDone,
+}: {
+  user: User
+  impact: InactivationImpact
+  onClose: () => void
+  onDone: (msg: string) => void
+}) {
+  const [redistribute, setRedistribute] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const balance = impact.balance ?? 0
+  const otherCount = impact.otherActiveCount ?? 0
+  const sharePerUser = otherCount > 0 ? Math.round(balance / otherCount) : 0
+
+  function fmt(v: number): string {
+    return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })
+  }
+
+  async function handleConfirm() {
+    setSaving(true); setError('')
+    try {
+      await inactivateUserWithGoal(user.id, redistribute)
+      onDone(redistribute
+        ? `${user.name} inativado e saldo de ${fmt(balance)} redistribuído entre ${otherCount} vendedor(es)`
+        : `${user.name} inativado e saldo de ${fmt(balance)} retirado da meta da equipe`,
+      )
+    } catch (e: any) {
+      setError(e?.response?.data?.error?.message ?? 'Erro ao inativar usuário')
+      setSaving(false)
+    }
+  }
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 520, maxWidth: '90vw', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Inativar — {user.name}</h2>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>Esse vendedor tem meta deste mês com saldo aberto. O que deseja fazer?</p>
+        </div>
+        <div style={{ padding: 24 }}>
+          {/* Resumo do saldo */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 16, padding: 12, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8 }}>
+            <div>
+              <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Meta</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{fmt(impact.revenueGoal ?? 0)}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Realizado</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#22c55e' }}>{fmt(impact.currentRevenue ?? 0)}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Saldo</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#f97316' }}>{fmt(balance)}</div>
+            </div>
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 14, fontStyle: 'italic' }}>
+            O realizado de {user.name} continua preservado nos relatórios — nunca é redistribuído.
+          </div>
+
+          {/* Opções */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+            <label onClick={() => setRedistribute(true)} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: 12, cursor: 'pointer', border: `1px solid ${redistribute ? '#f97316' : 'var(--border)'}`, background: redistribute ? 'rgba(249,115,22,0.06)' : 'transparent', borderRadius: 8 }}>
+              <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${redistribute ? '#f97316' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
+                {redistribute && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f97316' }} />}
+              </div>
+              <div>
+                <div style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>Redistribuir o saldo entre os demais</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                  {fmt(sharePerUser)} a mais pra cada um dos {otherCount} vendedor(es) ativo(s).
+                </div>
+              </div>
+            </label>
+            <label onClick={() => setRedistribute(false)} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: 12, cursor: 'pointer', border: `1px solid ${!redistribute ? '#f97316' : 'var(--border)'}`, background: !redistribute ? 'rgba(249,115,22,0.06)' : 'transparent', borderRadius: 8 }}>
+              <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${!redistribute ? '#f97316' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
+                {!redistribute && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f97316' }} />}
+              </div>
+              <div>
+                <div style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>Retirar o saldo da meta da equipe</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                  Meta total da equipe diminui em {fmt(balance)} neste mês.
+                </div>
+              </div>
+            </label>
+          </div>
+
+          {error && <div style={{ fontSize: 12, color: '#ef4444', marginTop: 4 }}>{error}</div>}
+        </div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <button onClick={onClose} disabled={saving} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}>Cancelar</button>
+          <button onClick={handleConfirm} disabled={saving} style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 22px', fontSize: 13, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: saving ? 0.7 : 1 }}>
+            {saving && <Loader2 size={14} className="animate-spin" />}{saving ? 'Processando...' : 'Confirmar inativação'}
           </button>
         </div>
       </div>

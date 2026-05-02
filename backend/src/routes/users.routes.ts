@@ -7,6 +7,7 @@ import { prisma } from '../lib/prisma'
 import {
   getUsers, createUser, updateUser, resetUserPassword,
   getTeams, createTeam, updateTeam,
+  getInactivationImpact, inactivateUserWithGoal,
 } from '../controllers/users.controller'
 
 const router = Router()
@@ -61,6 +62,12 @@ router.get('/users', getUsers)
 router.post('/users', createUser)
 router.patch('/users/:id', updateUser)
 router.patch('/users/:id/reset-password', resetUserPassword)
+
+// Inativação com saldo de meta (Bug 4 Fase C — Doc seções 6.9 e 13.7).
+// Frontend chama o GET pra mostrar modal de confirmação com info do
+// saldo. POST faz a inativação + (re)distribuição segundo flag boolean.
+router.get('/users/:id/inactivation-impact', getInactivationImpact)
+router.post('/users/:id/inactivate-with-goal', inactivateUserWithGoal)
 
 // Acesso a pipelines por usuario.
 // GET retorna lista de pipelineIds que o usuario tem acesso.

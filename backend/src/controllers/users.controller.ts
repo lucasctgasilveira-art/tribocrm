@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs'
 import { prisma } from '../lib/prisma'
 import { Prisma } from '@prisma/client'
 import { sendMail } from '../services/mailer.service'
+import { isUserInRamping } from '../lib/ramping'
 
 function generateTempPassword(): string {
   const pool = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -422,6 +423,222 @@ export async function resetUserPassword(req: Request, res: Response): Promise<vo
     res.json({ success: true, data: null })
   } catch (error) {
     console.error('[Users] resetUserPassword error:', error)
+    res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Erro interno do servidor' },
+    })
+  }
+}
+
+// ── Inativação com saldo de meta (Fase C do Bug 4) ──
+//
+// Doc seções 6.9 e 13.7: ao inativar vendedor com goal mensal ativa,
+// gestor decide o destino do saldo não alcançado (meta − realizado):
+//   redistribute=true  → saldo divide igual entre demais ATIVOS
+//                        não-rampantes; somam ao revenueGoal de cada.
+//   redistribute=false → saldo sai da meta consolidada da equipe
+//                        (totalRevenueGoal -= saldo).
+// Em ambos casos, GoalIndividual do desligado é PRESERVADO sem alteração:
+// realizado fica visível no nome dele nos relatórios, conforme regra fixa.
+
+/**
+ * Helper interno: encontra a goal MENSAL do mês atual no tenant que
+ * tem GoalIndividual desse user com revenueGoal > 0 (ou seja, user
+ * não estava em rampagem nesse goal). Pra trimestre/ano, decisão de
+ * produto: deixar pra fase futura — cobrir o caso mais comum primeiro.
+ */
+async function findActiveMonthlyGoalForUser(tenantId: string, userId: string) {
+  const now = new Date()
+  const periodRef = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+
+  const goal = await prisma.goal.findFirst({
+    where: { tenantId, periodType: 'MONTHLY', periodReference: periodRef },
+    include: {
+      individualGoals: {
+        where: { userId },
+      },
+    },
+  })
+
+  if (!goal) return null
+  const userGoal = goal.individualGoals[0]
+  if (!userGoal || !userGoal.revenueGoal) return null
+  return { goal, userGoal }
+}
+
+async function calculateUserCurrentRevenue(tenantId: string, userId: string): Promise<number> {
+  const now = new Date()
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
+
+  const wonLeads = await prisma.lead.findMany({
+    where: {
+      tenantId,
+      responsibleId: userId,
+      status: 'WON',
+      wonAt: { gte: startOfMonth, lte: endOfMonth },
+      deletedAt: null,
+    },
+    select: { closedValue: true },
+  })
+
+  return wonLeads.reduce((sum, l) => sum + (l.closedValue ? Number(l.closedValue) : 0), 0)
+}
+
+export async function getInactivationImpact(req: Request, res: Response): Promise<void> {
+  try {
+    const id = req.params.id as string
+    const tenantId = req.user!.tenantId
+
+    const user = await prisma.user.findFirst({
+      where: { id, tenantId, deletedAt: null },
+      select: { id: true, name: true },
+    })
+    if (!user) {
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Usuário não encontrado' } })
+      return
+    }
+
+    const active = await findActiveMonthlyGoalForUser(tenantId, id)
+    if (!active) {
+      res.json({ success: true, data: { hasActiveGoal: false } })
+      return
+    }
+
+    const { goal, userGoal } = active
+    const currentRevenue = await calculateUserCurrentRevenue(tenantId, id)
+    const revenueGoal = Number(userGoal.revenueGoal)
+    const balance = Math.max(0, revenueGoal - currentRevenue)
+
+    // Conta vendedores ativos (que receberiam o saldo se redistribute=true).
+    // Exclui o próprio (que está sendo inativado) e os rampantes desse goal.
+    const otherActives = await prisma.user.findMany({
+      where: {
+        tenantId,
+        role: { in: ['SELLER', 'TEAM_LEADER'] },
+        isActive: true,
+        deletedAt: null,
+        id: { not: id },
+      },
+      select: { id: true, rampingStartsAt: true },
+    })
+    const otherActiveCount = otherActives.filter(u =>
+      !isUserInRamping(u.rampingStartsAt, 'MONTHLY', goal.periodReference),
+    ).length
+
+    res.json({
+      success: true,
+      data: {
+        hasActiveGoal: true,
+        goalId: goal.id,
+        periodReference: goal.periodReference,
+        revenueGoal,
+        currentRevenue,
+        balance,
+        otherActiveCount,
+      },
+    })
+  } catch (error) {
+    console.error('[Users] getInactivationImpact error:', error)
+    res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Erro interno do servidor' },
+    })
+  }
+}
+
+export async function inactivateUserWithGoal(req: Request, res: Response): Promise<void> {
+  try {
+    const id = req.params.id as string
+    const tenantId = req.user!.tenantId
+    const { redistribute } = req.body as { redistribute?: boolean }
+
+    if (typeof redistribute !== 'boolean') {
+      res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'redistribute (boolean) é obrigatório' },
+      })
+      return
+    }
+
+    const existing = await prisma.user.findFirst({
+      where: { id, tenantId, deletedAt: null },
+    })
+    if (!existing) {
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Usuário não encontrado' } })
+      return
+    }
+
+    const active = await findActiveMonthlyGoalForUser(tenantId, id)
+
+    // Transação garante atomicidade: se algo falhar no recálculo, ninguém
+    // fica meio-inativado.
+    await prisma.$transaction(async (tx) => {
+      // 1. Marca como inativo (mesma lógica do updateUser quando userStatus='INACTIVE')
+      await tx.user.update({
+        where: { id },
+        data: { isActive: false, userStatus: 'INACTIVE' },
+      })
+
+      if (!active) return // sem goal ativa = nada a redistribuir
+
+      const { goal, userGoal } = active
+      const currentRevenue = await calculateUserCurrentRevenue(tenantId, id)
+      const revenueGoal = Number(userGoal.revenueGoal)
+      const balance = Math.max(0, revenueGoal - currentRevenue)
+
+      if (balance <= 0) return // nada pra redistribuir
+
+      if (redistribute) {
+        // Distribui igual entre os demais ativos não-rampantes deste goal.
+        // Aceita só os que JÁ TÊM GoalIndividual neste goal (foram incluídos
+        // na criação) — se vendedor entrou DEPOIS da meta, não recebe agora.
+        const otherIndividualGoals = await tx.goalIndividual.findMany({
+          where: {
+            goalId: goal.id,
+            userId: { not: id },
+            isRamping: false,
+          },
+          include: { goal: false },
+        })
+
+        if (otherIndividualGoals.length === 0) return
+
+        // Filtra ainda pra incluir só users ativos no momento atual
+        const otherUserIds = otherIndividualGoals.map(g => g.userId)
+        const otherUsersActive = await tx.user.findMany({
+          where: { id: { in: otherUserIds }, isActive: true, deletedAt: null },
+          select: { id: true },
+        })
+        const activeIds = new Set(otherUsersActive.map(u => u.id))
+        const eligible = otherIndividualGoals.filter(g => activeIds.has(g.userId))
+
+        if (eligible.length === 0) return
+
+        const sharePerUser = Math.round(balance / eligible.length)
+
+        await Promise.all(eligible.map(g =>
+          tx.goalIndividual.update({
+            where: { id: g.id },
+            data: {
+              revenueGoal: new Prisma.Decimal(Number(g.revenueGoal ?? 0) + sharePerUser),
+            },
+          }),
+        ))
+      } else {
+        // Reduz a meta total da equipe pelo saldo. Realizado do desligado
+        // permanece visível no GoalIndividual dele.
+        const newTotal = Math.max(0, Number(goal.totalRevenueGoal ?? 0) - balance)
+        await tx.goal.update({
+          where: { id: goal.id },
+          data: { totalRevenueGoal: new Prisma.Decimal(newTotal) },
+        })
+      }
+    })
+
+    res.json({ success: true, data: { id, isActive: false, userStatus: 'INACTIVE' } })
+  } catch (error) {
+    console.error('[Users] inactivateUserWithGoal error:', error)
     res.status(500).json({
       success: false,
       error: { code: 'INTERNAL_ERROR', message: 'Erro interno do servidor' },
