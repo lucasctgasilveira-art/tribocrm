@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom'
 import { getUsers, updateUser, createUser, getTeams, resetUserPassword, getUserPipelines, type CreateUserResult } from '../../services/users.service'
 import { getPipelines } from '../../services/pipeline.service'
 import { bulkUpdateLeads } from '../../services/leads.service'
+import { getRampingMonthOptions, isoDateToMonth, ensureCurrentValueInOptions } from '../../utils/rampingMonths'
 
 // ── Types ──
 
@@ -337,6 +338,11 @@ function NewUserModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [planLimitReached, setPlanLimitReached] = useState(false)
+  // Rampagem: regra do dia 1-19 / 20+ aplicada na hora de abrir o modal.
+  // Default = 1ª opção (vendedor novo entra mês atual ou próximo).
+  // Vazio "" = vendedor já participa de tudo (sem rampagem).
+  const rampingOptions = useMemo(() => getRampingMonthOptions(), [])
+  const [rampingStartsAt, setRampingStartsAt] = useState<string>(rampingOptions[0]?.value ?? '')
 
   useEffect(() => {
     getTeams().then((data: Array<{ id: string; name: string }>) => setTeams(data ?? [])).catch(() => setTeams([]))
@@ -365,6 +371,9 @@ function NewUserModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
         role,
         teamId: teamId || undefined,
         pipelineIds: isOwner ? undefined : pipelineIds,
+        // Rampagem só faz sentido pra quem participa de meta de vendas.
+        // OWNER e MANAGER ficam de fora do cálculo (passa undefined).
+        rampingStartsAt: (role === 'SELLER' || role === 'TEAM_LEADER') ? rampingStartsAt || undefined : undefined,
         // password is intentionally omitted — backend generates a temporary one
       })
       onCreated(result)
@@ -414,6 +423,18 @@ function NewUserModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
               {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
           </div>
+          {(role === 'SELLER' || role === 'TEAM_LEADER') && (
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Quando entra na divisão de metas?</label>
+              <select value={rampingStartsAt} onChange={e => setRampingStartsAt(e.target.value)} style={{ ...inputS, appearance: 'none', cursor: 'pointer' }}>
+                <option value="">Já participa (sem rampagem)</option>
+                {rampingOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                Enquanto está em rampagem, o vendedor não conta na divisão da meta da equipe.
+              </div>
+            </div>
+          )}
           {!isOwner && (
             <div style={{ marginBottom: 14 }}>
               <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Pipelines com acesso <span style={{ color: '#f97316' }}>*</span></label>
@@ -476,6 +497,16 @@ function EditUserInlineModal({ user, onClose, onSaved }: { user: User; onClose: 
   const [pipelinesLoaded, setPipelinesLoaded] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  // Rampagem: inicializa com valor atual do usuário (se houver). Quando
+  // o gestor edita, mantemos o valor existente nas opções via
+  // ensureCurrentValueInOptions pra não perder a referência.
+  const userWithExtras = user as User & { phone?: string; cpf?: string; birthday?: string; rampingStartsAt?: string }
+  const initialRamping = isoDateToMonth(userWithExtras.rampingStartsAt) ?? ''
+  const [rampingStartsAt, setRampingStartsAt] = useState<string>(initialRamping)
+  const rampingOptions = useMemo(
+    () => ensureCurrentValueInOptions(getRampingMonthOptions(), initialRamping),
+    [initialRamping],
+  )
 
   const isOwner = role === 'OWNER'
 
@@ -490,10 +521,9 @@ function EditUserInlineModal({ user, onClose, onSaved }: { user: User; onClose: 
       .catch(() => { setPipelineIds([]); setPipelinesLoaded(true) })
     // The user object from the list already has phone, cpf etc if the select includes them
     // They're typed loosely — set from whatever we have
-    const u = user as User & { phone?: string; cpf?: string; birthday?: string }
-    setPhone(u.phone ?? '')
-    setCpf(u.cpf ?? '')
-    setBirthday(u.birthday ? String(u.birthday).slice(0, 10) : '')
+    setPhone(userWithExtras.phone ?? '')
+    setCpf(userWithExtras.cpf ?? '')
+    setBirthday(userWithExtras.birthday ? String(userWithExtras.birthday).slice(0, 10) : '')
   }, [user])
 
   function togglePipeline(id: string) {
@@ -519,6 +549,10 @@ function EditUserInlineModal({ user, onClose, onSaved }: { user: User; onClose: 
         role,
         teamId: teamId || null,
         pipelineIds: isOwner ? undefined : pipelineIds,
+        // Rampagem: vazio = sem rampagem (vendedor entra em tudo).
+        // OWNER/MANAGER ignoram (rampagem só faz sentido pra quem
+        // participa de meta de vendas).
+        rampingStartsAt: (role === 'SELLER' || role === 'TEAM_LEADER') ? rampingStartsAt || null : null,
       } as Record<string, unknown>)
       onSaved()
     } catch (e: any) { setError(e?.response?.data?.error?.message ?? 'Erro ao salvar'); setSaving(false) }
@@ -549,6 +583,18 @@ function EditUserInlineModal({ user, onClose, onSaved }: { user: User; onClose: 
               {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
           </div>
+          {(role === 'SELLER' || role === 'TEAM_LEADER') && (
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Quando entra na divisão de metas?</label>
+              <select value={rampingStartsAt} onChange={e => setRampingStartsAt(e.target.value)} style={{ ...editInputS, appearance: 'none', cursor: 'pointer' }}>
+                <option value="">Já participa (sem rampagem)</option>
+                {rampingOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                Enquanto está em rampagem, não conta na divisão da meta da equipe.
+              </div>
+            </div>
+          )}
           {!isOwner && (
             <div style={{ gridColumn: '1 / -1' }}>
               <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Pipelines com acesso <span style={{ color: '#f97316' }}>*</span></label>

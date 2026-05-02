@@ -16,6 +16,10 @@ export interface CreateUserPayload {
   birthday?: string
   teamId?: string
   pipelineIds?: string[]
+  // Mês a partir do qual o vendedor entra na divisão de metas (rampagem).
+  // Formato "YYYY-MM" — backend converte pra Date no 1º dia do mês.
+  // Vazio/undefined = participa de tudo (sem rampagem).
+  rampingStartsAt?: string
 }
 
 export interface CreateUserResult {

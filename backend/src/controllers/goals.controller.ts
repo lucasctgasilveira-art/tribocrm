@@ -1,6 +1,7 @@
 import { Request, Response } from 'express'
 import { prisma } from '../lib/prisma'
 import { Prisma } from '@prisma/client'
+import { isUserInRamping, type GoalPeriodType } from '../lib/ramping'
 
 export async function getGoals(req: Request, res: Response): Promise<void> {
   try {
@@ -186,33 +187,59 @@ export async function createGoal(req: Request, res: Response): Promise<void> {
       return
     }
 
-    let individualGoalsData: { tenantId: string; userId: string; revenueGoal: Prisma.Decimal | null; dealsGoal: number | null }[] = []
+    let individualGoalsData: { tenantId: string; userId: string; revenueGoal: Prisma.Decimal | null; dealsGoal: number | null; isRamping: boolean }[] = []
 
     if (distributionType === 'INDIVIDUAL' && Array.isArray(userGoals)) {
+      // Distribuição manual: rampagem NÃO se aplica (gestor define valor
+      // por vendedor explicitamente). Doc seção 6.9: rampagem é regra
+      // automática só de distribuição GENERAL.
       individualGoalsData = (userGoals as { userId: string; revenueGoal?: number; dealsGoal?: number }[]).map((ug) => ({
         tenantId,
         userId: ug.userId,
         revenueGoal: ug.revenueGoal ? new Prisma.Decimal(ug.revenueGoal) : null,
         dealsGoal: ug.dealsGoal ?? null,
+        isRamping: false,
       }))
     } else {
-      // GENERAL: distribute equally among active sellers
+      // GENERAL: distribui igualmente entre vendedores ATIVOS, excluindo
+      // os que estão em rampagem para esse período. Rampantes entram com
+      // isRamping=true e sem meta — visualmente aparecem no painel mas
+      // não contam pra divisão (regra do Documento de Requisitos 6.3).
       const users = await prisma.user.findMany({
         where: { tenantId, role: { in: ['SELLER', 'TEAM_LEADER'] }, isActive: true, deletedAt: null },
-        select: { id: true },
+        select: { id: true, rampingStartsAt: true },
       })
 
-      if (users.length > 0) {
-        const revenuePerUser = totalRevenueGoal ? Math.round(Number(totalRevenueGoal) / users.length) : null
-        const dealsPerUser = totalDealsGoal ? Math.round(Number(totalDealsGoal) / users.length) : null
+      const goalPeriodType = periodType as GoalPeriodType
 
-        individualGoalsData = users.map((u) => ({
+      const rampingUsers = users.filter(u => isUserInRamping(u.rampingStartsAt, goalPeriodType, periodReference))
+      const activeUsers = users.filter(u => !isUserInRamping(u.rampingStartsAt, goalPeriodType, periodReference))
+
+      if (activeUsers.length > 0) {
+        const revenuePerUser = totalRevenueGoal ? Math.round(Number(totalRevenueGoal) / activeUsers.length) : null
+        const dealsPerUser = totalDealsGoal ? Math.round(Number(totalDealsGoal) / activeUsers.length) : null
+
+        individualGoalsData = activeUsers.map((u) => ({
           tenantId,
           userId: u.id,
           revenueGoal: revenuePerUser ? new Prisma.Decimal(revenuePerUser) : null,
           dealsGoal: dealsPerUser,
+          isRamping: false,
         }))
       }
+
+      // Rampantes registrados como GoalIndividual.isRamping=true, sem meta.
+      // Permite GoalsPage mostrar badge "Em rampagem — não conta na divisão"
+      // sem precisar de query separada e mantém histórico de quem estava
+      // rampando em cada período.
+      const rampingGoalsData = rampingUsers.map((u) => ({
+        tenantId,
+        userId: u.id,
+        revenueGoal: null,
+        dealsGoal: null,
+        isRamping: true,
+      }))
+      individualGoalsData = [...individualGoalsData, ...rampingGoalsData]
     }
 
     const goal = await prisma.goal.create({

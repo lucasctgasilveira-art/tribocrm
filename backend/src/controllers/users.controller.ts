@@ -11,6 +11,25 @@ function generateTempPassword(): string {
   return pwd
 }
 
+/**
+ * Aceita string "YYYY-MM" (formato do seletor de mês na UI) ou null.
+ * Retorna Date no 1º dia do mês escolhido (UTC) — User.rampingStartsAt
+ * é @db.Date no schema, então o componente de hora é descartado.
+ *
+ * Aceita também null/undefined/string vazia → retorna null (vendedor
+ * participa de todas as metas, sem rampagem).
+ */
+function parseRampingStartsAt(input: unknown): Date | null {
+  if (input === null || input === undefined || input === '') return null
+  if (typeof input !== 'string') return null
+  const match = input.match(/^(\d{4})-(\d{2})$/)
+  if (!match) return null
+  const year = parseInt(match[1]!, 10)
+  const month = parseInt(match[2]!, 10)
+  if (month < 1 || month > 12) return null
+  return new Date(Date.UTC(year, month - 1, 1))
+}
+
 const LOGIN_URL = 'https://tribocrm.vercel.app/login'
 
 // ── Users ──
@@ -50,6 +69,7 @@ export async function getUsers(req: Request, res: Response): Promise<void> {
         avatarUrl: true,
         isActive: true,
         userStatus: true,
+        rampingStartsAt: true,
         lastLoginAt: true,
         createdAt: true,
         teamMemberships: {
@@ -78,7 +98,7 @@ export async function getUsers(req: Request, res: Response): Promise<void> {
 export async function createUser(req: Request, res: Response): Promise<void> {
   try {
     const tenantId = req.user!.tenantId
-    const { name, email, password, role, cpf, birthday, teamId, pipelineIds } = req.body
+    const { name, email, password, role, cpf, birthday, teamId, pipelineIds, rampingStartsAt } = req.body
 
     if (!name || !email || !role) {
       res.status(400).json({
@@ -164,6 +184,10 @@ export async function createUser(req: Request, res: Response): Promise<void> {
         role,
         cpf: cpf || null,
         birthday: birthday ? new Date(birthday) : null,
+        // Mês a partir do qual o vendedor entra na divisão de metas (rampagem).
+        // String "YYYY-MM" → 1º dia do mês como Date. NULL = entra em tudo.
+        // Doc seção 6.3.
+        rampingStartsAt: parseRampingStartsAt(rampingStartsAt),
       },
       select: {
         id: true,
@@ -280,7 +304,7 @@ export async function updateUser(req: Request, res: Response): Promise<void> {
       return
     }
 
-    const { name, email, phone, cpf, birthday, role, isActive, userStatus, teamId, pipelineIds } = req.body
+    const { name, email, phone, cpf, birthday, role, isActive, userStatus, teamId, pipelineIds, rampingStartsAt } = req.body
 
     const data: Prisma.UserUpdateInput = {}
     if (name !== undefined) data.name = name
@@ -290,6 +314,7 @@ export async function updateUser(req: Request, res: Response): Promise<void> {
     if (birthday !== undefined) data.birthday = birthday ? new Date(birthday) : null
     if (role !== undefined) data.role = role
     if (isActive !== undefined) data.isActive = isActive
+    if (rampingStartsAt !== undefined) data.rampingStartsAt = parseRampingStartsAt(rampingStartsAt)
     if (userStatus !== undefined) {
       if (!['ACTIVE', 'VACATION', 'INACTIVE'].includes(userStatus)) {
         res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'userStatus deve ser ACTIVE, VACATION ou INACTIVE' } })
