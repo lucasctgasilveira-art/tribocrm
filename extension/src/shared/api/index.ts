@@ -17,6 +17,7 @@ import { productsService } from './services/products';
 import { tasksService } from './services/tasks';
 import { outcomeService } from './services/outcome';
 import { altPhonesService } from './services/alt-phones';
+import { whatsappTasksService } from './services/whatsapp-tasks.service';
 
 import {
   mockAuthService,
@@ -47,5 +48,7 @@ export const api = {
   products: USE_MOCKS ? mockProductsService : productsService,
   tasks: USE_MOCKS ? mockTasksService : tasksService,
   outcome: USE_MOCKS ? mockOutcomeService : outcomeService,
-  altPhones: USE_MOCKS ? mockAltPhonesService : altPhonesService
+  altPhones: USE_MOCKS ? mockAltPhonesService : altPhonesService,
+  // whatsappTasks não tem mock — fluxo agendado é validado contra backend real.
+  whatsappTasks: whatsappTasksService
 };

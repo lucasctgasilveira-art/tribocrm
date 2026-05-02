@@ -23,15 +23,22 @@
  */
 
 import { handlers } from './handlers';
-import { initScheduler } from './scheduler';
+import {
+  initScheduler,
+  readPrepData,
+  clearPrepData,
+  clearTaskNotifiedFlag,
+  PREP_NOTIFICATION_PREFIX
+} from './scheduler';
 import { api } from '@shared/api';
 import { createResponder } from '@shared/utils/messaging';
 import { createLogger } from '@shared/utils/logger';
-import type { ExtensionMessage } from '@shared/types/messages';
+import type { ExtensionMessage, SendScheduledMessageNotify } from '@shared/types/messages';
 
 const log = createLogger('service-worker');
 
 const TASK_ALARM_PREFIX = 'task:';
+const CONFIRM_NOTIFICATION_PREFIX = 'whatsapp-confirm:';
 
 // ── Instalação / atualização ─────────────────────────────────────
 
@@ -175,6 +182,126 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     log.error('Falha ao processar alarm de tarefa', taskId, err);
   }
 });
+
+// ── Notificações de tarefa WhatsApp (Fase 2 - Opção C) ───────────
+//
+// Fluxo de cliques:
+//   whatsapp-prep:{taskId}
+//     botão 0 (Abrir e preparar) → navega aba WA, manda MESSAGE_SEND_NOW
+//     botão 1 (Adiar 30 min)     → snooze + reset flag de notified
+//
+//   whatsapp-confirm:{taskId}
+//     botão 0 (Enviei)     → POST /tasks/:id/whatsapp-sent
+//     botão 1 (Não enviou) → POST /tasks/:id/whatsapp-failed
+
+chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIndex) => {
+  log.info('Botão de notificação clicado', { notificationId, buttonIndex });
+
+  if (notificationId.startsWith(PREP_NOTIFICATION_PREFIX)) {
+    const taskId = notificationId.slice(PREP_NOTIFICATION_PREFIX.length);
+    chrome.notifications.clear(notificationId);
+
+    if (buttonIndex === 0) {
+      await handlePrepOpen(taskId);
+    } else if (buttonIndex === 1) {
+      await handlePrepSnooze(taskId);
+    }
+    return;
+  }
+
+  if (notificationId.startsWith(CONFIRM_NOTIFICATION_PREFIX)) {
+    const taskId = notificationId.slice(CONFIRM_NOTIFICATION_PREFIX.length);
+    chrome.notifications.clear(notificationId);
+
+    if (buttonIndex === 0) {
+      await handleConfirmSent(taskId);
+    } else if (buttonIndex === 1) {
+      await handleConfirmFailed(taskId);
+    }
+    return;
+  }
+});
+
+async function handlePrepOpen(taskId: string): Promise<void> {
+  const prep = await readPrepData(taskId);
+  if (!prep) {
+    log.warn('Sem prep-data pra essa tarefa — pode ter sido limpa', taskId);
+    return;
+  }
+
+  // Procura aba do WhatsApp Web. Se existir, foca; senão, abre nova.
+  const existingTabs = await chrome.tabs.query({ url: 'https://web.whatsapp.com/*' });
+  let tabId: number | undefined;
+
+  if (existingTabs.length > 0 && existingTabs[0]?.id) {
+    tabId = existingTabs[0].id;
+    await chrome.tabs.update(tabId, { active: true });
+    if (existingTabs[0].windowId) {
+      await chrome.windows.update(existingTabs[0].windowId, { focused: true });
+    }
+  } else {
+    const created = await chrome.tabs.create({ url: 'https://web.whatsapp.com/' });
+    tabId = created.id;
+  }
+
+  if (!tabId) {
+    log.error('Sem tabId pra mandar MESSAGE_SEND_NOW', taskId);
+    return;
+  }
+
+  // Pequena espera pra dar chance do content script estar pronto se a aba
+  // existia. Se acabou de ser criada, o content script vai ler pendingInject
+  // do storage no boot — não depende dessa mensagem.
+  setTimeout(() => {
+    const notify: SendScheduledMessageNotify = {
+      type: 'MESSAGE_SEND_NOW',
+      payload: {
+        messageId: prep.taskId, // compat — campo legacy ainda no tipo
+        taskId: prep.taskId,
+        phone: prep.phone,
+        body: prep.body,
+        leadName: prep.leadName
+      }
+    };
+    chrome.tabs.sendMessage(tabId!, notify).catch((err) => {
+      log.debug('Aba ainda não tem listener — content script vai ler do storage', err);
+    });
+  }, 500);
+}
+
+async function handlePrepSnooze(taskId: string): Promise<void> {
+  try {
+    await api.whatsappTasks.snooze(taskId, 30);
+    await clearTaskNotifiedFlag(taskId);
+    await clearPrepData(taskId);
+    log.info('Tarefa adiada em 30 min', taskId);
+  } catch (err) {
+    log.error('Falha ao adiar tarefa', taskId, err);
+  }
+}
+
+async function handleConfirmSent(taskId: string): Promise<void> {
+  try {
+    await api.whatsappTasks.markSent(taskId);
+    await clearPrepData(taskId);
+    log.info('Tarefa marcada como enviada', taskId);
+  } catch (err) {
+    log.error('Falha ao marcar enviada', taskId, err);
+  }
+}
+
+async function handleConfirmFailed(taskId: string): Promise<void> {
+  try {
+    await api.whatsappTasks.markFailed(taskId, 'Vendedor reportou falha pelo painel');
+    await clearPrepData(taskId);
+    // Badge vermelho pra sinalizar que tem falha — vendedor abre o CRM e vê
+    chrome.action.setBadgeText({ text: '!' });
+    chrome.action.setBadgeBackgroundColor({ color: '#ef4444' });
+    log.info('Tarefa marcada como falhou', taskId);
+  } catch (err) {
+    log.error('Falha ao marcar falhou', taskId, err);
+  }
+}
 
 // ── Inicialização ────────────────────────────────────────────────
 

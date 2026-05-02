@@ -35,9 +35,24 @@ import {
   watchUrlForHint,
   watchStorageForHint
 } from './whatsapp-phone-hint';
+import { injectTextIntoChat } from './whatsapp-input';
 import { createLogger } from '@shared/utils/logger';
+import type { SendScheduledMessageNotify } from '@shared/types/messages';
 
 const log = createLogger('whatsapp');
+
+// Storage key compartilhada com service-worker — content script lê
+// no boot pra retomar injeção após navegar pra /send?phone=X.
+const PENDING_INJECT_KEY = 'tribocrm-pending-inject';
+const PENDING_INJECT_TTL_MS = 5 * 60 * 1000; // 5 min
+
+interface PendingInject {
+  taskId: string;
+  phone: string;
+  body: string;
+  leadName: string;
+  ts: number;
+}
 
 log.info('Content script injetado em', window.location.hostname);
 
@@ -135,6 +150,121 @@ function createToggleButton(): HTMLButtonElement {
   return btn;
 }
 
+// ── Injeção de mensagem agendada (Fase 2 - Opção C) ─────────────────
+//
+// Estratégia: o content script só toca no compositor do WA *depois* de
+// uma ação explícita do vendedor (clique em "Abrir e preparar" na
+// notificação). NUNCA injeta automaticamente sem essa autorização.
+//
+// O fluxo passa por dois caminhos possíveis:
+//   1. Aba do WA já estava no contato certo → MESSAGE_SEND_NOW chega,
+//      injetamos direto, mandamos INJECT_DONE.
+//   2. Aba estava em outro contato (ou em "nenhuma conversa") → salvamos
+//      pendingInject no storage e navegamos. Após o reload, o boot()
+//      lê do storage, espera DOM pronto e injeta.
+
+async function tryInjectAndConfirm(payload: PendingInject | { taskId: string; phone: string; body: string; leadName: string }): Promise<boolean> {
+  const ok = injectTextIntoChat(payload.body);
+  if (!ok) {
+    log.warn('Falha ao injetar texto no compositor');
+    return false;
+  }
+
+  try {
+    await chrome.runtime.sendMessage({
+      type: 'INJECT_DONE',
+      payload: { taskId: payload.taskId, leadName: payload.leadName }
+    });
+  } catch (err) {
+    log.warn('Falha ao notificar SW sobre INJECT_DONE', err);
+  }
+  return true;
+}
+
+function onlyDigits(v: string): string {
+  return v.replace(/\D/g, '');
+}
+
+async function handleSendNowMessage(payload: SendScheduledMessageNotify['payload']): Promise<void> {
+  const taskId = payload.taskId ?? payload.messageId;
+  const leadName = payload.leadName ?? 'Lead';
+  const phone = onlyDigits(payload.phone);
+
+  if (!taskId || !phone || !payload.body) {
+    log.warn('MESSAGE_SEND_NOW com payload incompleto');
+    return;
+  }
+
+  // Está na conversa correta? `state.chatInfo` é mantido pelo callback
+  // de onActiveChatChange. Comparação por número (sufixo) tolera DDIs/zeros.
+  const currentPhone =
+    state.chatInfo.kind === 'detected'
+      ? onlyDigits(state.chatInfo.contact.phone)
+      : null;
+  const samePhone = currentPhone && (currentPhone === phone || currentPhone.endsWith(phone) || phone.endsWith(currentPhone));
+
+  if (samePhone) {
+    log.info('Aba já está na conversa correta — injetando direto');
+    await tryInjectAndConfirm({ taskId, phone, body: payload.body, leadName });
+    return;
+  }
+
+  // Não está na conversa — salva no storage e navega. Após reload do
+  // content script, boot() vai ler isso e completar a injeção.
+  const pending: PendingInject = {
+    taskId,
+    phone,
+    body: payload.body,
+    leadName,
+    ts: Date.now()
+  };
+  await chrome.storage.local.set({ [PENDING_INJECT_KEY]: pending });
+  log.info('Navegando para conversa do lead via /send?phone=', phone);
+  window.location.href = `https://web.whatsapp.com/send?phone=${encodeURIComponent(phone)}`;
+}
+
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.type === 'MESSAGE_SEND_NOW') {
+    handleSendNowMessage(message.payload)
+      .then(() => sendResponse({ ok: true }))
+      .catch((err) => {
+        log.error('Erro em handleSendNowMessage', err);
+        sendResponse({ ok: false, error: String(err) });
+      });
+    return true; // mantém canal aberto para resposta async
+  }
+  return false; // outras mensagens não são deste listener
+});
+
+async function consumePendingInject(): Promise<void> {
+  const result = await chrome.storage.local.get(PENDING_INJECT_KEY);
+  const pending = result[PENDING_INJECT_KEY] as PendingInject | undefined;
+  if (!pending) return;
+
+  const isStale = Date.now() - pending.ts > PENDING_INJECT_TTL_MS;
+  if (isStale) {
+    log.info('pendingInject expirado — limpando sem injetar', pending.taskId);
+    await chrome.storage.local.remove(PENDING_INJECT_KEY);
+    return;
+  }
+
+  log.info('Retomando injeção após navegação', pending.taskId);
+  // Aguarda mais um pouco pro compositor estar realmente disponível.
+  // waitForWhatsAppReady já resolveu antes de chegar aqui, mas o input
+  // pode levar 1-2s extras pra aparecer após o /send?phone=.
+  for (let i = 0; i < 8; i++) {
+    const ok = await tryInjectAndConfirm(pending);
+    if (ok) {
+      await chrome.storage.local.remove(PENDING_INJECT_KEY);
+      return;
+    }
+    await new Promise((r) => setTimeout(r, 500));
+  }
+
+  log.warn('Não conseguiu injetar após retries — limpando', pending.taskId);
+  await chrome.storage.local.remove(PENDING_INJECT_KEY);
+}
+
 async function boot() {
   try {
     log.info('Aguardando WhatsApp Web carregar...');
@@ -189,6 +319,10 @@ async function boot() {
       }
       renderPanel();
     });
+
+    // Após boot completo, verifica se há injeção pendente vinda de um
+    // navigate anterior. Se sim, completa o fluxo agora.
+    void consumePendingInject();
   } catch (err) {
     log.error('Erro no boot:', err);
   }

@@ -129,7 +129,11 @@ export interface ScheduleMessageRequest {
 
 /**
  * Enviada pelo service worker PARA o content script do WhatsApp
- * quando há uma mensagem agendada pronta para envio.
+ * quando o vendedor clicou em "Abrir e preparar" na notificação de
+ * uma tarefa agendada — content script navega/injeta o texto.
+ *
+ * `messageId` é mantido por compat com o caminho legacy (ScheduledMessage);
+ * `taskId` é o id da Tarefa quando o agendamento veio via /tasks/pending-whatsapp.
  */
 export interface SendScheduledMessageNotify {
   type: 'MESSAGE_SEND_NOW';
@@ -137,6 +141,21 @@ export interface SendScheduledMessageNotify {
     messageId: string;
     phone: string;
     body: string;
+    taskId?: string;
+    leadName?: string;
+  };
+}
+
+/**
+ * Enviada pelo content script PARA o service worker logo após injetar
+ * com sucesso o texto no compositor do WhatsApp Web. SW dispara segunda
+ * notificação ("✓ Enviei" / "✗ Não enviou") pra fechar o ciclo.
+ */
+export interface InjectDoneRequest {
+  type: 'INJECT_DONE';
+  payload: {
+    taskId: string;
+    leadName: string;
   };
 }
 
@@ -276,6 +295,7 @@ export type ExtensionMessage =
   | ListTemplatesRequest
   | ScheduleMessageRequest
   | SendScheduledMessageNotify
+  | InjectDoneRequest
   | GetNotesRequest
   | SetNotesRequest
   | ListCatalogRequest
@@ -320,6 +340,7 @@ export interface MessageResponseMap {
   TEMPLATE_LIST: WhatsAppTemplate[];
   MESSAGE_SCHEDULE: ScheduledMessage;
   MESSAGE_SEND_NOW: null;
+  INJECT_DONE: null;
   NOTES_GET: string;
   NOTES_SET: null;
   PRODUCTS_CATALOG: Product[];

@@ -366,5 +366,40 @@ export const handlers: HandlerMap = {
 
   // Esta mensagem VAI do service worker PARA o content script.
   // Não tem handler no SW — o handler está no whatsapp.ts.
-  MESSAGE_SEND_NOW: async () => null
+  MESSAGE_SEND_NOW: async () => null,
+
+  // Content script avisa que injetou texto com sucesso no compositor
+  // do WhatsApp. SW dispara segunda notificação ("Enviei" / "Não enviou")
+  // pra fechar o ciclo. Tarefa fica PENDING até vendedor confirmar.
+  INJECT_DONE: async (payload) => {
+    const { taskId, leadName } = payload;
+    const permission = await new Promise<string>((resolve) =>
+      chrome.notifications.getPermissionLevel((level) => resolve(level))
+    );
+    if (permission !== 'granted') {
+      log.warn('Notificações desativadas — não posso confirmar com o vendedor', taskId);
+      return null;
+    }
+
+    await new Promise<string>((resolve) => {
+      chrome.notifications.create(
+        `whatsapp-confirm:${taskId}`,
+        {
+          type: 'basic',
+          iconUrl: chrome.runtime.getURL('src/assets/icon-128.png'),
+          title: `Texto inserido — ${leadName}`,
+          message: 'Revise e envie. Depois confirme aqui.',
+          contextMessage: 'TriboCRM',
+          priority: 2,
+          requireInteraction: true,
+          buttons: [
+            { title: '✓ Enviei' },
+            { title: '✗ Não enviou' }
+          ]
+        },
+        (notificationId) => resolve(notificationId)
+      );
+    });
+    return null;
+  }
 };
