@@ -135,12 +135,14 @@ export default function UsersPage() {
       return
     }
     // Inativação: se vendedor tem meta mensal ativa com saldo > 0, abre
-    // modal pra gestor decidir se redistribui o saldo. Caso contrário,
-    // segue fluxo direto (mesma lógica de antes).
+    // modal pra gestor decidir o destino do saldo. Modal aparece mesmo
+    // quando não há outros vendedores pra absorver — nesse caso só
+    // mostra a opção "Retirar saldo da meta da equipe", dando visibilidade
+    // ao gestor do impacto antes de confirmar.
     if (newStatus === 'INACTIVE' && (user.role === 'SELLER' || user.role === 'TEAM_LEADER')) {
       try {
         const impact = await getInactivationImpact(user.id)
-        if (impact.hasActiveGoal && (impact.balance ?? 0) > 0 && (impact.otherActiveCount ?? 0) > 0) {
+        if (impact.hasActiveGoal && (impact.balance ?? 0) > 0) {
           setInactivationModal({ user, impact })
           return
         }
@@ -831,12 +833,16 @@ function InactivationModal({
   onClose: () => void
   onDone: (msg: string) => void
 }) {
-  const [redistribute, setRedistribute] = useState(true)
+  // Se não há vendedores ativos não-rampantes pra absorver o saldo,
+  // a opção "redistribuir" não cabe — força a única opção viável:
+  // "retirar saldo da meta da equipe". Gestor ainda vê o impacto.
+  const otherCount = impact.otherActiveCount ?? 0
+  const canRedistribute = otherCount > 0
+  const [redistribute, setRedistribute] = useState(canRedistribute)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
   const balance = impact.balance ?? 0
-  const otherCount = impact.otherActiveCount ?? 0
   const sharePerUser = otherCount > 0 ? Math.round(balance / otherCount) : 0
 
   function fmt(v: number): string {
@@ -885,20 +891,29 @@ function InactivationModal({
             O realizado de {user.name} continua preservado nos relatórios — nunca é redistribuído.
           </div>
 
+          {/* Aviso quando não há vendedores pra absorver o saldo */}
+          {!canRedistribute && (
+            <div style={{ marginBottom: 12, padding: 10, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 8, fontSize: 12, color: 'var(--text-secondary)' }}>
+              Não há outros vendedores ativos disponíveis pra absorver o saldo (todos estão em rampagem ou são de outros cargos). A única opção é retirar o saldo da meta da equipe.
+            </div>
+          )}
+
           {/* Opções */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-            <label onClick={() => setRedistribute(true)} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: 12, cursor: 'pointer', border: `1px solid ${redistribute ? '#f97316' : 'var(--border)'}`, background: redistribute ? 'rgba(249,115,22,0.06)' : 'transparent', borderRadius: 8 }}>
-              <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${redistribute ? '#f97316' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
-                {redistribute && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f97316' }} />}
-              </div>
-              <div>
-                <div style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>Redistribuir o saldo entre os demais</div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-                  {fmt(sharePerUser)} a mais pra cada um dos {otherCount} vendedor(es) ativo(s).
+            {canRedistribute && (
+              <label onClick={() => setRedistribute(true)} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: 12, cursor: 'pointer', border: `1px solid ${redistribute ? '#f97316' : 'var(--border)'}`, background: redistribute ? 'rgba(249,115,22,0.06)' : 'transparent', borderRadius: 8 }}>
+                <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${redistribute ? '#f97316' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
+                  {redistribute && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f97316' }} />}
                 </div>
-              </div>
-            </label>
-            <label onClick={() => setRedistribute(false)} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: 12, cursor: 'pointer', border: `1px solid ${!redistribute ? '#f97316' : 'var(--border)'}`, background: !redistribute ? 'rgba(249,115,22,0.06)' : 'transparent', borderRadius: 8 }}>
+                <div>
+                  <div style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>Redistribuir o saldo entre os demais</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                    {fmt(sharePerUser)} a mais pra cada um dos {otherCount} vendedor(es) ativo(s).
+                  </div>
+                </div>
+              </label>
+            )}
+            <label onClick={() => setRedistribute(false)} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: 12, cursor: canRedistribute ? 'pointer' : 'default', border: `1px solid ${!redistribute ? '#f97316' : 'var(--border)'}`, background: !redistribute ? 'rgba(249,115,22,0.06)' : 'transparent', borderRadius: 8 }}>
               <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${!redistribute ? '#f97316' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
                 {!redistribute && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f97316' }} />}
               </div>
