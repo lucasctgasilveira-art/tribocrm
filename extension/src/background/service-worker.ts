@@ -33,7 +33,7 @@ import {
 import { api } from '@shared/api';
 import { createResponder } from '@shared/utils/messaging';
 import { createLogger } from '@shared/utils/logger';
-import type { ExtensionMessage, SendScheduledMessageNotify } from '@shared/types/messages';
+import type { ExtensionMessage } from '@shared/types/messages';
 
 const log = createLogger('service-worker');
 
@@ -222,6 +222,10 @@ chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIn
   }
 });
 
+// Mesma chave usada pelo content script pra ler injeção pendente no boot.
+// Mantida em sync manual com whatsapp.ts (PENDING_INJECT_KEY).
+const PENDING_INJECT_STORAGE_KEY = 'tribocrm-pending-inject';
+
 async function handlePrepOpen(taskId: string): Promise<void> {
   const prep = await readPrepData(taskId);
   if (!prep) {
@@ -229,44 +233,37 @@ async function handlePrepOpen(taskId: string): Promise<void> {
     return;
   }
 
-  // Procura aba do WhatsApp Web. Se existir, foca; senão, abre nova.
+  // Salva pendingInject ANTES de qualquer navegação. Quando o content
+  // script bootar (ou re-bootar após URL change), consumePendingInject
+  // vai ler isso e injetar o texto. Independe de mensagem em runtime —
+  // sem race conditions de aba nova vs listener pronto.
+  await chrome.storage.local.set({
+    [PENDING_INJECT_STORAGE_KEY]: {
+      taskId: prep.taskId,
+      phone: prep.phone,
+      body: prep.body,
+      leadName: prep.leadName,
+      ts: Date.now()
+    }
+  });
+
+  // Navega direto pra /send?phone=X. Aba existente: troca URL (recarrega).
+  // Aba nova: abre já na conversa correta. Em ambos os casos o content
+  // script boota nessa URL → conversa abre → injeção dispara automaticamente.
+  const sendUrl = `https://web.whatsapp.com/send?phone=${encodeURIComponent(prep.phone)}`;
   const existingTabs = await chrome.tabs.query({ url: 'https://web.whatsapp.com/*' });
-  let tabId: number | undefined;
 
   if (existingTabs.length > 0 && existingTabs[0]?.id) {
-    tabId = existingTabs[0].id;
-    await chrome.tabs.update(tabId, { active: true });
-    if (existingTabs[0].windowId) {
-      await chrome.windows.update(existingTabs[0].windowId, { focused: true });
+    const tab = existingTabs[0];
+    await chrome.tabs.update(tab.id!, { active: true, url: sendUrl });
+    if (tab.windowId) {
+      await chrome.windows.update(tab.windowId, { focused: true });
     }
+    log.info('Aba do WhatsApp Web atualizada pra /send?phone', { taskId, phone: prep.phone });
   } else {
-    const created = await chrome.tabs.create({ url: 'https://web.whatsapp.com/' });
-    tabId = created.id;
+    await chrome.tabs.create({ url: sendUrl });
+    log.info('Aba do WhatsApp Web criada em /send?phone', { taskId, phone: prep.phone });
   }
-
-  if (!tabId) {
-    log.error('Sem tabId pra mandar MESSAGE_SEND_NOW', taskId);
-    return;
-  }
-
-  // Pequena espera pra dar chance do content script estar pronto se a aba
-  // existia. Se acabou de ser criada, o content script vai ler pendingInject
-  // do storage no boot — não depende dessa mensagem.
-  setTimeout(() => {
-    const notify: SendScheduledMessageNotify = {
-      type: 'MESSAGE_SEND_NOW',
-      payload: {
-        messageId: prep.taskId, // compat — campo legacy ainda no tipo
-        taskId: prep.taskId,
-        phone: prep.phone,
-        body: prep.body,
-        leadName: prep.leadName
-      }
-    };
-    chrome.tabs.sendMessage(tabId!, notify).catch((err) => {
-      log.debug('Aba ainda não tem listener — content script vai ler do storage', err);
-    });
-  }, 500);
 }
 
 async function handlePrepSnooze(taskId: string): Promise<void> {
