@@ -26,6 +26,7 @@ import paymentsRoutes from './routes/payments.routes'
 import webhooksRoutes from './routes/webhooks.routes'
 import emailRoutes from './routes/email.routes'
 import tenantsRoutes from './routes/tenants.routes'
+import pushRoutes from './routes/push.routes'
 
 const app = express()
 
@@ -122,6 +123,7 @@ app.use('/forms', formsRoutes)
 app.use('/automations', automationsRoutes)
 app.use('/admin', adminRoutes)
 app.use('/payments', paymentsRoutes)
+app.use('/push', pushRoutes)
 
 // Sentry error handler — DEVE vir após todas as routes
 // mas ANTES de qualquer outro error handler customizado

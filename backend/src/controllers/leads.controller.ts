@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma'
 import { Prisma } from '@prisma/client'
 import { resolveTenantId } from '../lib/platformTenant'
 import { userHasPipelineAccess } from './pipeline.controller'
+import { sendPushToUser } from '../services/push-notification.service'
 
 // ── Helpers for import ──
 
@@ -528,6 +529,17 @@ export async function createLead(req: Request, res: Response): Promise<void> {
     prisma.automationEvent.create({
       data: { tenantId, triggerType: 'LEAD_CREATED', leadId: result.id, payload: {} },
     }).catch(e => console.error('[Leads] automation event error:', e?.message))
+
+    // Push pro vendedor responsável (se tiver e for diferente do criador
+    // — quem criou o lead obviamente já sabe)
+    if (result.responsibleId && result.responsibleId !== userId) {
+      sendPushToUser(result.responsibleId, {
+        title: '🎯 Novo lead atribuído',
+        body: `${result.name}${result.company ? ` (${result.company})` : ''} — atendê-lo logo aumenta a chance de fechar.`,
+        url: `/vendas/leads/${result.id}`,
+        tag: `lead-${result.id}`,
+      }).catch(() => {}) // best-effort, já é fire-and-forget no service
+    }
   } catch (error: any) {
     if (error?.message === 'PIPELINE_NOT_FOUND') {
       res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Pipeline não encontrado' } })
@@ -710,6 +722,17 @@ export async function updateLead(req: Request, res: Response): Promise<void> {
       }
     } catch (histErr) {
       console.error('[Leads] history hook failed (non-blocking):', histErr)
+    }
+
+    // Push pro novo responsável quando vendedor é REATRIBUÍDO. Só envia
+    // se o novo responsável é diferente de quem fez a alteração.
+    if (responsibleId !== undefined && responsibleId !== existing.responsibleId && responsibleId !== userId) {
+      sendPushToUser(responsibleId, {
+        title: '🎯 Lead atribuído a você',
+        body: `${lead.name}${lead.company ? ` (${lead.company})` : ''} foi transferido pra você.`,
+        url: `/vendas/leads/${id}`,
+        tag: `lead-${id}`,
+      }).catch(() => {})
     }
 
     // Fire STAGE_CHANGED automation event (non-blocking)

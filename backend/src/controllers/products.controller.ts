@@ -1,6 +1,7 @@
 import { Request, Response } from 'express'
 import { prisma } from '../lib/prisma'
 import { Prisma } from '@prisma/client'
+import { sendPushToUsers } from '../services/push-notification.service'
 
 // ── Products ──
 
@@ -266,6 +267,14 @@ export async function createDiscountRequest(req: Request, res: Response): Promis
             link: `/gestao/leads/${leadId}`,
           })),
         })
+
+        // Push pros gestores (best-effort, fire-and-forget)
+        sendPushToUsers(managers.map(m => m.id), {
+          title: '✅ Desconto aguardando aprovação',
+          body,
+          url: `/gestao/leads/${leadId}`,
+          tag: `discount-${request.id}`,
+        }).catch(() => {})
       } catch (notifErr) {
         console.error('[Products] discount notification failed:', notifErr)
       }

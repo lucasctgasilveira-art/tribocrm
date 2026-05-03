@@ -8,6 +8,7 @@ import OnboardingWizard from '../OnboardingWizard/OnboardingWizard'
 import TenantStatusGate from '../../billing/TenantStatusGate'
 import BillingBanner from '../../billing/BillingBanner'
 import BillingOverduePopup from '../../billing/BillingOverduePopup'
+import PushPermissionPrompt from '../PushPermissionPrompt/PushPermissionPrompt'
 
 interface AppLayoutProps {
   menuItems: SidebarEntry[]
@@ -120,6 +121,11 @@ export default function AppLayout({ menuItems, children }: AppLayoutProps) {
             and tenant.onboardingCompleted === false — renders null for
             everyone else, so mounting it unconditionally here is safe. */}
         <OnboardingWizard />
+        {/* Pre-prompt de Web Push. Self-gates: só aparece se navegador
+            suporta + permissão 'default' + nunca perguntou ou já se
+            passaram 7 dias. Não mostra pra Super Admin (não recebe
+            os 3 eventos: lead atribuído, tarefa vencendo, desconto). */}
+        {!isSuperAdmin && <PushPermissionPrompt />}
       </div>
     </TenantStatusGate>
   )

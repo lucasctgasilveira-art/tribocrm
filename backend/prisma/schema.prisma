@@ -496,8 +496,35 @@ model User {
   managerialTasksCreated ManagerialTask[] @relation("ManagerialTaskCreatedBy")
   notifications   Notification[]
   pipelineAccesses UserPipelineAccess[]
+  pushSubscriptions PushSubscription[]
   @@unique([tenantId, email])
   @@map("users")
+}
+
+// Web Push subscriptions (Push API + Service Worker). Cada device do
+// vendedor que aceitou notificações tem 1 linha aqui. O endpoint é
+// gerado pelo navegador (único por device/origem). Em caso de 410 Gone
+// no envio (subscription expirada), removemos a linha automaticamente.
+//
+// Eventos que disparam push (escolhidos com Lucas em 2026-05-03):
+//   1. Lead atribuído ao vendedor responsável
+//   2. Tarefa vencendo (cron checa a cada 5 min)
+//   3. Desconto aguardando aprovação (notifica OWNER/MANAGER)
+//
+// Pra criar VAPID keys: npx web-push generate-vapid-keys (vai pra .env
+// como VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY/VAPID_SUBJECT). Public key
+// também precisa estar exposta como VITE_VAPID_PUBLIC_KEY no frontend.
+model PushSubscription {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  endpoint  String   @db.Text
+  p256dh    String   @db.Text
+  auth      String   @db.Text
+  userAgent String?  @map("user_agent") @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([userId, endpoint])
+  @@map("push_subscriptions")
 }
 
 // Acesso de usuario a pipelines do tenant. Many-to-many entre User e
