@@ -446,9 +446,15 @@ function NewGoalModal({ pipelines, users, teams, onClose, onSave }: {
   const today = useMemo(() => new Date(), [])
   const [year, setYear] = useState<number>(today.getFullYear())
   const [month, setMonth] = useState<number>(today.getMonth() + 1) // 1-12
+  // Range de ano atual até 2040 (decisão de produto: planejamento de
+  // longo prazo. Em 2041+ cai no fallback do ano corrente sozinho).
   const yearOptions = useMemo(() => {
     const y = today.getFullYear()
-    return [y - 2, y - 1, y, y + 1, y + 2]
+    const last = 2040
+    if (y > last) return [y]
+    const arr: number[] = []
+    for (let yr = y; yr <= last; yr++) arr.push(yr)
+    return arr
   }, [today])
   const monthLabels = useMemo(() => [
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
