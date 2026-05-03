@@ -16,6 +16,7 @@ import PrivateRoute from './components/shared/PrivateRoute'
 // Admin
 import AdminDashboardPage from './pages/admin/DashboardPage'
 import TenantsPage from './pages/admin/TenantsPage'
+import LeadsOverviewPage from './pages/admin/LeadsOverviewPage'
 import FinancialPage from './pages/admin/FinancialPage'
 import InternalTeamPage from './pages/admin/InternalTeamPage'
 import PopupsPage from './pages/admin/PopupsPage'
@@ -104,6 +105,7 @@ export default function App() {
       <Route path="/admin/dashboard" element={<PrivateRoute allowed={['admin']}><AdminDashboardPage /></PrivateRoute>} />
       <Route path="/admin/clientes" element={<PrivateRoute allowed={['admin']}><TenantsPage /></PrivateRoute>} />
       <Route path="/admin/clientes/:id" element={<PrivateRoute allowed={['admin']}><TenantDetailPage /></PrivateRoute>} />
+      <Route path="/admin/leads" element={<PrivateRoute allowed={['admin']}><LeadsOverviewPage /></PrivateRoute>} />
       <Route path="/admin/financeiro" element={<PrivateRoute allowed={['admin']}><FinancialPage /></PrivateRoute>} />
       <Route path="/admin/tarefas" element={<PrivateRoute allowed={['admin']}><AdminTasksPage /></PrivateRoute>} />
       <Route path="/admin/popups" element={<PrivateRoute allowed={['admin']}><PopupsPage /></PrivateRoute>} />

@@ -7,6 +7,9 @@ import { prisma } from '../lib/prisma'
 import {
   getAdminDashboard, getTenants, getTenant, updateTenant, getFinancial,
 } from '../controllers/admin.controller'
+import {
+  getLeadsOverview, exportLeads, getTenantsForFilter,
+} from '../controllers/leads-overview.controller'
 import { registerPixWebhook, createPixCharge, createBoletoCharge } from '../services/efi.service'
 import { sendMail } from '../services/mailer.service'
 import { runBillingStateMachineJob } from '../jobs/billing-state-machine.job'
@@ -32,6 +35,11 @@ router.get('/dashboard', getAdminDashboard)
 router.get('/tenants', getTenants)
 router.get('/tenants/:id', getTenant)
 router.patch('/tenants/:id', updateTenant)
+
+// Dashboard consolidado de leads (Super Admin) — KPIs + filtros + export CSV
+router.get('/leads-overview', getLeadsOverview)
+router.get('/leads-export', exportLeads)
+router.get('/tenants-for-filter', getTenantsForFilter)
 
 router.post('/tenants', async (req: Request, res: Response) => {
   try {
