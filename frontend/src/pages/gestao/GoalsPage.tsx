@@ -137,14 +137,12 @@ export default function GoalsPage() {
   }
 
   async function handleCreateGoal(payload: { periodType: string; periodReference: string; goalType: string; totalRevenueGoal: number; distributionType: string; pipelineId: string }) {
-    try {
-      // Bug 5 — Alternativa A: cadastro sempre mensal, com mês escolhido
-      // pelo gestor (vem em payload.periodReference). periodType fixo
-      // em 'MONTHLY' enviado pelo modal.
-      await createGoal(payload)
-      setModalOpen(false)
-      loadData()
-    } catch { /* ignore */ }
+    // Bug 5 — Alternativa A: cadastro sempre mensal. Erro propaga pro
+    // NewGoalModal (que mostra mensagem + reseta saving). Antes era
+    // catch silencioso e o modal travava em "Criando..." sem feedback.
+    await createGoal(payload)
+    setModalOpen(false)
+    loadData()
   }
 
   if (loading) {
@@ -437,7 +435,7 @@ function NewGoalModal({ pipelines, users, teams, onClose, onSave }: {
   users: UserOption[]
   teams: { id: string; name: string }[]
   onClose: () => void
-  onSave: (p: { periodType: string; periodReference: string; goalType: string; totalRevenueGoal: number; distributionType: string; pipelineId: string }) => void
+  onSave: (p: { periodType: string; periodReference: string; goalType: string; totalRevenueGoal: number; distributionType: string; pipelineId: string }) => Promise<void>
 }) {
   const [goalType, setGoalType] = useState('REVENUE')
   // Bug 5 (Alternativa A): cadastro sempre mensal. periodType fixo
@@ -465,6 +463,7 @@ function NewGoalModal({ pipelines, users, teams, onClose, onSave }: {
   const [distributionType, setDistributionType] = useState('GENERAL')
   const [pipelineId, setPipelineId] = useState(pipelines[0]?.id ?? '')
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
   const [userGoalValues, setUserGoalValues] = useState<Record<string, string>>({})
   const [teamMode, setTeamMode] = useState<'all' | 'per_team'>('all')
   const [_selectedTeamId] = useState(teams[0]?.id ?? '') // reserved for future team selection
@@ -477,17 +476,30 @@ function NewGoalModal({ pipelines, users, teams, onClose, onSave }: {
   const effectiveTotal = distributionType === 'INDIVIDUAL' ? individualTotal : parseFloat(totalRevenueGoal) || 0
   const canSave = effectiveTotal > 0 && pipelineId
 
-  function handleSave() {
+  async function handleSave() {
     if (!canSave) return
     setSaving(true)
-    onSave({
-      periodType: 'MONTHLY',
-      periodReference,
-      goalType,
-      totalRevenueGoal: effectiveTotal,
-      distributionType,
-      pipelineId,
-    })
+    setError('')
+    try {
+      await onSave({
+        periodType: 'MONTHLY',
+        periodReference,
+        goalType,
+        totalRevenueGoal: effectiveTotal,
+        distributionType,
+        pipelineId,
+      })
+      // Sucesso: parent fecha o modal via setModalOpen(false) → componente desmonta
+    } catch (e: any) {
+      const code = e?.response?.data?.error?.code
+      const msg = e?.response?.data?.error?.message
+      if (code === 'DUPLICATE') {
+        setError(`Já existe uma meta para ${periodReference} neste pipeline. Edite a meta existente em vez de criar outra.`)
+      } else {
+        setError(msg ?? 'Erro ao salvar a meta. Tente novamente.')
+      }
+      setSaving(false)
+    }
   }
 
   function setUserGoal(userId: string, value: string) {
@@ -623,9 +635,14 @@ function NewGoalModal({ pipelines, users, teams, onClose, onSave }: {
               </div>
             </div>
           )}
+          {error && (
+            <div style={{ marginTop: 16, padding: '10px 12px', background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.30)', borderRadius: 8, fontSize: 12, color: '#ef4444', lineHeight: 1.5 }}>
+              {error}
+            </div>
+          )}
         </div>
         <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
-          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
+          <button onClick={onClose} disabled={saving} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}>Cancelar</button>
           <button onClick={handleSave} disabled={!canSave || saving} style={{
             background: canSave ? 'var(--accent)' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600,
             color: canSave ? '#fff' : 'var(--text-muted)', cursor: canSave ? 'pointer' : 'not-allowed',
