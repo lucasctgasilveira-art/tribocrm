@@ -636,6 +636,82 @@ export async function updateLead(req: Request, res: Response): Promise<void> {
       },
     })
 
+    // ── Histórico de alterações (Interaction SYSTEM, isAuto=true) ──
+    // Cria entradas no histórico do lead pros campos importantes que
+    // mudaram. Aparece automaticamente na aba "Histórico" da drawer
+    // (que já renderiza interactions). Falha aqui não rola back na
+    // mudança principal — best-effort.
+    try {
+      const changes: { content: string }[] = []
+      const fmtBRL = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })
+
+      // Mudança de etapa
+      if (stageId !== undefined && stageId !== existing.stageId) {
+        const [oldStage, newStage] = await Promise.all([
+          prisma.pipelineStage.findUnique({ where: { id: existing.stageId }, select: { name: true } }),
+          prisma.pipelineStage.findUnique({ where: { id: stageId }, select: { name: true } }),
+        ])
+        changes.push({ content: `Movido de "${oldStage?.name ?? '?'}" para "${newStage?.name ?? '?'}"` })
+      }
+
+      // Mudança de responsável
+      if (responsibleId !== undefined && responsibleId !== existing.responsibleId) {
+        const [oldUser, newUser] = await Promise.all([
+          prisma.user.findUnique({ where: { id: existing.responsibleId }, select: { name: true } }),
+          prisma.user.findUnique({ where: { id: responsibleId }, select: { name: true } }),
+        ])
+        changes.push({ content: `Responsável alterado de ${oldUser?.name ?? '?'} para ${newUser?.name ?? '?'}` })
+      }
+
+      // Mudança de valor esperado
+      if (expectedValue !== undefined) {
+        const oldVal = existing.expectedValue ? Number(existing.expectedValue) : 0
+        const newVal = expectedValue ? Number(expectedValue) : 0
+        if (oldVal !== newVal) {
+          changes.push({ content: `Valor esperado alterado de ${fmtBRL(oldVal)} para ${fmtBRL(newVal)}` })
+        }
+      }
+
+      // Status virou WON (registro adicional ao stage change — explícito sobre venda)
+      if (status === 'WON' && existing.status !== 'WON') {
+        const cv = closedValue ? Number(closedValue) : (existing.closedValue ? Number(existing.closedValue) : 0)
+        changes.push({ content: `Venda registrada — valor ${fmtBRL(cv)}` })
+      }
+
+      // Status virou LOST com motivo
+      if (status === 'LOST' && existing.status !== 'LOST') {
+        let reasonSuffix = ''
+        if (lossReasonId) {
+          const lr = await prisma.lossReason.findUnique({ where: { id: lossReasonId }, select: { name: true } })
+          reasonSuffix = lr ? ` — motivo: ${lr.name}` : ''
+        }
+        changes.push({ content: `Lead marcado como perdido${reasonSuffix}` })
+      }
+
+      // Mudança de temperatura
+      if (temperature !== undefined && temperature !== existing.temperature) {
+        const tempLabels: Record<string, string> = { HOT: 'Quente', WARM: 'Morno', COLD: 'Frio' }
+        changes.push({
+          content: `Temperatura alterada de ${tempLabels[existing.temperature] ?? existing.temperature} para ${tempLabels[temperature] ?? temperature}`,
+        })
+      }
+
+      if (changes.length > 0) {
+        await prisma.interaction.createMany({
+          data: changes.map(c => ({
+            tenantId,
+            leadId: id,
+            userId, // quem fez a alteração (req.user.userId)
+            type: 'SYSTEM' as const,
+            content: c.content,
+            isAuto: true,
+          })),
+        })
+      }
+    } catch (histErr) {
+      console.error('[Leads] history hook failed (non-blocking):', histErr)
+    }
+
     // Fire STAGE_CHANGED automation event (non-blocking)
     if (stageId !== undefined && stageId !== existing.stageId) {
       prisma.automationEvent.create({
