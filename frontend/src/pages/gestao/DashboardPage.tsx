@@ -4,7 +4,9 @@ import { Kanban } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
 import { getDashboard, exportGestaoReport } from '../../services/reports.service'
+import { getAggregatedGoals, type AggregatedGoals } from '../../services/goals.service'
 import PeriodPicker, { type PeriodValue } from '../../components/shared/PeriodPicker/PeriodPicker'
+import { getPeriodOptions, currentPeriodValue, currentMonthValue, type AggregationPeriod } from '../../utils/goalMonths'
 
 // ── Types ──
 
@@ -109,6 +111,12 @@ export default function GestaoDashboardPage() {
   const [periodValue, setPeriodValue] = useState<PeriodValue>({ period: 'month' })
   const [exporting, setExporting] = useState(false)
 
+  // Bug 5 Fase A4: filtros de período no card de Meta. Independentes
+  // dos filtros de KPIs/relatórios — meta tem ciclo próprio (mensal).
+  const [goalAggType, setGoalAggType] = useState<AggregationPeriod>('MONTHLY')
+  const [goalAggRef, setGoalAggRef] = useState<string>(currentMonthValue())
+  const [aggGoal, setAggGoal] = useState<AggregatedGoals | null>(null)
+
   useEffect(() => {
     async function load() {
       try {
@@ -124,6 +132,22 @@ export default function GestaoDashboardPage() {
     }
     load()
   }, [periodValue])
+
+  // Carrega meta agregada quando filtro muda (efeito separado pra não
+  // recarregar KPIs/equipe/aprovações quando o gestor só troca o filtro
+  // de meta).
+  useEffect(() => {
+    let cancelled = false
+    getAggregatedGoals({ periodType: goalAggType, periodReference: goalAggRef })
+      .then(r => { if (!cancelled) setAggGoal(r) })
+      .catch(() => { if (!cancelled) setAggGoal(null) })
+    return () => { cancelled = true }
+  }, [goalAggType, goalAggRef])
+
+  function handleGoalAggTypeChange(newType: AggregationPeriod) {
+    setGoalAggType(newType)
+    setGoalAggRef(currentPeriodValue(newType))
+  }
 
   async function handleExport() {
     setExporting(true)
@@ -160,7 +184,9 @@ export default function GestaoDashboardPage() {
     )
   }
 
-  const { kpis, goal, teamPerformance, pendingApprovals, inactiveLeads } = data
+  // `goal` removido do destructure — Bug 5 Fase A4 substituiu pelo
+  // card próprio que consome /goals/aggregated com filtros (aggGoal).
+  const { kpis, teamPerformance, pendingApprovals, inactiveLeads } = data
 
   const kpiCards = [
     { label: 'Receita no Mês', value: fmt(kpis.revenueThisMonth), icon: TrendingUp, iconColor: '#f97316' },
@@ -206,28 +232,56 @@ export default function GestaoDashboardPage() {
         })}
       </div>
 
-      {/* Goal Progress */}
+      {/* Goal Progress (Bug 5 Fase A4: filtros agregados Mês/Tri/Sem/Ano) */}
       <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginTop: 20 }}>
-        {goal ? (
-          <>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Meta de {new Date().toLocaleString('pt-BR', { month: 'long' }).replace(/^\w/, c => c.toUpperCase())} — Receita</span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: metaColor(goal.percentage) }}>{goal.percentage}% concluído</span>
-            </div>
-            <div style={{ background: 'var(--border)', borderRadius: 999, height: 8, margin: '12px 0' }}>
-              <div style={{ width: `${Math.min(goal.percentage, 100)}%`, height: '100%', background: 'linear-gradient(to right, #f97316, #fb923c)', borderRadius: 999 }} />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-              <span style={{ color: 'var(--text-primary)' }}>{fmt(goal.current)} realizados</span>
-              <span style={{ color: 'var(--text-muted)' }}>Meta: {fmt(goal.target)}</span>
-              <span style={{ color: '#f59e0b' }}>Faltam {fmt(Math.max(0, goal.target - goal.current))}</span>
-            </div>
-          </>
-        ) : (
-          <div style={{ textAlign: 'center', padding: 12, color: 'var(--text-muted)', fontSize: 13 }}>
-            Nenhuma meta cadastrada para este mês.
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Meta da Equipe — Receita</span>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <select value={goalAggType} onChange={e => handleGoalAggTypeChange(e.target.value as AggregationPeriod)}
+              style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 26px 6px 10px', fontSize: 12, color: 'var(--text-primary)', cursor: 'pointer', appearance: 'none' as const }}>
+              <option value="MONTHLY">Mensal</option>
+              <option value="QUARTERLY">Trimestral</option>
+              <option value="SEMESTRAL">Semestral</option>
+              <option value="YEARLY">Anual</option>
+            </select>
+            <select value={goalAggRef} onChange={e => setGoalAggRef(e.target.value)}
+              style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 26px 6px 10px', fontSize: 12, color: 'var(--text-primary)', cursor: 'pointer', appearance: 'none' as const, minWidth: 160 }}>
+              {getPeriodOptions(goalAggType).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
           </div>
-        )}
+        </div>
+        {(() => {
+          const target = aggGoal?.totalRevenueGoal ?? 0
+          const current = aggGoal?.totalRevenueCurrent ?? 0
+          const percentage = target > 0 ? Math.round((current / target) * 1000) / 10 : 0
+          if (target === 0) {
+            return (
+              <div style={{ textAlign: 'center', padding: 12, color: 'var(--text-muted)', fontSize: 13 }}>
+                Nenhuma meta cadastrada para este período.
+              </div>
+            )
+          }
+          return (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: metaColor(percentage) }}>{percentage}% concluído</span>
+              </div>
+              <div style={{ background: 'var(--border)', borderRadius: 999, height: 8, margin: '8px 0' }}>
+                <div style={{ width: `${Math.min(percentage, 100)}%`, height: '100%', background: 'linear-gradient(to right, #f97316, #fb923c)', borderRadius: 999 }} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                <span style={{ color: 'var(--text-primary)' }}>{fmt(current)} realizados</span>
+                <span style={{ color: 'var(--text-muted)' }}>Meta: {fmt(target)}</span>
+                <span style={{ color: '#f59e0b' }}>Faltam {fmt(Math.max(0, target - current))}</span>
+              </div>
+              {aggGoal && aggGoal.months.length > 1 && (
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
+                  Soma de {aggGoal.months.length} meses ({aggGoal.months[0]} a {aggGoal.months[aggGoal.months.length - 1]})
+                </div>
+              )}
+            </>
+          )
+        })()}
       </div>
 
       {/* Team Performance Table */}
