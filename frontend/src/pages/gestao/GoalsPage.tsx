@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Plus, Loader2, X, Info } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
@@ -6,6 +6,7 @@ import { getGoalDashboard, getGoals, createGoal, updateGoal } from '../../servic
 import { getPipelines } from '../../services/pipeline.service'
 import { getUsers, getTeams } from '../../services/users.service'
 import InfoTooltip from '../../components/shared/InfoTooltip/InfoTooltip'
+import { getGoalMonthOptions, currentMonthValue } from '../../utils/goalMonths'
 
 // ── Types ──
 
@@ -74,17 +75,9 @@ function currentMonthLabel(): string {
   return now.toLocaleString('pt-BR', { month: 'long', year: 'numeric' }).replace(/^\w/, c => c.toUpperCase())
 }
 
-function getPeriodReference(periodType: string): string {
-  const now = new Date()
-  const y = now.getFullYear()
-  const m = String(now.getMonth() + 1).padStart(2, '0')
-  if (periodType === 'QUARTERLY') {
-    const q = Math.floor(now.getMonth() / 3) + 1
-    return `${y}-Q${q}`
-  }
-  if (periodType === 'YEARLY') return `${y}`
-  return `${y}-${m}`
-}
+// getPeriodReference removido na Fase A2 do Bug 5 — agora o gestor
+// escolhe explicitamente o mês no formulário de Nova Meta. Backend
+// recebe periodReference="YYYY-MM" diretamente do payload.
 
 const thS: React.CSSProperties = { padding: '12px 20px', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, textAlign: 'left' }
 const tdS: React.CSSProperties = { padding: '14px 20px', fontSize: 13, color: 'var(--text-primary)', borderBottom: '1px solid var(--border)' }
@@ -137,12 +130,12 @@ export default function GoalsPage() {
     } catch { /* ignore */ }
   }
 
-  async function handleCreateGoal(payload: { periodType: string; goalType: string; totalRevenueGoal: number; distributionType: string; pipelineId: string }) {
+  async function handleCreateGoal(payload: { periodType: string; periodReference: string; goalType: string; totalRevenueGoal: number; distributionType: string; pipelineId: string }) {
     try {
-      await createGoal({
-        ...payload,
-        periodReference: getPeriodReference(payload.periodType),
-      })
+      // Bug 5 — Alternativa A: cadastro sempre mensal, com mês escolhido
+      // pelo gestor (vem em payload.periodReference). periodType fixo
+      // em 'MONTHLY' enviado pelo modal.
+      await createGoal(payload)
       setModalOpen(false)
       loadData()
     } catch { /* ignore */ }
@@ -360,10 +353,13 @@ function NewGoalModal({ pipelines, users, teams, onClose, onSave }: {
   users: UserOption[]
   teams: { id: string; name: string }[]
   onClose: () => void
-  onSave: (p: { periodType: string; goalType: string; totalRevenueGoal: number; distributionType: string; pipelineId: string }) => void
+  onSave: (p: { periodType: string; periodReference: string; goalType: string; totalRevenueGoal: number; distributionType: string; pipelineId: string }) => void
 }) {
   const [goalType, setGoalType] = useState('REVENUE')
-  const [periodType, setPeriodType] = useState('MONTHLY')
+  // Bug 5 (Alternativa A): cadastro sempre mensal. periodType fixo
+  // em 'MONTHLY'; trimestre/semestre/ano são visualizações agregadas.
+  const monthOptions = useMemo(() => getGoalMonthOptions(), [])
+  const [periodReference, setPeriodReference] = useState<string>(currentMonthValue())
   const [totalRevenueGoal, setTotalRevenueGoal] = useState('')
   const [distributionType, setDistributionType] = useState('GENERAL')
   const [pipelineId, setPipelineId] = useState(pipelines[0]?.id ?? '')
@@ -383,7 +379,14 @@ function NewGoalModal({ pipelines, users, teams, onClose, onSave }: {
   function handleSave() {
     if (!canSave) return
     setSaving(true)
-    onSave({ periodType, goalType, totalRevenueGoal: effectiveTotal, distributionType, pipelineId })
+    onSave({
+      periodType: 'MONTHLY',
+      periodReference,
+      goalType,
+      totalRevenueGoal: effectiveTotal,
+      distributionType,
+      pipelineId,
+    })
   }
 
   function setUserGoal(userId: string, value: string) {
@@ -419,13 +422,16 @@ function NewGoalModal({ pipelines, users, teams, onClose, onSave }: {
             </select>
           </div>
 
-          {/* Period */}
+          {/* Mês de referência (Bug 5 Alternativa A — sempre mensal) */}
           <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Período</label>
-            <select value={periodType} onChange={e => setPeriodType(e.target.value)} style={{ ...inputS, appearance: 'none' as const, cursor: 'pointer' }}>
-              <option value="MONTHLY">Mensal</option>
-              <option value="QUARTERLY">Trimestral</option>
-              <option value="YEARLY">Anual</option>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
+              Mês da meta <span style={{ color: 'var(--accent)' }}>*</span>
+              <InfoTooltip>
+                Cadastre uma meta para cada mês. Para visualizar trimestre, semestre ou ano, use os filtros na tela de metas — o sistema soma automaticamente.
+              </InfoTooltip>
+            </label>
+            <select value={periodReference} onChange={e => setPeriodReference(e.target.value)} style={{ ...inputS, appearance: 'none' as const, cursor: 'pointer' }}>
+              {monthOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>
 
