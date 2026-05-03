@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, type ChangeEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Bell, Search, Mail, ShieldCheck, AlertCircle, CheckCircle2, UserPlus, User, Key, LogOut, X, Loader2,
+  Bell, Search, Mail, ShieldCheck, AlertCircle, CheckCircle2, UserPlus, User, Key, LogOut, X, Loader2, Repeat,
   type LucideIcon,
 } from 'lucide-react'
 import {
@@ -362,6 +362,23 @@ function UserMenu({ initials, userName, userEmail, avatarUrl }: { initials: stri
   const [passwordModal, setPasswordModal] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
+  // Acesso administrativo dual (Super Admin pode alternar entre tela
+  // de seleção e a instância gestor que usa pra testar). Bloqueio com
+  // verificação dupla pra impedir vazamento pra outros usuários:
+  //   1. role === 'SUPER_ADMIN' (precisa ser admin de plataforma)
+  //   2. email === 'admin@tribocrm.com.br' (conta específica do Lucas)
+  // Email é UNIQUE no banco (constraint da tabela users) — ninguém
+  // pode criar outra conta com esse email. Se uma das condições
+  // falhar, o item literalmente não vai pra DOM.
+  const canSwitchAccess = (() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('user') ?? '{}') as { role?: string; email?: string }
+      return stored.role === 'SUPER_ADMIN' && stored.email === 'admin@tribocrm.com.br'
+    } catch {
+      return false
+    }
+  })()
+
   useEffect(() => {
     function close(e: MouseEvent) { if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpen(false) }
     if (open) document.addEventListener('mousedown', close)
@@ -394,6 +411,12 @@ function UserMenu({ initials, userName, userEmail, avatarUrl }: { initials: stri
           <div style={{ height: 1, background: 'var(--border)' }} />
           <MenuItem icon={User} label="Meu perfil" onClick={() => { setOpen(false); setProfileModal(true) }} />
           <MenuItem icon={Key} label="Alterar senha" onClick={() => { setOpen(false); setPasswordModal(true) }} />
+          {canSwitchAccess && (
+            <>
+              <div style={{ height: 1, background: 'var(--border)' }} />
+              <MenuItem icon={Repeat} label="Voltar à tela de escolha" onClick={() => { setOpen(false); navigate('/admin/select-access') }} />
+            </>
+          )}
           <div style={{ height: 1, background: 'var(--border)' }} />
           <MenuItem icon={LogOut} label="Sair" onClick={handleLogout} color="#ef4444" />
         </div>
