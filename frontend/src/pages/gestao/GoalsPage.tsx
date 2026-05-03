@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { Plus, Loader2, X, Info } from 'lucide-react'
+import { Plus, Loader2, X, Info, Edit3 } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
-import { getGoals, createGoal, updateGoal, getAggregatedGoals, type AggregatedGoals } from '../../services/goals.service'
+import { getGoals, createGoal, updateGoal, getAggregatedGoals, upsertGoalIndividual, type AggregatedGoals } from '../../services/goals.service'
 import { getPipelines } from '../../services/pipeline.service'
 import { getUsers, getTeams } from '../../services/users.service'
 import InfoTooltip from '../../components/shared/InfoTooltip/InfoTooltip'
@@ -88,6 +88,14 @@ export default function GoalsPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [rampModalOpen, setRampModalOpen] = useState(false)
+  // Bug 5 Fase D: edição inline de meta de um vendedor específico.
+  const [editUserGoal, setEditUserGoal] = useState<{
+    goalId: string
+    userId: string
+    userName: string
+    currentValue: number
+    wasRamping: boolean
+  } | null>(null)
 
   // Filtros de período (Bug 5 Fase A3). Default = mês corrente.
   // Trimestre/semestre/ano somam mensais que caem nos meses cobertos.
@@ -285,7 +293,7 @@ export default function GoalsPage() {
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ background: 'var(--bg)' }}>
-                      {['Vendedor', 'Meta', 'Realizado', '%', ''].map(h => <th key={h} style={thS}>{h}</th>)}
+                      {['Vendedor', 'Meta', 'Realizado', '%', '', ...(isSingleMonth ? [''] : [])].map((h, i) => <th key={i} style={thS}>{h}</th>)}
                     </tr>
                   </thead>
                   <tbody>
@@ -329,6 +337,33 @@ export default function GoalsPage() {
                               </div>
                             </td>
                           </>
+                        )}
+                        {isSingleMonth && goal && (
+                          <td style={{ ...tdS, width: 40, padding: '14px 16px', textAlign: 'right' }}>
+                            <button
+                              onClick={() => setEditUserGoal({
+                                goalId: goal.id,
+                                userId: ug.userId,
+                                userName: ug.user.name,
+                                currentValue: ug.revenueGoal,
+                                wasRamping: ug.isRamping,
+                              })}
+                              title={ug.isRamping ? 'Atribuir meta a este vendedor' : 'Editar meta'}
+                              style={{
+                                background: 'transparent',
+                                border: '1px solid var(--border)',
+                                borderRadius: 6,
+                                padding: 6,
+                                cursor: 'pointer',
+                                color: 'var(--text-secondary)',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              <Edit3 size={13} strokeWidth={1.5} />
+                            </button>
+                          </td>
                         )}
                       </tr>
                     ))}
@@ -424,6 +459,13 @@ export default function GoalsPage() {
       {modalOpen && <NewGoalModal pipelines={pipelines} users={users} teams={teams} onClose={() => setModalOpen(false)} onSave={handleCreateGoal} />}
       {editModalOpen && goal && <EditGoalModal goal={goal} onClose={() => setEditModalOpen(false)} onSave={handleEditGoal} />}
       {rampModalOpen && goal && <RampModal goalId={goal.id} onClose={() => setRampModalOpen(false)} onSaved={loadData} />}
+      {editUserGoal && (
+        <EditUserGoalModal
+          info={editUserGoal}
+          onClose={() => setEditUserGoal(null)}
+          onSaved={() => { setEditUserGoal(null); loadData() }}
+        />
+      )}
     </AppLayout>
   )
 }
@@ -773,6 +815,97 @@ function RampModal({ goalId, onClose, onSaved }: { goalId: string; onClose: () =
           <button onClick={handleSave} disabled={saving} style={{ background: 'var(--accent)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
             {saving && <Loader2 size={14} className="animate-spin" />}
             {saving ? 'Salvando...' : 'Salvar Rampagem'}
+          </button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ── Edit User Goal Modal (Bug 5 Fase D) ──
+//
+// Permite editar a meta de um vendedor específico em uma meta mensal.
+// Decisão de produto Bug 5: delta SOMA em totalRevenueGoal (não reduz
+// dos demais). Aviso explicativo no rodapé do modal pra deixar claro.
+
+function EditUserGoalModal({ info, onClose, onSaved }: {
+  info: { goalId: string; userId: string; userName: string; currentValue: number; wasRamping: boolean }
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const [value, setValue] = useState<string>(info.currentValue > 0 ? String(info.currentValue) : '')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const numValue = parseFloat(value)
+  const valid = !isNaN(numValue) && numValue >= 0
+  const delta = valid ? numValue - info.currentValue : 0
+
+  function fmtR(v: number): string {
+    return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })
+  }
+
+  async function handleSave() {
+    if (!valid) return
+    setSaving(true); setError('')
+    try {
+      await upsertGoalIndividual(info.goalId, info.userId, { revenueGoal: numValue })
+      onSaved()
+    } catch (e: any) {
+      setError(e?.response?.data?.error?.message ?? 'Erro ao salvar')
+      setSaving(false)
+    }
+  }
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 460, maxWidth: '90vw', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+          <div>
+            <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Editar meta — {info.userName}</h2>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+              {info.wasRamping
+                ? 'Vendedor está em rampagem. Atribuir uma meta vai tirá-lo da rampagem nesse mês.'
+                : `Valor atual: ${fmtR(info.currentValue)}`}
+            </p>
+          </div>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+        </div>
+        <div style={{ padding: 24 }}>
+          <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
+            Nova meta (R$) <span style={{ color: 'var(--accent)' }}>*</span>
+          </label>
+          <input
+            type="number" min="0" step="100"
+            value={value}
+            onChange={e => setValue(e.target.value)}
+            placeholder="Ex: 30000"
+            autoFocus
+            style={{ width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
+          />
+          {valid && delta !== 0 && (
+            <div style={{ marginTop: 10, padding: '10px 12px', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 8, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              {delta > 0
+                ? `A meta total da equipe vai aumentar em ${fmtR(delta)} (de ${fmtR(info.currentValue)} pra ${fmtR(numValue)} para ${info.userName}).`
+                : `A meta total da equipe vai diminuir em ${fmtR(-delta)}.`}
+              <br />
+              <span style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>
+                Os valores dos demais vendedores não são alterados.
+              </span>
+            </div>
+          )}
+          {error && <div style={{ marginTop: 10, padding: '8px 12px', background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.30)', borderRadius: 8, fontSize: 12, color: '#ef4444' }}>{error}</div>}
+        </div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <button onClick={onClose} disabled={saving} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: saving ? 'not-allowed' : 'pointer' }}>Cancelar</button>
+          <button onClick={handleSave} disabled={!valid || saving} style={{
+            background: valid ? '#f97316' : 'var(--border)', color: valid ? '#fff' : 'var(--text-muted)',
+            border: 'none', borderRadius: 8, padding: '9px 22px', fontSize: 13, fontWeight: 600,
+            cursor: valid ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 6,
+          }}>
+            {saving && <Loader2 size={14} className="animate-spin" />}
+            {saving ? 'Salvando...' : 'Salvar'}
           </button>
         </div>
       </div>
