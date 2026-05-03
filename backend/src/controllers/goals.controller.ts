@@ -532,3 +532,278 @@ export async function updateGoal(req: Request, res: Response): Promise<void> {
     })
   }
 }
+
+// ── Edição de GoalIndividual em meta existente (Bug 5 Fase B) ──
+//
+// Decisão de produto: ao incluir/editar valor de um vendedor numa meta
+// já criada, o delta SOMA em Goal.totalRevenueGoal (não reduz dos
+// demais). Ex: meta de R$ 100k entre 5 vendedores → adicionar X com
+// R$ 15k → meta total vira R$ 115k. Os outros 5 não são tocados.
+//
+// Casos cobertos:
+//   - Vendedor não está na meta + revenueGoal > 0 → cria GoalIndividual + soma
+//   - Vendedor já está + revenueGoal mudou → atualiza + soma o delta
+//   - revenueGoal = 0 → marca como 0 (efetivamente "remove" da divisão);
+//     totalRevenueGoal diminui pelo valor que estava antes
+
+export async function upsertGoalIndividual(req: Request, res: Response): Promise<void> {
+  try {
+    const tenantId = req.user!.tenantId
+    const goalId = req.params.goalId as string
+    const userId = req.params.userId as string
+    const { revenueGoal, dealsGoal } = req.body as { revenueGoal?: number; dealsGoal?: number }
+
+    if (revenueGoal === undefined || typeof revenueGoal !== 'number' || revenueGoal < 0) {
+      res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'revenueGoal (number >= 0) é obrigatório' },
+      })
+      return
+    }
+
+    const goal = await prisma.goal.findFirst({ where: { id: goalId, tenantId } })
+    if (!goal) {
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Meta não encontrada' } })
+      return
+    }
+
+    const user = await prisma.user.findFirst({
+      where: { id: userId, tenantId, deletedAt: null },
+      select: { id: true },
+    })
+    if (!user) {
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Usuário não encontrado' } })
+      return
+    }
+
+    const existing = await prisma.goalIndividual.findFirst({ where: { goalId, userId } })
+    const oldValue = existing?.revenueGoal ? Number(existing.revenueGoal) : 0
+    const delta = revenueGoal - oldValue
+
+    await prisma.$transaction(async (tx) => {
+      if (existing) {
+        await tx.goalIndividual.update({
+          where: { id: existing.id },
+          data: {
+            revenueGoal: revenueGoal > 0 ? new Prisma.Decimal(revenueGoal) : null,
+            dealsGoal: dealsGoal ?? existing.dealsGoal,
+            // Quem entra com valor explícito sai de rampagem nessa meta —
+            // gestor está dizendo "esse vendedor conta agora".
+            isRamping: revenueGoal > 0 ? false : existing.isRamping,
+          },
+        })
+      } else {
+        await tx.goalIndividual.create({
+          data: {
+            tenantId,
+            goalId,
+            userId,
+            revenueGoal: revenueGoal > 0 ? new Prisma.Decimal(revenueGoal) : null,
+            dealsGoal: dealsGoal ?? null,
+            isRamping: false,
+          },
+        })
+      }
+
+      // Ajusta totalRevenueGoal pelo delta (soma na meta total).
+      if (delta !== 0) {
+        const currentTotal = goal.totalRevenueGoal ? Number(goal.totalRevenueGoal) : 0
+        const newTotal = Math.max(0, currentTotal + delta)
+        await tx.goal.update({
+          where: { id: goalId },
+          data: { totalRevenueGoal: new Prisma.Decimal(newTotal) },
+        })
+      }
+    })
+
+    const updated = await prisma.goal.findUnique({
+      where: { id: goalId },
+      include: { individualGoals: true, pipeline: { select: { id: true, name: true } } },
+    })
+    res.json({ success: true, data: updated })
+  } catch (error) {
+    console.error('[Goals] upsertGoalIndividual error:', error)
+    res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Erro interno do servidor' },
+    })
+  }
+}
+
+// ── Inclusão de vendedor novo em metas ativas (Bug 5 Fase C — backend) ──
+//
+// Frontend chama esse endpoint depois de criar um vendedor pra perguntar
+// como ele entra nas metas mensais ativas. 3 modos:
+//   - 'distribute': valor médio das metas ativas (totalRevenueGoal /
+//     vendedores ativos não-rampantes) entra como meta dele. Rampagem
+//     respeitada por meta — se ele está rampante naquele mês, isRamping
+//     é true e revenueGoal é null. Soma na meta total.
+//   - 'manual': gestor passa { goalId: revenueGoal } em manualValues.
+//     Cada par vira upsert. Soma na meta total.
+//   - 'skip': nada. Retorna lista de metas ativas pra registro.
+//
+// "Metas ativas" = MONTHLY com periodReference >= mês corrente.
+
+export async function includeUserInActiveGoals(req: Request, res: Response): Promise<void> {
+  try {
+    const tenantId = req.user!.tenantId
+    const userId = req.params.id as string
+    const { mode, manualValues } = req.body as {
+      mode?: 'distribute' | 'manual' | 'skip'
+      manualValues?: Record<string, number>
+    }
+
+    if (mode !== 'distribute' && mode !== 'manual' && mode !== 'skip') {
+      res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: "mode deve ser 'distribute', 'manual' ou 'skip'" },
+      })
+      return
+    }
+
+    const user = await prisma.user.findFirst({
+      where: { id: userId, tenantId, deletedAt: null },
+      select: { id: true, rampingStartsAt: true },
+    })
+    if (!user) {
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Usuário não encontrado' } })
+      return
+    }
+
+    // Metas mensais ativas (mês corrente em diante)
+    const now = new Date()
+    const currentRef = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+    const activeGoals = await prisma.goal.findMany({
+      where: {
+        tenantId,
+        periodType: 'MONTHLY',
+        periodReference: { gte: currentRef },
+      },
+      include: { individualGoals: true },
+      orderBy: { periodReference: 'asc' },
+    })
+
+    if (activeGoals.length === 0 || mode === 'skip') {
+      res.json({
+        success: true,
+        data: { activeGoalsCount: activeGoals.length, applied: [] },
+      })
+      return
+    }
+
+    const applied: Array<{ goalId: string; periodReference: string; addedValue: number; isRamping: boolean }> = []
+
+    await prisma.$transaction(async (tx) => {
+      for (const goal of activeGoals) {
+        // Já está na meta? Skip — evita double-add.
+        const existing = goal.individualGoals.find(g => g.userId === userId)
+        if (existing) continue
+
+        const ramping = isUserInRamping(user.rampingStartsAt, 'MONTHLY', goal.periodReference)
+
+        let revenueGoalForUser = 0
+        if (mode === 'distribute') {
+          if (ramping) {
+            // Rampante entra com isRamping=true e sem meta. Não soma na total.
+            await tx.goalIndividual.create({
+              data: {
+                tenantId,
+                goalId: goal.id,
+                userId,
+                revenueGoal: null,
+                dealsGoal: null,
+                isRamping: true,
+              },
+            })
+            applied.push({ goalId: goal.id, periodReference: goal.periodReference, addedValue: 0, isRamping: true })
+            continue
+          }
+          // Calcula valor médio: totalRevenueGoal / nº de não-rampantes existentes
+          const nonRamping = goal.individualGoals.filter(g => !g.isRamping).length || 1
+          const total = goal.totalRevenueGoal ? Number(goal.totalRevenueGoal) : 0
+          revenueGoalForUser = Math.round(total / nonRamping)
+        } else {
+          // mode === 'manual'
+          const v = manualValues?.[goal.id]
+          if (typeof v !== 'number' || v < 0) continue
+          revenueGoalForUser = v
+        }
+
+        if (revenueGoalForUser <= 0) continue
+
+        await tx.goalIndividual.create({
+          data: {
+            tenantId,
+            goalId: goal.id,
+            userId,
+            revenueGoal: new Prisma.Decimal(revenueGoalForUser),
+            dealsGoal: null,
+            isRamping: false,
+          },
+        })
+
+        // Soma na meta total da equipe (decisão de produto Bug 5).
+        const currentTotal = goal.totalRevenueGoal ? Number(goal.totalRevenueGoal) : 0
+        await tx.goal.update({
+          where: { id: goal.id },
+          data: { totalRevenueGoal: new Prisma.Decimal(currentTotal + revenueGoalForUser) },
+        })
+
+        applied.push({ goalId: goal.id, periodReference: goal.periodReference, addedValue: revenueGoalForUser, isRamping: false })
+      }
+    })
+
+    res.json({
+      success: true,
+      data: {
+        activeGoalsCount: activeGoals.length,
+        applied,
+      },
+    })
+  } catch (error) {
+    console.error('[Goals] includeUserInActiveGoals error:', error)
+    res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Erro interno do servidor' },
+    })
+  }
+}
+
+// Endpoint utilitário pra Fase C: lista metas mensais ativas (>= mês
+// corrente) pra montar o modal de "incluir vendedor novo". Retorna info
+// suficiente pro modal mostrar valor sugerido em modo distribute.
+export async function getActiveMonthlyGoals(req: Request, res: Response): Promise<void> {
+  try {
+    const tenantId = req.user!.tenantId
+    const now = new Date()
+    const currentRef = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+    const goals = await prisma.goal.findMany({
+      where: {
+        tenantId,
+        periodType: 'MONTHLY',
+        periodReference: { gte: currentRef },
+      },
+      include: { individualGoals: true, pipeline: { select: { id: true, name: true } } },
+      orderBy: { periodReference: 'asc' },
+    })
+    const enriched = goals.map(g => {
+      const nonRamping = g.individualGoals.filter(ig => !ig.isRamping).length || 1
+      const total = g.totalRevenueGoal ? Number(g.totalRevenueGoal) : 0
+      return {
+        id: g.id,
+        periodReference: g.periodReference,
+        pipeline: g.pipeline,
+        totalRevenueGoal: total,
+        suggestedValue: Math.round(total / nonRamping),
+        currentSellersCount: nonRamping,
+      }
+    })
+    res.json({ success: true, data: enriched })
+  } catch (error) {
+    console.error('[Goals] getActiveMonthlyGoals error:', error)
+    res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Erro interno do servidor' },
+    })
+  }
+}

@@ -9,6 +9,7 @@ import {
   getTeams, createTeam, updateTeam,
   getInactivationImpact, inactivateUserWithGoal,
 } from '../controllers/users.controller'
+import { includeUserInActiveGoals } from '../controllers/goals.controller'
 
 const router = Router()
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024 }, fileFilter: (_req, file, cb) => { cb(null, file.mimetype.startsWith('image/')) } })
@@ -68,6 +69,10 @@ router.patch('/users/:id/reset-password', resetUserPassword)
 // saldo. POST faz a inativação + (re)distribuição segundo flag boolean.
 router.get('/users/:id/inactivation-impact', getInactivationImpact)
 router.post('/users/:id/inactivate-with-goal', inactivateUserWithGoal)
+
+// Bug 5 Fase C — incluir vendedor novo em metas mensais ativas.
+// Frontend chama após criar usuário; modal pergunta como (distribute/manual/skip).
+router.post('/users/:id/include-in-active-goals', includeUserInActiveGoals)
 
 // Acesso a pipelines por usuario.
 // GET retorna lista de pipelineIds que o usuario tem acesso.
