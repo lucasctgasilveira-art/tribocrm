@@ -3,7 +3,8 @@ import { Plus, Search, Loader2, X, CheckCircle2, AlertTriangle, MoreHorizontal }
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
 import { useNavigate } from 'react-router-dom'
-import { getUsers, updateUser, createUser, getTeams, resetUserPassword, getUserPipelines, getInactivationImpact, inactivateUserWithGoal, type CreateUserResult, type InactivationImpact } from '../../services/users.service'
+import { getUsers, updateUser, createUser, getTeams, resetUserPassword, getUserPipelines, getInactivationImpact, inactivateUserWithGoal, includeUserInActiveGoals, type CreateUserResult, type InactivationImpact, type IncludeMode } from '../../services/users.service'
+import { getActiveMonthlyGoals, type ActiveMonthlyGoal } from '../../services/goals.service'
 import { getPipelines } from '../../services/pipeline.service'
 import { bulkUpdateLeads } from '../../services/leads.service'
 import { getRampingMonthOptions, isoDateToMonth, ensureCurrentValueInOptions } from '../../utils/rampingMonths'
@@ -100,6 +101,10 @@ export default function UsersPage() {
   }
   const [newUserModalOpen, setNewUserModalOpen] = useState(false)
   const [createResult, setCreateResult] = useState<CreateUserResult | null>(null)
+  // Bug 5 Fase C: após criar SELLER/TEAM_LEADER e o gestor fechar o
+  // dialog de senha, abrimos o modal pra perguntar como incluir o
+  // novo vendedor nas metas mensais ativas (distribute / manual / skip).
+  const [pendingGoalsInclusion, setPendingGoalsInclusion] = useState<{ userId: string; userName: string } | null>(null)
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const handleSearch = useCallback((value: string) => {
@@ -315,10 +320,27 @@ export default function UsersPage() {
       {newUserModalOpen && (
         <NewUserModal
           onClose={() => setNewUserModalOpen(false)}
-          onCreated={(result) => { setNewUserModalOpen(false); setCreateResult(result); loadUsers() }}
+          onCreated={(result) => {
+            setNewUserModalOpen(false)
+            setCreateResult(result)
+            loadUsers()
+            // Bug 5 Fase C: agenda modal de inclusão em metas pra abrir
+            // depois do dialog de senha. Só pra cargos com meta de vendas.
+            if (result.role === 'SELLER' || result.role === 'TEAM_LEADER') {
+              setPendingGoalsInclusion({ userId: result.id, userName: result.name })
+            }
+          }}
         />
       )}
       {createResult && <CreateResultDialog result={createResult} onClose={() => setCreateResult(null)} />}
+      {!createResult && pendingGoalsInclusion && (
+        <IncludeInGoalsModal
+          userId={pendingGoalsInclusion.userId}
+          userName={pendingGoalsInclusion.userName}
+          onClose={() => setPendingGoalsInclusion(null)}
+          onDone={(msg) => { setPendingGoalsInclusion(null); showToast(msg); loadUsers() }}
+        />
+      )}
       {vacationModal && (
         <VacationModal
           user={vacationModal}
@@ -932,6 +954,178 @@ function InactivationModal({
           <button onClick={onClose} disabled={saving} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}>Cancelar</button>
           <button onClick={handleConfirm} disabled={saving} style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 22px', fontSize: 13, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: saving ? 0.7 : 1 }}>
             {saving && <Loader2 size={14} className="animate-spin" />}{saving ? 'Processando...' : 'Confirmar inativação'}
+          </button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ── IncludeInGoalsModal (Bug 5 Fase C) ──
+//
+// Aparece após criar SELLER/TEAM_LEADER e o dialog de senha ser fechado.
+// Lista as metas mensais ativas (>= mês corrente) e pergunta como o
+// vendedor entra. 3 modos: distribute (valor médio + rampagem), manual
+// (gestor digita valor por meta), skip (deixa fora). Em todos os modos
+// que adicionam, o delta SOMA na meta total da equipe (decisão Bug 5).
+
+function IncludeInGoalsModal({
+  userId,
+  userName,
+  onClose,
+  onDone,
+}: {
+  userId: string
+  userName: string
+  onClose: () => void
+  onDone: (msg: string) => void
+}) {
+  const [activeGoals, setActiveGoals] = useState<ActiveMonthlyGoal[] | null>(null)
+  const [mode, setMode] = useState<IncludeMode>('distribute')
+  const [manualValues, setManualValues] = useState<Record<string, string>>({})
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+    getActiveMonthlyGoals()
+      .then(list => { if (!cancelled) setActiveGoals(list) })
+      .catch(() => { if (!cancelled) setActiveGoals([]) })
+    return () => { cancelled = true }
+  }, [])
+
+  function fmtR(v: number): string {
+    return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })
+  }
+
+  function fmtPeriod(ref: string): string {
+    const [y, m] = ref.split('-')
+    const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+    return `${months[parseInt(m!) - 1]}/${y}`
+  }
+
+  async function handleConfirm() {
+    setSaving(true); setError('')
+    try {
+      // Em modo manual, converte map de strings → numbers
+      let manualValuesNum: Record<string, number> | undefined
+      if (mode === 'manual') {
+        manualValuesNum = {}
+        for (const [goalId, str] of Object.entries(manualValues)) {
+          const n = parseFloat(str)
+          if (!isNaN(n) && n > 0) manualValuesNum[goalId] = n
+        }
+      }
+      const result = await includeUserInActiveGoals(userId, mode, manualValuesNum)
+      if (mode === 'skip') {
+        onDone(`${userName} criado. Não foi incluído nas metas ativas.`)
+      } else if (result.applied.length === 0) {
+        onDone(`${userName} criado. Nenhuma meta atualizada.`)
+      } else {
+        onDone(`${userName} incluído em ${result.applied.length} meta(s) ativa(s).`)
+      }
+    } catch (e: any) {
+      setError(e?.response?.data?.error?.message ?? 'Erro ao incluir nas metas')
+      setSaving(false)
+    }
+  }
+
+  const hasActive = (activeGoals?.length ?? 0) > 0
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 560, maxWidth: '90vw', maxHeight: '90vh', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Incluir {userName} nas metas atuais?</h2>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
+            {activeGoals === null
+              ? 'Verificando metas ativas...'
+              : hasActive
+                ? `Há ${activeGoals!.length} meta(s) mensal(is) ativa(s) na equipe.`
+                : 'Não há metas mensais ativas no momento.'}
+          </p>
+        </div>
+
+        <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
+          {activeGoals === null ? (
+            <div style={{ textAlign: 'center', padding: 24 }}>
+              <Loader2 size={20} className="animate-spin" color="var(--accent)" strokeWidth={1.5} />
+            </div>
+          ) : !hasActive ? (
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', padding: 16 }}>
+              Você poderá incluí-lo quando criar uma nova meta.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {/* Distribuir */}
+              <label onClick={() => setMode('distribute')} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: 12, cursor: 'pointer', border: `1px solid ${mode === 'distribute' ? '#f97316' : 'var(--border)'}`, background: mode === 'distribute' ? 'rgba(249,115,22,0.06)' : 'transparent', borderRadius: 8 }}>
+                <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${mode === 'distribute' ? '#f97316' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
+                  {mode === 'distribute' && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f97316' }} />}
+                </div>
+                <div>
+                  <div style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>Distribuir as metas atuais incluindo ele</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, lineHeight: 1.5 }}>
+                    Recebe o valor médio de cada meta. Se ele estiver em rampagem em algum mês, esse mês fica sem meta atribuída.
+                  </div>
+                </div>
+              </label>
+
+              {/* Manual */}
+              <label onClick={() => setMode('manual')} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: 12, cursor: 'pointer', border: `1px solid ${mode === 'manual' ? '#f97316' : 'var(--border)'}`, background: mode === 'manual' ? 'rgba(249,115,22,0.06)' : 'transparent', borderRadius: 8 }}>
+                <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${mode === 'manual' ? '#f97316' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
+                  {mode === 'manual' && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f97316' }} />}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>Definir manualmente os valores dele</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                    Você informa quanto ele deve fazer em cada meta.
+                  </div>
+                  {mode === 'manual' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
+                      {activeGoals!.map(g => (
+                        <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: 12, color: 'var(--text-secondary)', flex: 1 }}>
+                            {fmtPeriod(g.periodReference)}
+                            {g.pipeline && <span style={{ color: 'var(--text-muted)', marginLeft: 6 }}>· {g.pipeline.name}</span>}
+                          </span>
+                          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Sugerido: {fmtR(g.suggestedValue)}</span>
+                          <input type="number" placeholder="0"
+                            value={manualValues[g.id] ?? ''}
+                            onChange={e => setManualValues(prev => ({ ...prev, [g.id]: e.target.value }))}
+                            style={{ width: 110, background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: 'var(--text-primary)', textAlign: 'right' }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </label>
+
+              {/* Skip */}
+              <label onClick={() => setMode('skip')} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: 12, cursor: 'pointer', border: `1px solid ${mode === 'skip' ? '#f97316' : 'var(--border)'}`, background: mode === 'skip' ? 'rgba(249,115,22,0.06)' : 'transparent', borderRadius: 8 }}>
+                <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${mode === 'skip' ? '#f97316' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
+                  {mode === 'skip' && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f97316' }} />}
+                </div>
+                <div>
+                  <div style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>Deixar ele de fora destas metas</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                    Ele só entra nas metas que você criar daqui pra frente.
+                  </div>
+                </div>
+              </label>
+            </div>
+          )}
+
+          {error && <div style={{ marginTop: 12, padding: '10px 12px', background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.30)', borderRadius: 8, fontSize: 12, color: '#ef4444' }}>{error}</div>}
+        </div>
+
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <button onClick={onClose} disabled={saving} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: saving ? 'not-allowed' : 'pointer' }}>Pular</button>
+          <button onClick={handleConfirm} disabled={saving || activeGoals === null}
+            style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 22px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: saving ? 0.7 : 1 }}>
+            {saving && <Loader2 size={14} className="animate-spin" />}
+            {saving ? 'Aplicando...' : 'Confirmar'}
           </button>
         </div>
       </div>

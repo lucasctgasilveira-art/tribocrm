@@ -86,6 +86,23 @@ export async function inactivateUserWithGoal(userId: string, redistribute: boole
   return response.data.data
 }
 
+// Bug 5 Fase C — incluir vendedor novo em metas mensais ativas
+export type IncludeMode = 'distribute' | 'manual' | 'skip'
+
+export interface IncludeInGoalsResult {
+  activeGoalsCount: number
+  applied: Array<{ goalId: string; periodReference: string; addedValue: number; isRamping: boolean }>
+}
+
+export async function includeUserInActiveGoals(
+  userId: string,
+  mode: IncludeMode,
+  manualValues?: Record<string, number>,
+): Promise<IncludeInGoalsResult> {
+  const response = await api.post(`/users/${userId}/include-in-active-goals`, { mode, manualValues })
+  return response.data.data
+}
+
 export async function getTeams() {
   const response = await api.get('/teams')
   return response.data.data

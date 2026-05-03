@@ -56,6 +56,32 @@ export async function getAggregatedGoals(params: {
   return response.data.data
 }
 
+// Bug 5 Fase C — metas ativas (mês corrente em diante) pra usar no
+// modal de "incluir vendedor novo".
+export interface ActiveMonthlyGoal {
+  id: string
+  periodReference: string
+  pipeline: { id: string; name: string } | null
+  totalRevenueGoal: number
+  suggestedValue: number
+  currentSellersCount: number
+}
+
+export async function getActiveMonthlyGoals(): Promise<ActiveMonthlyGoal[]> {
+  const response = await api.get('/goals/active-monthly')
+  return response.data.data
+}
+
+// Bug 5 Fase D — editar GoalIndividual de uma meta específica
+export async function upsertGoalIndividual(
+  goalId: string,
+  userId: string,
+  payload: { revenueGoal: number; dealsGoal?: number },
+) {
+  const response = await api.patch(`/goals/${goalId}/individual/${userId}`, payload)
+  return response.data.data
+}
+
 export async function createGoal(payload: CreateGoalPayload) {
   const response = await api.post('/goals', payload)
   return response.data.data
