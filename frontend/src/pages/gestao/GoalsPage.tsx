@@ -2,11 +2,11 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Plus, Loader2, X, Info } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
-import { getGoalDashboard, getGoals, createGoal, updateGoal } from '../../services/goals.service'
+import { getGoals, createGoal, updateGoal, getAggregatedGoals, type AggregatedGoals } from '../../services/goals.service'
 import { getPipelines } from '../../services/pipeline.service'
 import { getUsers, getTeams } from '../../services/users.service'
 import InfoTooltip from '../../components/shared/InfoTooltip/InfoTooltip'
-import { getGoalMonthOptions, currentMonthValue } from '../../utils/goalMonths'
+import { getGoalMonthOptions, currentMonthValue, getPeriodOptions, currentPeriodValue, type AggregationPeriod } from '../../utils/goalMonths'
 
 // ── Types ──
 
@@ -33,11 +33,6 @@ interface GoalData {
   totalCurrent: number
   totalPercentage: number
   daysRemaining: number
-}
-
-interface DashboardData {
-  goal: GoalData | null
-  userGoals: UserGoal[]
 }
 
 interface HistoryGoal {
@@ -70,10 +65,8 @@ function formatPeriod(ref: string): string {
   return `${months[parseInt(month!) - 1]}/${year}`
 }
 
-function currentMonthLabel(): string {
-  const now = new Date()
-  return now.toLocaleString('pt-BR', { month: 'long', year: 'numeric' }).replace(/^\w/, c => c.toUpperCase())
-}
+// currentMonthLabel removido na Fase A3 — substituído por periodLabel
+// derivado do filtro escolhido (mês corrente ou range agregado).
 
 // getPeriodReference removido na Fase A2 do Bug 5 — agora o gestor
 // escolhe explicitamente o mês no formulário de Nova Meta. Backend
@@ -86,7 +79,7 @@ const card: React.CSSProperties = { background: 'var(--bg-card)', border: '1px s
 // ── Component ──
 
 export default function GoalsPage() {
-  const [dashboard, setDashboard] = useState<DashboardData | null>(null)
+  const [aggData, setAggData] = useState<AggregatedGoals | null>(null)
   const [history, setHistory] = useState<HistoryGoal[]>([])
   const [pipelines, setPipelines] = useState<PipelineOption[]>([])
   const [users, setUsers] = useState<UserOption[]>([])
@@ -96,30 +89,43 @@ export default function GoalsPage() {
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [rampModalOpen, setRampModalOpen] = useState(false)
 
+  // Filtros de período (Bug 5 Fase A3). Default = mês corrente.
+  // Trimestre/semestre/ano somam mensais que caem nos meses cobertos.
+  const [aggType, setAggType] = useState<AggregationPeriod>('MONTHLY')
+  const [aggRef, setAggRef] = useState<string>(currentMonthValue())
+
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      const [dashData, goalsData, pipelinesData, usersData, teamsData] = await Promise.all([
-        getGoalDashboard(),
+      const [aggResult, goalsData, pipelinesData, usersData, teamsData] = await Promise.all([
+        getAggregatedGoals({ periodType: aggType, periodReference: aggRef }),
         getGoals({ year: String(new Date().getFullYear()) }),
         getPipelines(),
         getUsers(),
         getTeams().catch(() => []),
       ])
-      setDashboard(dashData)
+      setAggData(aggResult)
       setHistory(goalsData)
       setPipelines(pipelinesData)
       setUsers(usersData)
       setTeams(teamsData)
     } catch {
-      setDashboard({ goal: null, userGoals: [] })
+      setAggData(null)
       setHistory([])
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [aggType, aggRef])
 
   useEffect(() => { loadData() }, [loadData])
+
+  // Quando troca o tipo de agregação, ajusta a referência pra o período
+  // corrente desse tipo (ex: troca de Mensal → Trimestral, ref vira o
+  // trimestre atual). Se mantiver, periodReference fica inválido.
+  function handleAggTypeChange(newType: AggregationPeriod) {
+    setAggType(newType)
+    setAggRef(currentPeriodValue(newType))
+  }
 
   async function handleEditGoal(payload: { goalType: string; totalRevenueGoal: number; distributionType: string }) {
     if (!goal) return
@@ -152,24 +158,89 @@ export default function GoalsPage() {
     )
   }
 
-  const goal = dashboard?.goal
-  const userGoals = dashboard?.userGoals ?? []
+  // Adapta AggregatedGoals → estrutura compat com renderização legacy.
+  const userGoals: UserGoal[] = (aggData?.userGoalsAggregated ?? []).map(u => ({
+    id: u.userId,
+    userId: u.userId,
+    user: u.user,
+    revenueGoal: u.revenueGoal,
+    dealsGoal: u.dealsGoal || null,
+    isRamping: u.isRamping,
+    current: u.current,
+    percentage: u.percentage,
+  }))
+
+  const hasAnyGoal = (aggData?.monthlyGoals.length ?? 0) > 0
+  const isSingleMonth = aggType === 'MONTHLY' && (aggData?.monthlyGoals.length ?? 0) === 1
+  const totalGoal = aggData?.totalRevenueGoal ?? 0
+  const totalCurrent = aggData?.totalRevenueCurrent ?? 0
+  const totalPercentage = totalGoal > 0 ? Math.round((totalCurrent / totalGoal) * 1000) / 10 : 0
+
+  // Range de meses pra exibir no header (ex: "Mai/2026" ou "Abr-Jun/2026")
+  const periodLabel = (() => {
+    if (!aggData || aggData.months.length === 0) return ''
+    if (aggData.months.length === 1) return formatPeriod(aggData.months[0]!)
+    const first = formatPeriod(aggData.months[0]!).split('/')[0]
+    const last = formatPeriod(aggData.months[aggData.months.length - 1]!)
+    return `${first}-${last}`
+  })()
+
+  const now = new Date()
+  const isCurrentMonth = aggType === 'MONTHLY' && aggRef === currentMonthValue()
+  const daysRemaining = isCurrentMonth
+    ? new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - now.getDate()
+    : null
+
+  // "goal" pra os modais de Editar/Rampagem — só existe quando há
+  // exatamente 1 meta mensal selecionada (filtro = MONTHLY com a
+  // referência de um único mês). Em agregados não dá pra editar UMA
+  // meta específica; UI esconde os botões.
+  const singleMonthGoal = isSingleMonth && aggData?.monthlyGoals[0] ? aggData.monthlyGoals[0] : null
+  const goal: GoalData | null = singleMonthGoal
+    ? {
+      id: singleMonthGoal.id,
+      periodType: 'MONTHLY',
+      periodReference: singleMonthGoal.periodReference,
+      goalType: 'REVENUE',
+      totalRevenueGoal: singleMonthGoal.totalRevenueGoal,
+      totalDealsGoal: singleMonthGoal.totalDealsGoal,
+      distributionType: 'GENERAL',
+      pipeline: null,
+      totalCurrent,
+      totalPercentage,
+      daysRemaining: daysRemaining ?? 0,
+    }
+    : null
 
   return (
     <AppLayout menuItems={gestaoMenuItems}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Metas</h1>
-          <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{currentMonthLabel()}</span>
+          <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{periodLabel}</span>
         </div>
-        <button onClick={() => setModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-          <Plus size={15} strokeWidth={2} /> Nova Meta
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* Filtro tipo de período (Bug 5 Fase A3) */}
+          <select value={aggType} onChange={e => handleAggTypeChange(e.target.value as AggregationPeriod)}
+            style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 28px 7px 12px', fontSize: 13, color: 'var(--text-primary)', cursor: 'pointer', appearance: 'none' as const }}>
+            <option value="MONTHLY">Mensal</option>
+            <option value="QUARTERLY">Trimestral</option>
+            <option value="SEMESTRAL">Semestral</option>
+            <option value="YEARLY">Anual</option>
+          </select>
+          <select value={aggRef} onChange={e => setAggRef(e.target.value)}
+            style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 28px 7px 12px', fontSize: 13, color: 'var(--text-primary)', cursor: 'pointer', appearance: 'none' as const, minWidth: 180 }}>
+            {getPeriodOptions(aggType).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+          <button onClick={() => setModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            <Plus size={15} strokeWidth={2} /> Nova Meta
+          </button>
+        </div>
       </div>
 
       {/* No goal state */}
-      {!goal ? (
+      {!hasAnyGoal ? (
         <div style={{ ...card, padding: 40, textAlign: 'center' }}>
           <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8 }}>Nenhuma meta configurada para este período</div>
           <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>Crie uma meta para acompanhar o desempenho do seu time.</div>
@@ -184,20 +255,22 @@ export default function GoalsPage() {
           <div style={{ ...card, padding: 20, marginBottom: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>
-                Meta do Time — {currentMonthLabel()}
-                {goal.pipeline && <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 8 }}>· {goal.pipeline.name}</span>}
+                Meta do Time — {periodLabel}
+                {!isSingleMonth && <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 8 }}>(soma de {aggData?.months.length ?? 0} meses)</span>}
               </span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: barColor(goal.totalPercentage) }}>{goal.totalPercentage}% concluído</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: barColor(totalPercentage) }}>{totalPercentage}% concluído</span>
             </div>
             <div style={{ background: 'var(--border)', borderRadius: 999, height: 10 }}>
-              <div style={{ width: `${Math.min(goal.totalPercentage, 100)}%`, height: '100%', background: 'linear-gradient(to right, #f97316, #fb923c)', borderRadius: 999 }} />
+              <div style={{ width: `${Math.min(totalPercentage, 100)}%`, height: '100%', background: 'linear-gradient(to right, #f97316, #fb923c)', borderRadius: 999 }} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginTop: 10 }}>
-              <span style={{ color: 'var(--text-primary)' }}>{fmt(goal.totalCurrent)} realizados</span>
-              <span style={{ color: 'var(--text-muted)' }}>Meta: {fmt(goal.totalRevenueGoal)}</span>
-              <span style={{ color: '#f59e0b' }}>Faltam {fmt(Math.max(0, goal.totalRevenueGoal - goal.totalCurrent))}</span>
+              <span style={{ color: 'var(--text-primary)' }}>{fmt(totalCurrent)} realizados</span>
+              <span style={{ color: 'var(--text-muted)' }}>Meta: {fmt(totalGoal)}</span>
+              <span style={{ color: '#f59e0b' }}>Faltam {fmt(Math.max(0, totalGoal - totalCurrent))}</span>
             </div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>{goal.daysRemaining} dias restantes no período</div>
+            {daysRemaining !== null && (
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>{daysRemaining} dias restantes no período</div>
+            )}
           </div>
 
           {/* 2-column grid */}
@@ -271,16 +344,27 @@ export default function GoalsPage() {
               <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 16 }}>Configuração da meta</div>
 
               <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8 }}>Meta atual</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-                <ConfigRow label="Tipo" value={goal.goalType === 'BOTH' ? 'Receita + Nº de vendas' : goal.goalType === 'REVENUE' ? 'Receita' : 'Nº de vendas'} />
-                <ConfigRow label="Período" value={`${goal.periodType === 'MONTHLY' ? 'Mensal' : goal.periodType === 'QUARTERLY' ? 'Trimestral' : 'Anual'} — ${currentMonthLabel()}`} />
-                <ConfigRow label="Distribuição" value={goal.distributionType === 'GENERAL' ? 'Por operador (igual)' : 'Individual (manual)'} />
-                <ConfigRow label="Meta receita" value={fmt(goal.totalRevenueGoal)} valueColor="var(--accent)" />
-                {goal.totalDealsGoal && <ConfigRow label="Meta vendas" value={`${goal.totalDealsGoal} fechamentos`} />}
-              </div>
-              <button onClick={() => setEditModalOpen(true)} style={{ width: '100%', background: 'transparent', border: '1px solid rgba(249,115,22,0.3)', color: 'var(--accent)', borderRadius: 8, padding: '9px 0', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
-                Editar configuração
-              </button>
+              {goal ? (
+                <>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+                    <ConfigRow label="Período" value={`Mensal — ${periodLabel}`} />
+                    <ConfigRow label="Meta receita" value={fmt(totalGoal)} valueColor="var(--accent)" />
+                    {goal.totalDealsGoal && <ConfigRow label="Meta vendas" value={`${goal.totalDealsGoal} fechamentos`} />}
+                  </div>
+                  <button onClick={() => setEditModalOpen(true)} style={{ width: '100%', background: 'transparent', border: '1px solid rgba(249,115,22,0.3)', color: 'var(--accent)', borderRadius: 8, padding: '9px 0', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+                    Editar configuração
+                  </button>
+                </>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 4 }}>
+                  <ConfigRow label="Período" value={periodLabel} />
+                  <ConfigRow label="Meses cobertos" value={String(aggData?.months.length ?? 0)} />
+                  <ConfigRow label="Meta total" value={fmt(totalGoal)} valueColor="var(--accent)" />
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4, fontStyle: 'italic' }}>
+                    Para editar uma meta específica, mude o filtro pra Mensal e selecione o mês.
+                  </div>
+                </div>
+              )}
 
               <div style={{ height: 1, background: 'var(--border)', margin: '20px 0' }} />
 
