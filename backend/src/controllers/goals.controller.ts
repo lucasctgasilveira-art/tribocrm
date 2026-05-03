@@ -2,6 +2,11 @@ import { Request, Response } from 'express'
 import { prisma } from '../lib/prisma'
 import { Prisma } from '@prisma/client'
 import { isUserInRamping, type GoalPeriodType } from '../lib/ramping'
+import {
+  isValidPeriodReference,
+  getMonthsInPeriod,
+  type AggregationPeriod,
+} from '../lib/periodReference'
 
 export async function getGoals(req: Request, res: Response): Promise<void> {
   try {
@@ -150,6 +155,191 @@ export async function getGoalDashboard(req: Request, res: Response): Promise<voi
   }
 }
 
+/**
+ * Retorna meta agregada pra um período composto (mensal/trimestral/
+ * semestral/anual). Soma as metas mensais que compõem o período.
+ *
+ * Uso: dashboard/GoalsPage com filtro de período. Frontend chama esse
+ * endpoint passando o tipo de agregação + periodReference. Backend
+ * busca todas as Goals MONTHLY que caem nos meses cobertos e soma.
+ *
+ * Query: ?periodType=QUARTERLY&periodReference=2026-Q2&pipelineId=X
+ */
+export async function getAggregatedGoals(req: Request, res: Response): Promise<void> {
+  try {
+    const tenantId = req.user!.tenantId
+    const { periodType, periodReference, pipelineId } = req.query as Record<string, string | undefined>
+
+    if (!periodType || !periodReference) {
+      res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'periodType e periodReference são obrigatórios' },
+      })
+      return
+    }
+
+    const aggType = periodType as AggregationPeriod
+    if (!isValidPeriodReference(aggType, periodReference)) {
+      res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'periodReference inválido pro tipo informado' },
+      })
+      return
+    }
+
+    const months = getMonthsInPeriod(aggType, periodReference)
+
+    // Filtro: só goals MONTHLY do tenant cujo periodReference cai nos
+    // meses cobertos. Trimestrais/anuais legacy ficam fora — Alternativa A
+    // assume que cadastros novos são todos mensais.
+    const where: Prisma.GoalWhereInput = {
+      tenantId,
+      periodType: 'MONTHLY',
+      periodReference: { in: months },
+    }
+    if (pipelineId) where.pipelineId = pipelineId
+
+    const goals = await prisma.goal.findMany({
+      where,
+      include: {
+        individualGoals: true,
+        pipeline: { select: { id: true, name: true } },
+      },
+      orderBy: { periodReference: 'asc' },
+    })
+
+    // Calcula realizado de cada vendedor no intervalo. Performance ok pra
+    // até ~12 meses × N vendedores; se passar, dá pra otimizar com
+    // groupBy depois.
+    if (goals.length === 0) {
+      res.json({
+        success: true,
+        data: {
+          periodType: aggType,
+          periodReference,
+          months,
+          totalRevenueGoal: 0,
+          totalDealsGoal: 0,
+          totalRevenueCurrent: 0,
+          monthlyGoals: [],
+          userGoalsAggregated: [],
+        },
+      })
+      return
+    }
+
+    // Soma totais
+    const totalRevenueGoal = goals.reduce((s, g) =>
+      s + (g.totalRevenueGoal ? Number(g.totalRevenueGoal) : 0), 0,
+    )
+    const totalDealsGoal = goals.reduce((s, g) =>
+      s + (g.totalDealsGoal ?? 0), 0,
+    )
+
+    // Janela temporal pra calcular realizado: do dia 1 do primeiro mês
+    // até o último dia do último mês cobertos pelo período.
+    const firstMonth = months[0]!
+    const lastMonth = months[months.length - 1]!
+    const [fy, fm] = firstMonth.split('-').map(n => parseInt(n!, 10))
+    const [ly, lm] = lastMonth.split('-').map(n => parseInt(n!, 10))
+    const startDate = new Date(fy!, (fm! - 1), 1)
+    const endDate = new Date(ly!, lm!, 0, 23, 59, 59, 999)
+
+    // Agrega individuais por user — soma revenueGoal e dealsGoal de cada
+    // vendedor ao longo dos meses; isRamping é true se em ALGUM mês ele
+    // estava rampante (info pra UI).
+    const userAgg = new Map<string, {
+      userId: string
+      revenueGoal: number
+      dealsGoal: number
+      isRampingAnyMonth: boolean
+    }>()
+
+    for (const goal of goals) {
+      for (const ig of goal.individualGoals) {
+        const cur = userAgg.get(ig.userId) ?? {
+          userId: ig.userId,
+          revenueGoal: 0,
+          dealsGoal: 0,
+          isRampingAnyMonth: false,
+        }
+        cur.revenueGoal += ig.revenueGoal ? Number(ig.revenueGoal) : 0
+        cur.dealsGoal += ig.dealsGoal ?? 0
+        if (ig.isRamping) cur.isRampingAnyMonth = true
+        userAgg.set(ig.userId, cur)
+      }
+    }
+
+    // Calcula realizado do intervalo pra cada user agregado + busca nome
+    const userIds = Array.from(userAgg.keys())
+    const [users, wonLeads] = await Promise.all([
+      prisma.user.findMany({
+        where: { id: { in: userIds } },
+        select: { id: true, name: true },
+      }),
+      prisma.lead.findMany({
+        where: {
+          tenantId,
+          responsibleId: { in: userIds },
+          status: 'WON',
+          wonAt: { gte: startDate, lte: endDate },
+          deletedAt: null,
+        },
+        select: { responsibleId: true, closedValue: true },
+      }),
+    ])
+    const userById = new Map(users.map(u => [u.id, u.name]))
+    const currentByUser = new Map<string, number>()
+    for (const lead of wonLeads) {
+      const cur = currentByUser.get(lead.responsibleId) ?? 0
+      currentByUser.set(lead.responsibleId, cur + (lead.closedValue ? Number(lead.closedValue) : 0))
+    }
+
+    const userGoalsAggregated = Array.from(userAgg.values()).map(agg => {
+      const current = currentByUser.get(agg.userId) ?? 0
+      const percentage = agg.revenueGoal > 0
+        ? Math.round((current / agg.revenueGoal) * 1000) / 10
+        : 0
+      return {
+        userId: agg.userId,
+        user: { id: agg.userId, name: userById.get(agg.userId) ?? 'Desconhecido' },
+        revenueGoal: agg.revenueGoal,
+        dealsGoal: agg.dealsGoal,
+        isRamping: agg.isRampingAnyMonth,
+        current,
+        percentage,
+      }
+    })
+
+    const totalRevenueCurrent = Array.from(currentByUser.values()).reduce((s, v) => s + v, 0)
+
+    res.json({
+      success: true,
+      data: {
+        periodType: aggType,
+        periodReference,
+        months,
+        totalRevenueGoal,
+        totalDealsGoal,
+        totalRevenueCurrent,
+        monthlyGoals: goals.map(g => ({
+          id: g.id,
+          periodReference: g.periodReference,
+          totalRevenueGoal: g.totalRevenueGoal ? Number(g.totalRevenueGoal) : 0,
+          totalDealsGoal: g.totalDealsGoal,
+        })),
+        userGoalsAggregated: userGoalsAggregated.sort((a, b) => b.percentage - a.percentage),
+      },
+    })
+  } catch (error) {
+    console.error('[Goals] getAggregatedGoals error:', error)
+    res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Erro interno do servidor' },
+    })
+  }
+}
+
 export async function createGoal(req: Request, res: Response): Promise<void> {
   try {
     const tenantId = req.user!.tenantId
@@ -170,6 +360,20 @@ export async function createGoal(req: Request, res: Response): Promise<void> {
       res.status(400).json({
         success: false,
         error: { code: 'VALIDATION_ERROR', message: 'periodReference e pipelineId são obrigatórios' },
+      })
+      return
+    }
+
+    // Validação de formato — Bug 5 introduziu cadastro mensal selecionado.
+    // Backend continua aceitando QUARTERLY/YEARLY pra compat com metas
+    // legacy, mas exige formato correto pra cada tipo.
+    if (!isValidPeriodReference(periodType as AggregationPeriod, periodReference)) {
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: `periodReference inválido pro tipo ${periodType}. Esperado: MONTHLY=YYYY-MM, QUARTERLY=YYYY-Q[1-4], YEARLY=YYYY.`,
+        },
       })
       return
     }
