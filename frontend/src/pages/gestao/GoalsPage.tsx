@@ -6,7 +6,7 @@ import { getGoals, createGoal, updateGoal, getAggregatedGoals, type AggregatedGo
 import { getPipelines } from '../../services/pipeline.service'
 import { getUsers, getTeams } from '../../services/users.service'
 import InfoTooltip from '../../components/shared/InfoTooltip/InfoTooltip'
-import { getGoalMonthOptions, currentMonthValue, getPeriodOptions, currentPeriodValue, type AggregationPeriod } from '../../utils/goalMonths'
+import { currentMonthValue, getPeriodOptions, currentPeriodValue, type AggregationPeriod } from '../../utils/goalMonths'
 
 // ── Types ──
 
@@ -442,8 +442,19 @@ function NewGoalModal({ pipelines, users, teams, onClose, onSave }: {
   const [goalType, setGoalType] = useState('REVENUE')
   // Bug 5 (Alternativa A): cadastro sempre mensal. periodType fixo
   // em 'MONTHLY'; trimestre/semestre/ano são visualizações agregadas.
-  const monthOptions = useMemo(() => getGoalMonthOptions(), [])
-  const [periodReference, setPeriodReference] = useState<string>(currentMonthValue())
+  // Ano + Mês em selects separados pra UX mais ergonômica.
+  const today = useMemo(() => new Date(), [])
+  const [year, setYear] = useState<number>(today.getFullYear())
+  const [month, setMonth] = useState<number>(today.getMonth() + 1) // 1-12
+  const yearOptions = useMemo(() => {
+    const y = today.getFullYear()
+    return [y - 2, y - 1, y, y + 1, y + 2]
+  }, [today])
+  const monthLabels = useMemo(() => [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+  ], [])
+  const periodReference = `${year}-${String(month).padStart(2, '0')}`
   const [totalRevenueGoal, setTotalRevenueGoal] = useState('')
   const [distributionType, setDistributionType] = useState('GENERAL')
   const [pipelineId, setPipelineId] = useState(pipelines[0]?.id ?? '')
@@ -502,21 +513,25 @@ function NewGoalModal({ pipelines, users, teams, onClose, onSave }: {
             <select value={goalType} onChange={e => setGoalType(e.target.value)} style={{ ...inputS, appearance: 'none' as const, cursor: 'pointer' }}>
               <option value="REVENUE">Receita</option>
               <option value="DEALS">Vendas (nº de fechamentos)</option>
-              <option value="BOTH">Receita e Vendas</option>
             </select>
           </div>
 
-          {/* Mês de referência (Bug 5 Alternativa A — sempre mensal) */}
+          {/* Ano + Mês da meta (Bug 5 Alternativa A — sempre mensal) */}
           <div style={{ marginBottom: 16 }}>
             <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
-              Mês da meta <span style={{ color: 'var(--accent)' }}>*</span>
+              Ano e mês da meta <span style={{ color: 'var(--accent)' }}>*</span>
               <InfoTooltip>
                 Cadastre uma meta para cada mês. Para visualizar trimestre, semestre ou ano, use os filtros na tela de metas — o sistema soma automaticamente.
               </InfoTooltip>
             </label>
-            <select value={periodReference} onChange={e => setPeriodReference(e.target.value)} style={{ ...inputS, appearance: 'none' as const, cursor: 'pointer' }}>
-              {monthOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
+            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 8 }}>
+              <select value={year} onChange={e => setYear(Number(e.target.value))} style={{ ...inputS, appearance: 'none' as const, cursor: 'pointer' }}>
+                {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+              <select value={month} onChange={e => setMonth(Number(e.target.value))} style={{ ...inputS, appearance: 'none' as const, cursor: 'pointer' }}>
+                {monthLabels.map((label, i) => <option key={i + 1} value={i + 1}>{label}</option>)}
+              </select>
+            </div>
           </div>
 
           {/* Value */}
@@ -642,8 +657,7 @@ function EditGoalModal({ goal, onClose, onSave }: { goal: GoalData; onClose: () 
             <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Tipo de meta</label>
             <select value={goalType} onChange={e => setGoalType(e.target.value)} style={{ ...inputS, appearance: 'none' as const, cursor: 'pointer' }}>
               <option value="REVENUE">Receita</option>
-              <option value="DEALS">Vendas</option>
-              <option value="BOTH">Receita e Vendas</option>
+              <option value="DEALS">Vendas (nº de fechamentos)</option>
             </select>
           </div>
           <div style={{ marginBottom: 16 }}>
