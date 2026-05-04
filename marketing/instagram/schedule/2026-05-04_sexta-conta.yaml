@@ -1,13 +1,13 @@
-status: aprovado
+status: publicado
 aprovado_em: '2026-05-04'
 aprovado_por: lucas
 slot:
   data: '2026-05-04'
   horario: 18:00 BRT
   justificativa: >
-    Slot original era SEG 09:00 BRT mas o horário passou. Reposicionado pra 18:00 BRT (fim de expediente
-    PME B2B — janela em que dono/sócio confere rede social antes de fechar o dia). Mantém cadência
-    semanal de 5 peças e mantém o pilar Método em segunda-feira (B2 §3 do plano IG).
+    Slot original era SEG 09:00 BRT mas o horário passou. Reposicionado pra 18:00 BRT (fim de expediente PME B2B —
+    janela em que dono/sócio confere rede social antes de fechar o dia). Mantém cadência semanal de 5 peças e mantém o
+    pilar Método em segunda-feira (B2 §3 do plano IG).
 formato: carrossel
 slides: 8
 arquivos:
@@ -25,3 +25,6 @@ primeiro_comentario: null
 publicacao:
   metodo: instagram_graph_api
   acao_humana_necessaria: aprovacao_dada_em_2026-05-04_por_lucas_chat
+published_at: '2026-05-04T21:51:01.227Z'
+media_id: '17961619581116618'
+permalink: https://www.instagram.com/p/DX7rcOXlEoR/
