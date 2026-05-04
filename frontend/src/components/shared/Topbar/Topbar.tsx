@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, type ChangeEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Bell, Search, Mail, ShieldCheck, AlertCircle, CheckCircle2, UserPlus, User, Key, LogOut, X, Loader2, Repeat,
+  Bell, BellRing, BellOff, Search, Mail, ShieldCheck, AlertCircle, CheckCircle2, UserPlus, User, Key, LogOut, X, Loader2, Repeat,
   type LucideIcon,
 } from 'lucide-react'
 import {
@@ -9,6 +9,12 @@ import {
   markAsRead as markAsReadApi,
   markAllAsRead as markAllAsReadApi,
 } from '../../../services/notifications.service'
+import {
+  isPushSupported,
+  currentPermission,
+  enablePushNotifications,
+  disablePushNotifications,
+} from '../../../services/push.service'
 import api from '../../../services/api'
 
 /* ── types ── */
@@ -360,6 +366,7 @@ function UserMenu({ initials, userName, userEmail, avatarUrl }: { initials: stri
   const [open, setOpen] = useState(false)
   const [profileModal, setProfileModal] = useState(false)
   const [passwordModal, setPasswordModal] = useState(false)
+  const [notifModal, setNotifModal] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
   // Acesso administrativo dual (Super Admin pode alternar entre tela
@@ -374,6 +381,18 @@ function UserMenu({ initials, userName, userEmail, avatarUrl }: { initials: stri
     try {
       const stored = JSON.parse(localStorage.getItem('user') ?? '{}') as { role?: string; email?: string }
       return stored.role === 'SUPER_ADMIN' && stored.email === 'admin@tribocrm.com.br'
+    } catch {
+      return false
+    }
+  })()
+
+  // Item "Notificações" só aparece pra usuário não Super Admin (Super
+  // Admin não recebe os 3 eventos: lead atribuído, tarefa vencendo,
+  // desconto pendente) e em navegador que suporta Push API.
+  const canManagePush = (() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('user') ?? '{}') as { role?: string }
+      return stored.role !== 'SUPER_ADMIN' && isPushSupported()
     } catch {
       return false
     }
@@ -411,6 +430,9 @@ function UserMenu({ initials, userName, userEmail, avatarUrl }: { initials: stri
           <div style={{ height: 1, background: 'var(--border)' }} />
           <MenuItem icon={User} label="Meu perfil" onClick={() => { setOpen(false); setProfileModal(true) }} />
           <MenuItem icon={Key} label="Alterar senha" onClick={() => { setOpen(false); setPasswordModal(true) }} />
+          {canManagePush && (
+            <MenuItem icon={BellRing} label="Notificações" onClick={() => { setOpen(false); setNotifModal(true) }} />
+          )}
           {canSwitchAccess && (
             <>
               <div style={{ height: 1, background: 'var(--border)' }} />
@@ -424,6 +446,7 @@ function UserMenu({ initials, userName, userEmail, avatarUrl }: { initials: stri
 
       {profileModal && <ProfileModal userName={userName} onClose={() => setProfileModal(false)} />}
       {passwordModal && <PasswordModal onClose={() => setPasswordModal(false)} />}
+      {notifModal && <NotificationsModal onClose={() => setNotifModal(false)} />}
     </div>
   )
 }
@@ -577,6 +600,182 @@ function PasswordModal({ onClose }: { onClose: () => void }) {
           <button onClick={handleSave} disabled={saving || !current || !newPw || !confirm} style={{ background: current && newPw && confirm ? 'var(--accent)' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: current && newPw && confirm ? '#fff' : 'var(--text-muted)', cursor: current && newPw && confirm ? 'pointer' : 'not-allowed' }}>
             {saving ? 'Salvando...' : 'Alterar senha'}
           </button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ── Notifications Modal ──
+//
+// Gerenciamento manual de Web Push pelo usuário. Acessível via menu do
+// usuário > "Notificações". Mostra estado atual (granted / default /
+// denied) e o que o user pode fazer em cada um:
+//
+//   - granted: já ativadas → botão "Desativar neste dispositivo"
+//     (chama disablePushNotifications: unsubscribe + DELETE backend).
+//   - default: nunca aceitou nem negou → botão "Ativar agora"
+//     (mesmo fluxo do PushPermissionPrompt: VAPID + SW + permissão
+//     nativa + subscribe + POST backend).
+//   - denied: bloqueado no navegador → instruções de como destravar
+//     manualmente (clique no cadeado, mudar Notificações pra Permitir,
+//     F5). Não tem como destravar via JS.
+//
+// Self-gate no UserMenu: só renderiza pra não Super Admin e em
+// navegador que suporta Push API. Se chegou aqui, condições garantidas.
+
+function NotificationsModal({ onClose }: { onClose: () => void }) {
+  const [perm, setPerm] = useState(currentPermission())
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [toast, setToast] = useState('')
+
+  async function handleEnable() {
+    setBusy(true)
+    setError('')
+    try {
+      // Se já está bloqueado, não chama enablePushNotifications (que
+      // mostraria prompt nativo do nada). Atualiza estado pra view denied.
+      if (currentPermission() === 'denied') {
+        setPerm('denied')
+        setBusy(false)
+        return
+      }
+      const result = await enablePushNotifications()
+      setPerm(result)
+      if (result === 'granted') {
+        setToast('Notificações ativadas!')
+        setTimeout(() => setToast(''), 1800)
+      }
+    } catch (err: any) {
+      setError(err?.response?.data?.error?.message ?? err?.message ?? 'Erro inesperado. Tente novamente.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleDisable() {
+    setBusy(true)
+    setError('')
+    try {
+      await disablePushNotifications()
+      // Permissão do navegador continua granted (não dá pra revogar via JS),
+      // mas a subscription foi removida. Pra próxima vez que abrir esse
+      // modal, currentPermission() ainda vai retornar 'granted'. Por isso
+      // mostramos toast e fechamos — fluxo claro pro user.
+      setToast('Notificações desativadas neste dispositivo.')
+      setTimeout(() => { setToast(''); onClose() }, 1500)
+    } catch (err: any) {
+      setError(err?.message ?? 'Erro ao desativar. Tente novamente.')
+      setBusy(false)
+    }
+  }
+
+  const granted = perm === 'granted'
+  const denied = perm === 'denied'
+
+  return (
+    <>
+      {toast && (
+        <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: '4px solid #22c55e', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 70 }}>
+          {toast}
+        </div>
+      )}
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 60 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 460, maxWidth: '90vw', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 61, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {/* Header */}
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Notificações</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}>
+            <X size={18} strokeWidth={1.5} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: 24 }}>
+          {/* Status card */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 10, marginBottom: 16 }}>
+            <div style={{ width: 40, height: 40, borderRadius: '50%', background: granted ? 'rgba(34,197,94,0.12)' : denied ? 'rgba(239,68,68,0.10)' : 'rgba(249,115,22,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              {granted ? (
+                <CheckCircle2 size={20} color="#22c55e" strokeWidth={2} />
+              ) : denied ? (
+                <BellOff size={20} color="#ef4444" strokeWidth={2} />
+              ) : (
+                <BellRing size={20} color="#f97316" strokeWidth={2} />
+              )}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
+                {granted ? 'Ativadas neste dispositivo' : denied ? 'Bloqueadas pelo navegador' : 'Não ativadas'}
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                {granted ? 'Você recebe avisos mesmo com o navegador fechado.'
+                  : denied ? 'Permissão precisa ser liberada nas configurações do site.'
+                  : 'Receba aviso na hora de leads, tarefas e descontos.'}
+              </div>
+            </div>
+          </div>
+
+          {/* Default — pre-prompt resumido */}
+          {!granted && !denied && (
+            <>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 10px' }}>
+                Você recebe um aviso direto na tela quando:
+              </p>
+              <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.8 }}>
+                <li>Um lead novo cair na sua mão</li>
+                <li>Uma tarefa importante estiver pra vencer</li>
+                <li>Um desconto que você pediu for aprovado</li>
+              </ul>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 12, fontStyle: 'italic', margin: '12px 0 0' }}>
+                Funciona mesmo com o navegador fechado.
+              </p>
+            </>
+          )}
+
+          {/* Denied — 3 passos pra destravar */}
+          {denied && (
+            <div style={{ padding: '14px 14px', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 10, fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.7 }}>
+              <div style={{ fontWeight: 600, marginBottom: 8 }}>Como destravar em 3 passos:</div>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 6 }}>
+                <span style={{ color: '#f97316', fontWeight: 700, flexShrink: 0 }}>1.</span>
+                <span>Clique no ícone <strong style={{ color: 'var(--text-primary)' }}>🔒 cadeado</strong> à esquerda do endereço do site (no topo do navegador)</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 6 }}>
+                <span style={{ color: '#f97316', fontWeight: 700, flexShrink: 0 }}>2.</span>
+                <span>Em <strong style={{ color: 'var(--text-primary)' }}>Notificações</strong>, mude de "Bloquear" para <strong style={{ color: '#22c55e' }}>"Permitir"</strong></span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                <span style={{ color: '#f97316', fontWeight: 700, flexShrink: 0 }}>3.</span>
+                <span>Recarregue a página (F5) e abra esse menu de novo</span>
+              </div>
+            </div>
+          )}
+
+          {error && (
+            <div style={{ marginTop: 14, padding: '10px 12px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 8, fontSize: 12, color: '#ef4444', lineHeight: 1.5 }}>
+              {error}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+          <button onClick={onClose} disabled={busy} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
+            Fechar
+          </button>
+          {granted && (
+            <button onClick={handleDisable} disabled={busy} style={{ background: 'transparent', border: '1px solid #ef4444', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: '#ef4444', cursor: busy ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: busy ? 0.6 : 1 }}>
+              {busy && <Loader2 size={14} className="animate-spin" />}
+              {busy ? 'Desativando...' : 'Desativar'}
+            </button>
+          )}
+          {!granted && !denied && (
+            <button onClick={handleEnable} disabled={busy} style={{ background: '#f97316', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 700, color: '#fff', cursor: busy ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: busy ? 0.7 : 1 }}>
+              {busy && <Loader2 size={14} className="animate-spin" />}
+              {busy ? 'Ativando...' : '⚡ Ativar agora'}
+            </button>
+          )}
         </div>
       </div>
     </>
