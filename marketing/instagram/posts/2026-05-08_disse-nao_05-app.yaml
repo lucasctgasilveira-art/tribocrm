@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 5 (função 3: app mobile nativo) — 3 funções recusadas
+# Calendário: SEX 08/05/2026 · Semana 1 · Mês 1
+# Pilar: BASTIDOR
+# Status: aprovado
+# Evidência: 01_Documento_de_Requisitos.md §17 — "Aplicativo mobile nativo
+#            (iOS/Android) — mobile-first no navegador é suficiente para o MVP".
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-08_disse-nao_05-app
+data:
+  pilar: "Bastidor · Decisão"
+  step-num: "FUNÇÃO 3"
+  titulo: "Aplicativo nativo iOS/Android"
+  body-1: |
+    Todo cliente pede no primeiro mês. A gente <span class="miolo-emphasis">não fez.</span>
+  body-2: |
+    Por quê: o sistema já abre no celular pelo navegador, mobile-first. App nativo é 6 meses de engenharia pra ganhar 5% de uso real. Esse tempo a gente prefere usar pra deixar o pipeline mais rápido — que é o que o vendedor reclama de verdade.
+  slide-number: "05 / 08"
+  handle: "@tribocrmoficial"

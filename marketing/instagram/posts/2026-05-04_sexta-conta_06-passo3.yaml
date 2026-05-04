@@ -1,0 +1,18 @@
+# --------------------------------------------------------
+# Pauta: Slide 6 (passo 3) — A conta de sexta
+# Calendário: SEG 04/05/2026 · Semana 1 · Mês 1
+# Pilar: MÉTODO
+# Status: rascunho
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-04_sexta-conta_06-passo3
+data:
+  pilar: "Método · Forecast"
+  step-num: "PASSO 3"
+  titulo: "Quanto sobrou no funil — com data?"
+  body-1: |
+    Olha o que <span class="miolo-emphasis">ficou em pé</span>: cada negócio com próximo passo combinado e data clara.
+  body-2: |
+    Negócio sem próximo passo é negócio morto. Você só não enterrou ainda.
+  slide-number: "06 / 08"
+  handle: "@tribocrmoficial"

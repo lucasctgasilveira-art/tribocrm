@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Story diário SEX 08/05 — chama o carrossel-bastidor "3 funções recusadas"
+# Calendário: SEX 08/05/2026 · Semana 1 · Mês 1
+# Pilar: STORY
+# Status: aprovado
+# Carrossel ancorado: 2026-05-08_disse-nao_*.yaml (8 slides — WhatsApp API,
+#   IA preditiva, app nativo). Evidência em §17 do Doc Requisitos.
+# --------------------------------------------------------
+template: story-recap
+slug: 2026-05-08_story-diario
+data:
+  eyebrow: "Bastidor · Carrossel novo"
+  headline: |
+    3 funções<br>
+    que a gente<br>
+    <span class="t-orange">disse não.</span>
+  subline: |
+    Toda PME pediu. A gente recusou de propósito. O porquê tá no feed.
+  cta: "↑ Arrasta pro carrossel"
+  handle: "@tribocrmoficial"

@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 3 (função 1: WhatsApp Business API) — 3 funções recusadas
+# Calendário: SEX 08/05/2026 · Semana 1 · Mês 1
+# Pilar: BASTIDOR
+# Status: aprovado
+# Evidência: 01_Documento_de_Requisitos.md §17 — "Integração com WhatsApp
+#            Business API oficial" deliberadamente fora do escopo.
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-08_disse-nao_03-whatsapp
+data:
+  pilar: "Bastidor · Decisão"
+  step-num: "FUNÇÃO 1"
+  titulo: "WhatsApp Business API oficial"
+  body-1: |
+    Todo CRM brasileiro promete. A gente <span class="miolo-emphasis">não vai entregar</span> agora.
+  body-2: |
+    Por quê: cada PME usa WhatsApp do jeito dela. Plugar a API oficial mata o fluxo orgânico que já funciona — e ainda cobra por sessão. Resolve um problema que a maioria não tem.
+  slide-number: "03 / 08"
+  handle: "@tribocrmoficial"

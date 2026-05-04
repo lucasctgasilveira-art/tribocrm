@@ -1,0 +1,18 @@
+# --------------------------------------------------------
+# Pauta: Slide 6 (critério/régua) — 3 funções recusadas
+# Calendário: SEX 08/05/2026 · Semana 1 · Mês 1
+# Pilar: BASTIDOR
+# Status: aprovado
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-08_disse-nao_06-criterio
+data:
+  pilar: "Bastidor · Decisão"
+  step-num: "A RÉGUA"
+  titulo: "A pergunta que a gente faz antes de aceitar"
+  body-1: |
+    "<span class="miolo-emphasis">Isso resolve o que tá doendo</span> ou só fica bonito no print da call de venda?"
+  body-2: |
+    Se a resposta é "fica bonito", entra na lista do que a gente disse não. Não importa se o concorrente tem.
+  slide-number: "06 / 08"
+  handle: "@tribocrmoficial"

@@ -1,0 +1,18 @@
+# --------------------------------------------------------
+# Pauta: Slide 4 (passo 1) — A conta de sexta
+# Calendário: SEG 04/05/2026 · Semana 1 · Mês 1
+# Pilar: MÉTODO
+# Status: rascunho
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-04_sexta-conta_04-passo1
+data:
+  pilar: "Método · Forecast"
+  step-num: "PASSO 1"
+  titulo: "Quanto entrou de lead novo?"
+  body-1: |
+    Conta os leads que <span class="miolo-emphasis">entraram</span> no funil essa semana.
+  body-2: |
+    Sem isso, você não sabe se o problema é boca de funil ou conversão. Vai chutar a causa do mês fraco.
+  slide-number: "04 / 08"
+  handle: "@tribocrmoficial"

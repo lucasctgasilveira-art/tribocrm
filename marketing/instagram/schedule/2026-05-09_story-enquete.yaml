@@ -1,0 +1,31 @@
+status: manual
+aprovado_em: '2026-05-04'
+aprovado_por: lucas
+nota_status: |
+  status=manual em vez de aprovado pra blindar contra o publisher tentar postar via Graph
+  (story enquete usa sticker nativo do IG). Lucas sobe manualmente no app.
+slot:
+  data: '2026-05-09'
+  horario: 19:00 BRT
+  justificativa: >
+    Sábado 19:00 BRT — story enquete (interação leve no fim de semana). "Reunião de segunda
+    parece reunião com método ou sessão de terapia?" — provoca a auto-identificação do Pilar Dor
+    sem precisar de carrossel pesado. Stories NÃO são publicados pelo publisher automático
+    (publisher só faz feed/carrossel). Postagem manual pelo Lucas no app.
+formato: story
+slides: 1
+arquivos:
+  - output/2026-05-09_story-enquete.png
+caption_source: null
+hashtags_inline_na_caption: false
+primeiro_comentario: null
+publicacao:
+  metodo: manual_lucas_app_instagram
+  acao_humana_necessaria: lucas_sobe_story_no_app_e_ativa_enquete_nativa
+nota_postagem: |
+  Story enquete usa elemento nativo do Instagram (sticker enquete). Workflow:
+  1. Subir o PNG como story.
+  2. Adicionar sticker "Enquete" do IG por cima.
+  3. Texto sticker: "Sua reunião de segunda parece..." — opção A: "Com método" / opção B: "Terapia".
+  4. Habilitar respostas DM ("Manda DM se quiser conversar").
+  5. Salvar respostas pra alimentar planilha de KPI da semana (engajamento story = +1 sinal).

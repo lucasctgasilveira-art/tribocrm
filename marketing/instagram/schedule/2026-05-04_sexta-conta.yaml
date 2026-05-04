@@ -1,0 +1,27 @@
+status: aprovado
+aprovado_em: '2026-05-04'
+aprovado_por: lucas
+slot:
+  data: '2026-05-04'
+  horario: 18:00 BRT
+  justificativa: >
+    Slot original era SEG 09:00 BRT mas o horário passou. Reposicionado pra 18:00 BRT (fim de expediente
+    PME B2B — janela em que dono/sócio confere rede social antes de fechar o dia). Mantém cadência
+    semanal de 5 peças e mantém o pilar Método em segunda-feira (B2 §3 do plano IG).
+formato: carrossel
+slides: 8
+arquivos:
+  - output/2026-05-04_sexta-conta_01-capa.png
+  - output/2026-05-04_sexta-conta_02-dor.png
+  - output/2026-05-04_sexta-conta_03-erro.png
+  - output/2026-05-04_sexta-conta_04-passo1.png
+  - output/2026-05-04_sexta-conta_05-passo2.png
+  - output/2026-05-04_sexta-conta_06-passo3.png
+  - output/2026-05-04_sexta-conta_07-template.png
+  - output/2026-05-04_sexta-conta_08-cta.png
+caption_source: posts/2026-05-04_sexta-conta_08-cta.yaml#caption
+hashtags_inline_na_caption: true
+primeiro_comentario: null
+publicacao:
+  metodo: instagram_graph_api
+  acao_humana_necessaria: aprovacao_dada_em_2026-05-04_por_lucas_chat

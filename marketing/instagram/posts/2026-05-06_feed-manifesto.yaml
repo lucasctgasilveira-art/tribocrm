@@ -2,6 +2,7 @@
 # Pauta: Feed manifesto "Vender de verdade não é talento. É método."
 # Calendário: QUA 06/05/2026 · Semana 1 · Mês 1
 # Pilar: MANIFESTO
+# Status: aprovado
 # --------------------------------------------------------
 template: feed-manifesto
 slug: 2026-05-06_feed-manifesto
@@ -11,3 +12,19 @@ data:
   linha-3: |
     É <span class="t-orange">método</span>.
   handle: "@tribocrmoficial"
+
+# Legenda final oficial
+caption: |
+  Vender de verdade não é talento. É método.
+
+  Talento explica o melhor mês. Não explica o ano.
+
+  O vendedor que bate meta todo mês não tem dom. Tem ritual. Tem roteiro de qualificação. Tem pipeline limpo. Tem revisão de funil toda sexta.
+
+  Tira o método e o talento vira só sorte com nome bonito.
+
+  PME brasileira não precisa contratar gênio. Precisa colocar processo. O resto vem.
+
+  Compartilha com quem ainda acha que vendedor bom já nasce pronto.
+
+  #vendasb2b #pmebrasileira #processocomercial #gestaocomercial #vendasconsultivas

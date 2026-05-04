@@ -1,0 +1,19 @@
+# --------------------------------------------------------
+# Pauta: Slide 3 (erro comum) — A conta de sexta
+# Calendário: SEG 04/05/2026 · Semana 1 · Mês 1
+# Pilar: MÉTODO
+# Status: rascunho
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-04_sexta-conta_03-erro
+data:
+  pilar: "Método · Forecast"
+  step-num: "O ERRO"
+  titulo: "Olhar pipeline só quando precisa de número"
+  body-1: |
+    Pipeline vira <span class="miolo-emphasis">relatório de fim de mês</span>.<br>
+    Toda sexta vira surpresa.
+  body-2: |
+    A conta certa é semanal. Pequena, rápida, mas todo dia 6 da semana.
+  slide-number: "03 / 08"
+  handle: "@tribocrmoficial"

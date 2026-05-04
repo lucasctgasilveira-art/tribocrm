@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Story enquete "reunião comercial vs terapia"
+# Calendário: SAB 09/05/2026 · Semana 1 · Mês 1
+# Pilar: STORY (interação)
+# Status: aprovado
+# Observação: Story só. Sem caption (story não usa).
+# --------------------------------------------------------
+template: story-enquete
+slug: 2026-05-09_story-enquete
+data:
+  pilar: "Pergunta da semana"
+  pergunta: |
+    Sua reunião comercial<br>
+    de segunda parece mais...
+  opcao-a: |
+    Reunião<br>com método
+  opcao-b: |
+    Sessão<br>de terapia
+  cta: "Manda DM se quiser conversar 🔥"
+  handle: "@tribocrmoficial"

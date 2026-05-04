@@ -1,0 +1,18 @@
+# --------------------------------------------------------
+# Pauta: Story diário SEG 04/05 — chama atenção pro carrossel "conta de sexta"
+# Calendário: SEG 04/05/2026 · Semana 1 · Mês 1
+# Pilar: STORY
+# Status: rascunho
+# --------------------------------------------------------
+template: story-recap
+slug: 2026-05-04_story-diario
+data:
+  eyebrow: "Hoje no feed"
+  headline: |
+    A conta<br>
+    que ninguém<br>
+    <span class="t-orange">faz na sexta.</span>
+  subline: |
+    Carrossel novo: 3 números pra fechar a semana sem achismo.
+  cta: "↑ Arrasta pra ver"
+  handle: "@tribocrmoficial"

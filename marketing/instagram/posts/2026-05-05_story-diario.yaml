@@ -1,0 +1,18 @@
+# --------------------------------------------------------
+# Pauta: Story diário TER 05/05 — chama o reel "Sexta às 18h"
+# Calendário: TER 05/05/2026 · Semana 1 · Mês 1
+# Pilar: STORY
+# Status: rascunho
+# --------------------------------------------------------
+template: story-recap
+slug: 2026-05-05_story-diario
+data:
+  eyebrow: "Reel novo no feed"
+  headline: |
+    Sexta às 18h:<br>
+    a cena que <span class="t-orange">todo dono</span><br>
+    de PME conhece.
+  subline: |
+    Comenta lá se a tua sexta tá assim — a gente quer saber.
+  cta: "↑ Arrasta pra ver o reel"
+  handle: "@tribocrmoficial"

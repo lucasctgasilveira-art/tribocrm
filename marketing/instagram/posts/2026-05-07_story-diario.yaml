@@ -1,0 +1,18 @@
+# --------------------------------------------------------
+# Pauta: Story diário QUI 07/05 — chama o reel-bastidor "a gente"
+# Calendário: QUI 07/05/2026 · Semana 1 · Mês 1
+# Pilar: STORY
+# Status: rascunho
+# --------------------------------------------------------
+template: story-recap
+slug: 2026-05-07_story-diario
+data:
+  eyebrow: "Bastidor · Reel novo"
+  headline: |
+    Por que a<br>
+    gente fala<br>
+    <span class="t-orange">"a gente".</span>
+  subline: |
+    Não é descuido. É escolha. Reel de 45s explicando.
+  cta: "↑ Arrasta pra ver"
+  handle: "@tribocrmoficial"

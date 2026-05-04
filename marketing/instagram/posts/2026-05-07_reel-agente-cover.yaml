@@ -1,0 +1,34 @@
+# --------------------------------------------------------
+# Pauta: Capa do reel "Por que a gente fala 'a gente' e não 'nós'"
+# Calendário: QUI 07/05/2026 · Semana 1 · Mês 1
+# Pilar: BASTIDOR (Hook 10)
+# Status: aprovado (auto-aprovação editorial conforme mandato Lucas 04/05)
+# Observação: REEL = vídeo. Capa vira thumbnail.
+#             Postagem manual pelo Lucas (publisher pula formato=reel).
+# --------------------------------------------------------
+template: reel-cover
+slug: 2026-05-07_reel-agente-cover
+data:
+  pilar: "Bastidor · Voz da marca"
+  titulo: |
+    Por que a gente<br>
+    fala <span class="t-orange">"a gente"</span><br>
+    e não "nós".
+  meta: "▶ Reel · 0:45"
+  handle: "@tribocrmoficial"
+
+# Legenda final oficial
+caption: |
+  "A gente" não é descuido. É escolha.
+
+  CRM grande fala "nós oferecemos a melhor solução do mercado". A gente não fala assim porque PME brasileira não fala assim. Vendedor de PME fala "a gente vai resolver", "a gente combina semana que vem", "a gente vê isso na reunião".
+
+  Quando a marca fala diferente do cliente, vira distância. Distância vira "isso aqui não é pra mim".
+
+  A gente quer o oposto. Quer que dono de PME abra o Instagram, leia uma frase e pense "esse povo fala como eu".
+
+  Não é casual demais. É preciso. Cada palavra que entra aqui passa por essa régua: PME brasileira diria isso?
+
+  Se não diria, refaz.
+
+  #vendasb2b #pmebrasileira #marcabrasileira #vozdamarca #crmbrasileiro

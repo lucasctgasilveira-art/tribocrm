@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 4 (função 2: IA preditiva) — 3 funções recusadas
+# Calendário: SEX 08/05/2026 · Semana 1 · Mês 1
+# Pilar: BASTIDOR
+# Status: aprovado
+# Evidência: 01_Documento_de_Requisitos.md §17 — "Relatórios com IA preditiva"
+#            deliberadamente fora do escopo.
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-08_disse-nao_04-ia
+data:
+  pilar: "Bastidor · Decisão"
+  step-num: "FUNÇÃO 2"
+  titulo: "Relatório com IA preditiva"
+  body-1: |
+    Tá na moda. Todo concorrente vende. A gente <span class="miolo-emphasis">não vai colocar</span>.
+  body-2: |
+    Por quê: PME não precisa de previsão de IA. Precisa do número certo na hora certa. IA preditiva sem base virgem é chute com gráfico bonito. A gente entrega o método primeiro. IA depois, se fizer sentido.
+  slide-number: "04 / 08"
+  handle: "@tribocrmoficial"

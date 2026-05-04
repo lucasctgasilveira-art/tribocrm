@@ -1,0 +1,33 @@
+status: aprovado
+aprovado_em: '2026-05-04'
+aprovado_por: lucas
+slot:
+  data: '2026-05-05'
+  horario: 18:00 BRT
+  justificativa: >
+    Terça 18:00 BRT — pilar Dor da PME. Reel curto (0:18) sobre cena reconhecível de "sexta 18h sem saber
+    quanto fechou". Slot fim de tarde casa com o tema (a hora exata da dor). REEL = vídeo, postagem manual
+    pelo Lucas — o publisher pula automaticamente (formato=reel). Capa renderizada como thumbnail.
+formato: reel
+slides: 1
+arquivos:
+  - output/2026-05-05_reel-sexta-cover.png
+caption_source: posts/2026-05-05_reel-sexta-cover.yaml#caption
+hashtags_inline_na_caption: true
+primeiro_comentario: null
+publicacao:
+  metodo: manual_lucas_grava_e_publica
+  acao_humana_necessaria: lucas_grava_video_18s_e_publica_no_celular
+roteiro_gravacao:
+  duracao_alvo: "0:18 a 0:22"
+  formato: "vertical 9:16 — celular na altura dos olhos, luz frontal natural"
+  estrutura:
+    - "0:00-0:03 — HOOK falado direto pra câmera: 'Sexta, 18h. Adivinha o que vai acontecer.'"
+    - "0:03-0:08 — REENACT: olhar pro relógio, fechar notebook, suspirar. Voz over: 'Você fecha o dia sem saber quanto fechou na semana.'"
+    - "0:08-0:13 — VIRADA: voltar a falar pra câmera, mais sério: 'Segunda, o sócio pergunta. A resposta vem do achismo. Não do pipeline.'"
+    - "0:13-0:18 — RESOLUÇÃO: 'Três números resolvem isso. Toda sexta. 30 minutos. Sem sistema, sem treinamento, só método.' Final firme."
+  legenda_em_video:
+    - "Legenda automática (queimar no vídeo) — Instagram não conta sem legenda em 2026"
+  trilha:
+    - "Sem música ou trilha minimalista lo-fi sem voz (algoritmo IG: voz original cria mais retenção)"
+  dica_critica: "Grava no escritório real, mostra o ambiente PME. NÃO é ambiente de coach gravando em estúdio."

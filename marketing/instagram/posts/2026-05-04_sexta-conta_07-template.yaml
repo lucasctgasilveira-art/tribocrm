@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 7 (template/síntese) — A conta de sexta
+# Calendário: SEG 04/05/2026 · Semana 1 · Mês 1
+# Pilar: MÉTODO
+# Status: rascunho
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-04_sexta-conta_07-template
+data:
+  pilar: "Método · Forecast"
+  step-num: "A CONTA DE SEXTA"
+  titulo: "30 minutos. Toda semana."
+  body-1: |
+    <span class="miolo-emphasis">Entrou.</span> Quantos leads novos.<br>
+    <span class="miolo-emphasis">Saiu.</span> Quantos ganhos e perdidos.<br>
+    <span class="miolo-emphasis">Ficou.</span> Quantos com próximo passo.
+  body-2: |
+    Três números. Toda sexta. Sem isso, segunda vira surpresa. Com isso, segunda vira estratégia.
+  slide-number: "07 / 08"
+  handle: "@tribocrmoficial"

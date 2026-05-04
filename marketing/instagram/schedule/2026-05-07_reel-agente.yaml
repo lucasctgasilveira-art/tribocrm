@@ -1,0 +1,34 @@
+status: aprovado
+aprovado_em: '2026-05-04'
+aprovado_por: lucas
+slot:
+  data: '2026-05-07'
+  horario: 17:00 BRT
+  justificativa: >
+    Quinta 17:00 BRT — pilar Bastidor (Hook 10). Reel de 0:45 sobre escolha lexical "a gente"
+    vs "nós". Tópico voz da marca, perfeito pra criar conexão. Slot 17h fim de expediente,
+    horário em que dono PME respira e abre rede social. REEL = postagem manual pelo Lucas.
+formato: reel
+slides: 1
+arquivos:
+  - output/2026-05-07_reel-agente-cover.png
+caption_source: posts/2026-05-07_reel-agente-cover.yaml#caption
+hashtags_inline_na_caption: true
+primeiro_comentario: null
+publicacao:
+  metodo: manual_lucas_grava_e_publica
+  acao_humana_necessaria: lucas_grava_video_45s_e_publica_no_celular
+roteiro_gravacao:
+  duracao_alvo: "0:40 a 0:50"
+  formato: "vertical 9:16 — Lucas falando direto pra câmera (talking head), ambiente real do escritório"
+  estrutura:
+    - "0:00-0:05 — HOOK direto: 'CRM grande te chama de 'cliente' e fala 'nós oferecemos a melhor solução do mercado'.'"
+    - "0:05-0:12 — CONTRASTE: 'A gente não fala assim. Não no Instagram, não na call de vendas, não no produto.'"
+    - "0:12-0:25 — RAZÃO: 'Porque PME brasileira não fala assim. Vendedor de PME fala — a gente vai resolver, a gente combina semana que vem, a gente vê na reunião.'"
+    - "0:25-0:38 — TESE: 'Quando a marca fala diferente do cliente, vira distância. Distância vira — isso aqui não é pra mim.'"
+    - "0:38-0:45 — FECHAMENTO: 'A régua que eu uso é simples — PME brasileira diria isso? Se não diria, refaz.'"
+  legenda_em_video:
+    - "Queimar legenda automática no vídeo (essencial pra reels long-form em 2026)"
+  trilha:
+    - "Voz original sem música, ou música ambient muito baixa (-30dB)"
+  dica_critica: "Lucas em ambiente cotidiano (não estúdio). Camisa lisa, fundo desorganizado-real, sem ring light caricato. Preserva o tom 'gente como a gente'."

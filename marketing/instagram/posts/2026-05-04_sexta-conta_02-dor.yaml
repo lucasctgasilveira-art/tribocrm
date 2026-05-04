@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 2 (dor) — A conta de sexta
+# Calendário: SEG 04/05/2026 · Semana 1 · Mês 1
+# Pilar: MÉTODO
+# Status: rascunho
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-04_sexta-conta_02-dor
+data:
+  pilar: "Método · Forecast"
+  step-num: ""
+  titulo: ""
+  body-1: |
+    Sexta, 18h.<br>
+    Você fecha o notebook<br>
+    sem saber <span class="miolo-emphasis">quanto fechou</span> na semana.
+  body-2: |
+    Segunda chega e o sócio pergunta. A resposta vem do achismo, não do pipeline.
+  slide-number: "02 / 08"
+  handle: "@tribocrmoficial"

@@ -1,0 +1,18 @@
+# --------------------------------------------------------
+# Pauta: Slide 2 (abertura/contexto) — 3 funções recusadas
+# Calendário: SEX 08/05/2026 · Semana 1 · Mês 1
+# Pilar: BASTIDOR
+# Status: aprovado
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-08_disse-nao_02-abertura
+data:
+  pilar: "Bastidor · Decisão"
+  step-num: ""
+  titulo: ""
+  body-1: |
+    Toda semana chega <span class="miolo-emphasis">pedido novo</span> de função no produto.
+  body-2: |
+    A gente diz não pra muita coisa. Não por preguiça. Por escolha. Aqui vão 3 que parecem óbvias e a gente recusou de propósito.
+  slide-number: "02 / 08"
+  handle: "@tribocrmoficial"

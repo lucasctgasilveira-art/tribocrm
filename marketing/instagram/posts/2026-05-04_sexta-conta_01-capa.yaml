@@ -1,0 +1,16 @@
+# --------------------------------------------------------
+# Pauta: Slide 1 (capa) do carrossel "A conta que você tem que fazer toda sexta"
+# Calendário: SEG 04/05/2026 · Semana 1 · Mês 1
+# Pilar: MÉTODO (Hook 12 — Forecast e pipeline)
+# Status: rascunho (aguardando aprovação peça-a-peça do Lucas)
+# --------------------------------------------------------
+template: carrossel-metodo-capa
+slug: 2026-05-04_sexta-conta_01-capa
+data:
+  pilar: "Método · Forecast"
+  titulo: |
+    A conta que você tem<br>
+    que fazer <span class="t-orange">toda sexta.</span><br>
+    (E quase ninguém faz.)
+  slide-number: "01 / 08"
+  handle: "@tribocrmoficial"

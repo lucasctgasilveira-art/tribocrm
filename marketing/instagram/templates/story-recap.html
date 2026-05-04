@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>TriboCRM · Story Recap/Diário</title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  /* Story diário — formato simples: eyebrow + headline curta + linha-fina + handle */
+  .recap-eyebrow {
+    position: absolute;
+    top: calc(var(--canvas-pad) + 80px);
+    left: var(--canvas-pad);
+    color: var(--tribo-orange);
+  }
+  .recap-headline {
+    position: absolute;
+    top: 35%;
+    left: var(--canvas-pad);
+    right: var(--canvas-pad);
+    max-width: 920px;
+  }
+  .recap-headline h2 {
+    line-height: 1.05;
+    letter-spacing: -0.025em;
+  }
+  .recap-subline {
+    position: absolute;
+    top: 65%;
+    left: var(--canvas-pad);
+    right: var(--canvas-pad);
+    color: var(--tribo-white-soft);
+    font-size: 40px;
+    font-weight: var(--w-medium);
+    line-height: 1.3;
+    max-width: 880px;
+  }
+  .recap-cta {
+    position: absolute;
+    bottom: 220px;
+    left: var(--canvas-pad);
+    right: var(--canvas-pad);
+    text-align: left;
+    font-size: 32px;
+    font-weight: var(--w-semibold);
+    color: var(--tribo-white-dim);
+  }
+  .canvas--story .brand-symbol {
+    bottom: var(--canvas-pad);
+    right: var(--canvas-pad);
+  }
+  .canvas--story .brand-signature {
+    bottom: var(--canvas-pad);
+    left: var(--canvas-pad);
+    font-size: 30px;
+  }
+</style>
+</head>
+<body>
+<div class="preview-stage">
+
+  <div class="canvas canvas--story" data-format="story-recap">
+
+    <span class="recap-eyebrow t-eyebrow" data-edit="eyebrow">Hoje no feed</span>
+
+    <div class="recap-headline">
+      <h2 class="t-h2" data-edit="headline">
+        Olha o<br>
+        carrossel<br>
+        novo lá.
+      </h2>
+    </div>
+
+    <div class="recap-subline" data-edit="subline">
+      A conta de sexta — 3 números que mudam tua semana.
+    </div>
+
+    <div class="recap-cta" data-edit="cta">↑ Arrasta pra cima</div>
+
+    <span class="brand-signature" data-edit="handle">@tribocrmoficial</span>
+    <img class="brand-symbol" src="../_assets/symbol-d.svg" alt="">
+
+  </div>
+
+</div>
+</body>
+</html>

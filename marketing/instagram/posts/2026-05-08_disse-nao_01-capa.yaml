@@ -1,0 +1,18 @@
+# --------------------------------------------------------
+# Pauta: Slide 1 (capa) do carrossel "3 funções que a gente disse não"
+# Calendário: SEX 08/05/2026 · Semana 1 · Mês 1
+# Pilar: BASTIDOR (Hook 8 — coisas que CRM grande tem e a gente não)
+# Status: aprovado (auto-aprovação editorial conforme mandato Lucas 04/05)
+# Evidência: documentos_projeto_completo/01_Documento_de_Requisitos.md §17
+#            "Fora do Escopo do MVP" — itens deliberadamente excluídos.
+# --------------------------------------------------------
+template: carrossel-metodo-capa
+slug: 2026-05-08_disse-nao_01-capa
+data:
+  pilar: "Bastidor · Decisão"
+  titulo: |
+    3 funções<br>
+    que todo CRM tem<br>
+    e a gente <span class="t-orange">disse não.</span>
+  slide-number: "01 / 08"
+  handle: "@tribocrmoficial"

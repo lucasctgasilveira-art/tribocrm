@@ -1,0 +1,51 @@
+status: manual
+aprovado_em: '2026-05-04'
+aprovado_por: lucas
+formato: story
+nota_status: |
+  status=manual em vez de aprovado pra blindar contra o publisher tentar postar story via
+  Graph API (publisher só cobre feed e carrossel). Lucas posta manualmente no app — ver
+  bloco arquivos_por_dia abaixo.
+slot:
+  data: '2026-05-04'
+  horario: 19:00 BRT
+  justificativa: >
+    Stories diários da semana 04-08/05 — chamam o feed do dia. Postagem manual pelo Lucas
+    no app (publisher automático não publica stories). Slot 19:00 BRT é referência: pode ser
+    qualquer hora em que o feed do dia já estiver no ar.
+nota_global: |
+  Cada story-diario.png é o "card visual" pra subir no story do Instagram.
+  Workflow manual padronizado pra todos:
+  1. Abre o app, story novo.
+  2. Sobe o PNG correspondente do dia.
+  3. Adiciona sticker "ver post" ou "link" apontando pro post do feed publicado naquele dia.
+  4. Publica.
+arquivos_por_dia:
+  - dia: '2026-05-04'
+    horario_sugerido: '19:00 BRT'
+    arquivo: output/2026-05-04_story-diario.png
+    chama_feed_de: posts/2026-05-04_sexta-conta_*.yaml (carrossel "A conta de sexta")
+    caption_source: null
+  - dia: '2026-05-05'
+    horario_sugerido: '19:00 BRT'
+    arquivo: output/2026-05-05_story-diario.png
+    chama_feed_de: posts/2026-05-05_reel-sexta-cover.yaml (reel "Sexta às 18h")
+    caption_source: null
+  - dia: '2026-05-06'
+    horario_sugerido: '12:00 BRT'
+    arquivo: output/2026-05-06_story-diario.png
+    chama_feed_de: posts/2026-05-06_feed-manifesto.yaml (manifesto "talento vs método")
+    caption_source: null
+  - dia: '2026-05-07'
+    horario_sugerido: '19:00 BRT'
+    arquivo: output/2026-05-07_story-diario.png
+    chama_feed_de: posts/2026-05-07_reel-agente-cover.yaml (reel "a gente")
+    caption_source: null
+  - dia: '2026-05-08'
+    horario_sugerido: '12:00 BRT'
+    arquivo: output/2026-05-08_story-diario.png
+    chama_feed_de: posts/2026-05-08_disse-nao_*.yaml (carrossel "3 funções recusadas")
+    caption_source: null
+publicacao:
+  metodo: manual_lucas_app_instagram
+  acao_humana_necessaria: lucas_sobe_5_stories_um_por_dia_apos_feed_publicado

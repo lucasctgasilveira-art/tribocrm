@@ -1,0 +1,18 @@
+# --------------------------------------------------------
+# Pauta: Slide 7 (promessa/posicionamento) — 3 funções recusadas
+# Calendário: SEX 08/05/2026 · Semana 1 · Mês 1
+# Pilar: BASTIDOR
+# Status: aprovado
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-08_disse-nao_07-promessa
+data:
+  pilar: "Bastidor · Decisão"
+  step-num: "POR QUÊ"
+  titulo: "A gente prefere fazer pouco, bem feito."
+  body-1: |
+    CRM brasileiro tem virado <span class="miolo-emphasis">enxoval</span>. 800 funções, 12 que o cliente usa.
+  body-2: |
+    A gente faz a Máquina de Vendas. Cabe num jeito de trabalhar que dá pra rodar na sexta sem treinamento de 3 semanas.
+  slide-number: "07 / 08"
+  handle: "@tribocrmoficial"

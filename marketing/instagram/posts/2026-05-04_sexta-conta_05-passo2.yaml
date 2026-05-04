@@ -1,0 +1,18 @@
+# --------------------------------------------------------
+# Pauta: Slide 5 (passo 2) — A conta de sexta
+# Calendário: SEG 04/05/2026 · Semana 1 · Mês 1
+# Pilar: MÉTODO
+# Status: rascunho
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-04_sexta-conta_05-passo2
+data:
+  pilar: "Método · Forecast"
+  step-num: "PASSO 2"
+  titulo: "Quanto saiu (ganho ou perdido)?"
+  body-1: |
+    Conta os negócios que <span class="miolo-emphasis">saíram</span> do pipeline. Os que fecharam e os que morreram.
+  body-2: |
+    Sem isso, o pipeline incha. Vira mato. Vira mentira. E você acha que tem mais venda em andamento do que tem.
+  slide-number: "05 / 08"
+  handle: "@tribocrmoficial"

@@ -2,6 +2,10 @@
 # Pauta: Capa do reel "Sexta às 18h: ninguém sabe quanto fechou"
 # Calendário: TER 05/05/2026 · Semana 1 · Mês 1
 # Pilar: DOR DA PME
+# Status: aprovado (auto-aprovação editorial conforme mandato Lucas 04/05)
+# Observação: REEL = vídeo. Capa renderizada vira thumbnail.
+#             Postagem manual pelo Lucas (publisher pula formato=reel).
+#             Roteiro de gravação está no schedule/ correspondente.
 # --------------------------------------------------------
 template: reel-cover
 slug: 2026-05-05_reel-sexta-cover
@@ -14,3 +18,17 @@ data:
     na <span class="t-orange">semana</span>.
   meta: "▶ Reel · 0:18"
   handle: "@tribocrmoficial"
+
+# Legenda final oficial
+caption: |
+  Sexta, 18h. O time fecha o notebook. O sócio chega segunda perguntando "quanto a gente fechou na semana?" — e a resposta vem do achismo, não do pipeline.
+
+  É a cena mais comum em PME brasileira. Não é falta de vontade. É falta de método.
+
+  Três números resolvem: quanto entrou de lead novo, quanto saiu (ganho ou perdido) e quanto ficou em pé com próximo passo combinado.
+
+  Roda toda sexta. 30 minutos. Vira ritual em 2 semanas.
+
+  Marca aquele vendedor que ainda fecha sexta no escuro 🔥
+
+  #vendasb2b #pmebrasileira #gestaocomercial #processocomercial #crmbrasileiro
