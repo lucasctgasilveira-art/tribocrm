@@ -3,6 +3,40 @@ import { prisma } from '../lib/prisma'
 import { Prisma } from '@prisma/client'
 import { resolveTenantId } from '../lib/platformTenant'
 import { replaceVars } from '../services/automation.service'
+import { triggerWebhookEvent } from '../services/webhook-dispatcher.service'
+
+// Helper pra serializar task pro payload de webhook. Mantém shape
+// estável com campos diretos do model Task — espelha a serialização
+// usada na API v1.
+function serializeTaskForWebhook(task: {
+  id: string
+  type: string
+  title: string
+  description: string | null
+  dueDate: Date | null
+  isDone: boolean
+  doneAt: Date | null
+  leadId: string
+  responsibleId: string
+  createdAt: Date
+  lead?: { id: string; name: string; company: string | null } | null
+  responsible?: { id: string; name: string } | null
+}) {
+  return {
+    id: task.id,
+    type: task.type,
+    title: task.title,
+    description: task.description,
+    dueDate: task.dueDate,
+    isDone: task.isDone,
+    doneAt: task.doneAt,
+    leadId: task.leadId,
+    responsibleId: task.responsibleId,
+    createdAt: task.createdAt,
+    lead: task.lead ?? null,
+    responsible: task.responsible ?? null,
+  }
+}
 
 // ── Lead Tasks ──
 
@@ -222,6 +256,14 @@ export async function completeTask(req: Request, res: Response): Promise<void> {
       },
     })
 
+    // Webhook task.completed (só na transição false→true, evita
+    // duplicar se completeTask é chamado várias vezes pra task já feita)
+    if (!existing.isDone) {
+      triggerWebhookEvent(tenantId, 'task.completed', {
+        task: serializeTaskForWebhook(task),
+      })
+    }
+
     res.json({ success: true, data: task })
   } catch (error) {
     console.error('[Tasks] completeTask error:', error)
@@ -284,6 +326,13 @@ export async function updateTask(req: Request, res: Response): Promise<void> {
         createdByUser: { select: { id: true, name: true } },
       },
     })
+
+    // Webhook task.completed quando PATCH troca isDone false→true
+    if (req.body.isDone === true && !existing.isDone) {
+      triggerWebhookEvent(tenantId, 'task.completed', {
+        task: serializeTaskForWebhook(task),
+      })
+    }
 
     res.json({ success: true, data: task })
   } catch (error) {

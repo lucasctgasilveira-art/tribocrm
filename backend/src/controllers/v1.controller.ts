@@ -1,6 +1,7 @@
 import { Request, Response } from 'express'
 import { Prisma } from '@prisma/client'
 import { prisma } from '../lib/prisma'
+import { triggerWebhookEvent } from '../services/webhook-dispatcher.service'
 
 // Controller da API pública v1. Toda rota aqui é montada DEPOIS do
 // middleware apiKeyAuth, então sempre temos req.apiKey.tenantId. Não
@@ -273,6 +274,11 @@ export async function createLeadV1(req: Request, res: Response): Promise<void> {
         },
       })
       .catch((e) => console.error('[v1] LEAD_CREATED event error:', e?.message))
+
+    // Webhook: lead.created (mesmo shape pra qualquer fonte de criação)
+    triggerWebhookEvent(tenantId, 'lead.created', {
+      lead: serializeLead(result),
+    })
 
     res.status(201).json({ success: true, data: serializeLead(result) })
   } catch (error: any) {

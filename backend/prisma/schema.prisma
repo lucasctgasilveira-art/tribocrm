@@ -395,6 +395,7 @@ model Tenant {
   notes          TenantNote[]
   leadPurchases  LeadPurchase[]
   apiKeys        ApiKey[]
+  webhookEndpoints WebhookEndpoint[]
   @@map("tenants")
 }
 
@@ -499,6 +500,7 @@ model User {
   pipelineAccesses UserPipelineAccess[]
   pushSubscriptions PushSubscription[]
   apiKeysCreated    ApiKey[]           @relation("ApiKeyCreatedBy")
+  webhooksCreated   WebhookEndpoint[]  @relation("WebhookEndpointCreatedBy")
   @@unique([tenantId, email])
   @@map("users")
 }
@@ -560,6 +562,68 @@ model ApiKey {
   creator     User?     @relation("ApiKeyCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
   @@index([tenantId])
   @@map("api_keys")
+}
+
+// Endpoint de webhook de saída cadastrado pelo tenant. Cada endpoint
+// escuta um subset de eventos (events: array de strings tipo
+// "lead.created", "lead.won" etc.). O secret é gerado uma vez na
+// criação e usado pra HMAC SHA-256 do payload — cliente valida pra
+// garantir que veio mesmo do TriboCRM.
+//
+// Limites: 10 endpoints ativos por tenant (gate no controller).
+//
+// FK Cascade pro tenant. createdBy SetNull (preserva endpoint mesmo
+// se o user que criou for removido — auditoria).
+model WebhookEndpoint {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  name        String    @db.VarChar(100)
+  url         String    @db.Text
+  // Secret em texto plano (não hashado) porque precisamos dele pra
+  // assinar cada payload com HMAC. Cliente também tem cópia pra
+  // validar a assinatura. Só dono do endpoint vê o secret na UI
+  // (não aparece em listagens públicas — controller esconde).
+  secret      String    @db.VarChar(80)
+  events      String[]  // ex: ["lead.created", "lead.won"]
+  isActive    Boolean   @default(true) @map("is_active")
+  createdBy   String?   @map("created_by") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  creator     User?     @relation("WebhookEndpointCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  deliveries  WebhookDelivery[]
+  @@index([tenantId])
+  @@map("webhook_endpoints")
+}
+
+// Log de cada tentativa de entrega. Uma linha por endpoint+evento+attempt.
+// Status: PENDING (na fila pra retry), SUCCESS (HTTP 2xx), FAILED (esgotou
+// 3 tentativas ou recebeu 4xx que não é retryable).
+//
+// nextRetryAt: quando vai ser próxima tentativa. NULL se SUCCESS ou FAILED
+// definitivo. Cron simples lê deliveries com status=PENDING e
+// nextRetryAt <= now() pra reenviar.
+//
+// Retenção: 90 dias (job de limpeza apaga depois). Sem isso a tabela cresce
+// indefinidamente.
+model WebhookDelivery {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  endpointId      String   @map("endpoint_id") @db.Uuid
+  eventType       String   @map("event_type") @db.VarChar(50)
+  payload         Json
+  status          String   @default("PENDING") @db.VarChar(20)
+  attemptCount    Int      @default(0) @map("attempt_count")
+  lastResponseStatus Int?  @map("last_response_status")
+  lastResponseBody String? @map("last_response_body") @db.Text
+  lastError       String?  @map("last_error") @db.Text
+  nextRetryAt     DateTime? @map("next_retry_at")
+  deliveredAt     DateTime? @map("delivered_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  endpoint        WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@index([status, nextRetryAt])
+  @@map("webhook_deliveries")
 }
 
 // Acesso de usuario a pipelines do tenant. Many-to-many entre User e

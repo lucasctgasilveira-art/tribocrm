@@ -1,6 +1,7 @@
 import { Request, Response } from 'express'
 import { prisma } from '../lib/prisma'
 import { Prisma } from '@prisma/client'
+import { triggerWebhookEvent } from '../services/webhook-dispatcher.service'
 
 // Public handlers — no JWT. Mounted under /public/forms/:embedToken and
 // called by the embed.js widget served from /public/embed.js on any
@@ -268,6 +269,36 @@ export async function submitPublicForm(req: Request, res: Response): Promise<voi
           },
         })
         .catch((e) => console.error('[Public] LEAD_CREATED event error:', e?.message))
+
+      // Webhook lead.created — busca lead recém-criado pra serializar.
+      // Best-effort, não bloqueia resposta pro cliente do form.
+      prisma.lead.findUnique({ where: { id: result.leadId } })
+        .then(lead => {
+          if (lead) {
+            triggerWebhookEvent(tenantId, 'lead.created', {
+              lead: {
+                id: lead.id,
+                name: lead.name,
+                email: lead.email,
+                phone: lead.phone,
+                whatsapp: lead.whatsapp,
+                company: lead.company,
+                source: lead.source,
+                temperature: lead.temperature,
+                status: lead.status,
+                pipelineId: lead.pipelineId,
+                stageId: lead.stageId,
+                responsibleId: lead.responsibleId,
+                expectedValue: lead.expectedValue ? Number(lead.expectedValue) : null,
+                closedValue: lead.closedValue ? Number(lead.closedValue) : null,
+                wonAt: lead.wonAt,
+                lostAt: lead.lostAt,
+                createdAt: lead.createdAt,
+              },
+            })
+          }
+        })
+        .catch(() => { /* ignore */ })
     }
 
     // Fire FORM_SUBMITTED targeted at the form's linked automation, if

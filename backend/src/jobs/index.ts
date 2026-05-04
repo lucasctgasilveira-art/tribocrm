@@ -9,6 +9,7 @@ import { runWonCardsArchiverJob } from './wonCardsArchiver.job'
 import { runBillingStateMachineJob } from './billing-state-machine.job'
 import { runCampaignRunnerJob } from './campaign-runner.job'
 import { runPushTaskReminderJob } from './push-task-reminder.job'
+import { runWebhookRetryJob } from './webhook-retry.job'
 
 /**
  * Initializes all scheduled jobs.
@@ -57,6 +58,9 @@ export function initJobs(): void {
 
   cron.schedule('*/5 * * * *', () => { runPushTaskReminderJob().catch(e => console.error('[Job:push-task-reminder] uncaught:', e)) }, tz)
   console.log('[Jobs] push-task-reminder job scheduled — every 5 minutes')
+
+  cron.schedule('* * * * *', () => { runWebhookRetryJob().catch(e => console.error('[Job:webhook-retry] uncaught:', e)) }, tz)
+  console.log('[Jobs] webhook-retry job scheduled — every 1 minute')
 
   console.log('[Jobs] all scheduled jobs initialized')
 }

@@ -293,5 +293,133 @@ curl "https://api.tribocrm.com.br/v1/tasks?isDone=false&limit=10" \
 
 ---
 
+---
+
+# Webhooks de saída
+
+A API descrita acima permite que sistemas externos **mandem** dados pro CRM. Os **webhooks de saída** fazem o caminho inverso: o TriboCRM **manda** um POST pra URL configurada por você toda vez que um evento importante acontece.
+
+## Como configurar
+
+1. No CRM (como OWNER ou MANAGER): **Configuração → Webhooks → Novo webhook**.
+2. Informe nome, URL de destino e quais eventos quer receber.
+3. Copie o **secret** que aparece na criação (você vai precisar pra validar a assinatura).
+
+## Eventos disponíveis
+
+| Evento                | Quando dispara                                              |
+| --------------------- | ----------------------------------------------------------- |
+| `lead.created`        | Lead novo cadastrado (manual, formulário, importação ou API) |
+| `lead.stage_changed`  | Lead foi movido de etapa do pipeline                        |
+| `lead.won`            | Lead virou cliente (status = WON)                           |
+| `lead.lost`           | Lead foi marcado como perdido                               |
+| `task.completed`      | Tarefa marcada como concluída                               |
+
+## Formato do POST
+
+**Headers enviados:**
+
+```
+Content-Type: application/json
+User-Agent: TriboCRM-Webhooks/1.0
+X-TriboCRM-Event: lead.created
+X-TriboCRM-Signature: sha256=<hex>
+```
+
+**Body (envelope padrão):**
+
+```json
+{
+  "event": "lead.created",
+  "timestamp": "2026-05-04T20:41:54.875Z",
+  "data": {
+    "lead": {
+      "id": "550e8400-...",
+      "name": "João da Silva",
+      "email": "joao@empresa.com.br",
+      "phone": "(31) 99999-0000",
+      "company": "Empresa do João",
+      "source": "API",
+      "temperature": "WARM",
+      "status": "ACTIVE",
+      "pipelineId": "...",
+      "stageId": "...",
+      "responsibleId": "...",
+      "expectedValue": 5000,
+      "closedValue": null,
+      "wonAt": null,
+      "lostAt": null,
+      "createdAt": "2026-05-04T20:41:54.875Z"
+    }
+  }
+}
+```
+
+Pra `lead.stage_changed`, o `data` também inclui `previousStageId`. Pra `lead.lost`, inclui `lossReasonId`. Pra `task.completed`, em vez de `lead`, vem `task`.
+
+## Validação da assinatura (HMAC SHA-256)
+
+**Importante:** sempre valide a assinatura antes de processar. Sem isso, qualquer um que descobrir a URL pode mandar dados falsos.
+
+**Pseudo-código (Node.js):**
+
+```js
+const crypto = require('crypto')
+
+function isValidSignature(rawBody, headerSignature, secret) {
+  const expected = crypto
+    .createHmac('sha256', secret)
+    .update(rawBody)
+    .digest('hex')
+  return `sha256=${expected}` === headerSignature
+}
+```
+
+> Use o `rawBody` exato que recebeu — não o JSON parseado e re-serializado, senão o hash não bate.
+
+## Tentativas em caso de erro
+
+Se sua URL responder com erro ou timeout, o TriboCRM tenta de novo automaticamente:
+
+| Tentativa  | Quando                                           |
+| ---------- | ------------------------------------------------ |
+| 1ª         | Imediatamente                                    |
+| 2ª         | 30 segundos depois (se a 1ª falhou)              |
+| 3ª         | 5 minutos depois (se a 2ª falhou)                |
+
+Após 3 falhas, marcamos como **FAILED** e você vê na aba **Logs**. Pode reenviar manualmente clicando no botão "Reenviar".
+
+**O que conta como falha:**
+
+- Timeout: > 5 segundos sem resposta.
+- Status HTTP 5xx (erro do seu servidor).
+- Status HTTP 408 (timeout) ou 429 (rate limit).
+
+**O que NÃO retenta** (marca como FAILED na hora):
+
+- Status HTTP 4xx em geral (400, 401, 403, 404...) — entendemos que sua URL respondeu de verdade dizendo "não quero" ou "URL errada".
+
+## Boa prática: responda rápido
+
+Sua URL precisa responder em até 5 segundos. **Não processe síncrono** — receba, valide a assinatura, jogue numa fila e responda 200 imediatamente. Processe depois.
+
+```js
+app.post('/webhooks/tribocrm', (req, res) => {
+  if (!isValidSignature(rawBody, req.headers['x-tribocrm-signature'], SECRET)) {
+    return res.status(401).end()
+  }
+  queue.push(req.body) // processa async depois
+  res.status(200).end()
+})
+```
+
+## Limites
+
+- Máximo **10 endpoints ativos** por tenant.
+- URL precisa ser HTTPS (HTTP só pra desenvolvimento).
+- Logs ficam guardados por 90 dias.
+
+---
+
 **Versão da API:** v1
 **Última atualização:** 2026-05-04

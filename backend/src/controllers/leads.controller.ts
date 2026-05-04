@@ -5,6 +5,50 @@ import { Prisma } from '@prisma/client'
 import { resolveTenantId } from '../lib/platformTenant'
 import { userHasPipelineAccess } from './pipeline.controller'
 import { sendPushToUser } from '../services/push-notification.service'
+import { triggerWebhookEvent } from '../services/webhook-dispatcher.service'
+
+// Helper pra serializar lead pro payload de webhook. Mantém shape
+// estável (mesmos campos usados na API v1) — adicionar é zero-risco,
+// remover é breaking pra integrações externas.
+function serializeLeadForWebhook(lead: {
+  id: string
+  name: string
+  email: string | null
+  phone: string | null
+  whatsapp: string | null
+  company: string | null
+  source: string | null
+  temperature: string
+  status: string
+  pipelineId: string
+  stageId: string
+  responsibleId: string
+  expectedValue: Prisma.Decimal | null
+  closedValue: Prisma.Decimal | null
+  wonAt?: Date | null
+  lostAt?: Date | null
+  createdAt: Date
+}) {
+  return {
+    id: lead.id,
+    name: lead.name,
+    email: lead.email,
+    phone: lead.phone,
+    whatsapp: lead.whatsapp,
+    company: lead.company,
+    source: lead.source,
+    temperature: lead.temperature,
+    status: lead.status,
+    pipelineId: lead.pipelineId,
+    stageId: lead.stageId,
+    responsibleId: lead.responsibleId,
+    expectedValue: lead.expectedValue ? Number(lead.expectedValue) : null,
+    closedValue: lead.closedValue ? Number(lead.closedValue) : null,
+    wonAt: lead.wonAt ?? null,
+    lostAt: lead.lostAt ?? null,
+    createdAt: lead.createdAt,
+  }
+}
 
 // ── Helpers for import ──
 
@@ -530,6 +574,11 @@ export async function createLead(req: Request, res: Response): Promise<void> {
       data: { tenantId, triggerType: 'LEAD_CREATED', leadId: result.id, payload: {} },
     }).catch(e => console.error('[Leads] automation event error:', e?.message))
 
+    // Webhook: lead.created (fire-and-forget, jamais lança)
+    triggerWebhookEvent(tenantId, 'lead.created', {
+      lead: serializeLeadForWebhook(result),
+    })
+
     // Push pro vendedor responsável (se tiver e for diferente do criador
     // — quem criou o lead obviamente já sabe)
     if (result.responsibleId && result.responsibleId !== userId) {
@@ -740,6 +789,26 @@ export async function updateLead(req: Request, res: Response): Promise<void> {
       prisma.automationEvent.create({
         data: { tenantId, triggerType: 'STAGE_CHANGED', leadId: id, payload: { stageId, previousStageId: existing.stageId } },
       }).catch(e => console.error('[Leads] automation event error:', e?.message))
+
+      triggerWebhookEvent(tenantId, 'lead.stage_changed', {
+        lead: serializeLeadForWebhook(lead),
+        previousStageId: existing.stageId,
+      })
+    }
+
+    // Webhooks de WON/LOST: dispara só na primeira transição (evita
+    // duplicatas se algum fluxo PATCH redundante mandar status=WON em
+    // lead que já está WON).
+    if ((status === 'WON' || lead.status === 'WON') && existing.status !== 'WON') {
+      triggerWebhookEvent(tenantId, 'lead.won', {
+        lead: serializeLeadForWebhook(lead),
+      })
+    }
+    if ((status === 'LOST' || lead.status === 'LOST') && existing.status !== 'LOST') {
+      triggerWebhookEvent(tenantId, 'lead.lost', {
+        lead: serializeLeadForWebhook(lead),
+        lossReasonId: lossReasonId ?? null,
+      })
     }
 
     // Detect repeat purchase: if the lead is being moved to WON and

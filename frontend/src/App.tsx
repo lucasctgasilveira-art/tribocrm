@@ -51,6 +51,7 @@ import GoalsPage from './pages/gestao/GoalsPage'
 import MySubscriptionPage from './pages/gestao/MySubscriptionPage'
 import GestaoSettingsPage from './pages/gestao/SettingsPage'
 import GestaoApiKeysPage from './pages/gestao/ApiKeysPage'
+import GestaoWebhooksPage from './pages/gestao/WebhooksPage'
 import GestaoLeadDetailPage from './pages/gestao/LeadDetailPage'
 
 // Vendas
@@ -140,6 +141,7 @@ export default function App() {
       <Route path="/gestao/assinatura" element={<PrivateRoute allowed={['gestao']}><MySubscriptionPage /></PrivateRoute>} />
       <Route path="/gestao/configuracoes" element={<PrivateRoute allowed={['gestao']}><GestaoSettingsPage /></PrivateRoute>} />
       <Route path="/gestao/configuracoes/api" element={<PrivateRoute allowed={['gestao']}><GestaoApiKeysPage /></PrivateRoute>} />
+      <Route path="/gestao/configuracoes/webhooks" element={<PrivateRoute allowed={['gestao']}><GestaoWebhooksPage /></PrivateRoute>} />
 
       {/* Vendas */}
       <Route path="/vendas/dashboard" element={<PrivateRoute allowed={['vendas']}><VendasDashboardPage /></PrivateRoute>} />
