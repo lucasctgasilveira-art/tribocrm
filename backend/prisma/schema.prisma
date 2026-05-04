@@ -394,6 +394,7 @@ model Tenant {
   goals          Goal[]
   notes          TenantNote[]
   leadPurchases  LeadPurchase[]
+  apiKeys        ApiKey[]
   @@map("tenants")
 }
 
@@ -497,6 +498,7 @@ model User {
   notifications   Notification[]
   pipelineAccesses UserPipelineAccess[]
   pushSubscriptions PushSubscription[]
+  apiKeysCreated    ApiKey[]           @relation("ApiKeyCreatedBy")
   @@unique([tenantId, email])
   @@map("users")
 }
@@ -525,6 +527,39 @@ model PushSubscription {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@unique([userId, endpoint])
   @@map("push_subscriptions")
+}
+
+// API keys da v1 da API pública (uso externo: integração com landing
+// page, sistema próprio do cliente, Zapier-like). Cada tenant pode
+// criar múltiplas keys (uma por integração) via UI em
+// /gestao/configuracoes/api. Apenas OWNER/MANAGER cria/revoga.
+//
+// Segurança:
+//   - keyHash: hash SHA-256 da key real (nunca armazenamos texto plano).
+//     Lookup no middleware apiKeyAuth: hash(headerKey) === keyHash.
+//   - keyPrefix: primeiros 12 chars da key ("tcrm_live_abc"). Mostrado
+//     na lista pra usuário identificar qual key é qual sem revelar a
+//     completa. A key inteira só aparece UMA VEZ na criação.
+//   - revokedAt: soft-delete. Lookup ignora keys com revokedAt != null.
+//   - lastUsedAt: atualizado best-effort em cada request bem-sucedido
+//     (sem bloquear o pipeline — fire-and-forget).
+//
+// FK Cascade: se o tenant é deletado, suas keys vão junto. createdBy
+// usa SET NULL pra preservar a key se o user for removido (auditoria).
+model ApiKey {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  name        String    @db.VarChar(100)
+  keyHash     String    @unique @map("key_hash") @db.VarChar(64)
+  keyPrefix   String    @map("key_prefix") @db.VarChar(20)
+  lastUsedAt  DateTime? @map("last_used_at")
+  revokedAt   DateTime? @map("revoked_at")
+  createdBy   String?   @map("created_by") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  creator     User?     @relation("ApiKeyCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  @@index([tenantId])
+  @@map("api_keys")
 }
 
 // Acesso de usuario a pipelines do tenant. Many-to-many entre User e

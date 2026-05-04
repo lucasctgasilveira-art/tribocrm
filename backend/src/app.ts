@@ -27,6 +27,8 @@ import webhooksRoutes from './routes/webhooks.routes'
 import emailRoutes from './routes/email.routes'
 import tenantsRoutes from './routes/tenants.routes'
 import pushRoutes from './routes/push.routes'
+import v1Routes from './routes/v1.routes'
+import apiKeysRoutes from './routes/api-keys.routes'
 
 const app = express()
 
@@ -105,6 +107,12 @@ app.use('/public', publicRoutes)
 // authenticated router so there's no JWT requirement.
 app.use('/public', signupRoutes)
 
+// API pública v1 — autenticação por API key (Bearer tcrm_live_...).
+// Mounted BEFORE usersRoutes (que está em "/") pelo mesmo motivo das
+// rotas /public: usersRoutes aplica authMiddleware globalmente, o que
+// rejeitaria as chamadas v1 antes do apiKeyAuth.
+app.use('/v1', v1Routes)
+
 app.use('/webhooks', webhooksRoutes)
 app.use('/email', emailRoutes)
 app.use('/oauth', oauthRoutes)
@@ -124,6 +132,7 @@ app.use('/automations', automationsRoutes)
 app.use('/admin', adminRoutes)
 app.use('/payments', paymentsRoutes)
 app.use('/push', pushRoutes)
+app.use('/api-keys', apiKeysRoutes)
 
 // Sentry error handler — DEVE vir após todas as routes
 // mas ANTES de qualquer outro error handler customizado

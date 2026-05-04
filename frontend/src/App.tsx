@@ -50,6 +50,7 @@ import WhatsappTemplatesPage from './pages/gestao/WhatsappTemplatesPage'
 import GoalsPage from './pages/gestao/GoalsPage'
 import MySubscriptionPage from './pages/gestao/MySubscriptionPage'
 import GestaoSettingsPage from './pages/gestao/SettingsPage'
+import GestaoApiKeysPage from './pages/gestao/ApiKeysPage'
 import GestaoLeadDetailPage from './pages/gestao/LeadDetailPage'
 
 // Vendas
@@ -138,6 +139,7 @@ export default function App() {
       <Route path="/gestao/metas" element={<PrivateRoute allowed={['gestao']}><GoalsPage /></PrivateRoute>} />
       <Route path="/gestao/assinatura" element={<PrivateRoute allowed={['gestao']}><MySubscriptionPage /></PrivateRoute>} />
       <Route path="/gestao/configuracoes" element={<PrivateRoute allowed={['gestao']}><GestaoSettingsPage /></PrivateRoute>} />
+      <Route path="/gestao/configuracoes/api" element={<PrivateRoute allowed={['gestao']}><GestaoApiKeysPage /></PrivateRoute>} />
 
       {/* Vendas */}
       <Route path="/vendas/dashboard" element={<PrivateRoute allowed={['vendas']}><VendasDashboardPage /></PrivateRoute>} />
