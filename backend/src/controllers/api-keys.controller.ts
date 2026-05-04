@@ -58,6 +58,14 @@ export async function createApiKey(req: Request, res: Response): Promise<void> {
     return
   }
 
+  // SUPER_ADMIN sem dual-access fica com tenantId="platform" (sentinel
+  // — não é UUID válido). FK do api_keys.tenant_id pra tenants.id
+  // explodiria com erro genérico. Bloqueia aqui com mensagem clara.
+  if (tenantId === 'platform') {
+    res.status(400).json({ success: false, error: { code: 'NO_TENANT_CONTEXT', message: 'SUPER_ADMIN precisa estar no modo gestor de um tenant pra criar API key.' } })
+    return
+  }
+
   const name = typeof req.body?.name === 'string' ? req.body.name.trim() : ''
   if (!name) {
     res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'name é obrigatório' } })
@@ -84,6 +92,12 @@ export async function createApiKey(req: Request, res: Response): Promise<void> {
 
   const { plain, hash, prefix } = generateApiKey()
 
+  // SUPER_ADMIN tem userId que aponta pra admin_users, NÃO pra users.
+  // Tentar gravar em created_by (FK pra users.id) explode com violação
+  // de FK. Mesmo padrão usado em managerial_tasks.created_by — pra
+  // SUPER_ADMIN, registramos NULL e a UI mostra "—" como criador.
+  const createdBy = role === 'SUPER_ADMIN' ? null : userId
+
   try {
     const created = await prisma.apiKey.create({
       data: {
@@ -91,7 +105,7 @@ export async function createApiKey(req: Request, res: Response): Promise<void> {
         name,
         keyHash: hash,
         keyPrefix: prefix,
-        createdBy: userId,
+        createdBy,
       },
       select: {
         id: true,
@@ -110,7 +124,16 @@ export async function createApiKey(req: Request, res: Response): Promise<void> {
       },
     })
   } catch (error: any) {
-    console.error('[ApiKeys] create error:', error)
+    // Log estruturado pra capturar code do Prisma (P2003 = FK violation,
+    // P2002 = unique). Erro genérico no client mas mensagem precisa
+    // no Sentry/Railway logs.
+    console.error('[ApiKeys] create error:', {
+      code: error?.code,
+      meta: error?.meta,
+      message: error?.message,
+      role,
+      tenantId,
+    })
     res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Erro ao criar API key' } })
   }
 }
