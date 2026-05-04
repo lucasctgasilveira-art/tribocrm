@@ -23,7 +23,9 @@ const ROLE = (() => {
   }
 })()
 
-const canManage = ROLE === 'OWNER' || ROLE === 'MANAGER'
+// OWNER/MANAGER do tenant + SUPER_ADMIN (em dual-access, atuando como
+// gestor pra testar). Backend faz mesma checagem em api-keys.controller.
+const canManage = ROLE === 'OWNER' || ROLE === 'MANAGER' || ROLE === 'SUPER_ADMIN'
 
 function formatDate(iso: string | null): string {
   if (!iso) return '—'
@@ -102,7 +104,7 @@ export default function ApiKeysPage() {
         <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
           Cada key permite que sistemas externos (formulários, automações, integrações) criem e consultem leads no seu CRM. Trate como senha — não compartilhe e não comite em código aberto.
           <br />
-          Documentação completa em <a href="https://docs.tribocrm.com.br/api" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>docs.tribocrm.com.br/api</a>.
+          Endpoint da API: <code style={{ background: 'var(--bg-surface)', padding: '2px 6px', borderRadius: 4, fontSize: 12 }}>https://api.tribocrm.com.br/v1</code>
         </div>
       </div>
 

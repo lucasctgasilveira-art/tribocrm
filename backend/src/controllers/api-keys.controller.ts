@@ -3,15 +3,19 @@ import { prisma } from '../lib/prisma'
 import { generateApiKey } from '../middleware/api-key-auth.middleware'
 
 // CRUD de API keys do tenant logado. Acesso via JWT do CRM (não pela
-// API pública). Apenas OWNER e MANAGER criam/revogam — TEAM_LEADER e
-// SELLER apenas listam.
+// API pública). Apenas OWNER, MANAGER e SUPER_ADMIN (em dual-access)
+// criam/revogam — TEAM_LEADER e SELLER apenas listam. SUPER_ADMIN
+// está incluído porque o Lucas, quando alterna pra modo gestor pra
+// testar, mantém role=SUPER_ADMIN no JWT mas tenantId vira o
+// linkedTenantId (ver auth.middleware) — bloqueá-lo aqui impediria
+// suporte/teste de criar keys do lado do tenant.
 //
 // SEGURANÇA CRÍTICA: a key em texto plano só aparece UMA VEZ no POST
 // /api-keys (response da criação). Depois disso, só o hash fica no
 // banco. Se o user perder, a única solução é revogar e criar nova.
 
 function canManage(role: string): boolean {
-  return role === 'OWNER' || role === 'MANAGER'
+  return role === 'OWNER' || role === 'MANAGER' || role === 'SUPER_ADMIN'
 }
 
 // ─── GET /api-keys ───────────────────────────────────────────────
@@ -50,7 +54,7 @@ export async function listApiKeys(req: Request, res: Response): Promise<void> {
 export async function createApiKey(req: Request, res: Response): Promise<void> {
   const { tenantId, userId, role } = req.user!
   if (!canManage(role)) {
-    res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Apenas OWNER e MANAGER podem criar API keys' } })
+    res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Apenas gestores e proprietários podem criar API keys' } })
     return
   }
 
@@ -118,7 +122,7 @@ export async function createApiKey(req: Request, res: Response): Promise<void> {
 export async function revokeApiKey(req: Request, res: Response): Promise<void> {
   const { tenantId, role } = req.user!
   if (!canManage(role)) {
-    res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Apenas OWNER e MANAGER podem revogar API keys' } })
+    res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Apenas gestores e proprietários podem revogar API keys' } })
     return
   }
 
