@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Bell, X, Zap, Clock, CheckCircle2, Loader2, type LucideIcon } from 'lucide-react'
+import { Bell, X, Zap, Clock, CheckCircle2, Loader2, BellOff, type LucideIcon } from 'lucide-react'
 import {
   shouldShowPrompt, markPromptDismissed, enablePushNotifications, isPushSupported,
+  currentPermission,
 } from '../../../services/push.service'
 
 /**
@@ -20,11 +21,13 @@ import {
  * fluxo (VAPID key + SW + permissão nativa + subscribe + POST backend).
  */
 
+type View = 'prompt' | 'success' | 'blocked'
+
 export default function PushPermissionPrompt() {
   const [visible, setVisible] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
+  const [view, setView] = useState<View>('prompt')
 
   useEffect(() => {
     if (!isPushSupported()) return
@@ -45,23 +48,34 @@ export default function PushPermissionPrompt() {
     setSaving(true)
     setError('')
     try {
+      // Se já está bloqueado no navegador, requestPermission() retorna
+      // 'denied' direto sem mostrar prompt. Detecta antes pra dar
+      // instrução em vez de mensagem genérica.
+      if (currentPermission() === 'denied') {
+        setView('blocked')
+        setSaving(false)
+        return
+      }
       const result = await enablePushNotifications()
       if (result === 'granted') {
-        setSuccess(true)
-        // Mostra confirmação por 1.5s e fecha
+        setView('success')
         setTimeout(() => setVisible(false), 1500)
       } else if (result === 'denied') {
-        setError('Permissão negada. Você pode habilitar depois nas configurações do navegador.')
+        setView('blocked')
         setSaving(false)
       } else {
         setError('Não foi possível ativar agora. Tente novamente em alguns minutos.')
         setSaving(false)
       }
     } catch (err: any) {
-      setError(err?.message ?? 'Erro inesperado. Tente novamente.')
+      setError(err?.response?.data?.error?.message ?? err?.message ?? 'Erro inesperado. Tente novamente.')
       setSaving(false)
     }
   }
+
+  // Atalhos pros 3 estados de view
+  const success = view === 'success'
+  const blocked = view === 'blocked'
 
   if (!visible) return null
 
@@ -110,12 +124,14 @@ export default function PushPermissionPrompt() {
 
           <div style={{
             width: 64, height: 64, borderRadius: '50%',
-            background: 'rgba(249,115,22,0.12)',
+            background: blocked ? 'rgba(239,68,68,0.10)' : 'rgba(249,115,22,0.12)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             margin: '0 auto 16px',
           }}>
             {success ? (
               <CheckCircle2 size={32} color="#22c55e" strokeWidth={2} />
+            ) : blocked ? (
+              <BellOff size={32} color="#ef4444" strokeWidth={2} />
             ) : (
               <Bell size={32} color="#f97316" strokeWidth={2} />
             )}
@@ -128,6 +144,15 @@ export default function PushPermissionPrompt() {
               </h2>
               <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.5 }}>
                 Você vai receber notificações dos seus leads, tarefas e descontos.
+              </p>
+            </>
+          ) : blocked ? (
+            <>
+              <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+                Notificações bloqueadas
+              </h2>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 8, lineHeight: 1.5 }}>
+                Você precisa permitir notificações pra esse site nas configurações do navegador. Leva uns segundos.
               </p>
             </>
           ) : (
@@ -143,7 +168,7 @@ export default function PushPermissionPrompt() {
           )}
         </div>
 
-        {!success && (
+        {!success && !blocked && (
           <div style={{ padding: '16px 24px' }}>
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 12px' }}>
               Ative as notificações e receba aviso direto na sua tela quando:
@@ -171,6 +196,35 @@ export default function PushPermissionPrompt() {
           </div>
         )}
 
+        {blocked && (
+          <div style={{ padding: '8px 24px 16px' }}>
+            <div style={{
+              padding: '14px 14px',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 10,
+              fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.7,
+            }}>
+              <div style={{ fontWeight: 600, marginBottom: 8 }}>Como destravar em 3 passos:</div>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 6 }}>
+                <span style={{ color: '#f97316', fontWeight: 700, flexShrink: 0 }}>1.</span>
+                <span>Clique no ícone <strong style={{ color: 'var(--text-primary)' }}>🔒 cadeado</strong> à esquerda do endereço do site (no topo do navegador)</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 6 }}>
+                <span style={{ color: '#f97316', fontWeight: 700, flexShrink: 0 }}>2.</span>
+                <span>Em <strong style={{ color: 'var(--text-primary)' }}>Notificações</strong>, mude de "Bloquear" para <strong style={{ color: '#22c55e' }}>"Permitir"</strong></span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                <span style={{ color: '#f97316', fontWeight: 700, flexShrink: 0 }}>3.</span>
+                <span>Recarregue a página (F5) e tente ativar de novo</span>
+              </div>
+            </div>
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 10, lineHeight: 1.5, fontStyle: 'italic' }}>
+              Essa permissão é controlada pelo navegador — só você pode mudar nas configurações do site. Não conseguimos fazer isso pelo CRM.
+            </p>
+          </div>
+        )}
+
         {!success && (
           <div style={{
             padding: '16px 24px 24px',
@@ -187,25 +241,27 @@ export default function PushPermissionPrompt() {
               cursor: saving ? 'not-allowed' : 'pointer',
               opacity: saving ? 0.6 : 1,
             }}>
-              Agora não
+              {blocked ? 'Fechar' : 'Agora não'}
             </button>
-            <button onClick={handleEnable} disabled={saving} style={{
-              flex: 1.4,
-              background: '#f97316',
-              border: 'none',
-              borderRadius: 10,
-              padding: '11px 16px',
-              fontSize: 13, fontWeight: 700,
-              color: '#fff',
-              cursor: saving ? 'not-allowed' : 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              transition: 'background 0.15s',
-            }}
-              onMouseEnter={e => { if (!saving) e.currentTarget.style.background = '#fb923c' }}
-              onMouseLeave={e => { e.currentTarget.style.background = '#f97316' }}>
-              {saving && <Loader2 size={14} className="animate-spin" />}
-              {saving ? 'Ativando...' : '⚡ Ativar agora'}
-            </button>
+            {!blocked && (
+              <button onClick={handleEnable} disabled={saving} style={{
+                flex: 1.4,
+                background: '#f97316',
+                border: 'none',
+                borderRadius: 10,
+                padding: '11px 16px',
+                fontSize: 13, fontWeight: 700,
+                color: '#fff',
+                cursor: saving ? 'not-allowed' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                transition: 'background 0.15s',
+              }}
+                onMouseEnter={e => { if (!saving) e.currentTarget.style.background = '#fb923c' }}
+                onMouseLeave={e => { e.currentTarget.style.background = '#f97316' }}>
+                {saving && <Loader2 size={14} className="animate-spin" />}
+                {saving ? 'Ativando...' : '⚡ Ativar agora'}
+              </button>
+            )}
           </div>
         )}
       </div>
