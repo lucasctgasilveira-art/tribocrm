@@ -24,6 +24,126 @@ import { Prisma } from '@prisma/client'
 // Após carência: sem reversão (parceiro já "ganhou").
 const RETENTION_DAYS = 30
 
+// Estrutura de cada faixa de comissão progressiva.
+// maxClients = null significa "acima do tier anterior" (último tier).
+export interface CommissionTier {
+  maxClients: number | null
+  rate: number
+}
+
+/**
+ * Faixas padrão sugeridas (Bronze/Prata/Ouro). Usadas como default
+ * no modal de cadastro — Lucas pode editar antes de salvar.
+ */
+export const DEFAULT_COMMISSION_TIERS: CommissionTier[] = [
+  { maxClients: 5, rate: 15 },
+  { maxClients: 19, rate: 20 },
+  { maxClients: null, rate: 25 },
+]
+
+/**
+ * Valida estrutura de tiers vinda do front. Regras:
+ *   - Array com 1 a 3 tiers
+ *   - rate entre 0 e 100
+ *   - maxClients positivo OU null (apenas no último)
+ *   - maxClients ascendente (cada tier > anterior)
+ *   - Apenas o ÚLTIMO pode ter maxClients = null
+ *
+ * Retorna { valid, reason? }.
+ */
+export function validateCommissionTiers(tiers: unknown): { valid: boolean; reason?: string } {
+  if (!Array.isArray(tiers)) return { valid: false, reason: 'commissionTiers deve ser um array' }
+  if (tiers.length < 1 || tiers.length > 3) return { valid: false, reason: 'commissionTiers precisa ter de 1 a 3 faixas' }
+
+  let lastMax = -1
+  for (let i = 0; i < tiers.length; i++) {
+    const t = tiers[i] as { maxClients?: unknown; rate?: unknown }
+    if (typeof t !== 'object' || t === null) {
+      return { valid: false, reason: `Faixa ${i + 1} inválida` }
+    }
+    const rate = Number(t.rate)
+    if (!Number.isFinite(rate) || rate < 0 || rate > 100) {
+      return { valid: false, reason: `Faixa ${i + 1}: % deve estar entre 0 e 100` }
+    }
+
+    const isLast = i === tiers.length - 1
+    if (t.maxClients === null || t.maxClients === undefined) {
+      if (!isLast) return { valid: false, reason: `Apenas a última faixa pode ser "acima de"` }
+      // último com null é OK
+    } else {
+      const max = Number(t.maxClients)
+      if (!Number.isInteger(max) || max < 1) {
+        return { valid: false, reason: `Faixa ${i + 1}: limite de clientes deve ser inteiro >= 1` }
+      }
+      if (max <= lastMax) {
+        return { valid: false, reason: `Faixa ${i + 1}: limite deve ser maior que a faixa anterior` }
+      }
+      lastMax = max
+    }
+  }
+  return { valid: true }
+}
+
+/**
+ * Conta tenants ACTIVE referidos pelo parceiro. Definição combinada
+ * com Lucas (2026-05-04): "cliente ativo" = tenant com status='ACTIVE'.
+ *   - Não conta TRIAL (ainda não pagou)
+ *   - Não conta PAYMENT_OVERDUE/SUSPENDED/CANCELLED
+ *   - Conta apenas tenants pagantes regulares no momento da query
+ */
+async function countActiveClients(partnerId: string): Promise<number> {
+  return prisma.tenant.count({
+    where: {
+      referredByPartnerId: partnerId,
+      status: 'ACTIVE',
+    },
+  })
+}
+
+/**
+ * Aplica a tabela de tiers do parceiro à contagem de clientes ativos
+ * e retorna a rate aplicável. Fallback pra commissionRate (legado)
+ * se commissionTiers vier vazio.
+ *
+ * Retorna null se não há rate aplicável (parceiro mal configurado —
+ * raro, vai logar warning e quem chama pode pular a comissão).
+ */
+async function calculateRateForPartner(
+  partnerId: string,
+  tiersRaw: unknown,
+  legacyRate: { toString: () => string } | null,
+): Promise<number | null> {
+  const tiers = Array.isArray(tiersRaw) ? (tiersRaw as CommissionTier[]) : []
+
+  // Sem tiers configurados — fallback no legacy commissionRate.
+  if (tiers.length === 0) {
+    if (legacyRate !== null && legacyRate !== undefined) {
+      const r = Number(legacyRate.toString())
+      return Number.isFinite(r) ? r : null
+    }
+    console.warn(`[CommissionEngine] partner ${partnerId} sem tiers e sem rate legado`)
+    return null
+  }
+
+  const activeCount = await countActiveClients(partnerId)
+
+  // Tiers em ordem ascendente. Pega o primeiro cuja maxClients ainda
+  // contém activeCount. Último com maxClients=null pega tudo restante.
+  for (const tier of tiers) {
+    if (tier.maxClients === null || tier.maxClients === undefined) {
+      return Number(tier.rate)
+    }
+    if (activeCount <= Number(tier.maxClients)) {
+      return Number(tier.rate)
+    }
+  }
+
+  // Caiu fora de todas as faixas (sem tier "acima de") — usa o
+  // último tier definido.
+  const last = tiers[tiers.length - 1]
+  return last ? Number(last.rate) : null
+}
+
 /**
  * Gera um código único pra parceiro: PRT + 8 chars hex (uppercase).
  * Tenta até 5 vezes em caso de colisão (probabilidade astronômica
@@ -141,7 +261,7 @@ export async function createCommissionForCharge(chargeId: string): Promise<void>
         id: true,
         referredByPartnerId: true,
         referredBy: {
-          select: { id: true, isActive: true, commissionRate: true },
+          select: { id: true, isActive: true, commissionRate: true, commissionTiers: true },
         },
       },
     })
@@ -162,11 +282,24 @@ export async function createCommissionForCharge(chargeId: string): Promise<void>
       return
     }
 
-    const rate = tenant.referredBy.commissionRate
+    // Calcula rate aplicável no momento desta cobrança paga (conta
+    // clientes ACTIVE do parceiro AGORA e aplica a faixa correta).
+    const rateNum = await calculateRateForPartner(
+      tenant.referredByPartnerId,
+      tenant.referredBy.commissionTiers,
+      tenant.referredBy.commissionRate,
+    )
+    if (rateNum === null) {
+      console.warn(
+        `[CommissionEngine] partner ${tenant.referredByPartnerId} sem rate aplicável — pulando commission`,
+      )
+      return
+    }
+    const rate = new Prisma.Decimal(rateNum.toString())
     const amount = charge.amount
     // commission = amount * rate / 100, arredondado pra 2 casas
     const commissionValue = new Prisma.Decimal(amount.toString())
-      .mul(rate.toString())
+      .mul(rate)
       .div(100)
       .toDecimalPlaces(2)
     const availableAt = new Date(charge.paidAt.getTime() + RETENTION_DAYS * 24 * 60 * 60 * 1000)

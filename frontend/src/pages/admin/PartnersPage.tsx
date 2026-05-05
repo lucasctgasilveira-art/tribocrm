@@ -4,7 +4,9 @@ import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { adminMenuItems } from '../../config/adminMenu'
 import {
   listPartners, getPartner, createPartner, updatePartner, deletePartner,
+  applyTier, DEFAULT_COMMISSION_TIERS,
   type PartnerListItem, type PartnerDetail, type CreatePartnerInput,
+  type CommissionTier,
 } from '../../services/partners.service'
 
 /**
@@ -40,6 +42,30 @@ function maskDocument(doc: string | null): string {
   if (d.length === 14) return d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5')
   if (d.length === 11) return d.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4')
   return doc
+}
+
+// Retorna o "X%" da faixa atualmente aplicada baseado em clientes
+// ativos. Usa applyTier que espelha o cálculo do backend.
+function currentRateLabel(tiers: CommissionTier[], activeCount: number): string {
+  const rate = applyTier(tiers, activeCount)
+  return rate === null ? '—' : `${rate}%`
+}
+
+// Tooltip com a tabela completa pra UX hover na lista de parceiros.
+function tiersTooltip(tiers: CommissionTier[]): string {
+  if (!Array.isArray(tiers) || tiers.length === 0) return ''
+  let prevMax = 0
+  const lines: string[] = []
+  for (const t of tiers) {
+    if (t.maxClients === null) {
+      lines.push(`Acima de ${prevMax} clientes: ${t.rate}%`)
+    } else {
+      const from = prevMax === 0 ? 'Até' : `De ${prevMax + 1} a`
+      lines.push(`${from} ${t.maxClients} clientes: ${t.rate}%`)
+      prevMax = t.maxClients
+    }
+  }
+  return lines.join(' | ')
 }
 
 export default function PartnersPage() {
@@ -226,10 +252,15 @@ function PartnerCard({ partner, onView, onEdit, onChange }: {
             </span>
             <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{partner.email}</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12, color: 'var(--text-secondary)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12, color: 'var(--text-secondary)', flexWrap: 'wrap' }}>
             <span style={{ fontFamily: 'monospace', background: 'var(--bg-surface)', padding: '2px 8px', borderRadius: 4 }}>{partner.code}</span>
-            <span><strong>{Number(partner.commissionRate)}%</strong> de comissão</span>
-            <span>{partner._count.referredTenants} indicação{partner._count.referredTenants !== 1 ? 'ões' : ''}</span>
+            <span title={tiersTooltip(partner.commissionTiers)}>
+              <strong>{currentRateLabel(partner.commissionTiers, partner.activeClientsCount)}</strong> agora
+              <span style={{ color: 'var(--text-muted)', marginLeft: 4 }}>
+                ({partner.activeClientsCount} ativo{partner.activeClientsCount !== 1 ? 's' : ''})
+              </span>
+            </span>
+            <span>{partner._count.referredTenants} indicaç{partner._count.referredTenants !== 1 ? 'ões' : 'ão'}</span>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
@@ -329,6 +360,11 @@ function CreateOrEditModal({ editing, onClose, onSaved }: {
   onSaved: () => void
 }) {
   const isEdit = !!editing
+  // Inicializa tiers do editing se vier preenchido, senão usa defaults
+  const initialTiers: CommissionTier[] = editing?.commissionTiers && editing.commissionTiers.length > 0
+    ? editing.commissionTiers.map(t => ({ ...t }))
+    : DEFAULT_COMMISSION_TIERS.map(t => ({ ...t }))
+
   const [form, setForm] = useState<CreatePartnerInput & { isActive?: boolean }>({
     name: editing?.name ?? '',
     email: editing?.email ?? '',
@@ -340,7 +376,7 @@ function CreateOrEditModal({ editing, onClose, onSaved }: {
     bankAccount: '',
     bankAccountType: '',
     bankInfo: '',
-    commissionRate: editing ? Number(editing.commissionRate) : 20,
+    commissionTiers: initialTiers,
     notes: '',
     isActive: editing?.isActive ?? true,
   })
@@ -362,9 +398,22 @@ function CreateOrEditModal({ editing, onClose, onSaved }: {
         bankAccountType: (data.bankAccountType as 'CHECKING' | 'SAVINGS' | null) ?? '',
         bankInfo: data.bankInfo ?? '',
         notes: data.notes ?? '',
+        commissionTiers: data.commissionTiers && data.commissionTiers.length > 0
+          ? data.commissionTiers.map(t => ({ ...t }))
+          : DEFAULT_COMMISSION_TIERS.map(t => ({ ...t })),
       }))
     }).catch(() => {})
   }, [editing])
+
+  function updateTier(idx: number, field: 'maxClients' | 'rate', value: string) {
+    setForm(f => {
+      const tiers = f.commissionTiers.map((t, i) => i === idx ? { ...t } : t)
+      const numValue = value === '' ? (field === 'maxClients' ? null : 0) : Number(value)
+      tiers[idx] = { ...tiers[idx]!, [field]: numValue }
+      return { ...f, commissionTiers: tiers }
+    })
+    setError('')
+  }
 
   function update(k: keyof typeof form, v: any) {
     setForm(f => ({ ...f, [k]: v }))
@@ -374,7 +423,37 @@ function CreateOrEditModal({ editing, onClose, onSaved }: {
   async function handleSave() {
     if (!form.name.trim()) { setError('Nome obrigatório'); return }
     if (!form.email.trim() || !form.email.includes('@')) { setError('E-mail inválido'); return }
-    if (form.commissionRate < 0 || form.commissionRate > 100) { setError('Comissão deve ser entre 0 e 100'); return }
+
+    // Validação local da tabela de comissão. Backend valida de novo.
+    if (!Array.isArray(form.commissionTiers) || form.commissionTiers.length < 1) {
+      setError('Tabela de comissão precisa ter pelo menos 1 faixa')
+      return
+    }
+    let lastMax = -1
+    for (let i = 0; i < form.commissionTiers.length; i++) {
+      const t = form.commissionTiers[i]!
+      if (!Number.isFinite(t.rate) || t.rate < 0 || t.rate > 100) {
+        setError(`Faixa ${i + 1}: % deve estar entre 0 e 100`)
+        return
+      }
+      const isLast = i === form.commissionTiers.length - 1
+      if (t.maxClients === null || t.maxClients === undefined) {
+        if (!isLast) {
+          setError('Apenas a última faixa pode ser "Acima de"')
+          return
+        }
+      } else {
+        if (!Number.isInteger(t.maxClients) || t.maxClients < 1) {
+          setError(`Faixa ${i + 1}: limite de clientes deve ser inteiro positivo`)
+          return
+        }
+        if (t.maxClients <= lastMax) {
+          setError(`Faixa ${i + 1}: limite deve ser maior que a faixa anterior`)
+          return
+        }
+        lastMax = t.maxClients
+      }
+    }
 
     // Validação local de CPF/CNPJ — bate dígitos antes de enviar.
     // Backend revalida com validateDocument; aqui só checa tamanho
@@ -454,19 +533,65 @@ function CreateOrEditModal({ editing, onClose, onSaved }: {
               />
             </Field>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <Field label="Telefone">
-              <input
-                value={form.phone ?? ''}
-                onChange={e => update('phone', maskPhone(e.target.value))}
-                placeholder="(00) 00000-0000"
-                style={inputS}
-                maxLength={15}
-              />
-            </Field>
-            <Field label="Comissão % *">
-              <input type="number" min={0} max={100} step={0.5} value={form.commissionRate} onChange={e => update('commissionRate', Number(e.target.value))} style={inputS} />
-            </Field>
+          <Field label="Telefone">
+            <input
+              value={form.phone ?? ''}
+              onChange={e => update('phone', maskPhone(e.target.value))}
+              placeholder="(00) 00000-0000"
+              style={{ ...inputS, maxWidth: 220 }}
+              maxLength={15}
+            />
+          </Field>
+
+          {/* Tabela de comissão progressiva (3 faixas editáveis) */}
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, marginTop: 4 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>
+              Tabela de comissão *
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 10, lineHeight: 1.5 }}>
+              O sistema aplica a faixa correta automaticamente, baseado em quantos clientes ATIVOS o parceiro tem no momento de cada cobrança paga. Clientes em trial, vencidos ou cancelados não contam.
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {form.commissionTiers.map((tier, idx) => {
+                const isLast = idx === form.commissionTiers.length - 1
+                const prev = idx > 0 ? form.commissionTiers[idx - 1] : null
+                const fromLabel = prev?.maxClients != null ? `De ${prev.maxClients + 1} a` : 'Até'
+                return (
+                  <div key={idx} style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto auto', gap: 8, alignItems: 'center' }}>
+                    <span style={{ fontSize: 12, color: 'var(--text-secondary)', minWidth: 70 }}>
+                      {isLast ? 'Acima de' : fromLabel}
+                    </span>
+                    {isLast ? (
+                      <input
+                        readOnly
+                        value={prev?.maxClients ?? 0}
+                        style={{ ...inputS, background: 'var(--bg)', color: 'var(--text-muted)' }}
+                      />
+                    ) : (
+                      <input
+                        type="number"
+                        min={1}
+                        value={tier.maxClients ?? ''}
+                        onChange={e => updateTier(idx, 'maxClients', e.target.value)}
+                        style={inputS}
+                      />
+                    )}
+                    <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>clientes:</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={0.5}
+                      value={tier.rate}
+                      onChange={e => updateTier(idx, 'rate', e.target.value)}
+                      style={{ ...inputS, width: 80 }}
+                      placeholder="%"
+                    />
+                  </div>
+                )
+              })}
+            </div>
           </div>
 
           {/* Bloco de dados pra pagamento da comissão */}
@@ -644,8 +769,35 @@ function PartnerDetailView({ id, onBack }: { id: string; onBack: () => void }) {
           {partner.document && <span>📄 {maskDocument(partner.document)}</span>}
           {partner.phone && <span>📞 {partner.phone}</span>}
           <span style={{ fontFamily: 'monospace', background: 'var(--bg-surface)', padding: '2px 8px', borderRadius: 4 }}>{partner.code}</span>
-          <span><strong>{Number(partner.commissionRate)}%</strong></span>
+          <span style={{ color: 'var(--text-primary)' }}>
+            <strong>{currentRateLabel(partner.commissionTiers, partner.activeClientsCount)}</strong> agora · {partner.activeClientsCount} cliente{partner.activeClientsCount !== 1 ? 's' : ''} ativo{partner.activeClientsCount !== 1 ? 's' : ''}
+          </span>
         </div>
+
+        {/* Tabela de comissão do parceiro */}
+        {partner.commissionTiers && partner.commissionTiers.length > 0 && (
+          <div style={{ marginTop: 12, padding: '10px 14px', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, color: 'var(--text-secondary)', display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+            {(() => {
+              let prev = 0
+              return partner.commissionTiers.map((t, i) => {
+                const isCurrent = applyTier(partner.commissionTiers, partner.activeClientsCount) === t.rate
+                const label = t.maxClients === null
+                  ? `Acima de ${prev}`
+                  : (prev === 0 ? `Até ${t.maxClients}` : `De ${prev + 1} a ${t.maxClients}`)
+                if (t.maxClients !== null) prev = t.maxClients
+                return (
+                  <span key={i} style={{
+                    fontWeight: isCurrent ? 700 : 400,
+                    color: isCurrent ? 'var(--accent)' : 'var(--text-secondary)',
+                  }}>
+                    {label}: {t.rate}%
+                    {isCurrent && ' ←'}
+                  </span>
+                )
+              })
+            })()}
+          </div>
+        )}
         {(partner.pixKey || partner.bankName) && (
           <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 8, padding: '10px 12px', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, lineHeight: 1.7 }}>
             {partner.pixKey && (

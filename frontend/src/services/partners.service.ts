@@ -3,13 +3,40 @@ import api from './api'
 // Service de gestão de parceiros (afiliados). Frontend Super Admin
 // usa CRUD; frontend gestor usa endpoints separados em /tenant-partner.
 
+// Faixa de comissão progressiva. maxClients=null = "acima do tier anterior".
+export interface CommissionTier {
+  maxClients: number | null
+  rate: number
+}
+
+// Defaults sugeridos no modal (Lucas pode editar antes de salvar).
+export const DEFAULT_COMMISSION_TIERS: CommissionTier[] = [
+  { maxClients: 5, rate: 15 },
+  { maxClients: 19, rate: 20 },
+  { maxClients: null, rate: 25 },
+]
+
+// Calcula a faixa aplicável agora baseado em quantidade de clientes
+// ativos do parceiro. Espelha a lógica do backend pra UI mostrar
+// "está aplicando 20%" sem ida ao servidor.
+export function applyTier(tiers: CommissionTier[], activeCount: number): number | null {
+  if (!Array.isArray(tiers) || tiers.length === 0) return null
+  for (const tier of tiers) {
+    if (tier.maxClients === null) return tier.rate
+    if (activeCount <= tier.maxClients) return tier.rate
+  }
+  return tiers[tiers.length - 1]?.rate ?? null
+}
+
 export interface PartnerListItem {
   id: string
   name: string
   email: string
   document: string | null
   code: string
-  commissionRate: number
+  commissionRate: number | null
+  commissionTiers: CommissionTier[]
+  activeClientsCount: number
   isActive: boolean
   createdAt: string
   _count: { referredTenants: number; commissions: number }
@@ -29,7 +56,9 @@ export interface PartnerDetail {
   bankAccountType: string | null
   bankInfo: string | null
   code: string
-  commissionRate: number
+  commissionRate: number | null
+  commissionTiers: CommissionTier[]
+  activeClientsCount: number
   isActive: boolean
   notes: string | null
   createdAt: string
@@ -85,7 +114,7 @@ export interface CreatePartnerInput {
   bankAccount?: string
   bankAccountType?: 'CHECKING' | 'SAVINGS' | ''
   bankInfo?: string
-  commissionRate: number
+  commissionTiers: CommissionTier[]
   notes?: string
 }
 

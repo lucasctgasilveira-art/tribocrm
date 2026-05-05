@@ -666,10 +666,23 @@ model Partner {
   // Código único usado em ?ref= e cadastro manual. Gerado automático
   // (PRT + 8 chars hex). Indexado pra lookup rápido na API pública.
   code           String   @unique @db.VarChar(20)
-  // % de comissão padrão (ex: 20.00 = 20%). Aplicado a cada cobrança
-  // paga do cliente indicado. Pode mudar — comissões já criadas
-  // congelam o rate na hora da criação.
-  commissionRate Decimal  @map("commission_rate") @db.Decimal(5, 2)
+  // DEPRECATED — mantido pra compat retroativa. Comissão agora é
+  // calculada por commissionTiers (faixas progressivas). Coluna fica
+  // como Decimal? (nullable) pra não exigir backfill em parceiros
+  // antigos. Comissões já criadas congelam o rate aplicado.
+  commissionRate  Decimal? @map("commission_rate") @db.Decimal(5, 2)
+  // Tabela de comissão progressiva por faixa de clientes ativos.
+  // Array JSON de até 3 tiers em ordem ASCENDENTE de maxClients:
+  //   [
+  //     { "maxClients": 5,    "rate": 15 },   // até 5 ativos: 15%
+  //     { "maxClients": 19,   "rate": 20 },   // até 19 ativos: 20%
+  //     { "maxClients": null, "rate": 25 }    // null = "acima do tier anterior"
+  //   ]
+  // Engine conta tenants ACTIVE referidos pelo parceiro NO MOMENTO da
+  // cobrança virar PAID e aplica a faixa correta. Rate é congelado
+  // na PartnerCommission criada — parceiro não perde retroativo se
+  // cliente cancelar.
+  commissionTiers Json     @default("[]") @map("commission_tiers")
   isActive       Boolean  @default(true) @map("is_active")
   notes          String?  @db.Text
   createdBy      String?  @map("created_by") @db.Uuid

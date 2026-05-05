@@ -1,7 +1,9 @@
 import { Request, Response } from 'express'
 import { prisma } from '../lib/prisma'
 import { Prisma } from '@prisma/client'
-import { generatePartnerCode } from '../services/commission-engine.service'
+import {
+  generatePartnerCode, validateCommissionTiers, DEFAULT_COMMISSION_TIERS,
+} from '../services/commission-engine.service'
 import { validateDocument, stripDocument } from '../utils/validateDocument'
 
 // Telefone brasileiro: 10 ou 11 dígitos só (com ou sem DDD).
@@ -40,6 +42,7 @@ export async function listPartners(_req: Request, res: Response): Promise<void> 
         document: true,
         code: true,
         commissionRate: true,
+        commissionTiers: true,
         isActive: true,
         createdAt: true,
         _count: {
@@ -64,9 +67,25 @@ export async function listPartners(_req: Request, res: Response): Promise<void> 
       totalsByPartner.set(t.partnerId, cur)
     }
 
+    // Conta tenants ACTIVE indicados por cada parceiro pra UI mostrar
+    // em qual faixa cada um está agora. Single query agrupada — barato.
+    const activeCounts = await prisma.tenant.groupBy({
+      by: ['referredByPartnerId'],
+      where: {
+        status: 'ACTIVE',
+        referredByPartnerId: { in: partners.map(p => p.id) },
+      },
+      _count: true,
+    })
+    const activeByPartner = new Map<string, number>()
+    for (const ac of activeCounts) {
+      if (ac.referredByPartnerId) activeByPartner.set(ac.referredByPartnerId, ac._count)
+    }
+
     const enriched = partners.map(p => ({
       ...p,
-      commissionRate: Number(p.commissionRate),
+      commissionRate: p.commissionRate ? Number(p.commissionRate) : null,
+      activeClientsCount: activeByPartner.get(p.id) ?? 0,
       totals: totalsByPartner.get(p.id) ?? { pending: 0, available: 0, paid: 0 },
     }))
 
@@ -112,11 +131,18 @@ export async function getPartner(req: Request, res: Response): Promise<void> {
       },
     })
 
+    // Quantos clientes ACTIVE o parceiro tem agora — informa qual
+    // faixa de comissão está sendo aplicada.
+    const activeClientsCount = await prisma.tenant.count({
+      where: { referredByPartnerId: id, status: 'ACTIVE' },
+    })
+
     res.json({
       success: true,
       data: {
         ...partner,
-        commissionRate: Number(partner.commissionRate),
+        commissionRate: partner.commissionRate ? Number(partner.commissionRate) : null,
+        activeClientsCount,
         commissions: commissions.map(c => ({
           ...c,
           amount: Number(c.amount),
@@ -134,7 +160,7 @@ export async function getPartner(req: Request, res: Response): Promise<void> {
 // ─── POST /admin/partners ───────────────────────────────────────
 export async function createPartner(req: Request, res: Response): Promise<void> {
   const {
-    name, email, document, phone, pixKey, commissionRate, notes,
+    name, email, document, phone, pixKey, commissionTiers, notes,
     bankName, bankBranch, bankAccount, bankAccountType, bankInfo,
   } = req.body ?? {}
 
@@ -146,9 +172,15 @@ export async function createPartner(req: Request, res: Response): Promise<void> 
     res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'email inválido' } })
     return
   }
-  const rate = Number(commissionRate)
-  if (!Number.isFinite(rate) || rate < 0 || rate > 100) {
-    res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'commissionRate deve ser entre 0 e 100' } })
+
+  // Valida tabela de comissão progressiva. Se vazia ou ausente, usa
+  // os defaults (Bronze/Prata/Ouro 15/20/25%).
+  const tiersInput = Array.isArray(commissionTiers) && commissionTiers.length > 0
+    ? commissionTiers
+    : DEFAULT_COMMISSION_TIERS
+  const tiersValidation = validateCommissionTiers(tiersInput)
+  if (!tiersValidation.valid) {
+    res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: tiersValidation.reason ?? 'Tabela de comissão inválida' } })
     return
   }
 
@@ -206,7 +238,8 @@ export async function createPartner(req: Request, res: Response): Promise<void> 
         bankAccountType: accountTypeClean,
         bankInfo: typeof bankInfo === 'string' && bankInfo.trim() ? bankInfo.trim() : null,
         code,
-        commissionRate: new Prisma.Decimal(rate.toString()),
+        // commissionRate (legado) fica null. commissionTiers é o novo source of truth.
+        commissionTiers: tiersInput as any,
         notes: typeof notes === 'string' && notes.trim() ? notes.trim() : null,
         createdBy: createdByUuid,
       },
@@ -214,7 +247,10 @@ export async function createPartner(req: Request, res: Response): Promise<void> 
 
     res.status(201).json({
       success: true,
-      data: { ...partner, commissionRate: Number(partner.commissionRate) },
+      data: {
+        ...partner,
+        commissionRate: partner.commissionRate ? Number(partner.commissionRate) : null,
+      },
     })
   } catch (error: any) {
     console.error('[Partners] create error:', { code: error?.code, message: error?.message })
@@ -226,7 +262,7 @@ export async function createPartner(req: Request, res: Response): Promise<void> 
 export async function updatePartner(req: Request, res: Response): Promise<void> {
   const id = req.params.id as string
   const {
-    name, email, document, phone, pixKey, commissionRate, isActive, notes,
+    name, email, document, phone, pixKey, commissionTiers, isActive, notes,
     bankName, bankBranch, bankAccount, bankAccountType, bankInfo,
   } = req.body ?? {}
 
@@ -292,13 +328,13 @@ export async function updatePartner(req: Request, res: Response): Promise<void> 
   if (bankInfo !== undefined) data.bankInfo = typeof bankInfo === 'string' && bankInfo.trim() ? bankInfo.trim() : null
   if (notes !== undefined) data.notes = typeof notes === 'string' && notes.trim() ? notes.trim() : null
   if (isActive !== undefined) data.isActive = Boolean(isActive)
-  if (commissionRate !== undefined) {
-    const rate = Number(commissionRate)
-    if (!Number.isFinite(rate) || rate < 0 || rate > 100) {
-      res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'commissionRate inválido' } })
+  if (commissionTiers !== undefined) {
+    const validation = validateCommissionTiers(commissionTiers)
+    if (!validation.valid) {
+      res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: validation.reason ?? 'Tabela de comissão inválida' } })
       return
     }
-    data.commissionRate = new Prisma.Decimal(rate.toString())
+    data.commissionTiers = commissionTiers as any
   }
 
   if (Object.keys(data).length === 0) {
@@ -315,7 +351,10 @@ export async function updatePartner(req: Request, res: Response): Promise<void> 
     const updated = await prisma.partner.update({ where: { id }, data })
     res.json({
       success: true,
-      data: { ...updated, commissionRate: Number(updated.commissionRate) },
+      data: {
+        ...updated,
+        commissionRate: updated.commissionRate ? Number(updated.commissionRate) : null,
+      },
     })
   } catch (error: any) {
     console.error('[Partners] update error:', error)
