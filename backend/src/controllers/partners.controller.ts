@@ -2,6 +2,17 @@ import { Request, Response } from 'express'
 import { prisma } from '../lib/prisma'
 import { Prisma } from '@prisma/client'
 import { generatePartnerCode } from '../services/commission-engine.service'
+import { validateDocument, stripDocument } from '../utils/validateDocument'
+
+// Telefone brasileiro: 10 ou 11 dígitos só (com ou sem DDD).
+// Aceita máscaras pra UX — limpa pra dígitos antes de validar.
+function isValidPhone(raw: string): boolean {
+  const digits = raw.replace(/\D/g, '')
+  return digits.length === 10 || digits.length === 11
+}
+
+// Tipos de conta bancária aceitos.
+const ACCOUNT_TYPES = new Set(['CHECKING', 'SAVINGS'])
 
 /**
  * Controllers para gestão de parceiros pelo Super Admin.
@@ -122,7 +133,10 @@ export async function getPartner(req: Request, res: Response): Promise<void> {
 
 // ─── POST /admin/partners ───────────────────────────────────────
 export async function createPartner(req: Request, res: Response): Promise<void> {
-  const { name, email, document, phone, pixKey, bankInfo, commissionRate, notes } = req.body ?? {}
+  const {
+    name, email, document, phone, pixKey, commissionRate, notes,
+    bankName, bankBranch, bankAccount, bankAccountType, bankInfo,
+  } = req.body ?? {}
 
   if (typeof name !== 'string' || !name.trim()) {
     res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'name é obrigatório' } })
@@ -138,6 +152,42 @@ export async function createPartner(req: Request, res: Response): Promise<void> 
     return
   }
 
+  // CPF/CNPJ: opcional, mas se vier, valida dígitos verificadores.
+  // Reusamos a função do signup (mesmo padrão usado em validações de tenant).
+  let documentDigits: string | null = null
+  if (typeof document === 'string' && document.trim()) {
+    documentDigits = stripDocument(document)
+    if (documentDigits.length !== 11 && documentDigits.length !== 14) {
+      res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'CPF/CNPJ deve ter 11 ou 14 dígitos' } })
+      return
+    }
+    if (!validateDocument(documentDigits).valid) {
+      res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'CPF/CNPJ com dígitos verificadores inválidos' } })
+      return
+    }
+  }
+
+  // Telefone: opcional, mas se vier, valida 10 ou 11 dígitos.
+  let phoneClean: string | null = null
+  if (typeof phone === 'string' && phone.trim()) {
+    if (!isValidPhone(phone)) {
+      res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Telefone deve ter 10 ou 11 dígitos (com DDD)' } })
+      return
+    }
+    phoneClean = phone.trim()
+  }
+
+  // Tipo de conta: opcional, mas se vier, valida enum.
+  let accountTypeClean: string | null = null
+  if (typeof bankAccountType === 'string' && bankAccountType.trim()) {
+    const upper = bankAccountType.trim().toUpperCase()
+    if (!ACCOUNT_TYPES.has(upper)) {
+      res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Tipo de conta deve ser CHECKING ou SAVINGS' } })
+      return
+    }
+    accountTypeClean = upper
+  }
+
   try {
     const code = await generatePartnerCode()
     const userId = (req as any).user?.userId
@@ -147,9 +197,13 @@ export async function createPartner(req: Request, res: Response): Promise<void> 
       data: {
         name: name.trim(),
         email: email.trim().toLowerCase(),
-        document: typeof document === 'string' && document.trim() ? document.replace(/\D/g, '') : null,
-        phone: typeof phone === 'string' && phone.trim() ? phone.trim() : null,
+        document: documentDigits,
+        phone: phoneClean,
         pixKey: typeof pixKey === 'string' && pixKey.trim() ? pixKey.trim() : null,
+        bankName: typeof bankName === 'string' && bankName.trim() ? bankName.trim() : null,
+        bankBranch: typeof bankBranch === 'string' && bankBranch.trim() ? bankBranch.trim() : null,
+        bankAccount: typeof bankAccount === 'string' && bankAccount.trim() ? bankAccount.trim() : null,
+        bankAccountType: accountTypeClean,
         bankInfo: typeof bankInfo === 'string' && bankInfo.trim() ? bankInfo.trim() : null,
         code,
         commissionRate: new Prisma.Decimal(rate.toString()),
@@ -171,7 +225,10 @@ export async function createPartner(req: Request, res: Response): Promise<void> 
 // ─── PATCH /admin/partners/:id ──────────────────────────────────
 export async function updatePartner(req: Request, res: Response): Promise<void> {
   const id = req.params.id as string
-  const { name, email, document, phone, pixKey, bankInfo, commissionRate, isActive, notes } = req.body ?? {}
+  const {
+    name, email, document, phone, pixKey, commissionRate, isActive, notes,
+    bankName, bankBranch, bankAccount, bankAccountType, bankInfo,
+  } = req.body ?? {}
 
   const data: Prisma.PartnerUpdateInput = {}
 
@@ -189,9 +246,49 @@ export async function updatePartner(req: Request, res: Response): Promise<void> 
     }
     data.email = email.trim().toLowerCase()
   }
-  if (document !== undefined) data.document = typeof document === 'string' && document.trim() ? document.replace(/\D/g, '') : null
-  if (phone !== undefined) data.phone = typeof phone === 'string' && phone.trim() ? phone.trim() : null
+  if (document !== undefined) {
+    if (typeof document === 'string' && document.trim()) {
+      const digits = stripDocument(document)
+      if (digits.length !== 11 && digits.length !== 14) {
+        res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'CPF/CNPJ deve ter 11 ou 14 dígitos' } })
+        return
+      }
+      if (!validateDocument(digits).valid) {
+        res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'CPF/CNPJ com dígitos verificadores inválidos' } })
+        return
+      }
+      data.document = digits
+    } else {
+      data.document = null
+    }
+  }
+  if (phone !== undefined) {
+    if (typeof phone === 'string' && phone.trim()) {
+      if (!isValidPhone(phone)) {
+        res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Telefone deve ter 10 ou 11 dígitos (com DDD)' } })
+        return
+      }
+      data.phone = phone.trim()
+    } else {
+      data.phone = null
+    }
+  }
   if (pixKey !== undefined) data.pixKey = typeof pixKey === 'string' && pixKey.trim() ? pixKey.trim() : null
+  if (bankName !== undefined) data.bankName = typeof bankName === 'string' && bankName.trim() ? bankName.trim() : null
+  if (bankBranch !== undefined) data.bankBranch = typeof bankBranch === 'string' && bankBranch.trim() ? bankBranch.trim() : null
+  if (bankAccount !== undefined) data.bankAccount = typeof bankAccount === 'string' && bankAccount.trim() ? bankAccount.trim() : null
+  if (bankAccountType !== undefined) {
+    if (typeof bankAccountType === 'string' && bankAccountType.trim()) {
+      const upper = bankAccountType.trim().toUpperCase()
+      if (!ACCOUNT_TYPES.has(upper)) {
+        res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Tipo de conta deve ser CHECKING ou SAVINGS' } })
+        return
+      }
+      data.bankAccountType = upper
+    } else {
+      data.bankAccountType = null
+    }
+  }
   if (bankInfo !== undefined) data.bankInfo = typeof bankInfo === 'string' && bankInfo.trim() ? bankInfo.trim() : null
   if (notes !== undefined) data.notes = typeof notes === 'string' && notes.trim() ? notes.trim() : null
   if (isActive !== undefined) data.isActive = Boolean(isActive)
@@ -298,7 +395,13 @@ export async function commissionsReport(req: Request, res: Response): Promise<vo
       where,
       orderBy: [{ partnerId: 'asc' }, { availableAt: 'asc' }],
       include: {
-        partner: { select: { id: true, name: true, code: true, pixKey: true, bankInfo: true, document: true } },
+        partner: {
+          select: {
+            id: true, name: true, code: true, document: true,
+            pixKey: true, bankName: true, bankBranch: true, bankAccount: true,
+            bankAccountType: true, bankInfo: true,
+          },
+        },
         tenant: { select: { id: true, name: true } },
       },
     })

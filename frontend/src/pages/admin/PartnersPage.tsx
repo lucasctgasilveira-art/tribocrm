@@ -299,6 +299,30 @@ function Stat({ label, value, color }: { label: string; value: string; color: st
 
 // ─── Modal Criar/Editar ─────────────────────────────────────────
 
+// Máscara CPF/CNPJ — aplica formatação visual conforme o user digita.
+function maskDoc(value: string): string {
+  const d = value.replace(/\D/g, '').slice(0, 14)
+  if (d.length <= 11) {
+    // CPF: 000.000.000-00
+    return d.replace(/^(\d{3})(\d{0,3})(\d{0,3})(\d{0,2}).*/, (_m, a, b, c, e) =>
+      [a, b, c, e].filter(Boolean).join('').length === 0 ? '' :
+      [a && a, b && '.' + b, c && '.' + c, e && '-' + e].filter(Boolean).join(''))
+  }
+  // CNPJ: 00.000.000/0000-00
+  return d.replace(/^(\d{2})(\d{0,3})(\d{0,3})(\d{0,4})(\d{0,2}).*/, (_m, a, b, c, e, f) =>
+    [a && a, b && '.' + b, c && '.' + c, e && '/' + e, f && '-' + f].filter(Boolean).join(''))
+}
+
+// Máscara telefone — (00) 00000-0000 ou (00) 0000-0000.
+function maskPhone(value: string): string {
+  const d = value.replace(/\D/g, '').slice(0, 11)
+  if (d.length === 0) return ''
+  if (d.length <= 2) return `(${d}`
+  if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`
+  if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
+}
+
 function CreateOrEditModal({ editing, onClose, onSaved }: {
   editing?: PartnerListItem
   onClose: () => void
@@ -308,9 +332,13 @@ function CreateOrEditModal({ editing, onClose, onSaved }: {
   const [form, setForm] = useState<CreatePartnerInput & { isActive?: boolean }>({
     name: editing?.name ?? '',
     email: editing?.email ?? '',
-    document: editing?.document ?? '',
+    document: editing?.document ? maskDoc(editing.document) : '',
     phone: '',
     pixKey: '',
+    bankName: '',
+    bankBranch: '',
+    bankAccount: '',
+    bankAccountType: '',
     bankInfo: '',
     commissionRate: editing ? Number(editing.commissionRate) : 20,
     notes: '',
@@ -326,8 +354,12 @@ function CreateOrEditModal({ editing, onClose, onSaved }: {
     getPartner(editing.id).then(data => {
       setForm(f => ({
         ...f,
-        phone: data.phone ?? '',
+        phone: data.phone ? maskPhone(data.phone) : '',
         pixKey: data.pixKey ?? '',
+        bankName: data.bankName ?? '',
+        bankBranch: data.bankBranch ?? '',
+        bankAccount: data.bankAccount ?? '',
+        bankAccountType: (data.bankAccountType as 'CHECKING' | 'SAVINGS' | null) ?? '',
         bankInfo: data.bankInfo ?? '',
         notes: data.notes ?? '',
       }))
@@ -344,14 +376,42 @@ function CreateOrEditModal({ editing, onClose, onSaved }: {
     if (!form.email.trim() || !form.email.includes('@')) { setError('E-mail inválido'); return }
     if (form.commissionRate < 0 || form.commissionRate > 100) { setError('Comissão deve ser entre 0 e 100'); return }
 
+    // Validação local de CPF/CNPJ — bate dígitos antes de enviar.
+    // Backend revalida com validateDocument; aqui só checa tamanho
+    // pra dar feedback rápido.
+    if (form.document && form.document.trim()) {
+      const docDigits = form.document.replace(/\D/g, '')
+      if (docDigits.length !== 11 && docDigits.length !== 14) {
+        setError('CPF deve ter 11 dígitos ou CNPJ 14 dígitos')
+        return
+      }
+    }
+
+    if (form.phone && form.phone.trim()) {
+      const phoneDigits = form.phone.replace(/\D/g, '')
+      if (phoneDigits.length !== 10 && phoneDigits.length !== 11) {
+        setError('Telefone deve ter 10 ou 11 dígitos (com DDD)')
+        return
+      }
+    }
+
     setSaving(true)
     setError('')
     try {
+      // Backend espera digits-only em document e phone — limpa máscaras
+      // antes de enviar. Strings vazias viram undefined pra o backend
+      // tratar como "não enviou".
+      const payload = {
+        ...form,
+        document: form.document ? form.document.replace(/\D/g, '') : undefined,
+        phone: form.phone ? form.phone.replace(/\D/g, '') : undefined,
+        bankAccountType: form.bankAccountType || undefined,
+      }
       if (isEdit && editing) {
-        await updatePartner(editing.id, form)
+        await updatePartner(editing.id, payload)
         onSaved()
       } else {
-        const result = await createPartner(form)
+        const result = await createPartner(payload)
         setCreatedCode(result.code)
       }
     } catch (err: any) {
@@ -385,23 +445,69 @@ function CreateOrEditModal({ editing, onClose, onSaved }: {
               <input type="email" value={form.email} onChange={e => update('email', e.target.value)} style={inputS} />
             </Field>
             <Field label="CNPJ/CPF">
-              <input value={form.document ?? ''} onChange={e => update('document', e.target.value)} placeholder="Só números" style={inputS} />
+              <input
+                value={form.document ?? ''}
+                onChange={e => update('document', maskDoc(e.target.value))}
+                placeholder="00.000.000/0000-00"
+                style={inputS}
+                maxLength={18}
+              />
             </Field>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <Field label="Telefone">
-              <input value={form.phone ?? ''} onChange={e => update('phone', e.target.value)} style={inputS} />
+              <input
+                value={form.phone ?? ''}
+                onChange={e => update('phone', maskPhone(e.target.value))}
+                placeholder="(00) 00000-0000"
+                style={inputS}
+                maxLength={15}
+              />
             </Field>
             <Field label="Comissão % *">
               <input type="number" min={0} max={100} step={0.5} value={form.commissionRate} onChange={e => update('commissionRate', Number(e.target.value))} style={inputS} />
             </Field>
           </div>
-          <Field label="Chave PIX (pra pagar comissão)">
-            <input value={form.pixKey ?? ''} onChange={e => update('pixKey', e.target.value)} placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória" style={inputS} />
-          </Field>
-          <Field label="Outras informações bancárias">
-            <textarea value={form.bankInfo ?? ''} onChange={e => update('bankInfo', e.target.value)} rows={2} placeholder="Banco, agência, conta — caso PIX não seja a opção" style={{ ...inputS, fontFamily: 'inherit', resize: 'vertical' }} />
-          </Field>
+
+          {/* Bloco de dados pra pagamento da comissão */}
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, marginTop: 4 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 10 }}>
+              Dados pra pagamento da comissão
+            </div>
+
+            <Field label="Chave PIX">
+              <input value={form.pixKey ?? ''} onChange={e => update('pixKey', e.target.value)} placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória" style={inputS} />
+            </Field>
+
+            <div style={{ marginTop: 10, fontSize: 11, color: 'var(--text-muted)' }}>
+              Caso PIX não seja a opção, preencha os dados bancários abaixo:
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12, marginTop: 10 }}>
+              <Field label="Banco">
+                <input value={form.bankName ?? ''} onChange={e => update('bankName', e.target.value)} placeholder="Ex: Banco do Brasil, Itaú, Nubank" style={inputS} />
+              </Field>
+              <Field label="Agência">
+                <input value={form.bankBranch ?? ''} onChange={e => update('bankBranch', e.target.value)} placeholder="0000" style={inputS} />
+              </Field>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12 }}>
+              <Field label="Conta">
+                <input value={form.bankAccount ?? ''} onChange={e => update('bankAccount', e.target.value)} placeholder="00000-0" style={inputS} />
+              </Field>
+              <Field label="Tipo">
+                <select value={form.bankAccountType ?? ''} onChange={e => update('bankAccountType', e.target.value)} style={inputS}>
+                  <option value="">—</option>
+                  <option value="CHECKING">Corrente</option>
+                  <option value="SAVINGS">Poupança</option>
+                </select>
+              </Field>
+            </div>
+
+            <Field label="Observações bancárias (opcional)">
+              <textarea value={form.bankInfo ?? ''} onChange={e => update('bankInfo', e.target.value)} rows={2} placeholder="Qualquer detalhe adicional" style={{ ...inputS, fontFamily: 'inherit', resize: 'vertical' }} />
+            </Field>
+          </div>
           <Field label="Observações">
             <textarea value={form.notes ?? ''} onChange={e => update('notes', e.target.value)} rows={2} style={{ ...inputS, fontFamily: 'inherit', resize: 'vertical' }} />
           </Field>
@@ -441,13 +547,24 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 // ─── Modal: código gerado ───────────────────────────────────────
 
 function ShowCodeModal({ code, onClose }: { code: string; onClose: () => void }) {
-  const [copied, setCopied] = useState(false)
+  // States separados pra cada botão — evita os dois ficarem verdes
+  // simultaneamente (bug reportado: clicar em "copiar link" deixava
+  // o botão do código verde também).
+  const [copiedCode, setCopiedCode] = useState(false)
+  const [copiedUrl, setCopiedUrl] = useState(false)
   const url = `https://tribocrm.com.br/?ref=${code}`
 
-  function handleCopy(text: string) {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+  function handleCopyCode() {
+    navigator.clipboard.writeText(code).then(() => {
+      setCopiedCode(true)
+      setTimeout(() => setCopiedCode(false), 2000)
+    }).catch(() => {})
+  }
+
+  function handleCopyUrl() {
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedUrl(true)
+      setTimeout(() => setCopiedUrl(false), 2000)
     }).catch(() => {})
   }
 
@@ -469,9 +586,9 @@ function ShowCodeModal({ code, onClose }: { code: string; onClose: () => void })
             <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Código</label>
             <div style={{ display: 'flex', gap: 8 }}>
               <input value={code} readOnly onClick={e => (e.target as HTMLInputElement).select()} style={{ ...inputS, fontFamily: 'monospace', fontSize: 14, fontWeight: 600 }} />
-              <button onClick={() => handleCopy(code)} style={{ background: copied ? '#22c55e' : 'var(--accent)', border: 'none', borderRadius: 8, padding: '0 14px', fontSize: 12, fontWeight: 600, color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-                {copied ? <Check size={13} /> : <Copy size={13} />}
-                {copied ? 'Copiado' : 'Copiar'}
+              <button onClick={handleCopyCode} style={{ background: copiedCode ? '#22c55e' : 'var(--accent)', border: 'none', borderRadius: 8, padding: '0 14px', fontSize: 12, fontWeight: 600, color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                {copiedCode ? <Check size={13} /> : <Copy size={13} />}
+                {copiedCode ? 'Copiado' : 'Copiar'}
               </button>
             </div>
           </div>
@@ -480,8 +597,9 @@ function ShowCodeModal({ code, onClose }: { code: string; onClose: () => void })
             <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Link de divulgação</label>
             <div style={{ display: 'flex', gap: 8 }}>
               <input value={url} readOnly onClick={e => (e.target as HTMLInputElement).select()} style={{ ...inputS, fontFamily: 'monospace', fontSize: 11 }} />
-              <button onClick={() => handleCopy(url)} style={{ background: 'var(--accent)', border: 'none', borderRadius: 8, padding: '0 14px', fontSize: 12, fontWeight: 600, color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Copy size={13} /> Copiar
+              <button onClick={handleCopyUrl} style={{ background: copiedUrl ? '#22c55e' : 'var(--accent)', border: 'none', borderRadius: 8, padding: '0 14px', fontSize: 12, fontWeight: 600, color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                {copiedUrl ? <Check size={13} /> : <Copy size={13} />}
+                {copiedUrl ? 'Copiado' : 'Copiar'}
               </button>
             </div>
           </div>
@@ -528,9 +646,29 @@ function PartnerDetailView({ id, onBack }: { id: string; onBack: () => void }) {
           <span style={{ fontFamily: 'monospace', background: 'var(--bg-surface)', padding: '2px 8px', borderRadius: 4 }}>{partner.code}</span>
           <span><strong>{Number(partner.commissionRate)}%</strong></span>
         </div>
-        {partner.pixKey && (
-          <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 6 }}>
-            🏦 PIX: <code style={{ background: 'var(--bg-surface)', padding: '2px 6px', borderRadius: 4 }}>{partner.pixKey}</code>
+        {(partner.pixKey || partner.bankName) && (
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 8, padding: '10px 12px', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, lineHeight: 1.7 }}>
+            {partner.pixKey && (
+              <div>
+                <strong style={{ color: 'var(--text-primary)' }}>PIX:</strong>{' '}
+                <code style={{ background: 'var(--bg-card)', padding: '2px 6px', borderRadius: 4, fontSize: 11 }}>{partner.pixKey}</code>
+              </div>
+            )}
+            {partner.bankName && (
+              <div>
+                <strong style={{ color: 'var(--text-primary)' }}>Conta:</strong>{' '}
+                {partner.bankName}
+                {partner.bankBranch && ` · Ag ${partner.bankBranch}`}
+                {partner.bankAccount && ` · Conta ${partner.bankAccount}`}
+                {partner.bankAccountType === 'CHECKING' && ' (Corrente)'}
+                {partner.bankAccountType === 'SAVINGS' && ' (Poupança)'}
+              </div>
+            )}
+            {partner.bankInfo && (
+              <div style={{ color: 'var(--text-muted)', fontStyle: 'italic', marginTop: 2 }}>
+                {partner.bankInfo}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -680,7 +818,7 @@ function CommissionsReportView({ onBack }: { onBack: () => void }) {
   function exportCSV() {
     if (!data?.groups?.length) return
     const rows: string[][] = [
-      ['Parceiro', 'Código', 'CNPJ/CPF', 'Chave PIX', 'Cliente', 'Cobrança (R$)', '% Comissão', 'Comissão (R$)', 'Status', 'Disponível em', 'Pago em'],
+      ['Parceiro', 'Código', 'CNPJ/CPF', 'Chave PIX', 'Banco', 'Agência', 'Conta', 'Tipo', 'Cliente', 'Cobrança (R$)', '% Comissão', 'Comissão (R$)', 'Status', 'Disponível em', 'Pago em'],
     ]
     for (const g of data.groups) {
       for (const c of g.commissions) {
@@ -689,6 +827,10 @@ function CommissionsReportView({ onBack }: { onBack: () => void }) {
           g.partner.code,
           g.partner.document ?? '',
           g.partner.pixKey ?? '',
+          (g.partner as any).bankName ?? '',
+          (g.partner as any).bankBranch ?? '',
+          (g.partner as any).bankAccount ?? '',
+          (g.partner as any).bankAccountType === 'CHECKING' ? 'Corrente' : (g.partner as any).bankAccountType === 'SAVINGS' ? 'Poupança' : '',
           c.tenant?.name ?? '',
           c.amount.toString().replace('.', ','),
           c.rate.toString().replace('.', ','),

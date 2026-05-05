@@ -655,9 +655,14 @@ model Partner {
   document       String?  @db.VarChar(18)  // CNPJ ou CPF (digits-only)
   phone          String?  @db.VarChar(20)
   // Dados pra pagamento manual (sem integração bancária):
-  // chave PIX preferida + texto livre pra info adicional (banco/agência/conta).
-  pixKey         String?  @map("pix_key") @db.VarChar(150)
-  bankInfo       String?  @map("bank_info") @db.Text
+  // chave PIX preferida + dados bancários estruturados (4 campos)
+  // + observações livres em bankInfo (compat retroativa, opcional).
+  pixKey            String?  @map("pix_key") @db.VarChar(150)
+  bankName          String?  @map("bank_name") @db.VarChar(100)
+  bankBranch        String?  @map("bank_branch") @db.VarChar(20)
+  bankAccount       String?  @map("bank_account") @db.VarChar(30)
+  bankAccountType   String?  @map("bank_account_type") @db.VarChar(20)  // CHECKING | SAVINGS
+  bankInfo          String?  @map("bank_info") @db.Text                  // observações livres (legacy)
   // Código único usado em ?ref= e cadastro manual. Gerado automático
   // (PRT + 8 chars hex). Indexado pra lookup rápido na API pública.
   code           String   @unique @db.VarChar(20)

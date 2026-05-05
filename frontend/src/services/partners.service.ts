@@ -23,6 +23,10 @@ export interface PartnerDetail {
   document: string | null
   phone: string | null
   pixKey: string | null
+  bankName: string | null
+  bankBranch: string | null
+  bankAccount: string | null
+  bankAccountType: string | null
   bankInfo: string | null
   code: string
   commissionRate: number
@@ -76,6 +80,10 @@ export interface CreatePartnerInput {
   document?: string
   phone?: string
   pixKey?: string
+  bankName?: string
+  bankBranch?: string
+  bankAccount?: string
+  bankAccountType?: 'CHECKING' | 'SAVINGS' | ''
   bankInfo?: string
   commissionRate: number
   notes?: string
