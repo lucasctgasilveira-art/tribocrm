@@ -5,6 +5,7 @@ import { randomUUID } from 'crypto'
 import { prisma } from '../lib/prisma'
 import { sendMail } from '../services/mailer.service'
 import { validateDocument, stripDocument } from '../utils/validateDocument'
+import { validateNotSelfReferral } from '../services/commission-engine.service'
 
 const BCRYPT_ROUNDS = 12
 const TRIAL_DAYS = 30
@@ -51,6 +52,10 @@ export async function publicSignup(req: Request, res: Response): Promise<void> {
       addressNeighborhood, addressCity, addressState,
       preferredPaymentMethod,
       termsAccepted, termsVersion, privacyAccepted, privacyVersion,
+      // Programa de parceiros — campo opcional. Veio do cookie ?ref=
+      // capturado pela SignupPage. Se inválido, signup segue normal
+      // (não falha por causa de ref).
+      referralCode,
     } = (req.body ?? {}) as Record<string, unknown>
 
     // Required-field validation (mirrors the shape the signup screen
@@ -256,6 +261,54 @@ export async function publicSignup(req: Request, res: Response): Promise<void> {
       documentType,
       termsVersion: (termsVersion as string).trim(),
     })
+
+    // Programa de parceiros — vincula o tenant recém-criado ao parceiro
+    // se o referralCode foi enviado E é válido E não é auto-indicação.
+    // Tudo dentro de try/catch separado: falha aqui NÃO quebra o signup
+    // (tenant + user já estão criados, comissão é "nice-to-have").
+    if (typeof referralCode === 'string' && referralCode.trim()) {
+      const code = referralCode.trim().toUpperCase()
+      try {
+        const partner = await prisma.partner.findUnique({
+          where: { code },
+          select: { id: true, isActive: true },
+        })
+        if (!partner) {
+          console.log(`[Signup] referralCode=${code} não encontrado — ignorando`)
+        } else if (!partner.isActive) {
+          console.log(`[Signup] referralCode=${code} encontrado mas parceiro está inativo — ignorando`)
+        } else {
+          const validation = await validateNotSelfReferral(created.tenantId, partner.id)
+          if (!validation.valid) {
+            console.log(`[Signup] referralCode=${code} bloqueado por self-referral: ${validation.reason}`)
+          } else {
+            await prisma.$transaction([
+              prisma.tenant.update({
+                where: { id: created.tenantId },
+                data: {
+                  referredByPartnerId: partner.id,
+                  referredAt: new Date(),
+                },
+              }),
+              prisma.tenantPartnerChange.create({
+                data: {
+                  tenantId: created.tenantId,
+                  oldPartnerId: null,
+                  newPartnerId: partner.id,
+                  changedBy: null,
+                  source: 'signup_cookie',
+                },
+              }),
+            ])
+            console.log(`[Signup] tenant ${created.tenantId} vinculado ao parceiro ${partner.id} (code=${code})`)
+          }
+        }
+      } catch (refErr: any) {
+        console.error('[Signup] erro ao vincular parceiro (não-bloqueante):', {
+          code: refErr?.code, message: refErr?.message,
+        })
+      }
+    }
 
     // Confirmation email — fire-and-await so we can at least log the
     // mailer status, but a failed send does NOT roll back the signup:

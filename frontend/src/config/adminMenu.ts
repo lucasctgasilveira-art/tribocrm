@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Building2, DollarSign, Megaphone, LayoutGrid,
   Users, CreditCard, ScrollText, Settings, Tag, CheckSquare, Zap, Mail, Send,
-  Target,
+  Target, Handshake,
 } from 'lucide-react'
 import type { SidebarEntry } from '../components/shared/Sidebar/Sidebar'
 
@@ -11,6 +11,7 @@ export const adminMenuItems: SidebarEntry[] = [
   { label: 'Clientes', icon: Building2, path: '/admin/clientes' },
   { label: 'Leads', icon: Target, path: '/admin/leads' },
   { label: 'Financeiro', icon: DollarSign, path: '/admin/financeiro', badge: '4', badgeColor: '#f59e0b' },
+  { label: 'Parceiros', icon: Handshake, path: '/admin/parceiros' },
   { label: 'Tarefas', icon: CheckSquare, path: '/admin/tarefas' },
   { label: 'Pop-ups', icon: Megaphone, path: '/admin/popups' },
   { label: 'Menu das Instâncias', icon: LayoutGrid, path: '/admin/menu-instancias' },

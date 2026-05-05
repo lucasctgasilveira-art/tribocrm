@@ -32,6 +32,7 @@ import AdminPermissionsPage from './pages/admin/AdminPermissionsPage'
 import AdminTasksPage from './pages/admin/TasksPage'
 import AdminAutomationsPage from './pages/admin/AutomationsPage'
 import DualAccessSelector from './pages/admin/DualAccessSelector'
+import PartnersPage from './pages/admin/PartnersPage'
 
 // Gestão
 import GestaoDashboardPage from './pages/gestao/DashboardPage'
@@ -121,6 +122,7 @@ export default function App() {
       <Route path="/admin/logs/emails" element={<PrivateRoute allowed={['admin']}><EmailLogsPage /></PrivateRoute>} />
       <Route path="/admin/emails/novo" element={<PrivateRoute allowed={['admin']}><NewCampaignPage /></PrivateRoute>} />
       <Route path="/admin/configuracoes" element={<PrivateRoute allowed={['admin']}><GlobalSettingsPage /></PrivateRoute>} />
+      <Route path="/admin/parceiros" element={<PrivateRoute allowed={['admin']}><PartnersPage /></PrivateRoute>} />
 
       {/* Gestão */}
       <Route path="/gestao/dashboard" element={<PrivateRoute allowed={['gestao']}><GestaoDashboardPage /></PrivateRoute>} />

@@ -1,11 +1,15 @@
-import { useState, useEffect } from 'react'
-import { CreditCard, QrCode, FileText, Download, X, Copy, Loader2 } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { CreditCard, QrCode, FileText, Download, X, Copy, Loader2, Handshake, Check } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { gestaoMenuItems } from '../../config/gestaoMenu'
 import api from '../../services/api'
 import CardSubscriptionForm from '../../components/billing/CardSubscriptionForm'
 import { invalidateCurrentTenantCache } from '../../hooks/useCurrentTenant'
+import {
+  getTenantPartner, setTenantPartner, unsetTenantPartner, validatePartnerCode,
+  type TenantPartnerCurrent,
+} from '../../services/partners.service'
 
 // Row shape consumed by the history table. Built on-the-fly from the
 // charges returned by GET /payments/history — no longer hardcoded.
@@ -343,6 +347,9 @@ export default function MySubscriptionPage() {
           <span style={{ fontSize: 13, color: '#f97316', cursor: 'pointer' }}>Precisa de mais? Fale com nosso time de consultores →</span>
         </div>
       </div>
+
+      {/* Programa de parceiros — cliente cadastra/troca código */}
+      <PartnerCodeCard />
 
       {/* Modals */}
       {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: '4px solid #22c55e', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 60 }}>{toast}</div>}
@@ -983,5 +990,187 @@ function PayOpt({ icon, color, label, onClick }: { icon: React.ReactNode; color:
       onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)' }}>
       <span style={{ color: 'inherit' }}>{icon}</span>{label}
     </div>
+  )
+}
+
+// ── Partner code card ──
+//
+// Card mostrado em /gestao/assinatura pra o gestor cadastrar ou trocar
+// código de parceiro indicador. Apenas OWNER/MANAGER (gate é no
+// backend; UI esconde botão de salvar pro resto). Mudanças valem a
+// partir da próxima cobrança paga.
+
+function PartnerCodeCard() {
+  const [current, setCurrent] = useState<TenantPartnerCurrent | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [editing, setEditing] = useState(false)
+  const [code, setCode] = useState('')
+  const [validating, setValidating] = useState(false)
+  const [validated, setValidated] = useState<{ name: string; code: string } | null>(null)
+  const [validationError, setValidationError] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [toast, setToast] = useState('')
+
+  const role = (() => {
+    try {
+      return (JSON.parse(localStorage.getItem('user') ?? '{}') as { role?: string }).role ?? ''
+    } catch { return '' }
+  })()
+  const canManage = role === 'OWNER' || role === 'MANAGER' || role === 'SUPER_ADMIN'
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const data = await getTenantPartner()
+      setCurrent(data.current)
+    } catch { /* silencioso — campo é opcional, falha não é crítica */ }
+    finally { setLoading(false) }
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  // Validação em tempo real (debounce 600ms)
+  useEffect(() => {
+    if (!editing || !code.trim()) { setValidated(null); setValidationError(''); return }
+    const trimmed = code.trim().toUpperCase()
+    if (trimmed.length < 4) { setValidated(null); setValidationError(''); return }
+
+    const t = setTimeout(async () => {
+      setValidating(true)
+      setValidationError('')
+      try {
+        const partner = await validatePartnerCode(trimmed)
+        setValidated(partner)
+      } catch (err: any) {
+        setValidated(null)
+        const msg = err?.response?.data?.error?.message ?? ''
+        setValidationError(msg || 'Código não encontrado')
+      } finally {
+        setValidating(false)
+      }
+    }, 600)
+    return () => clearTimeout(t)
+  }, [code, editing])
+
+  async function handleSave() {
+    if (!validated) return
+    setSaving(true)
+    try {
+      await setTenantPartner(validated.code)
+      setToast(current ? 'Parceiro atualizado!' : 'Parceiro vinculado!')
+      setTimeout(() => setToast(''), 3000)
+      setEditing(false)
+      setCode('')
+      setValidated(null)
+      await load()
+    } catch (err: any) {
+      setValidationError(err?.response?.data?.error?.message ?? 'Erro ao salvar')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleRemove() {
+    if (!confirm('Remover vínculo com o parceiro? Comissões já geradas continuam, mas nenhuma nova será criada.')) return
+    setSaving(true)
+    try {
+      await unsetTenantPartner()
+      setToast('Vínculo removido')
+      setTimeout(() => setToast(''), 3000)
+      await load()
+    } catch (err: any) {
+      alert(err?.response?.data?.error?.message ?? 'Erro')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) return null
+
+  const card: React.CSSProperties = { background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 20 }
+
+  return (
+    <>
+      {toast && <div style={{ position: 'fixed', top: 24, right: 24, background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: '4px solid #22c55e', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', zIndex: 60 }}>{toast}</div>}
+      <div style={card}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: current ? 12 : 16 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(249,115,22,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Handshake size={18} color="#f97316" />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
+              {current ? 'Parceiro vinculado' : 'Tem código de parceiro?'}
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2, lineHeight: 1.5 }}>
+              {current
+                ? `Você foi indicado por ${current.name} e ele recebe uma comissão a cada pagamento seu.`
+                : 'Se uma agência te indicou o TriboCRM, cadastre o código dela aqui pra ela receber a comissão.'}
+            </div>
+          </div>
+        </div>
+
+        {current && !editing && (
+          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{current.name}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'monospace', marginTop: 2 }}>{current.code}</div>
+            </div>
+            {canManage && (
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button onClick={() => { setEditing(true); setCode('') }} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                  Trocar
+                </button>
+                <button onClick={handleRemove} disabled={saving} style={{ background: 'transparent', border: '1px solid #ef4444', borderRadius: 6, padding: '6px 12px', fontSize: 12, color: '#ef4444', cursor: saving ? 'not-allowed' : 'pointer' }}>
+                  Remover
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {(!current || editing) && canManage && (
+          <div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                value={code}
+                onChange={e => setCode(e.target.value.toUpperCase())}
+                placeholder="Ex: PRTAB12CD34"
+                style={{ flex: 1, background: 'var(--bg-surface)', border: `1px solid ${validated ? '#22c55e' : validationError ? '#ef4444' : 'var(--border)'}`, borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', fontFamily: 'monospace', textTransform: 'uppercase' }}
+              />
+              {editing && (
+                <button onClick={() => { setEditing(false); setCode(''); setValidated(null); setValidationError('') }} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '0 14px', fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                  Cancelar
+                </button>
+              )}
+              <button onClick={handleSave} disabled={!validated || saving} style={{ background: validated ? 'var(--accent)' : 'var(--border)', border: 'none', borderRadius: 8, padding: '0 18px', fontSize: 13, fontWeight: 600, color: validated ? '#fff' : 'var(--text-muted)', cursor: validated && !saving ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 6 }}>
+                {saving && <Loader2 size={14} className="animate-spin" />}
+                {saving ? 'Salvando...' : 'Salvar'}
+              </button>
+            </div>
+            <div style={{ marginTop: 8, fontSize: 12, minHeight: 18 }}>
+              {validating && (
+                <span style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Loader2 size={12} className="animate-spin" /> Validando...
+                </span>
+              )}
+              {validated && (
+                <span style={{ color: '#22c55e', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Check size={14} /> Parceiro: <strong>{validated.name}</strong>
+                </span>
+              )}
+              {validationError && (
+                <span style={{ color: '#ef4444' }}>{validationError}</span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {!canManage && !current && (
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic' }}>
+            Apenas gestores e proprietários podem cadastrar código de parceiro.
+          </div>
+        )}
+      </div>
+    </>
   )
 }

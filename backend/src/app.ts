@@ -30,6 +30,8 @@ import pushRoutes from './routes/push.routes'
 import v1Routes from './routes/v1.routes'
 import apiKeysRoutes from './routes/api-keys.routes'
 import webhookEndpointsRoutes from './routes/webhook-endpoints.routes'
+import partnersRoutes from './routes/partners.routes'
+import tenantPartnerRoutes from './routes/tenant-partner.routes'
 
 const app = express()
 
@@ -130,11 +132,16 @@ app.use('/goals', goalsRoutes)
 app.use('/templates', templatesRoutes)
 app.use('/forms', formsRoutes)
 app.use('/automations', automationsRoutes)
+// /admin/partners precisa vir ANTES de /admin (router específico antes
+// do genérico) — senão o handler de adminRoutes intercepta primeiro
+// e devolve 404.
+app.use('/admin/partners', partnersRoutes)
 app.use('/admin', adminRoutes)
 app.use('/payments', paymentsRoutes)
 app.use('/push', pushRoutes)
 app.use('/api-keys', apiKeysRoutes)
 app.use('/webhook-endpoints', webhookEndpointsRoutes)
+app.use('/tenant-partner', tenantPartnerRoutes)
 
 // Sentry error handler — DEVE vir após todas as routes
 // mas ANTES de qualquer outro error handler customizado

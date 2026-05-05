@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import cors from 'cors'
 import { getPublicForm, submitPublicForm } from '../controllers/public.controller'
+import { validatePartnerCode } from '../controllers/tenant-partner.controller'
 
 // Public (no JWT) routes for the embeddable capture form. Mounted
 // BEFORE any auth-protected routes in app.ts so requests never hit an
@@ -22,5 +23,12 @@ router.use(
 
 router.get('/forms/:embedToken', getPublicForm)
 router.post('/forms/:embedToken/submit', submitPublicForm)
+
+// Validação pública de código de parceiro (usado pela landing e
+// SignupPage pra mostrar "Você está sendo indicado por <Nome>" antes
+// do cadastro). Mesma função do controller protegido — handler
+// é stateless e não revela nada além de nome+code, então é seguro
+// expor sem JWT.
+router.get('/partners/validate/:code', validatePartnerCode)
 
 export default router

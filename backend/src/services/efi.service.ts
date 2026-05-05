@@ -3,6 +3,7 @@ import fs from 'fs'
 import os from 'os'
 import EfiPay from 'sdk-typescript-apis-efi'
 import { prisma } from '../lib/prisma'
+import { createCommissionForCharge } from './commission-engine.service'
 
 const isSandbox = process.env.EFI_SANDBOX === 'true'
 
@@ -587,6 +588,13 @@ export async function processWebhookPayment(efiId: string): Promise<{ ok: boolea
   await prisma.charge.update({
     where: { id: charge.id },
     data: { status: 'PAID', paidAt: new Date() },
+  })
+
+  // Programa de parceiros — cria PartnerCommission se tenant tem
+  // parceiro ativo. Fire-and-forget, nunca trava o webhook.
+  // Idempotente via @@unique em chargeId no modelo PartnerCommission.
+  createCommissionForCharge(charge.id).catch(err => {
+    console.error('[Efi] commission engine error (non-blocking):', err?.message ?? err)
   })
 
   // Activate tenant and extend billing period

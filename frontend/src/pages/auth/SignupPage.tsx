@@ -130,6 +130,16 @@ interface Step1Data {
 
 const STEP1_STORAGE_KEY = 'signup_step1_data'
 
+// Lê o cookie 'tribocrm_ref' que a landing grava quando user chega
+// via ?ref=CODIGO. Cookie tem 30 dias. Retorna string vazia se ausente
+// ou se sandboxing/private mode bloquear document.cookie.
+function readReferralCookie(): string {
+  try {
+    const match = document.cookie.match(/(?:^|;\s*)tribocrm_ref=([^;]+)/)
+    return match ? decodeURIComponent(match[1]!).trim().toUpperCase() : ''
+  } catch { return '' }
+}
+
 function readStep1Data(): Step1Data | null {
   try {
     const raw = sessionStorage.getItem(STEP1_STORAGE_KEY)
@@ -572,6 +582,11 @@ export default function SignupPage() {
         termsVersion: LEGAL_VERSIONS.terms,
         privacyAccepted: true,
         privacyVersion: LEGAL_VERSIONS.privacy,
+
+        // Programa de parceiros — lê cookie 'tribocrm_ref' (gravado pela
+        // landing quando user clicou ?ref=CODIGO) e envia opcionalmente.
+        // Backend ignora silenciosamente se inválido — não bloqueia signup.
+        referralCode: readReferralCookie() || undefined,
       })
 
       if (data?.success) {

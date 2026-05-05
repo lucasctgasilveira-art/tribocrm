@@ -10,6 +10,7 @@ import { runBillingStateMachineJob } from './billing-state-machine.job'
 import { runCampaignRunnerJob } from './campaign-runner.job'
 import { runPushTaskReminderJob } from './push-task-reminder.job'
 import { runWebhookRetryJob } from './webhook-retry.job'
+import { runCommissionAvailabilityJob } from './commission-availability.job'
 
 /**
  * Initializes all scheduled jobs.
@@ -61,6 +62,9 @@ export function initJobs(): void {
 
   cron.schedule('* * * * *', () => { runWebhookRetryJob().catch(e => console.error('[Job:webhook-retry] uncaught:', e)) }, tz)
   console.log('[Jobs] webhook-retry job scheduled — every 1 minute')
+
+  cron.schedule('30 4 * * *', () => { runCommissionAvailabilityJob().catch(e => console.error('[Job:commission-availability] uncaught:', e)) }, tz)
+  console.log('[Jobs] commission-availability job scheduled — 04:30 daily')
 
   console.log('[Jobs] all scheduled jobs initialized')
 }

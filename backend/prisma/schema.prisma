@@ -396,6 +396,15 @@ model Tenant {
   leadPurchases  LeadPurchase[]
   apiKeys        ApiKey[]
   webhookEndpoints WebhookEndpoint[]
+  partnerCommissions  PartnerCommission[]  @relation("CommissionsForTenant")
+  partnerChanges      TenantPartnerChange[] @relation("PartnerChangesForTenant")
+  // Programa de parceiros — quem indicou esse tenant.
+  // Setado no signup (via cookie ?ref=) ou via UI do gestor depois.
+  // Se cliente trocar de parceiro, esse campo é sobrescrito e o
+  // histórico fica em TenantPartnerChange. NULL = veio direto.
+  referredByPartnerId String?  @map("referred_by_partner_id") @db.Uuid
+  referredAt          DateTime? @map("referred_at")
+  referredBy          Partner? @relation("TenantReferredByPartner", fields: [referredByPartnerId], references: [id], onDelete: SetNull)
   @@map("tenants")
 }
 
@@ -501,6 +510,7 @@ model User {
   pushSubscriptions PushSubscription[]
   apiKeysCreated    ApiKey[]           @relation("ApiKeyCreatedBy")
   webhooksCreated   WebhookEndpoint[]  @relation("WebhookEndpointCreatedBy")
+  partnerChangesByUser TenantPartnerChange[] @relation("PartnerChangedByUser")
   @@unique([tenantId, email])
   @@map("users")
 }
@@ -624,6 +634,103 @@ model WebhookDelivery {
   @@index([tenantId, createdAt(sort: Desc)])
   @@index([status, nextRetryAt])
   @@map("webhook_deliveries")
+}
+
+// Programa de parceiros (afiliados/agências) — Super Admin cadastra
+// agências que recebem comissão por indicação. Cada parceiro tem um
+// código único usado em links de divulgação (?ref=CODIGO) e que
+// clientes podem cadastrar manualmente na área do gestor.
+//
+// Comissão é recorrente (gerada a cada cobrança paga do cliente),
+// vitalícia enquanto cliente estiver ativo + parceiro estiver ativo.
+// Carência de 30 dias (D+30) antes de virar AVAILABLE — protege
+// contra reembolsos. Após carência, sem reversão por cancelamento.
+//
+// Auto-indicação é bloqueada via comparação de document (CPF/CNPJ)
+// e email do tenant com os do parceiro.
+model Partner {
+  id             String   @id @default(uuid()) @db.Uuid
+  name           String   @db.VarChar(150)
+  email          String   @db.VarChar(255)
+  document       String?  @db.VarChar(18)  // CNPJ ou CPF (digits-only)
+  phone          String?  @db.VarChar(20)
+  // Dados pra pagamento manual (sem integração bancária):
+  // chave PIX preferida + texto livre pra info adicional (banco/agência/conta).
+  pixKey         String?  @map("pix_key") @db.VarChar(150)
+  bankInfo       String?  @map("bank_info") @db.Text
+  // Código único usado em ?ref= e cadastro manual. Gerado automático
+  // (PRT + 8 chars hex). Indexado pra lookup rápido na API pública.
+  code           String   @unique @db.VarChar(20)
+  // % de comissão padrão (ex: 20.00 = 20%). Aplicado a cada cobrança
+  // paga do cliente indicado. Pode mudar — comissões já criadas
+  // congelam o rate na hora da criação.
+  commissionRate Decimal  @map("commission_rate") @db.Decimal(5, 2)
+  isActive       Boolean  @default(true) @map("is_active")
+  notes          String?  @db.Text
+  createdBy      String?  @map("created_by") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  // tenants indicados por esse parceiro (pode ser 0 ou N).
+  referredTenants Tenant[] @relation("TenantReferredByPartner")
+  commissions    PartnerCommission[]
+  partnerChangesAsOld TenantPartnerChange[] @relation("PartnerChangeOldPartner")
+  partnerChangesAsNew TenantPartnerChange[] @relation("PartnerChangeNewPartner")
+  @@map("partners")
+}
+
+// Cada cobrança paga (Charge.status = PAID) que o tenant indicado
+// gera cria UMA linha aqui. Status:
+//   PENDING   — em carência (paidAt + 30d ainda no futuro)
+//   AVAILABLE — saiu da carência, pronta pra ser paga ao parceiro
+//   PAID      — Super Admin marcou como pago (controle financeiro)
+//   REVERSED  — caso raro: reembolso/chargeback dentro da carência
+//
+// availableAt = chargePaidAt + 30 dias. Cron diário promove de
+// PENDING → AVAILABLE quando o relógio passa.
+//
+// rate é congelado no momento da criação (parceiro pode mudar % no
+// futuro — comissões antigas mantêm o valor original).
+model PartnerCommission {
+  id          String   @id @default(uuid()) @db.Uuid
+  partnerId   String   @map("partner_id") @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  chargeId    String   @unique @map("charge_id") @db.Uuid
+  amount      Decimal  @db.Decimal(12, 2)
+  rate        Decimal  @db.Decimal(5, 2)
+  commission  Decimal  @db.Decimal(12, 2)
+  status      String   @default("PENDING") @db.VarChar(20)
+  availableAt DateTime @map("available_at")
+  paidAt      DateTime? @map("paid_at")
+  reversedAt  DateTime? @map("reversed_at")
+  notes       String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  partner     Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  tenant      Tenant   @relation("CommissionsForTenant", fields: [tenantId], references: [id], onDelete: Cascade)
+  @@index([partnerId, status])
+  @@index([status, availableAt])
+  @@index([tenantId])
+  @@map("partner_commissions")
+}
+
+// Histórico de troca de parceiro pelo tenant. Útil pra auditoria e
+// suporte ("por que parceiro X reclama de não receber comissão de
+// fevereiro? Cliente trocou em 28/jan."). Incluí oldPartnerId NULL
+// pro registro inicial do vínculo (signup ou primeiro cadastro).
+model TenantPartnerChange {
+  id            String   @id @default(uuid()) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  oldPartnerId  String?  @map("old_partner_id") @db.Uuid
+  newPartnerId  String?  @map("new_partner_id") @db.Uuid
+  changedBy     String?  @map("changed_by") @db.Uuid
+  source        String   @db.VarChar(30)  // signup_cookie | gestor_ui | super_admin
+  createdAt     DateTime @default(now()) @map("created_at")
+  tenant        Tenant   @relation("PartnerChangesForTenant", fields: [tenantId], references: [id], onDelete: Cascade)
+  oldPartner    Partner? @relation("PartnerChangeOldPartner", fields: [oldPartnerId], references: [id], onDelete: SetNull)
+  newPartner    Partner? @relation("PartnerChangeNewPartner", fields: [newPartnerId], references: [id], onDelete: SetNull)
+  changedByUser User?    @relation("PartnerChangedByUser", fields: [changedBy], references: [id], onDelete: SetNull)
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@map("tenant_partner_changes")
 }
 
 // Acesso de usuario a pipelines do tenant. Many-to-many entre User e
