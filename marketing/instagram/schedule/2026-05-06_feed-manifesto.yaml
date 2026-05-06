@@ -1,13 +1,13 @@
-status: aprovado
+status: publicado
 aprovado_em: '2026-05-04'
 aprovado_por: lucas
 slot:
   data: '2026-05-06'
   horario: 09:00 BRT
   justificativa: >
-    Quarta 09:00 BRT — pilar Manifesto. Frase curta de marca pra começar a manhã. Slot manhã
-    porque manifesto funciona melhor antes da rotina engolir o leitor (Schwartz: aware-of-need).
-    Feed estático, 1 imagem, dispara automático pelo publisher.
+    Quarta 09:00 BRT — pilar Manifesto. Frase curta de marca pra começar a manhã. Slot manhã porque manifesto funciona
+    melhor antes da rotina engolir o leitor (Schwartz: aware-of-need). Feed estático, 1 imagem, dispara automático pelo
+    publisher.
 formato: feed-estatico
 slides: 1
 arquivos:
@@ -18,3 +18,6 @@ primeiro_comentario: null
 publicacao:
   metodo: instagram_graph_api
   acao_humana_necessaria: aprovacao_dada_em_2026-05-04_por_lucas_chat
+published_at: '2026-05-06T13:10:14.058Z'
+media_id: '18072368252652443'
+permalink: https://www.instagram.com/p/DX_5YFflNvP/
