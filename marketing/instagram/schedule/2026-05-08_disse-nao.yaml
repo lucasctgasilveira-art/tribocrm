@@ -1,15 +1,14 @@
-status: aprovado
+status: publicado
 aprovado_em: '2026-05-04'
 aprovado_por: lucas
 slot:
   data: '2026-05-08'
   horario: 09:00 BRT
   justificativa: >
-    Sexta 09:00 BRT — pilar Bastidor (Hook 8). Carrossel de 8 slides sobre as 3 funções que a
-    TriboCRM deliberadamente não fez (WhatsApp Business API, IA preditiva, app nativo). Evidência
-    documental em 01_Documento_de_Requisitos.md §17 (Fora do Escopo do MVP). Slot manhã sexta —
-    início do último dia útil, peça polêmica/provocativa funciona bem. Espera engagement alto via
-    debate nos comentários.
+    Sexta 09:00 BRT — pilar Bastidor (Hook 8). Carrossel de 8 slides sobre as 3 funções que a TriboCRM deliberadamente
+    não fez (WhatsApp Business API, IA preditiva, app nativo). Evidência documental em 01_Documento_de_Requisitos.md §17
+    (Fora do Escopo do MVP). Slot manhã sexta — início do último dia útil, peça polêmica/provocativa funciona bem.
+    Espera engagement alto via debate nos comentários.
 formato: carrossel
 slides: 8
 arquivos:
@@ -27,3 +26,6 @@ primeiro_comentario: null
 publicacao:
   metodo: instagram_graph_api
   acao_humana_necessaria: aprovacao_dada_em_2026-05-04_por_lucas_chat
+published_at: '2026-05-08T12:02:54.880Z'
+media_id: '17949944073159385'
+permalink: https://www.instagram.com/p/DYE7Uznlrx_/
