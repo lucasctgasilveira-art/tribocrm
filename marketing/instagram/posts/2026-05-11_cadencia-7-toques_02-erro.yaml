@@ -1,0 +1,21 @@
+# --------------------------------------------------------
+# Pauta: Slide 2 — Erro da PME (follow-up sem método)
+# Calendário: SEG 11/05/2026 · Semana 2 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-11_cadencia-7-toques_02-erro
+data:
+  pilar: "Método · Cadência"
+  step-num: ""
+  titulo: "O erro mora aqui."
+  body-1: |
+    Vendedor entra na semana
+    <span class="miolo-emphasis">"batendo no feeling"</span>.
+    Liga uma vez, manda um WhatsApp,
+    fica esperando o cliente "dar sinal".
+  body-2: |
+    Sem cadência, follow-up vira intuição.
+    Intuição não escala. Quando o time cresce,
+    cliente bom esfria sem ninguém perceber.
+  slide-number: "02 / 08"
+  handle: "@tribocrmoficial"

@@ -1,0 +1,26 @@
+status: aprovado
+aprovado_em: '2026-05-10'
+aprovado_por: lucas
+slot:
+  data: '2026-05-12'
+  horario: 09:00 BRT
+  justificativa: >
+    Terça 09:00 BRT — pilar Dor da PME. Cena clássica em PME brasileira: vendedor
+    bom vai embora e leva pipeline na cabeça. Aprovada pelo Lucas em 10/05 junto
+    com o plano da Semana 2.
+formato: carrossel
+slides: 6
+arquivos:
+  - output/2026-05-12_vendedor-sai_01-capa.png
+  - output/2026-05-12_vendedor-sai_02-cena1.png
+  - output/2026-05-12_vendedor-sai_03-cena2.png
+  - output/2026-05-12_vendedor-sai_04-cena3.png
+  - output/2026-05-12_vendedor-sai_05-diagnostico.png
+  - output/2026-05-12_vendedor-sai_06-cta.png
+caption_source: posts/2026-05-12_vendedor-sai_06-cta.yaml#caption
+hashtags_inline_na_caption: true
+primeiro_comentario: null
+publicacao:
+  metodo: instagram_graph_api
+  acao_humana_necessaria: aprovacao_final_no_dia
+tema_visual: dark

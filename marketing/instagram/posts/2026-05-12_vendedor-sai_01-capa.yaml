@@ -1,0 +1,14 @@
+# --------------------------------------------------------
+# Pauta: Slide 1 (capa) do carrossel "Vendedor que sai e leva o pipeline"
+# Calendário: TER 12/05/2026 · Semana 2 · Mês 1
+# Pilar: DOR
+# --------------------------------------------------------
+template: carrossel-metodo-capa
+slug: 2026-05-12_vendedor-sai_01-capa
+data:
+  pilar: "Dor da PME"
+  titulo: |
+    Quando o melhor vendedor sai<br>
+    e leva o <span class="t-orange">pipeline</span> na cabeça.
+  slide-number: "01 / 06"
+  handle: "@tribocrmoficial"

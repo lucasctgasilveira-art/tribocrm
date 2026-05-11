@@ -1,0 +1,22 @@
+# --------------------------------------------------------
+# Pauta: Slide 2 — Contexto/erro
+# Calendário: QUA 13/05/2026 · Semana 2 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-13_3-perguntas_02-contexto
+theme: light
+data:
+  pilar: "Método · Qualificação"
+  step-num: ""
+  titulo: "Qualificação ruim queima time inteiro."
+  body-1: |
+    Vendedor aceita reunião com qualquer um
+    que respira. Agenda lota, fechamento
+    não vem, sócio cobra resultado.
+  body-2: |
+    Lead bom e lead ruim consomem
+    <span class="miolo-emphasis">o mesmo tempo da equipe.</span>
+    A diferença mora na pergunta certa
+    no começo, não no fim.
+  slide-number: "02 / 06"
+  handle: "@tribocrmoficial"

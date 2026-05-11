@@ -1,0 +1,19 @@
+# --------------------------------------------------------
+# Pauta: Slide 2 (Cena 1) do carrossel "Vendedor que sai e leva o pipeline"
+# Calendário: TER 12/05/2026 · Semana 2 · Mês 1
+# Pilar: DOR · CENA 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-12_vendedor-sai_02-cena1
+data:
+  pilar: "Dor · Cena 1"
+  step-num: ""
+  titulo: "Sexta de manhã. Ele entrega o aviso."
+  body-1: |
+    Era o melhor vendedor do time. Vendia 40% do mês sozinho.<br>
+    Tinha relação com cliente que ninguém mais tinha.
+  body-2: |
+    Domingo à noite, você abre o WhatsApp do trabalho e lembra:<br>
+    <span class="miolo-emphasis">cadê o follow-up que ele tava fazendo com a Camila?</span>
+  slide-number: "02 / 06"
+  handle: "@tribocrmoficial"

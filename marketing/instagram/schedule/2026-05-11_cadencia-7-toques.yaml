@@ -1,0 +1,28 @@
+status: aprovado
+aprovado_em: '2026-05-10'
+aprovado_por: lucas
+slot:
+  data: '2026-05-11'
+  horario: 09:00 BRT
+  justificativa: >
+    Segunda 09:00 BRT — pilar Método encaixa com a cadência do B2 §3 do plano IG
+    (segunda = método). Carrossel longo de 8 slides aproveita o tempo da abertura
+    da semana, quando a equipe comercial da PME entra na rotina e procura referência.
+formato: carrossel
+slides: 8
+arquivos:
+  - output/2026-05-11_cadencia-7-toques_01-capa.png
+  - output/2026-05-11_cadencia-7-toques_02-erro.png
+  - output/2026-05-11_cadencia-7-toques_03-toque1.png
+  - output/2026-05-11_cadencia-7-toques_04-toques23.png
+  - output/2026-05-11_cadencia-7-toques_05-toques45.png
+  - output/2026-05-11_cadencia-7-toques_06-toques67.png
+  - output/2026-05-11_cadencia-7-toques_07-sintese.png
+  - output/2026-05-11_cadencia-7-toques_08-cta.png
+caption_source: posts/2026-05-11_cadencia-7-toques_08-cta.yaml#caption
+hashtags_inline_na_caption: true
+primeiro_comentario: null
+publicacao:
+  metodo: instagram_graph_api
+  acao_humana_necessaria: aprovacao_lucas_antes_de_postar
+tema_visual: dark

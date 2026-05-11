@@ -1,0 +1,33 @@
+# --------------------------------------------------------
+# Pauta: Feed manifesto "A planilha tá te servindo ou tá te escondendo?"
+# Calendário: SEX 15/05/2026 · Semana 2 · Mês 1
+# Pilar: MANIFESTO
+# Status: pending_review
+# Tema: CLARO
+# --------------------------------------------------------
+template: feed-manifesto
+slug: 2026-05-15_planilha-servindo
+theme: light
+data:
+  linha-1: "A planilha tá"
+  linha-2: |
+    te <span class="t-orange">servindo</span>
+  linha-3: |
+    ou te <span class="t-orange">escondendo</span>?
+  handle: "@tribocrmoficial"
+
+# Legenda oficial
+caption: |
+  A planilha tá te servindo ou tá te escondendo?
+
+  Toda PME já passou pelo mesmo ciclo. Começa com a planilha do "controle". Cada vendedor tem a dele. Sócio pede consolidado, alguém passa a tarde colando célula em outra aba.
+
+  No começo parece organização. Depois vira teatro. Vira o lugar onde o vendedor escreve o que o gerente quer ler, não o que aconteceu de verdade. Vira o motivo da reunião de sexta às 18h não chegar a lugar nenhum — porque ninguém confia mais no número.
+
+  A planilha não é o vilão. O vilão é fingir que ela ainda dá conta de uma operação que cresceu.
+
+  Pergunta sem resposta fácil: a planilha que tu tem hoje serve o teu pipeline, ou esconde o teu pipeline de você?
+
+  Salva. Manda pra sócio. Volta aqui no domingo e me conta o que tu reparou olhando ela na segunda de manhã.
+
+  #vendasb2b #pmebrasileira #gestaocomercial #processocomercial #pipeline

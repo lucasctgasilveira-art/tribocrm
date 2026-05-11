@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 6 — Toques 6-7: longo prazo
+# Calendário: SEG 11/05/2026 · Semana 2 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-11_cadencia-7-toques_06-toques67
+data:
+  pilar: "Método · Toques 6 e 7"
+  step-num: "D+30 · D+45"
+  titulo: "Longo prazo."
+  body-1: |
+    D+30: pergunta direta, sem rodeio.
+    <span class="miolo-emphasis">"Faz sentido a gente seguir
+    ou tu já fechou com alguém?"</span>
+  body-2: |
+    D+45: respeita o "não".
+    Encerra com elegância. Cliente que
+    disse não hoje pode lembrar daqui 6 meses.
+  slide-number: "06 / 08"
+  handle: "@tribocrmoficial"

@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 3 (Cena 2) do carrossel "Vendedor que sai e leva o pipeline"
+# Calendário: TER 12/05/2026 · Semana 2 · Mês 1
+# Pilar: DOR · CENA 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-12_vendedor-sai_03-cena2
+data:
+  pilar: "Dor · Cena 2"
+  step-num: ""
+  titulo: "O que saiu junto."
+  body-1: |
+    17 leads em negociação.<br>
+    Histórico de 6 meses de cliente VIP.<br>
+    A senha do CRM que nem usava direito.<br>
+    A planilha pessoal que só ele entendia.
+  body-2: |
+    Tudo isso saiu <span class="miolo-emphasis">na cabeça dele</span>.
+  slide-number: "03 / 06"
+  handle: "@tribocrmoficial"

@@ -1,0 +1,21 @@
+# --------------------------------------------------------
+# Pauta: Slide 4 — Pergunta 2 (dor em R$)
+# Calendário: QUA 13/05/2026 · Semana 2 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-13_3-perguntas_04-pergunta2
+theme: light
+data:
+  pilar: "Pergunta 2 · Dor"
+  step-num: "PERGUNTA 2"
+  titulo: "Quanto custa não resolver isso até agosto?"
+  body-1: |
+    <span class="miolo-emphasis">Se ele não souber o número,
+    a dor não é dor ainda. É incômodo.</span>
+  body-2: |
+    Cliente que sabe o tamanho do prejuízo
+    decide rápido. Cliente que não sabe
+    vai pesquisar mais 3 fornecedores
+    pelos próximos 4 meses.
+  slide-number: "04 / 06"
+  handle: "@tribocrmoficial"

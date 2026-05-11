@@ -1,0 +1,21 @@
+status: aprovado
+aprovado_em: '2026-05-10'
+aprovado_por: lucas
+slot:
+  data: '2026-05-14'
+  horario: 09:00 BRT
+  justificativa: >
+    Quinta 09:00 BRT — pilar Manifesto. Feed estático no formato pergunta-frase
+    que vira recorte fácil. Frase central: "Forecast no achismo é venda perdida
+    no calendário." Aprovada pelo Lucas em 10/05.
+formato: feed-estatico
+slides: 1
+arquivos:
+  - output/2026-05-14_forecast-achismo.png
+caption_source: posts/2026-05-14_forecast-achismo.yaml#caption
+hashtags_inline_na_caption: true
+primeiro_comentario: null
+publicacao:
+  metodo: instagram_graph_api
+  acao_humana_necessaria: aprovacao_final_no_dia
+tema_visual: dark

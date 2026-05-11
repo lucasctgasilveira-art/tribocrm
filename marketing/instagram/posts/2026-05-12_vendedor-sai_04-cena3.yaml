@@ -1,0 +1,18 @@
+# --------------------------------------------------------
+# Pauta: Slide 4 (Cena 3) do carrossel "Vendedor que sai e leva o pipeline"
+# Calendário: TER 12/05/2026 · Semana 2 · Mês 1
+# Pilar: DOR · CENA 3
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-12_vendedor-sai_04-cena3
+data:
+  pilar: "Dor · Cena 3"
+  step-num: ""
+  titulo: "Terça-feira. O cliente liga."
+  body-1: |
+    "Oi, é da empresa? Tô esperando aquela proposta que o Pedro ia mandar."
+  body-2: |
+    Você não sabe quem é. Não sabe qual proposta. Não sabe em que pé tava.<br><br>
+    <span class="miolo-emphasis">O cliente sabe mais do seu pipeline do que você.</span>
+  slide-number: "04 / 06"
+  handle: "@tribocrmoficial"

@@ -1,0 +1,22 @@
+# --------------------------------------------------------
+# Pauta: Slide 3 — A discussão
+# Calendário: SAB 16/05/2026 · Semana 2 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-16_card-pipeline_03-discussao
+theme: light
+data:
+  pilar: "Bastidor · Discussão"
+  step-num: ""
+  titulo: "Manter? Tirar? Simplificar?"
+  body-1: |
+    Quatro horas escutando vendedor,
+    escutando sócio, escutando gerente.
+    <span class="miolo-emphasis">Três opiniões fortes e nenhuma errada.</span>
+  body-2: |
+    Tinha quem queria tirar pra desafogar.
+    Tinha quem defendia o campo pelo dado.
+    A pergunta certa não era "manter ou tirar".
+    Era "por que ninguém usa?".
+  slide-number: "03 / 04"
+  handle: "@tribocrmoficial"

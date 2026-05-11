@@ -1,0 +1,17 @@
+# --------------------------------------------------------
+# Pauta: Slide 1 (capa) — Carrossel "3 perguntas que separam lead de tempo perdido"
+# Calendário: QUA 13/05/2026 · Semana 2 · Mês 1
+# Pilar: MÉTODO
+# Status: pending_review
+# Tema: CLARO (alternância da semana 2)
+# --------------------------------------------------------
+template: carrossel-metodo-capa
+slug: 2026-05-13_3-perguntas_01-capa
+theme: light
+data:
+  pilar: "Método · Qualificação"
+  titulo: |
+    <span class="t-orange">3</span> perguntas que separam<br>
+    lead de tempo perdido.
+  slide-number: "01 / 06"
+  handle: "@tribocrmoficial"

@@ -1,0 +1,22 @@
+status: aprovado
+aprovado_em: '2026-05-10'
+aprovado_por: lucas
+slot:
+  data: '2026-05-15'
+  horario: 09:00 BRT
+  justificativa: >
+    Sexta 09:00 BRT — pilar Manifesto. Pergunta retórica curta em fundo branco
+    (alternância da Semana 2 — única peça única-slide do tema claro). Vilão da
+    peça é a planilha como teatro de controle — frase fica e provoca conversa
+    no DM no fim de semana.
+formato: feed-estatico
+slides: 1
+arquivos:
+  - output/2026-05-15_planilha-servindo.png
+caption_source: posts/2026-05-15_planilha-servindo.yaml#caption
+hashtags_inline_na_caption: true
+primeiro_comentario: null
+publicacao:
+  metodo: instagram_graph_api
+  acao_humana_necessaria: aprovacao_lucas_antes_de_postar
+tema_visual: light

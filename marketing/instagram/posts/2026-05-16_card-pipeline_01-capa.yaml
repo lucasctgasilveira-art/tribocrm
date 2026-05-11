@@ -1,0 +1,17 @@
+# --------------------------------------------------------
+# Pauta: Slide 1 (capa) — Carrossel bastidor "Reunião do card"
+# Calendário: SAB 16/05/2026 · Semana 2 · Mês 1
+# Pilar: BASTIDOR
+# Status: pending_review
+# Tema: CLARO
+# --------------------------------------------------------
+template: carrossel-metodo-capa
+slug: 2026-05-16_card-pipeline_01-capa
+theme: light
+data:
+  pilar: "Bastidor · Produto"
+  titulo: |
+    A reunião que durou <span class="t-orange">4 horas</span><br>
+    e mexeu num card do pipeline.
+  slide-number: "01 / 04"
+  handle: "@tribocrmoficial"

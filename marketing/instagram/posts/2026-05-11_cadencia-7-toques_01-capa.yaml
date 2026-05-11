@@ -1,0 +1,16 @@
+# --------------------------------------------------------
+# Pauta: Slide 1 (capa) — Carrossel "Cadência de 7 toques"
+# Calendário: SEG 11/05/2026 · Semana 2 · Mês 1
+# Pilar: MÉTODO
+# Status: pending_review
+# --------------------------------------------------------
+template: carrossel-metodo-capa
+slug: 2026-05-11_cadencia-7-toques_01-capa
+data:
+  pilar: "Método · Cadência"
+  titulo: |
+    <span class="t-orange">7</span> toques.<br>
+    A cadência que separa<br>
+    follow-up de perseguição.
+  slide-number: "01 / 08"
+  handle: "@tribocrmoficial"

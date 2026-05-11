@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 3 — Toque 1: imediato
+# Calendário: SEG 11/05/2026 · Semana 2 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-11_cadencia-7-toques_03-toque1
+data:
+  pilar: "Método · Toque 1"
+  step-num: "TOQUE 1 · IMEDIATO"
+  titulo: "Mesmo dia."
+  body-1: |
+    WhatsApp curto, na primeira hora
+    depois da conversa.
+    <span class="miolo-emphasis">"Vi tua dúvida sobre X, tô aqui."</span>
+  body-2: |
+    Não é venda. É presença.
+    Cliente novo precisa sentir que
+    a gente lembrou dele antes do almoço.
+  slide-number: "03 / 08"
+  handle: "@tribocrmoficial"

@@ -1,0 +1,38 @@
+# --------------------------------------------------------
+# Pauta: Slide 4 — A decisão + abre conversa
+# Calendário: SAB 16/05/2026 · Semana 2 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-16_card-pipeline_04-decisao
+theme: light
+data:
+  pilar: "Bastidor · Decisão"
+  step-num: ""
+  titulo: "Simplificamos. Virou 2 opções."
+  body-1: |
+    De campo livre virou seleção curta.
+    O vendedor escolhe em 2 segundos.
+    <span class="miolo-emphasis">Quem não preenchia, passou a preencher.</span>
+  body-2: |
+    Conta aqui — tu tem aquele campo
+    que ninguém preenche?
+    Tu tira, mantém ou simplifica?
+    Sem certo nem errado. Quero saber.
+  slide-number: "04 / 04"
+  handle: "@tribocrmoficial"
+
+# Legenda oficial
+caption: |
+  Sábado é dia de bastidor. Conta aqui que essa decisão me deu trabalho.
+
+  A gente tinha um campo no card de oportunidade que parecia óbvio quando desenhou. Na prática, vendedor pulava, gerente cobrava, voltava a pular. A reunião pra decidir o que fazer com ele durou 4 horas — porque tinha 3 jeitos certos de resolver e nenhuma resposta confortável.
+
+  Sócio defendendo o dado. Vendedor defendendo a velocidade. Gerente no meio querendo um meio-termo que ainda fosse útil. Quem nunca passou por isso construindo processo dentro de PME?
+
+  No fim, a gente simplificou. De campo livre virou 2 opções pra clicar. Quem não preenchia, passou a preencher.
+
+  Lição que ficou: campo que ninguém preenche não é problema do time. É problema de quem desenhou. A gente erra também — diferença é que a gente volta a discutir.
+
+  Te pergunto: tu tem aquele campo no teu CRM que todo mundo pula? Tira, mantém ou simplifica? Comenta aí.
+
+  #bastidores #vendasb2b #pmebrasileira #crm #produto

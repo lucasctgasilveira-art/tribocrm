@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 5 (Diagnóstico) do carrossel "Vendedor que sai e leva o pipeline"
+# Calendário: TER 12/05/2026 · Semana 2 · Mês 1
+# Pilar: DOR · DIAGNÓSTICO
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-12_vendedor-sai_05-diagnostico
+data:
+  pilar: "O diagnóstico"
+  step-num: ""
+  titulo: |
+    Não é o <span class="t-orange">vendedor</span> que sai.<br>
+    É o método que nunca entrou.
+  body-1: |
+    Quando o método mora só na cabeça do vendedor, ele vai embora junto.<br>
+    Quando o método mora no sistema, fica.
+  body-2: |
+    Vendedor bom é vendedor bom. Mas operação que depende dele <span class="miolo-emphasis">individualmente</span> não é equipe — é refém.
+  slide-number: "05 / 06"
+  handle: "@tribocrmoficial"

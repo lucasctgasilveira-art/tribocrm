@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 5 — Toques 4-5: médio prazo
+# Calendário: SEG 11/05/2026 · Semana 2 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-11_cadencia-7-toques_05-toques45
+data:
+  pilar: "Método · Toques 4 e 5"
+  step-num: "D+10 · D+18"
+  titulo: "Médio prazo."
+  body-1: |
+    D+10: WhatsApp com prova de uso.
+    Print, número, depoimento de empresa
+    do mesmo porte. <span class="miolo-emphasis">Sem promessa fofa.</span>
+  body-2: |
+    D+18: email curto pro decisor real
+    (não pro contato inicial só).
+    Resgata a conversa, abre a porta.
+  slide-number: "05 / 08"
+  handle: "@tribocrmoficial"

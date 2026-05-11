@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 4 — Toques 2-3: curto prazo
+# Calendário: SEG 11/05/2026 · Semana 2 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-11_cadencia-7-toques_04-toques23
+data:
+  pilar: "Método · Toques 2 e 3"
+  step-num: "D+2 · D+5"
+  titulo: "Curto prazo."
+  body-1: |
+    Ligação curta no D+2.
+    Pergunta direta:
+    <span class="miolo-emphasis">"Roda aí o que a gente combinou?"</span>
+  body-2: |
+    D+5 manda uma referência concreta —
+    um exemplo de empresa parecida,
+    um número, um trecho útil. Sem encheção.
+  slide-number: "04 / 08"
+  handle: "@tribocrmoficial"

@@ -1,0 +1,25 @@
+status: aprovado
+aprovado_em: '2026-05-10'
+aprovado_por: lucas
+slot:
+  data: '2026-05-16'
+  horario: 09:00 BRT
+  justificativa: >
+    Sábado 09:00 BRT — pilar Bastidor. Carrossel curto de 4 slides contando a
+    decisão real de produto (campo do card que ninguém preenchia). Sábado é o
+    espaço natural pra peça de bastidor, tom 90% Pessoa Comum. Tema visual claro
+    fecha a alternância da Semana 2.
+formato: carrossel
+slides: 4
+arquivos:
+  - output/2026-05-16_card-pipeline_01-capa.png
+  - output/2026-05-16_card-pipeline_02-problema.png
+  - output/2026-05-16_card-pipeline_03-discussao.png
+  - output/2026-05-16_card-pipeline_04-decisao.png
+caption_source: posts/2026-05-16_card-pipeline_04-decisao.yaml#caption
+hashtags_inline_na_caption: true
+primeiro_comentario: null
+publicacao:
+  metodo: instagram_graph_api
+  acao_humana_necessaria: aprovacao_lucas_antes_de_postar
+tema_visual: light

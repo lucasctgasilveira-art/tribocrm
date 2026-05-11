@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 7 — Síntese
+# Calendário: SEG 11/05/2026 · Semana 2 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-11_cadencia-7-toques_07-sintese
+data:
+  pilar: "Síntese"
+  step-num: ""
+  titulo: ""
+  body-1: |
+    <span class="miolo-emphasis">Cadência sozinha
+    não converte.</span>
+  body-2: |
+    Mas pipeline sem cadência
+    não fecha mês. A gente cansou
+    de ver PME perder cliente bom
+    por silêncio entre o toque 2 e o toque 4.
+  slide-number: "07 / 08"
+  handle: "@tribocrmoficial"

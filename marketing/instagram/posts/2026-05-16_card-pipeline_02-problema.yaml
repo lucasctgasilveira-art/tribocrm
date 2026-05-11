@@ -1,0 +1,22 @@
+# --------------------------------------------------------
+# Pauta: Slide 2 — O problema
+# Calendário: SAB 16/05/2026 · Semana 2 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-16_card-pipeline_02-problema
+theme: light
+data:
+  pilar: "Bastidor · Problema"
+  step-num: ""
+  titulo: "Um campo. Que ninguém preenchia."
+  body-1: |
+    Tinha um campo no card de oportunidade
+    que parecia útil no papel.
+    <span class="miolo-emphasis">Na prática, ninguém preenchia.</span>
+  body-2: |
+    Vendedor pulava. Gerente cobrava.
+    Voltava a pular. Cliente entendia
+    como burocracia. A gente entendia
+    como sinal de que algo tava errado.
+  slide-number: "02 / 04"
+  handle: "@tribocrmoficial"

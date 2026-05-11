@@ -1,0 +1,21 @@
+# --------------------------------------------------------
+# Pauta: Slide 3 — Pergunta 1 (decisor)
+# Calendário: QUA 13/05/2026 · Semana 2 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-13_3-perguntas_03-pergunta1
+theme: light
+data:
+  pilar: "Pergunta 1 · Decisor"
+  step-num: "PERGUNTA 1"
+  titulo: "Quem mais decide com você?"
+  body-1: |
+    <span class="miolo-emphasis">Se a resposta vier travada,
+    tu não tá falando com quem decide.</span>
+  body-2: |
+    Não é falta de respeito perguntar.
+    É respeito com o tempo da equipe.
+    Reunião com não-decisor é treino,
+    não é venda.
+  slide-number: "03 / 06"
+  handle: "@tribocrmoficial"

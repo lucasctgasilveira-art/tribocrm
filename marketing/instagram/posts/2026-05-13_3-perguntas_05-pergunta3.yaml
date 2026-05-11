@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 5 — Pergunta 3 (urgência)
+# Calendário: QUA 13/05/2026 · Semana 2 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-13_3-perguntas_05-pergunta3
+theme: light
+data:
+  pilar: "Pergunta 3 · Urgência"
+  step-num: "PERGUNTA 3"
+  titulo: "Quando precisa estar rodando?"
+  body-1: |
+    <span class="miolo-emphasis">Sem prazo concreto,
+    a venda mora no &quot;ano que vem&quot;.</span>
+  body-2: |
+    Urgência real tem data, gatilho,
+    consequência. "Logo" não é urgência —
+    é o nome polido pra "talvez nunca".
+  slide-number: "05 / 06"
+  handle: "@tribocrmoficial"
