@@ -69,7 +69,8 @@ async function main() {
       const name = pautaPath.split(/[\\/]/).pop();
       try {
         const r = await renderPost({ pautaPath, outDir, browser });
-        console.log(`  ✓ ${name.padEnd(48)} → ${r.width}×${r.height}`);
+        const themeTag = r.theme === 'light' ? ' [claro]' : '';
+        console.log(`  ✓ ${name.padEnd(48)} → ${r.width}×${r.height}${themeTag}`);
         ok++;
       } catch (err) {
         console.log(`  ✗ ${name.padEnd(48)} ${err.message}`);

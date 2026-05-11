@@ -36,9 +36,14 @@ export async function renderPost({ pautaPath, outDir, browser }) {
     throw new Error(`YAML inválido: ${pautaPath}`);
   }
 
-  const { template, slug, data } = pauta;
+  const { template, slug, data, theme } = pauta;
   if (!template) throw new Error(`Pauta sem campo "template": ${pautaPath}`);
   if (!data) throw new Error(`Pauta sem campo "data": ${pautaPath}`);
+
+  // theme é opcional. Default = "dark" (fundo preto histórico).
+  // Quando "light", o renderer seta data-theme="light" no .canvas
+  // e o tokens.css aplica a variante clara via seletor [data-theme="light"].
+  const resolvedTheme = theme === 'light' ? 'light' : 'dark';
 
   const templatePath = resolve(ROOT, 'templates', `${template}.html`);
   try {
@@ -94,6 +99,13 @@ export async function renderPost({ pautaPath, outDir, browser }) {
       });
     }, data);
 
+    // Aplica tema no canvas. Default dark = sem atributo (fica fundo preto).
+    // Light = data-theme="light" → tokens.css aplica variante clara.
+    await page.evaluate((t) => {
+      const canvas = document.querySelector('.canvas');
+      if (canvas && t === 'light') canvas.setAttribute('data-theme', 'light');
+    }, resolvedTheme);
+
     // Garante que fontes carregaram antes de capturar
     await page.evaluate(() => document.fonts.ready);
     // Pequena espera adicional pra estabilizar layout (img SVG, etc)
@@ -116,6 +128,7 @@ export async function renderPost({ pautaPath, outDir, browser }) {
     return {
       slug: finalSlug,
       template,
+      theme: resolvedTheme,
       out: outPath,
       width: Math.round(box.width),
       height: Math.round(box.height)
@@ -162,7 +175,7 @@ Opções:
   const dt = ((Date.now() - t0) / 1000).toFixed(1);
 
   console.log(`✓ ${result.template} → ${result.slug}.png`);
-  console.log(`  ${result.width}×${result.height} · ${dt}s · ${result.out}`);
+  console.log(`  ${result.width}×${result.height} · tema=${result.theme} · ${dt}s · ${result.out}`);
 }
 
 // Só executa main se for chamado direto (não importado pelo batch).

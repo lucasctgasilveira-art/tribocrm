@@ -19,6 +19,16 @@
   --tribo-white-dim: rgba(255,255,255,.55);
   --tribo-line: rgba(255,255,255,.08);
 
+  /* Variante clara — só pra peças com theme=light no YAML.
+     Preto sólido pra texto principal · variantes dim em rgba(preto) pra
+     respeitar contraste WCAG e manter hierarquia tipográfica.
+     Laranja (--tribo-orange) e símbolo D continuam iguais em ambos os modos. */
+  --tribo-bg-light: #ffffff;
+  --tribo-ink-on-light: #0a0a0a;
+  --tribo-ink-soft-on-light: rgba(10,10,10,.78);
+  --tribo-ink-dim-on-light: rgba(10,10,10,.55);
+  --tribo-line-on-light: rgba(10,10,10,.10);
+
   /* ---------- TIPOGRAFIA ---------- */
   --tribo-font: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   --w-regular: 400;
@@ -224,6 +234,62 @@ img, svg { display: block; max-width: 100%; }
 }
 .canvas--cta .brand-signature { color: rgba(0,0,0,.6); }
 .canvas--cta .slide-number    { color: rgba(0,0,0,.5); }
+
+/* ============================================================
+   VARIANTE TEMA CLARO — .canvas[data-theme="light"]
+   ============================================================
+   Ativada quando o YAML do post tem `theme: light`.
+   Renderer (render-post.mjs) seta data-theme="light" no .canvas.
+   Sem isso, o canvas continua escuro (default).
+
+   Regra: reescrever só o que muda. Laranja (t-orange, eyebrow,
+   capa-eyebrow, miolo-eyebrow, step-num, arrow, quote-mark) fica
+   igual — laranja sobre branco tem contraste de marca.
+   Símbolo D padrão (laranja com miolo branco) também funciona
+   em fundo branco.
+   ============================================================ */
+
+.canvas[data-theme="light"] {
+  background: var(--tribo-bg-light);
+  color: var(--tribo-ink-on-light);
+}
+
+/* Texto utilitário no claro */
+.canvas[data-theme="light"] .t-dim   { color: var(--tribo-ink-dim-on-light); }
+.canvas[data-theme="light"] .t-soft  { color: var(--tribo-ink-soft-on-light); }
+
+/* Assinatura e numeração de slide no claro */
+.canvas[data-theme="light"] .brand-signature { color: var(--tribo-ink-dim-on-light); }
+.canvas[data-theme="light"] .slide-number    { color: var(--tribo-ink-dim-on-light); }
+
+/* Carrossel método — slide miolo: corpo padrão e emphasis */
+.canvas[data-theme="light"] .miolo-body      { color: var(--tribo-ink-soft-on-light); }
+.canvas[data-theme="light"] .miolo-emphasis  { color: var(--tribo-ink-on-light); }
+
+/* Feed citação — texto da frase e fonte */
+.canvas[data-theme="light"] .quote-text      { color: var(--tribo-ink-on-light); }
+.canvas[data-theme="light"] .quote-fonte     { color: var(--tribo-ink-dim-on-light); }
+
+/* Story recap — sub-linha e CTA */
+.canvas[data-theme="light"] .recap-subline   { color: var(--tribo-ink-soft-on-light); }
+.canvas[data-theme="light"] .recap-cta       { color: var(--tribo-ink-dim-on-light); }
+
+/* Reel cover — meta secundária */
+.canvas[data-theme="light"] .reel-meta       { color: var(--tribo-ink-dim-on-light); }
+
+/* Story enquete — opções: fundo claro com borda definida pra contraste */
+.canvas[data-theme="light"] .story-option {
+  background: #f4f4f4;
+  border-color: var(--tribo-line-on-light);
+  color: var(--tribo-ink-on-light);
+}
+.canvas[data-theme="light"] .story-option--accent {
+  background: var(--tribo-orange);
+  color: var(--tribo-ink-on-light);
+  border-color: var(--tribo-orange);
+}
+.canvas[data-theme="light"] .story-vs        { background: var(--tribo-bg-light); }
+.canvas[data-theme="light"] .story-cta       { color: var(--tribo-ink-dim-on-light); }
 
 /* ============================================================
    PRINT — útil pra exportar via Ctrl+P, mas Puppeteer é o canal padrão
