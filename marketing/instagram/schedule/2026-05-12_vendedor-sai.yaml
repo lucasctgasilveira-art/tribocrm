@@ -1,13 +1,12 @@
-status: aprovado
+status: publicado
 aprovado_em: '2026-05-10'
 aprovado_por: lucas
 slot:
   data: '2026-05-12'
   horario: 09:00 BRT
   justificativa: >
-    Terça 09:00 BRT — pilar Dor da PME. Cena clássica em PME brasileira: vendedor
-    bom vai embora e leva pipeline na cabeça. Aprovada pelo Lucas em 10/05 junto
-    com o plano da Semana 2.
+    Terça 09:00 BRT — pilar Dor da PME. Cena clássica em PME brasileira: vendedor bom vai embora e leva pipeline na
+    cabeça. Aprovada pelo Lucas em 10/05 junto com o plano da Semana 2.
 formato: carrossel
 slides: 6
 arquivos:
@@ -24,3 +23,6 @@ publicacao:
   metodo: instagram_graph_api
   acao_humana_necessaria: aprovacao_final_no_dia
 tema_visual: dark
+published_at: '2026-05-12T12:17:03.052Z'
+media_id: '18116954137741552'
+permalink: https://www.instagram.com/p/DYPQHUUlkdg/
