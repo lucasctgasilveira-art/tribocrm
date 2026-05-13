@@ -1,13 +1,12 @@
-status: aprovado
+status: publicado
 aprovado_em: '2026-05-10'
 aprovado_por: lucas
 slot:
   data: '2026-05-13'
   horario: 09:00 BRT
   justificativa: >
-    Quarta 09:00 BRT — pilar Método (qualificação). Carrossel curto de 6 slides
-    serve como peça acionável, salvável e compartilhável com a equipe comercial.
-    Tema visual claro (alternância da Semana 2 — primeira peça branca).
+    Quarta 09:00 BRT — pilar Método (qualificação). Carrossel curto de 6 slides serve como peça acionável, salvável e
+    compartilhável com a equipe comercial. Tema visual claro (alternância da Semana 2 — primeira peça branca).
 formato: carrossel
 slides: 6
 arquivos:
@@ -25,5 +24,8 @@ publicacao:
   acao_humana_necessaria: aprovacao_lucas_antes_de_postar
 tema_visual: light
 observacao: >
-  Slide 1-5 em fundo branco (theme: light). Slide 6 (CTA) mantém gradient laranja
-  do template canvas--cta — assinatura visual histórica dos CTAs do método.
+  Slide 1-5 em fundo branco (theme: light). Slide 6 (CTA) mantém gradient laranja do template canvas--cta — assinatura
+  visual histórica dos CTAs do método.
+published_at: '2026-05-13T13:40:31.043Z'
+media_id: '17963504552932733'
+permalink: https://www.instagram.com/p/DYR-dORoBPx/
