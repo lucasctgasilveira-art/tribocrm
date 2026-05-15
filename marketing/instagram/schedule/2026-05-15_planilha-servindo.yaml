@@ -1,14 +1,13 @@
-status: aprovado
+status: publicado
 aprovado_em: '2026-05-10'
 aprovado_por: lucas
 slot:
   data: '2026-05-15'
   horario: 09:00 BRT
   justificativa: >
-    Sexta 09:00 BRT — pilar Manifesto. Pergunta retórica curta em fundo branco
-    (alternância da Semana 2 — única peça única-slide do tema claro). Vilão da
-    peça é a planilha como teatro de controle — frase fica e provoca conversa
-    no DM no fim de semana.
+    Sexta 09:00 BRT — pilar Manifesto. Pergunta retórica curta em fundo branco (alternância da Semana 2 — única peça
+    única-slide do tema claro). Vilão da peça é a planilha como teatro de controle — frase fica e provoca conversa no DM
+    no fim de semana.
 formato: feed-estatico
 slides: 1
 arquivos:
@@ -20,3 +19,6 @@ publicacao:
   metodo: instagram_graph_api
   acao_humana_necessaria: aprovacao_lucas_antes_de_postar
 tema_visual: light
+published_at: '2026-05-15T12:24:19.576Z'
+media_id: '18071909996441002'
+permalink: https://www.instagram.com/p/DYW_Rq8GBx0/
