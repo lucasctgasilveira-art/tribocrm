@@ -1,0 +1,21 @@
+# --------------------------------------------------------
+# Pauta: Slide 6 — Passos 4 e 5: número da semana (5 min) + resumo pro sócio (2 min)
+# Calendário: SEG 18/05/2026 · Semana 3 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-18_pipeline-limpo-30min_06-passo4-5
+data:
+  pilar: "Passos 4 e 5 · 7 minutos"
+  step-num: "PASSO 4 + 5"
+  titulo: "Fecha o número. Manda 3 linhas pro sócio."
+  body-1: |
+    <span class="miolo-emphasis">Quanto fechou. Quanto entrou.
+    Quanto morreu.</span>
+    Cinco minutos.
+  body-2: |
+    Depois escreve 3 linhas pro sócio:
+    "Fechei X. Entraram Y. Tô apostando em Z
+    pra próxima semana." Domingo ele acorda
+    sabendo. Segunda começa com plano.
+  slide-number: "06 / 08"
+  handle: "@tribocrmoficial"

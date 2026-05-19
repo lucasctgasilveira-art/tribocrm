@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 3 — Passo 1: bater olho no que entrou (5 min)
+# Calendário: SEG 18/05/2026 · Semana 3 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-18_pipeline-limpo-30min_03-passo1
+data:
+  pilar: "Passo 1 · 5 minutos"
+  step-num: "PASSO 1"
+  titulo: "Olha o que entrou na semana."
+  body-1: |
+    <span class="miolo-emphasis">Quantos leads novos chegaram?
+    De onde vieram?</span>
+  body-2: |
+    Pipeline que não recebe sangue novo
+    seca em duas semanas e o dono
+    só percebe quando o mês fecha mal.
+    Olhar a entrada antes de olhar a saída.
+  slide-number: "03 / 08"
+  handle: "@tribocrmoficial"

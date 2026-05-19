@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 5 — Passo 3: mover ou matar quem tá parado há mais de X dias (8 min)
+# Calendário: SEG 18/05/2026 · Semana 3 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-18_pipeline-limpo-30min_05-passo3
+data:
+  pilar: "Passo 3 · 8 minutos"
+  step-num: "PASSO 3"
+  titulo: "Mata ou move quem tá parado há mais de 15 dias."
+  body-1: |
+    <span class="miolo-emphasis">Lead frio não fica em proposta.
+    Ou volta pra qualificação, ou sai.</span>
+  body-2: |
+    O pipeline que ninguém poda
+    vira museu de boa intenção.
+    Coragem de tirar lead morto da etapa quente
+    é o que mantém a previsão honesta.
+  slide-number: "05 / 08"
+  handle: "@tribocrmoficial"

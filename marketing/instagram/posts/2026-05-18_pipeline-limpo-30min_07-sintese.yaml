@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 7 — Síntese
+# Calendário: SEG 18/05/2026 · Semana 3 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-18_pipeline-limpo-30min_07-sintese
+data:
+  pilar: "Síntese"
+  step-num: ""
+  titulo: ""
+  body-1: |
+    <span class="miolo-emphasis">Pipeline limpo não é talento.
+    É hábito de 30 minutos.</span>
+  body-2: |
+    Quem faz, chega na segunda com clareza.
+    Quem não faz, chega na segunda apostando.
+    A gente cansou de ver PME boa
+    perder mês por falta de ritual.
+  slide-number: "07 / 08"
+  handle: "@tribocrmoficial"

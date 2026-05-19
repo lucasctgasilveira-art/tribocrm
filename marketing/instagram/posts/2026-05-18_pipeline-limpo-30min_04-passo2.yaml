@@ -1,0 +1,21 @@
+# --------------------------------------------------------
+# Pauta: Slide 4 — Passo 2: marcar próximo passo de todo lead em proposta (10 min)
+# Calendário: SEG 18/05/2026 · Semana 3 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-18_pipeline-limpo-30min_04-passo2
+data:
+  pilar: "Passo 2 · 10 minutos"
+  step-num: "PASSO 2"
+  titulo: "Próximo passo com data, em tudo que tá em proposta."
+  body-1: |
+    <span class="miolo-emphasis">Cada lead em negociação
+    precisa de uma data combinada.</span>
+    Não "vou voltar a falar". Quarta às 14h.
+  body-2: |
+    Lead sem próximo passo com data
+    não tá vivo. Tá te esperando esquecer.
+    Esse passo sozinho já recupera
+    metade do pipeline da maioria.
+  slide-number: "04 / 08"
+  handle: "@tribocrmoficial"

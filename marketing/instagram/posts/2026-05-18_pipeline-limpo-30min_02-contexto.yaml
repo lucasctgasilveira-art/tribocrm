@@ -1,0 +1,21 @@
+# --------------------------------------------------------
+# Pauta: Slide 2 — Contexto/abertura (dois tipos de PME na sexta às 17h)
+# Calendário: SEG 18/05/2026 · Semana 3 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-18_pipeline-limpo-30min_02-contexto
+data:
+  pilar: "Método · Pipeline"
+  step-num: ""
+  titulo: "Toda sexta tem dois tipos de PME."
+  body-1: |
+    A que sabe quanto fechou na semana
+    e o que tá vivo pra próxima.
+    E a que <span class="miolo-emphasis">descobre isso na segunda</span>,
+    depois do café, com cara de quem dormiu mal.
+  body-2: |
+    A diferença entre as duas não é tamanho,
+    nem time, nem sorte.
+    São 30 minutos.
+  slide-number: "02 / 08"
+  handle: "@tribocrmoficial"

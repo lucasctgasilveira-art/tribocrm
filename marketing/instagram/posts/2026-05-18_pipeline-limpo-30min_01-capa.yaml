@@ -1,0 +1,17 @@
+# --------------------------------------------------------
+# Pauta: Slide 1 (capa) — Carrossel "Pipeline limpo em 30 minutos: o ritual de sexta"
+# Calendário: SEG 18/05/2026 · Semana 3 · Mês 1
+# Pilar: MÉTODO
+# Status: pending_review
+# Tema: ESCURO
+# --------------------------------------------------------
+template: carrossel-metodo-capa
+slug: 2026-05-18_pipeline-limpo-30min_01-capa
+data:
+  pilar: "Método · Pipeline"
+  titulo: |
+    Pipeline limpo em<br>
+    <span class="t-orange">30 minutos</span>:<br>
+    o ritual de sexta.
+  slide-number: "01 / 08"
+  handle: "@tribocrmoficial"
