@@ -1,0 +1,17 @@
+# --------------------------------------------------------
+# Pauta: Slide 1 (capa) — Carrossel "Como ler um pipeline em 5 minutos"
+# Calendário: SEX 22/05/2026 · Semana 3 · Mês 1
+# Pilar: MÉTODO · Pipeline
+# Status: pending_review
+# Tema: ESCURO (default)
+# --------------------------------------------------------
+template: carrossel-metodo-capa
+slug: 2026-05-22_ler-pipeline-5min_01-capa
+data:
+  pilar: "Método · Pipeline"
+  titulo: |
+    Como ler um<br>
+    pipeline em<br>
+    <span class="t-orange">5 minutos</span>.
+  slide-number: "01 / 08"
+  handle: "@tribocrmoficial"

@@ -1,0 +1,31 @@
+# --------------------------------------------------------
+# Pauta: Feed manifesto "Pipeline limpo é decisão de domingo, não de quinta"
+# Calendário: QUA 20/05/2026 · Semana 3 · Mês 1
+# Pilar: MANIFESTO
+# Status: pending_review
+# Tema: ESCURO (default)
+# --------------------------------------------------------
+template: feed-manifesto
+slug: 2026-05-20_pipeline-decisao-domingo
+data:
+  linha-1: "Pipeline limpo"
+  linha-2: |
+    é decisão de <span class="t-orange">domingo</span>,
+  linha-3: "não de quinta."
+  handle: "@tribocrmoficial"
+
+# Legenda oficial
+caption: |
+  Pipeline limpo é decisão de domingo, não de quinta.
+
+  Quinta de manhã, o sócio abre a planilha. Vê que três negociações grandes não andaram. Decide cobrar o time na reunião de sexta. Sexta chega, a reunião vira sermão, o time sai mal-humorado, o pipeline continua igual.
+
+  Isso não é gestão. É reação.
+
+  A decisão que muda o mês não acontece quinta. Acontece domingo à noite, quando o sócio decide qual ritual vai virar inegociável na semana. Sexta às 17h pra olhar o que entrou. Quarta às 9h pra definir próximo passo de tudo que tá em proposta. Reunião curta de segunda pra alinhar quem mata e quem move.
+
+  Domingo é onde o sócio escolhe o sistema. Quinta é onde ele só descobre que não escolheu.
+
+  Pipeline limpo de PME não é talento. É decisão tomada antes da semana começar.
+
+  #vendasb2b #pmebrasileira #gestaocomercial #processocomercial #pipeline

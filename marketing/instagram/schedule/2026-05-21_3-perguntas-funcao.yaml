@@ -1,0 +1,28 @@
+status: aprovado
+aprovado_em: '2026-05-18'
+aprovado_por: lucas
+slot:
+  data: '2026-05-21'
+  horario: 09:00 BRT
+  justificativa: >
+    Quinta 09:00 BRT — pilar Bastidor (critério de produto). Carrossel de 7 slides no tema claro mostrando o filtro que
+    a gente aplica antes de aceitar função no TriboCRM — humaniza o produto, gera engajamento via CTA aberto ("qual
+    função tu queria ver num CRM brasileiro?"). Tipográfico puro (sem foto) até confirmação formal de imagem do fundador
+    pro IG público.
+formato: carrossel
+slides: 7
+arquivos:
+  - output/2026-05-21_3-perguntas-funcao_01-capa.png
+  - output/2026-05-21_3-perguntas-funcao_02-abertura.png
+  - output/2026-05-21_3-perguntas-funcao_03-pergunta1.png
+  - output/2026-05-21_3-perguntas-funcao_04-pergunta2.png
+  - output/2026-05-21_3-perguntas-funcao_05-pergunta3.png
+  - output/2026-05-21_3-perguntas-funcao_06-sintese.png
+  - output/2026-05-21_3-perguntas-funcao_07-cta.png
+caption_source: posts/2026-05-21_3-perguntas-funcao_07-cta.yaml#caption
+hashtags_inline_na_caption: true
+primeiro_comentario: null
+publicacao:
+  metodo: instagram_graph_api
+  acao_humana_necessaria: aprovacao_lucas_antes_de_postar
+tema_visual: light

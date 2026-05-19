@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 580" role="img" aria-label="TriboCRM Pipeline — zoom coluna Fechando com total">
+  <rect width="700" height="580" rx="20" fill="#0f0f0f"/>
+  <rect x="0" y="0" width="700" height="50" rx="20" fill="#161616"/>
+  <rect x="0" y="30" width="700" height="20" fill="#161616"/>
+  <circle cx="22" cy="25" r="6" fill="#2a2a2a"/>
+  <circle cx="42" cy="25" r="6" fill="#2a2a2a"/>
+  <circle cx="62" cy="25" r="6" fill="#2a2a2a"/>
+  <text x="350" y="32" font-family="DM Sans, sans-serif" font-size="16" font-weight="700" fill="rgba(255,255,255,0.55)" text-anchor="middle" letter-spacing="2">PIPELINE · NEGOCIAÇÃO AVANÇADA</text>
+
+  <g transform="translate(60, 80)">
+    <rect width="580" height="470" rx="14" fill="#161616" stroke="#f97316" stroke-width="2"/>
+    <text x="30" y="46" font-family="DM Sans, sans-serif" font-size="22" font-weight="800" fill="#f97316" letter-spacing="1">FECHANDO</text>
+    <text x="550" y="46" font-family="DM Sans, sans-serif" font-size="18" font-weight="700" fill="#ffffff" text-anchor="end">2 leads</text>
+    <line x1="30" y1="68" x2="550" y2="68" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+
+    <g transform="translate(30, 88)">
+      <rect width="520" height="86" rx="10" fill="#1f1f1f" stroke="#f97316" stroke-width="1.5"/>
+      <text x="20" y="30" font-family="DM Sans, sans-serif" font-size="17" font-weight="700" fill="#ffffff">Lead 11 — Indústria PR</text>
+      <text x="20" y="56" font-family="DM Sans, sans-serif" font-size="15" font-weight="500" fill="rgba(255,255,255,0.55)">R$ 56.000</text>
+      <text x="20" y="76" font-family="DM Sans, sans-serif" font-size="14" font-weight="600" fill="#f97316">prox: 22/05 — call de fechamento</text>
+    </g>
+
+    <g transform="translate(30, 184)">
+      <rect width="520" height="86" rx="10" fill="#1f1f1f" stroke="#f97316" stroke-width="1.5"/>
+      <text x="20" y="30" font-family="DM Sans, sans-serif" font-size="17" font-weight="700" fill="#ffffff">Lead 12 — Comércio SP</text>
+      <text x="20" y="56" font-family="DM Sans, sans-serif" font-size="15" font-weight="500" fill="rgba(255,255,255,0.55)">R$ 38.500</text>
+      <text x="20" y="76" font-family="DM Sans, sans-serif" font-size="14" font-weight="600" fill="#f97316">prox: 23/05 — envio do contrato</text>
+    </g>
+
+    <!-- Total destacado -->
+    <g transform="translate(30, 310)">
+      <rect width="520" height="140" rx="14" fill="#0a0a0a" stroke="#f97316" stroke-width="2.5"/>
+      <text x="30" y="40" font-family="DM Sans, sans-serif" font-size="14" font-weight="700" fill="rgba(255,255,255,0.55)" letter-spacing="2">EM NEGOCIAÇÃO AVANÇADA</text>
+      <text x="30" y="92" font-family="DM Sans, sans-serif" font-size="42" font-weight="800" fill="#f97316">R$ 94.500</text>
+      <text x="30" y="120" font-family="DM Sans, sans-serif" font-size="14" font-weight="500" fill="rgba(255,255,255,0.55)">2 leads · fechamento previsto na semana</text>
+    </g>
+  </g>
+</svg>

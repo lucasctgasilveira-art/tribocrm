@@ -1,0 +1,22 @@
+# --------------------------------------------------------
+# Pauta: Slide 2 — Lugar 1: WhatsApp pessoal do vendedor
+# Calendário: TER 19/05/2026 · Semana 3 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-19_5-lugares-lead-esconde_02-whatsapp
+theme: light
+data:
+  pilar: "Lugar 1 · WhatsApp"
+  step-num: "LUGAR 1"
+  titulo: "Mensagem não lida no WhatsApp pessoal do vendedor."
+  body-1: |
+    <span class="miolo-emphasis">Cliente mandou às 19h de quarta.
+    Vendedor viu deitado no sofá,
+    pensou "respondo amanhã cedo".</span>
+  body-2: |
+    Amanhã cedo nunca chegou.
+    A mensagem ficou marcada como lida,
+    desceu na lista, sumiu na rotina.
+    Lead bom virou silêncio.
+  slide-number: "02 / 06"
+  handle: "@tribocrmoficial"

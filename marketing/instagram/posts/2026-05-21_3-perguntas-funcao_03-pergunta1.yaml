@@ -1,0 +1,22 @@
+# --------------------------------------------------------
+# Pauta: Slide 3 — Pergunta 1: resolve dor de quem perde venda hoje?
+# Calendário: QUI 21/05/2026 · Semana 3 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-21_3-perguntas-funcao_03-pergunta1
+theme: light
+data:
+  pilar: "Pergunta 1 · Dor real"
+  step-num: "PERGUNTA 1"
+  titulo: "Isso resolve a dor do dono que perde venda hoje?"
+  body-1: |
+    <span class="miolo-emphasis">Ou é função pra vendedor
+    que já vende bem
+    ficar mais confortável?</span>
+  body-2: |
+    Função que melhora a vida
+    de quem já tá bem é luxo.
+    A gente faz produto pra PME
+    que tá perdendo cliente esta semana.
+  slide-number: "03 / 07"
+  handle: "@tribocrmoficial"

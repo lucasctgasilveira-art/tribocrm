@@ -1,0 +1,17 @@
+# --------------------------------------------------------
+# Pauta: Slide 2 — Leitura 1: quantos leads novos entraram?
+# Calendário: SEX 22/05/2026 · Semana 3 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide-com-mockup
+slug: 2026-05-22_ler-pipeline-5min_02-leitura1
+data:
+  pilar: "Leitura 1 · Entrada"
+  step-num: "LEITURA 1"
+  titulo: "Quantos leads novos entraram esta semana?"
+  body: |
+    Pipeline sem sangue novo
+    <span class="mockup-emphasis">seca em duas semanas</span>
+    e o dono só percebe quando o mês fecha mal.
+  slide-number: "02 / 08"
+  handle: "@tribocrmoficial"
+  mockup: '<img src="../_assets/mockups/pipeline-zoom-novos.svg" alt="">'

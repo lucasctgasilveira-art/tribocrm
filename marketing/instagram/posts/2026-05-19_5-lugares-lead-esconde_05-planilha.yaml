@@ -1,0 +1,22 @@
+# --------------------------------------------------------
+# Pauta: Slide 5 — Lugar 4: aba 7 da planilha controle_comercial_FINAL_v3
+# Calendário: TER 19/05/2026 · Semana 3 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-19_5-lugares-lead-esconde_05-planilha
+theme: light
+data:
+  pilar: "Lugar 4 · Planilha"
+  step-num: "LUGAR 4"
+  titulo: "Aba 7 da planilha “controle_comercial_FINAL_v3”."
+  body-1: |
+    <span class="miolo-emphasis">Aba que ninguém abre.
+    Linha 142 escrita em fonte 9
+    na coluna "observações".</span>
+  body-2: |
+    Foi pra lá porque o vendedor
+    "ia voltar nisso depois".
+    Não voltou. A aba virou cemitério
+    e o sócio nem desconfia que existe.
+  slide-number: "05 / 06"
+  handle: "@tribocrmoficial"

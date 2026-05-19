@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 580" role="img" aria-label="TriboCRM Pipeline — zoom proximo passo com data">
+  <rect width="700" height="580" rx="20" fill="#0f0f0f"/>
+  <rect x="0" y="0" width="700" height="50" rx="20" fill="#161616"/>
+  <rect x="0" y="30" width="700" height="20" fill="#161616"/>
+  <circle cx="22" cy="25" r="6" fill="#2a2a2a"/>
+  <circle cx="42" cy="25" r="6" fill="#2a2a2a"/>
+  <circle cx="62" cy="25" r="6" fill="#2a2a2a"/>
+  <text x="350" y="32" font-family="DM Sans, sans-serif" font-size="16" font-weight="700" fill="rgba(255,255,255,0.55)" text-anchor="middle" letter-spacing="2">PIPELINE · PRÓXIMO PASSO COM DATA</text>
+
+  <g transform="translate(60, 80)">
+    <rect width="580" height="470" rx="14" fill="#161616" stroke="#f97316" stroke-width="2"/>
+    <text x="30" y="46" font-family="DM Sans, sans-serif" font-size="22" font-weight="800" fill="#f97316" letter-spacing="1">EM PROPOSTA</text>
+    <text x="550" y="46" font-family="DM Sans, sans-serif" font-size="18" font-weight="700" fill="#ffffff" text-anchor="end">3 com data</text>
+    <line x1="30" y1="68" x2="550" y2="68" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+
+    <!-- Card 1: data destacada -->
+    <g transform="translate(30, 88)">
+      <rect width="520" height="110" rx="10" fill="#1f1f1f"/>
+      <text x="20" y="32" font-family="DM Sans, sans-serif" font-size="17" font-weight="700" fill="#ffffff">Lead 08 — Indústria MG</text>
+      <text x="20" y="58" font-family="DM Sans, sans-serif" font-size="15" font-weight="500" fill="rgba(255,255,255,0.55)">R$ 42.000</text>
+      <!-- "tag" de data -->
+      <rect x="20" y="74" width="180" height="26" rx="6" fill="#f97316"/>
+      <text x="32" y="92" font-family="DM Sans, sans-serif" font-size="13" font-weight="700" fill="#0a0a0a">23/05 · 14h</text>
+      <text x="212" y="92" font-family="DM Sans, sans-serif" font-size="14" font-weight="600" fill="#ffffff">assinatura do contrato</text>
+    </g>
+
+    <!-- Card 2 -->
+    <g transform="translate(30, 218)">
+      <rect width="520" height="110" rx="10" fill="#1f1f1f"/>
+      <text x="20" y="32" font-family="DM Sans, sans-serif" font-size="17" font-weight="700" fill="#ffffff">Lead 10 — Atacado RS</text>
+      <text x="20" y="58" font-family="DM Sans, sans-serif" font-size="15" font-weight="500" fill="rgba(255,255,255,0.55)">R$ 28.700</text>
+      <rect x="20" y="74" width="180" height="26" rx="6" fill="#f97316"/>
+      <text x="32" y="92" font-family="DM Sans, sans-serif" font-size="13" font-weight="700" fill="#0a0a0a">22/05 · 10h</text>
+      <text x="212" y="92" font-family="DM Sans, sans-serif" font-size="14" font-weight="600" fill="#ffffff">revisar escopo com sócio</text>
+    </g>
+
+    <!-- Card 3 -->
+    <g transform="translate(30, 348)">
+      <rect width="520" height="110" rx="10" fill="#1f1f1f"/>
+      <text x="20" y="32" font-family="DM Sans, sans-serif" font-size="17" font-weight="700" fill="#ffffff">Lead 11 — Indústria PR</text>
+      <text x="20" y="58" font-family="DM Sans, sans-serif" font-size="15" font-weight="500" fill="rgba(255,255,255,0.55)">R$ 56.000</text>
+      <rect x="20" y="74" width="180" height="26" rx="6" fill="#f97316"/>
+      <text x="32" y="92" font-family="DM Sans, sans-serif" font-size="13" font-weight="700" fill="#0a0a0a">22/05 · 16h</text>
+      <text x="212" y="92" font-family="DM Sans, sans-serif" font-size="14" font-weight="600" fill="#ffffff">fechamento — call decisão</text>
+    </g>
+  </g>
+</svg>

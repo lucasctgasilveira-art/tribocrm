@@ -1,0 +1,17 @@
+# --------------------------------------------------------
+# Pauta: Slide 3 — Leitura 2: quantos têm próximo passo com data?
+# Calendário: SEX 22/05/2026 · Semana 3 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide-com-mockup
+slug: 2026-05-22_ler-pipeline-5min_03-leitura2
+data:
+  pilar: "Leitura 2 · Próximo passo"
+  step-num: "LEITURA 2"
+  titulo: "Quantos têm próximo passo com data?"
+  body: |
+    “Vou voltar a falar” não é passo.
+    <span class="mockup-emphasis">Quarta às 14h</span> é passo.
+    Lead sem data não tá vivo — tá te esperando esquecer.
+  slide-number: "03 / 08"
+  handle: "@tribocrmoficial"
+  mockup: '<img src="../_assets/mockups/pipeline-zoom-datas.svg" alt="">'

@@ -1,0 +1,21 @@
+# --------------------------------------------------------
+# Pauta: Slide 4 — Lugar 3: post-it amarelo grudado no monitor
+# Calendário: TER 19/05/2026 · Semana 3 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-19_5-lugares-lead-esconde_04-postit
+theme: light
+data:
+  pilar: "Lugar 3 · Post-it"
+  step-num: "LUGAR 3"
+  titulo: "Post-it amarelo grudado no monitor da semana retrasada."
+  body-1: |
+    <span class="miolo-emphasis">"Ligar pro João da metalúrgica."</span>
+    Tá lá há 9 dias. Já virou paisagem.
+  body-2: |
+    Vendedor olha 30 vezes por dia e não vê.
+    Cliente bom virou adesivo de decoração.
+    Pipeline de PME tá cheio
+    de post-it virando móvel.
+  slide-number: "04 / 06"
+  handle: "@tribocrmoficial"

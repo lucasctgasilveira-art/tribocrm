@@ -1,0 +1,17 @@
+# --------------------------------------------------------
+# Pauta: Slide 6 — Leitura 5: o número da semana cabe na cabeça?
+# Calendário: SEX 22/05/2026 · Semana 3 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide-com-mockup
+slug: 2026-05-22_ler-pipeline-5min_06-leitura5
+data:
+  pilar: "Leitura 5 · Síntese"
+  step-num: "LEITURA 5"
+  titulo: "O número da semana cabe na cabeça?"
+  body: |
+    Entrou X. Fechou Y. Vivo no funil Z.
+    <span class="mockup-emphasis">Três números, uma frase</span>.
+    Se não cabe assim, ninguém vai decidir nada com ele.
+  slide-number: "06 / 08"
+  handle: "@tribocrmoficial"
+  mockup: '<img src="../_assets/mockups/pipeline-zoom-totalizador.svg" alt="">'

@@ -1,0 +1,22 @@
+# --------------------------------------------------------
+# Pauta: Slide 4 — Pergunta 2: vai ser usado segunda às 9h?
+# Calendário: QUI 21/05/2026 · Semana 3 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-21_3-perguntas-funcao_04-pergunta2
+theme: light
+data:
+  pilar: "Pergunta 2 · Uso real"
+  step-num: "PERGUNTA 2"
+  titulo: "O vendedor vai abrir segunda às 9h da manhã?"
+  body-1: |
+    <span class="miolo-emphasis">Ou só vai mexer
+    no fim do mês,
+    quando sobrar tempo?</span>
+  body-2: |
+    Função que entra na rotina
+    da segunda muda o mês.
+    Função que mora num menu escondido
+    vira museu dentro do produto.
+  slide-number: "04 / 07"
+  handle: "@tribocrmoficial"

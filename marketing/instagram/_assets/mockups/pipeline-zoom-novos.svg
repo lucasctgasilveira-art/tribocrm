@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 580" role="img" aria-label="TriboCRM Pipeline — zoom coluna Novos">
+  <rect width="700" height="580" rx="20" fill="#0f0f0f"/>
+  <rect x="0" y="0" width="700" height="50" rx="20" fill="#161616"/>
+  <rect x="0" y="30" width="700" height="20" fill="#161616"/>
+  <circle cx="22" cy="25" r="6" fill="#2a2a2a"/>
+  <circle cx="42" cy="25" r="6" fill="#2a2a2a"/>
+  <circle cx="62" cy="25" r="6" fill="#2a2a2a"/>
+  <text x="350" y="32" font-family="DM Sans, sans-serif" font-size="16" font-weight="700" fill="rgba(255,255,255,0.55)" text-anchor="middle" letter-spacing="2">PIPELINE · ENTRADA DA SEMANA</text>
+
+  <!-- Coluna NOVOS expandida -->
+  <g transform="translate(60, 80)">
+    <rect width="580" height="470" rx="14" fill="#161616" stroke="#f97316" stroke-width="2"/>
+
+    <!-- Header da coluna -->
+    <text x="30" y="46" font-family="DM Sans, sans-serif" font-size="22" font-weight="800" fill="#f97316" letter-spacing="1">NOVOS</text>
+    <text x="550" y="46" font-family="DM Sans, sans-serif" font-size="18" font-weight="700" fill="#ffffff" text-anchor="end">4 leads</text>
+
+    <!-- linha separadora sutil -->
+    <line x1="30" y1="68" x2="550" y2="68" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+
+    <!-- Cards -->
+    <g transform="translate(30, 88)">
+      <rect width="520" height="86" rx="10" fill="#1f1f1f"/>
+      <text x="20" y="30" font-family="DM Sans, sans-serif" font-size="17" font-weight="700" fill="#ffffff">Lead 01 — Indústria SP</text>
+      <text x="20" y="56" font-family="DM Sans, sans-serif" font-size="15" font-weight="500" fill="rgba(255,255,255,0.55)">R$ 12.400 · origem: indicação</text>
+      <text x="20" y="76" font-family="DM Sans, sans-serif" font-size="14" font-weight="600" fill="#f97316">prox: 22/05 — call de descoberta</text>
+    </g>
+    <g transform="translate(30, 184)">
+      <rect width="520" height="86" rx="10" fill="#1f1f1f"/>
+      <text x="20" y="30" font-family="DM Sans, sans-serif" font-size="17" font-weight="700" fill="#ffffff">Lead 02 — Comércio MG</text>
+      <text x="20" y="56" font-family="DM Sans, sans-serif" font-size="15" font-weight="500" fill="rgba(255,255,255,0.55)">R$ 6.800 · origem: site</text>
+      <text x="20" y="76" font-family="DM Sans, sans-serif" font-size="14" font-weight="600" fill="#f97316">prox: 23/05 — enviar orçamento</text>
+    </g>
+    <g transform="translate(30, 280)">
+      <rect width="520" height="86" rx="10" fill="#1f1f1f"/>
+      <text x="20" y="30" font-family="DM Sans, sans-serif" font-size="17" font-weight="700" fill="#ffffff">Lead 03 — Serviços RJ</text>
+      <text x="20" y="56" font-family="DM Sans, sans-serif" font-size="15" font-weight="500" fill="rgba(255,255,255,0.55)">R$ 9.200 · origem: anúncio</text>
+      <text x="20" y="76" font-family="DM Sans, sans-serif" font-size="14" font-weight="600" fill="#f97316">prox: 22/05 — visita técnica</text>
+    </g>
+    <g transform="translate(30, 376)">
+      <rect width="520" height="86" rx="10" fill="#1f1f1f"/>
+      <text x="20" y="30" font-family="DM Sans, sans-serif" font-size="17" font-weight="700" fill="#ffffff">Lead 04 — Atacado PR</text>
+      <text x="20" y="56" font-family="DM Sans, sans-serif" font-size="15" font-weight="500" fill="rgba(255,255,255,0.55)">R$ 18.500 · origem: indicação</text>
+      <text x="20" y="76" font-family="DM Sans, sans-serif" font-size="14" font-weight="600" fill="#f97316">prox: 24/05 — preparar proposta</text>
+    </g>
+  </g>
+</svg>

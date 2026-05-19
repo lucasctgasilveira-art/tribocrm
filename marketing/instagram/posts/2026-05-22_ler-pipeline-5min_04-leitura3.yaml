@@ -1,0 +1,17 @@
+# --------------------------------------------------------
+# Pauta: Slide 4 — Leitura 3: quem tá parado há +15 dias?
+# Calendário: SEX 22/05/2026 · Semana 3 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide-com-mockup
+slug: 2026-05-22_ler-pipeline-5min_04-leitura3
+data:
+  pilar: "Leitura 3 · Frios"
+  step-num: "LEITURA 3"
+  titulo: "Quem tá parado há mais de 15 dias?"
+  body: |
+    Lead frio em proposta é
+    <span class="mockup-emphasis">museu, não pipeline</span>.
+    Pipeline que ninguém poda vira coleção.
+  slide-number: "04 / 08"
+  handle: "@tribocrmoficial"
+  mockup: '<img src="../_assets/mockups/pipeline-zoom-frios.svg" alt="">'

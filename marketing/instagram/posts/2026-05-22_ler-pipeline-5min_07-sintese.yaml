@@ -1,0 +1,21 @@
+# --------------------------------------------------------
+# Pauta: Slide 7 — Síntese (sem mockup, só texto)
+# Calendário: SEX 22/05/2026 · Semana 3 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-22_ler-pipeline-5min_07-sintese
+data:
+  pilar: "Síntese"
+  step-num: ""
+  titulo: ""
+  body-1: |
+    <span class="miolo-emphasis">5 leituras. 5 minutos.
+    Pipeline lido é decisão tomada —
+    não torcida.</span>
+  body-2: |
+    Sócio que lê o funil toda semana
+    chega na segunda com plano.
+    Sócio que não lê,
+    chega na segunda apostando.
+  slide-number: "07 / 08"
+  handle: "@tribocrmoficial"

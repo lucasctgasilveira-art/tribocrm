@@ -1,0 +1,21 @@
+# --------------------------------------------------------
+# Pauta: Slide 6 — Síntese
+# Calendário: QUI 21/05/2026 · Semana 3 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-21_3-perguntas-funcao_06-sintese
+theme: light
+data:
+  pilar: "Síntese"
+  step-num: ""
+  titulo: ""
+  body-1: |
+    <span class="miolo-emphasis">Função nova é dívida pra sempre.
+    Por isso a gente prefere recusar bonito.</span>
+  body-2: |
+    Produto pra PME brasileira não pode virar inchaço.
+    Tem que ser ferramenta que cabe na cabeça
+    do vendedor no meio do dia corrido —
+    não menu que ele aprende e depois esquece.
+  slide-number: "06 / 07"
+  handle: "@tribocrmoficial"

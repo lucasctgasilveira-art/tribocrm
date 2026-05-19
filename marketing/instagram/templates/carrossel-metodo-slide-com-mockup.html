@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>TriboCRM · Carrossel Método · Slide com Mockup</title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  /* Variante do slide miolo: topo pra texto, base pra mockup SVG.
+     Mantém todas as convenções do carrossel-metodo-slide (eyebrow, step-num,
+     emphasis, brand-signature, slide-number) — só acrescenta slot pra imagem
+     no terço inferior dentro de um frame sutil. */
+
+  .mockup-eyebrow {
+    position: absolute;
+    top: var(--canvas-pad);
+    left: var(--canvas-pad);
+    color: var(--tribo-orange);
+  }
+
+  /* Conteúdo de texto fica fixo na metade superior — sem translateY:50% pra não
+     colidir com o mockup. */
+  .mockup-content {
+    position: absolute;
+    top: 168px;            /* abaixo do eyebrow */
+    left: var(--canvas-pad);
+    right: var(--canvas-pad);
+    max-width: 900px;
+  }
+  .mockup-step-num {
+    font-size: 32px;
+    font-weight: var(--w-black);
+    color: var(--tribo-orange);
+    margin-bottom: var(--s-2);
+    letter-spacing: var(--tracking-wide);
+  }
+  .mockup-step-num:empty { display: none; }
+
+  .mockup-title {
+    margin-bottom: var(--s-3);
+  }
+
+  .mockup-body {
+    color: var(--tribo-white-soft);
+    max-width: 900px;
+  }
+  .mockup-emphasis {
+    color: var(--tribo-white);
+    font-weight: var(--w-bold);
+  }
+
+  /* Frame do mockup — metade inferior */
+  .mockup-frame {
+    position: absolute;
+    left: var(--canvas-pad);
+    right: var(--canvas-pad);
+    bottom: calc(var(--canvas-pad) + 120px);  /* respira sobre signature/symbol */
+    height: 560px;
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+    border: 1px solid var(--tribo-line);
+  }
+  .mockup-frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center;
+    background: #0f0f0f;
+  }
+
+  /* No tema claro, o mockup mantém o fundo escuro (ele é representação de UI dark) —
+     só a borda e a sombra se ajustam ao fundo branco do canvas. */
+</style>
+</head>
+<body>
+<div class="preview-stage">
+
+  <div class="canvas canvas--feed" data-format="carrossel-metodo-slide-com-mockup">
+
+    <span class="slide-number" data-edit="slide-number">03 / 08</span>
+
+    <span class="mockup-eyebrow t-eyebrow" data-edit="pilar">Método · Pipeline</span>
+
+    <div class="mockup-content">
+      <div class="mockup-step-num" data-edit="step-num">LEITURA 1</div>
+      <h2 class="mockup-title t-h3" data-edit="titulo">Quantos leads novos entraram esta semana?</h2>
+      <p class="mockup-body t-body" data-edit="body">
+        Sem sangue novo, <span class="mockup-emphasis">pipeline seca em duas semanas</span>.
+      </p>
+    </div>
+
+    <div class="mockup-frame" data-edit="mockup">
+      <img src="../_assets/mockups/pipeline-zoom-novos.svg" alt="">
+    </div>
+
+    <span class="brand-signature" data-edit="handle">@tribocrmoficial</span>
+    <img class="brand-symbol" src="../_assets/symbol-d.svg" alt="">
+
+  </div>
+
+</div>
+</body>
+</html>

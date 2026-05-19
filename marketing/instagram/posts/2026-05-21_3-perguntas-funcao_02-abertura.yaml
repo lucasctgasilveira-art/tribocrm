@@ -1,0 +1,22 @@
+# --------------------------------------------------------
+# Pauta: Slide 2 — Abertura (contexto: ideia nova chega toda semana)
+# Calendário: QUI 21/05/2026 · Semana 3 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-21_3-perguntas-funcao_02-abertura
+theme: light
+data:
+  pilar: "Bastidor · Critério"
+  step-num: ""
+  titulo: "Toda semana chega ideia nova."
+  body-1: |
+    <span class="miolo-emphasis">Do time. De cliente.
+    Da nossa cabeça às 22h
+    olhando o produto.</span>
+  body-2: |
+    A maioria não vira nada.
+    Não por preguiça —
+    por critério. A gente prefere
+    recusar bonito do que aceitar mole.
+  slide-number: "02 / 07"
+  handle: "@tribocrmoficial"

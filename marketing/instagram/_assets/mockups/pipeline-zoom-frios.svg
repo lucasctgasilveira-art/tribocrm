@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 580" role="img" aria-label="TriboCRM Pipeline — zoom leads parados ha mais de 15 dias">
+  <rect width="700" height="580" rx="20" fill="#0f0f0f"/>
+  <rect x="0" y="0" width="700" height="50" rx="20" fill="#161616"/>
+  <rect x="0" y="30" width="700" height="20" fill="#161616"/>
+  <circle cx="22" cy="25" r="6" fill="#2a2a2a"/>
+  <circle cx="42" cy="25" r="6" fill="#2a2a2a"/>
+  <circle cx="62" cy="25" r="6" fill="#2a2a2a"/>
+  <text x="350" y="32" font-family="DM Sans, sans-serif" font-size="16" font-weight="700" fill="rgba(255,255,255,0.55)" text-anchor="middle" letter-spacing="2">PIPELINE · PARADOS HÁ +15 DIAS</text>
+
+  <g transform="translate(60, 80)">
+    <rect width="580" height="470" rx="14" fill="#161616" stroke="#f97316" stroke-width="2"/>
+    <text x="30" y="46" font-family="DM Sans, sans-serif" font-size="22" font-weight="800" fill="#f97316" letter-spacing="1">SEM MOVIMENTO</text>
+    <text x="550" y="46" font-family="DM Sans, sans-serif" font-size="18" font-weight="700" fill="#ffffff" text-anchor="end">3 leads frios</text>
+    <line x1="30" y1="68" x2="550" y2="68" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+
+    <!-- Cards frios (opacidade baixa, tag laranja avisando dias parado) -->
+    <g transform="translate(30, 88)" opacity="0.5">
+      <rect width="520" height="110" rx="10" fill="#1f1f1f"/>
+      <text x="20" y="32" font-family="DM Sans, sans-serif" font-size="17" font-weight="700" fill="#ffffff">Lead 09 — Serviços SP</text>
+      <text x="20" y="58" font-family="DM Sans, sans-serif" font-size="15" font-weight="500" fill="rgba(255,255,255,0.55)">R$ 15.300 · em proposta</text>
+    </g>
+    <!-- Tag por cima (sem opacidade reduzida pra alertar) -->
+    <g transform="translate(50, 162)">
+      <rect width="200" height="26" rx="6" fill="#f97316"/>
+      <text x="12" y="18" font-family="DM Sans, sans-serif" font-size="13" font-weight="700" fill="#0a0a0a">parado há 18 dias</text>
+    </g>
+
+    <g transform="translate(30, 218)" opacity="0.5">
+      <rect width="520" height="110" rx="10" fill="#1f1f1f"/>
+      <text x="20" y="32" font-family="DM Sans, sans-serif" font-size="17" font-weight="700" fill="#ffffff">Lead 13 — Comércio CE</text>
+      <text x="20" y="58" font-family="DM Sans, sans-serif" font-size="15" font-weight="500" fill="rgba(255,255,255,0.55)">R$ 22.400 · em proposta</text>
+    </g>
+    <g transform="translate(50, 292)">
+      <rect width="200" height="26" rx="6" fill="#f97316"/>
+      <text x="12" y="18" font-family="DM Sans, sans-serif" font-size="13" font-weight="700" fill="#0a0a0a">parado há 23 dias</text>
+    </g>
+
+    <g transform="translate(30, 348)" opacity="0.5">
+      <rect width="520" height="110" rx="10" fill="#1f1f1f"/>
+      <text x="20" y="32" font-family="DM Sans, sans-serif" font-size="17" font-weight="700" fill="#ffffff">Lead 14 — Indústria SC</text>
+      <text x="20" y="58" font-family="DM Sans, sans-serif" font-size="15" font-weight="500" fill="rgba(255,255,255,0.55)">R$ 31.000 · em proposta</text>
+    </g>
+    <g transform="translate(50, 422)">
+      <rect width="200" height="26" rx="6" fill="#f97316"/>
+      <text x="12" y="18" font-family="DM Sans, sans-serif" font-size="13" font-weight="700" fill="#0a0a0a">parado há 31 dias</text>
+    </g>
+  </g>
+</svg>

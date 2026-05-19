@@ -1,0 +1,18 @@
+# --------------------------------------------------------
+# Pauta: Slide 1 (capa) — Carrossel "Os 5 lugares onde seu lead esquecido se esconde"
+# Calendário: TER 19/05/2026 · Semana 3 · Mês 1
+# Pilar: DOR
+# Status: pending_review
+# Tema: CLARO
+# --------------------------------------------------------
+template: carrossel-metodo-capa
+slug: 2026-05-19_5-lugares-lead-esconde_01-capa
+theme: light
+data:
+  pilar: "Dor · Pipeline esquecido"
+  titulo: |
+    Os <span class="t-orange">5 lugares</span><br>
+    onde seu lead<br>
+    esquecido se esconde.
+  slide-number: "01 / 06"
+  handle: "@tribocrmoficial"

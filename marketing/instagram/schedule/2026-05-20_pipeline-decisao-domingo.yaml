@@ -1,0 +1,21 @@
+status: aprovado
+aprovado_em: '2026-05-18'
+aprovado_por: lucas
+slot:
+  data: '2026-05-20'
+  horario: 09:00 BRT
+  justificativa: >
+    Quarta 09:00 BRT — pilar Manifesto. Peça única (feed-manifesto) no tema escuro, marcando o meio da semana com
+    provocação. Frase curta de alto contraste: "Pipeline limpo é decisão de domingo, não de quinta" — destaque laranja
+    em "domingo" pra puxar o ponto de virada da frase. Sem CTA explícito (manifesto provoca, não vende).
+formato: feed-estatico
+slides: 1
+arquivos:
+  - output/2026-05-20_pipeline-decisao-domingo.png
+caption_source: posts/2026-05-20_pipeline-decisao-domingo.yaml#caption
+hashtags_inline_na_caption: true
+primeiro_comentario: null
+publicacao:
+  metodo: instagram_graph_api
+  acao_humana_necessaria: aprovacao_lucas_antes_de_postar
+tema_visual: dark

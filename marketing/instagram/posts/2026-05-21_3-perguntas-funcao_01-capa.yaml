@@ -1,0 +1,19 @@
+# --------------------------------------------------------
+# Pauta: Slide 1 (capa) — Carrossel "As 3 perguntas que a gente faz antes de aceitar uma função no produto"
+# Calendário: QUI 21/05/2026 · Semana 3 · Mês 1
+# Pilar: BASTIDOR · Produto
+# Status: pending_review
+# Tema: CLARO
+# --------------------------------------------------------
+template: carrossel-metodo-capa
+slug: 2026-05-21_3-perguntas-funcao_01-capa
+theme: light
+data:
+  pilar: "Bastidor · Produto"
+  titulo: |
+    As <span class="t-orange">3 perguntas</span><br>
+    que a gente faz antes<br>
+    de aceitar uma função<br>
+    no produto.
+  slide-number: "01 / 07"
+  handle: "@tribocrmoficial"

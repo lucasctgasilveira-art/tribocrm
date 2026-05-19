@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 580" role="img" aria-label="TriboCRM Pipeline — totalizador da semana">
+  <rect width="700" height="580" rx="20" fill="#0f0f0f"/>
+  <rect x="0" y="0" width="700" height="50" rx="20" fill="#161616"/>
+  <rect x="0" y="30" width="700" height="20" fill="#161616"/>
+  <circle cx="22" cy="25" r="6" fill="#2a2a2a"/>
+  <circle cx="42" cy="25" r="6" fill="#2a2a2a"/>
+  <circle cx="62" cy="25" r="6" fill="#2a2a2a"/>
+  <text x="350" y="32" font-family="DM Sans, sans-serif" font-size="16" font-weight="700" fill="rgba(255,255,255,0.55)" text-anchor="middle" letter-spacing="2">PIPELINE · NÚMERO DA SEMANA</text>
+
+  <!-- Card "ENTROU" -->
+  <g transform="translate(60, 90)">
+    <rect width="580" height="120" rx="14" fill="#161616" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+    <text x="30" y="38" font-family="DM Sans, sans-serif" font-size="14" font-weight="700" fill="#f97316" letter-spacing="2">ENTROU NA SEMANA</text>
+    <text x="30" y="86" font-family="DM Sans, sans-serif" font-size="44" font-weight="800" fill="#ffffff">4 leads</text>
+    <text x="550" y="86" font-family="DM Sans, sans-serif" font-size="22" font-weight="700" fill="rgba(255,255,255,0.55)" text-anchor="end">R$ 46.900</text>
+  </g>
+
+  <!-- Card "FECHOU" -->
+  <g transform="translate(60, 232)">
+    <rect width="580" height="120" rx="14" fill="#161616" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+    <text x="30" y="38" font-family="DM Sans, sans-serif" font-size="14" font-weight="700" fill="#f97316" letter-spacing="2">FECHOU NA SEMANA</text>
+    <text x="30" y="86" font-family="DM Sans, sans-serif" font-size="44" font-weight="800" fill="#ffffff">2 leads</text>
+    <text x="550" y="86" font-family="DM Sans, sans-serif" font-size="22" font-weight="700" fill="rgba(255,255,255,0.55)" text-anchor="end">R$ 31.200</text>
+  </g>
+
+  <!-- Card "NO FUNIL" -->
+  <g transform="translate(60, 374)">
+    <rect width="580" height="146" rx="14" fill="#0a0a0a" stroke="#f97316" stroke-width="2.5"/>
+    <text x="30" y="42" font-family="DM Sans, sans-serif" font-size="14" font-weight="700" fill="rgba(255,255,255,0.55)" letter-spacing="2">VIVO NO FUNIL</text>
+    <text x="30" y="98" font-family="DM Sans, sans-serif" font-size="48" font-weight="800" fill="#f97316">R$ 291.800</text>
+    <text x="30" y="126" font-family="DM Sans, sans-serif" font-size="14" font-weight="500" fill="rgba(255,255,255,0.55)">12 leads · próxima semana começa com isso</text>
+  </g>
+</svg>

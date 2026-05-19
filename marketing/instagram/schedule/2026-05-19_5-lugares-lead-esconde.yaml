@@ -1,0 +1,26 @@
+status: aprovado
+aprovado_em: '2026-05-18'
+aprovado_por: lucas
+slot:
+  data: '2026-05-19'
+  horario: 09:00 BRT
+  justificativa: >
+    Terça 09:00 BRT — pilar Dor. Carrossel de 6 slides no tema claro (alternância visual da semana, após o SEG escuro).
+    Lista nominal dos 5 cantos onde lead bom desaparece em PME — peça acionável, salvável e marcável (CTA "marca o
+    vendedor que vive isso"). Funciona melhor cedo, quando o sócio abre o feed antes da reunião comercial da manhã.
+formato: carrossel
+slides: 6
+arquivos:
+  - output/2026-05-19_5-lugares-lead-esconde_01-capa.png
+  - output/2026-05-19_5-lugares-lead-esconde_02-whatsapp.png
+  - output/2026-05-19_5-lugares-lead-esconde_03-email.png
+  - output/2026-05-19_5-lugares-lead-esconde_04-postit.png
+  - output/2026-05-19_5-lugares-lead-esconde_05-planilha.png
+  - output/2026-05-19_5-lugares-lead-esconde_06-corredor.png
+caption_source: posts/2026-05-19_5-lugares-lead-esconde_06-corredor.yaml#caption
+hashtags_inline_na_caption: true
+primeiro_comentario: null
+publicacao:
+  metodo: instagram_graph_api
+  acao_humana_necessaria: aprovacao_lucas_antes_de_postar
+tema_visual: light

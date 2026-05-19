@@ -1,0 +1,34 @@
+status: aprovado
+aprovado_em: '2026-05-18'
+aprovado_por: lucas
+slot:
+  data: '2026-05-22'
+  horario: 09:00 BRT
+  justificativa: >
+    Sexta 09:00 BRT — pilar Método. Carrossel de 8 slides no tema escuro, estreando mockup ilustrado do produto (5 SVGs
+    de Kanban representando as 5 leituras de pipeline). Peça mais "produto" da semana, fecha o arco que começou no SEG
+    (ritual de sexta) com método visual concreto. Sai cedo na sexta pra cair no feed do sócio antes da última reunião
+    comercial da semana.
+formato: carrossel
+slides: 8
+arquivos:
+  - output/2026-05-22_ler-pipeline-5min_01-capa.png
+  - output/2026-05-22_ler-pipeline-5min_02-leitura1.png
+  - output/2026-05-22_ler-pipeline-5min_03-leitura2.png
+  - output/2026-05-22_ler-pipeline-5min_04-leitura3.png
+  - output/2026-05-22_ler-pipeline-5min_05-leitura4.png
+  - output/2026-05-22_ler-pipeline-5min_06-leitura5.png
+  - output/2026-05-22_ler-pipeline-5min_07-sintese.png
+  - output/2026-05-22_ler-pipeline-5min_08-cta.png
+caption_source: posts/2026-05-22_ler-pipeline-5min_08-cta.yaml#caption
+hashtags_inline_na_caption: true
+primeiro_comentario: null
+publicacao:
+  metodo: instagram_graph_api
+  acao_humana_necessaria: aprovacao_lucas_antes_de_postar
+tema_visual: dark
+observacao: >
+  Primeira peça da operação com mockup do produto. SVGs em _assets/mockups/ (pipeline-kanban-base + 4 zooms — novos,
+  datas, frios, fechando) e (pipeline-zoom-totalizador). Template novo: carrossel-metodo-slide-com-mockup.html — variante
+  do carrossel-metodo-slide que aceita imagem no terço inferior. Zero nome real, zero número real — placeholders genéricos
+  ("Lead 01 — Indústria SP", "R$ 12.400") conforme regra Zero Ficção.
