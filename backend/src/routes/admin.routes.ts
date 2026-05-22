@@ -471,6 +471,28 @@ router.patch('/popups/:id/toggle', async (req: Request, res: Response) => {
   } catch (error: any) { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }) }
 })
 
+// ── Menu Buttons (Mentoria/Treinamentos) ──
+
+router.get('/menu-buttons', async (_req: Request, res: Response) => {
+  try {
+    const buttons = await prisma.menuButton.findMany({ orderBy: { order: 'asc' } })
+    res.json({ success: true, data: buttons })
+  } catch (error: any) { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }) }
+})
+
+router.patch('/menu-buttons/:id', async (req: Request, res: Response) => {
+  try {
+    const { label, url, order, isActive } = req.body
+    const data: Record<string, unknown> = {}
+    if (label !== undefined) data.label = label
+    if (url !== undefined) data.url = url
+    if (order !== undefined) data.order = Number(order)
+    if (isActive !== undefined) data.isActive = Boolean(isActive)
+    const button = await prisma.menuButton.update({ where: { id: req.params.id as string }, data })
+    res.json({ success: true, data: button })
+  } catch (error: any) { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }) }
+})
+
 // ── Setup: PIX Webhook Registration ──
 
 router.post('/setup/pix-webhook', async (_req: Request, res: Response) => {

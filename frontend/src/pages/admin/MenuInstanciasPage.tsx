@@ -1,15 +1,12 @@
-import { useState } from 'react'
-import { GraduationCap, PlayCircle, Moon, Info } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { GraduationCap, PlayCircle, Moon, Info, type LucideIcon } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import { adminMenuItems } from '../../config/adminMenu'
+import { fetchAllMenuButtons, updateMenuButton, type MenuButton } from '../../services/menu-buttons.service'
 
-interface MenuButton {
-  icon: typeof GraduationCap
-  title: string
-  label: string
-  url: string
-  order: number
-  active: boolean
+const ICON_BY_TYPE: Record<MenuButton['type'], LucideIcon> = {
+  MENTORIA: GraduationCap,
+  TREINAMENTOS: PlayCircle,
 }
 
 const inputS: React.CSSProperties = {
@@ -33,12 +30,6 @@ const blurH = (e: React.FocusEvent<HTMLInputElement>) => {
   e.target.style.borderColor = 'var(--border)'
   e.target.style.boxShadow = 'none'
 }
-
-const history = [
-  { action: 'URL da Mentoria alterada', user: 'Tiago Alves', time: 'há 3 dias' },
-  { action: 'Botão Treinamentos ativado', user: 'Tiago Alves', time: 'há 1 semana' },
-  { action: "Label 'Mentoria' atualizado", user: 'Marina Costa', time: 'há 2 semanas' },
-]
 
 function Toggle({ active, onToggle }: { active: boolean; onToggle: () => void }) {
   return (
@@ -72,7 +63,7 @@ function Toggle({ active, onToggle }: { active: boolean; onToggle: () => void })
   )
 }
 
-function MenuPreviewItem({ icon: Icon, label }: { icon: typeof GraduationCap; label: string }) {
+function MenuPreviewItem({ icon: Icon, label }: { icon: LucideIcon; label: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px' }}>
       <Icon size={16} color="var(--text-secondary)" />
@@ -82,19 +73,45 @@ function MenuPreviewItem({ icon: Icon, label }: { icon: typeof GraduationCap; la
 }
 
 export default function MenuInstanciasPage() {
-  const [toast, setToast] = useState('')
-  const [buttons, setButtons] = useState<MenuButton[]>([
-    { icon: GraduationCap, title: 'Mentoria', label: 'Mentoria', url: 'https://mentoria.tribodevendas.com.br', order: 1, active: true },
-    { icon: PlayCircle, title: 'Treinamentos', label: 'Treinamentos', url: 'https://treinamentos.tribodevendas.com.br', order: 2, active: true },
-  ])
+  const [toast, setToast] = useState<{ msg: string; type: 'ok' | 'err' } | null>(null)
+  const [buttons, setButtons] = useState<MenuButton[]>([])
+  const [loading, setLoading] = useState(true)
+  const [savingId, setSavingId] = useState<string | null>(null)
 
-  function update(idx: number, patch: Partial<MenuButton>) {
-    setButtons((prev) => prev.map((b, i) => (i === idx ? { ...b, ...patch } : b)))
+  const showToast = useCallback((msg: string, type: 'ok' | 'err' = 'ok') => {
+    setToast({ msg, type })
+    setTimeout(() => setToast(null), 3000)
+  }, [])
+
+  useEffect(() => {
+    let mounted = true
+    fetchAllMenuButtons()
+      .then((list) => { if (mounted) setButtons(list) })
+      .catch(() => { if (mounted) showToast('Erro ao carregar botões', 'err') })
+      .finally(() => { if (mounted) setLoading(false) })
+    return () => { mounted = false }
+  }, [showToast])
+
+  function update(id: string, patch: Partial<MenuButton>) {
+    setButtons((prev) => prev.map((b) => (b.id === id ? { ...b, ...patch } : b)))
   }
 
-  function showToast(msg: string) {
-    setToast(msg)
-    setTimeout(() => setToast(''), 3000)
+  async function handleSave(btn: MenuButton) {
+    setSavingId(btn.id)
+    try {
+      const updated = await updateMenuButton(btn.id, {
+        label: btn.label,
+        url: btn.url,
+        order: btn.order,
+        isActive: btn.isActive,
+      })
+      setButtons((prev) => prev.map((b) => (b.id === btn.id ? updated : b)))
+      showToast(`Botão ${updated.label} atualizado!`)
+    } catch {
+      showToast(`Erro ao salvar ${btn.label}`, 'err')
+    } finally {
+      setSavingId(null)
+    }
   }
 
   return (
@@ -107,7 +124,7 @@ export default function MenuInstanciasPage() {
             right: 24,
             background: 'var(--bg-card)',
             border: '1px solid var(--border)',
-            borderLeft: '4px solid #22c55e',
+            borderLeft: `4px solid ${toast.type === 'ok' ? '#22c55e' : '#ef4444'}`,
             borderRadius: 8,
             padding: '12px 16px',
             fontSize: 13,
@@ -116,7 +133,7 @@ export default function MenuInstanciasPage() {
             boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
           }}
         >
-          {toast}
+          {toast.msg}
         </div>
       )}
 
@@ -147,13 +164,18 @@ export default function MenuInstanciasPage() {
         </span>
       </div>
 
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)', fontSize: 13 }}>Carregando...</div>
+      ) : (
+      <>
       {/* grid 2 colunas */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-        {buttons.map((btn, idx) => {
-          const Icon = btn.icon
+        {buttons.map((btn) => {
+          const Icon = ICON_BY_TYPE[btn.type] ?? GraduationCap
+          const titleLabel = btn.type === 'MENTORIA' ? 'Mentoria' : 'Treinamentos'
           return (
             <div
-              key={btn.title}
+              key={btn.id}
               style={{
                 background: 'var(--bg-card)',
                 border: '1px solid var(--border)',
@@ -165,9 +187,9 @@ export default function MenuInstanciasPage() {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <Icon size={24} color="#f97316" />
-                  <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>{btn.title}</span>
+                  <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>{titleLabel}</span>
                 </div>
-                <Toggle active={btn.active} onToggle={() => update(idx, { active: !btn.active })} />
+                <Toggle active={btn.isActive} onToggle={() => update(btn.id, { isActive: !btn.isActive })} />
               </div>
 
               {/* fields */}
@@ -178,7 +200,7 @@ export default function MenuInstanciasPage() {
                   </label>
                   <input
                     value={btn.label}
-                    onChange={(e) => update(idx, { label: e.target.value })}
+                    onChange={(e) => update(btn.id, { label: e.target.value })}
                     style={inputS}
                     onFocus={focusH}
                     onBlur={blurH}
@@ -190,7 +212,7 @@ export default function MenuInstanciasPage() {
                   </label>
                   <input
                     value={btn.url}
-                    onChange={(e) => update(idx, { url: e.target.value })}
+                    onChange={(e) => update(btn.id, { url: e.target.value })}
                     style={inputS}
                     onFocus={focusH}
                     onBlur={blurH}
@@ -203,7 +225,7 @@ export default function MenuInstanciasPage() {
                   <input
                     type="number"
                     value={btn.order}
-                    onChange={(e) => update(idx, { order: Number(e.target.value) })}
+                    onChange={(e) => update(btn.id, { order: Number(e.target.value) })}
                     style={{ ...inputS, width: 80 }}
                     onFocus={focusH}
                     onBlur={blurH}
@@ -246,7 +268,8 @@ export default function MenuInstanciasPage() {
 
               {/* save */}
               <button
-                onClick={() => showToast(`Botão de ${btn.title} atualizado!`)}
+                onClick={() => handleSave(btn)}
+                disabled={savingId === btn.id}
                 style={{
                   width: '100%',
                   marginTop: 16,
@@ -257,10 +280,11 @@ export default function MenuInstanciasPage() {
                   borderRadius: 8,
                   padding: '10px 0',
                   border: 'none',
-                  cursor: 'pointer',
+                  cursor: savingId === btn.id ? 'not-allowed' : 'pointer',
+                  opacity: savingId === btn.id ? 0.7 : 1,
                 }}
               >
-                Salvar
+                {savingId === btn.id ? 'Salvando...' : 'Salvar'}
               </button>
             </div>
           )
@@ -293,37 +317,17 @@ export default function MenuInstanciasPage() {
         >
           <div style={{ height: 1, background: 'var(--border)', margin: '4px 0 8px' }} />
           {buttons
-            .filter((b) => b.active)
+            .filter((b) => b.isActive)
             .sort((a, b) => a.order - b.order)
             .map((b) => (
-              <MenuPreviewItem key={b.title} icon={b.icon} label={b.label} />
+              <MenuPreviewItem key={b.id} icon={ICON_BY_TYPE[b.type] ?? GraduationCap} label={b.label} />
             ))}
           <div style={{ height: 1, background: 'var(--border)', margin: '8px 0' }} />
           <MenuPreviewItem icon={Moon} label="Modo escuro" />
         </div>
       </div>
-
-      {/* histórico */}
-      <div
-        style={{
-          background: 'var(--bg-card)',
-          border: '1px solid var(--border)',
-          borderRadius: 12,
-          padding: 20,
-          marginTop: 20,
-        }}
-      >
-        <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 16px' }}>Histórico de alterações</h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {history.map((h, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontSize: 13, color: 'var(--text-primary)', flex: 1 }}>{h.action}</span>
-              <span style={{ fontSize: 13, color: 'var(--text-muted)', flexShrink: 0 }}>{h.user}</span>
-              <span style={{ fontSize: 13, color: 'var(--text-muted)', flexShrink: 0, minWidth: 90, textAlign: 'right' }}>{h.time}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+      </>
+      )}
     </AppLayout>
   )
 }

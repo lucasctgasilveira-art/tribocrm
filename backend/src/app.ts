@@ -33,6 +33,7 @@ import webhookEndpointsRoutes from './routes/webhook-endpoints.routes'
 import partnersRoutes from './routes/partners.routes'
 import tenantPartnerRoutes from './routes/tenant-partner.routes'
 import popupsRoutes from './routes/popups.routes'
+import menuButtonsRoutes from './routes/menu-buttons.routes'
 
 const app = express()
 
@@ -144,6 +145,7 @@ app.use('/api-keys', apiKeysRoutes)
 app.use('/webhook-endpoints', webhookEndpointsRoutes)
 app.use('/tenant-partner', tenantPartnerRoutes)
 app.use('/popups', popupsRoutes)
+app.use('/menu-buttons', menuButtonsRoutes)
 
 // Sentry error handler — DEVE vir após todas as routes
 // mas ANTES de qualquer outro error handler customizado

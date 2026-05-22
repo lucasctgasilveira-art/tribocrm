@@ -1,9 +1,10 @@
 import {
   LayoutDashboard, Kanban, Users, CheckSquare, TrendingUp, Settings,
-  GraduationCap, PlayCircle,
 } from 'lucide-react'
 import type { SidebarEntry } from '../components/shared/Sidebar/Sidebar'
 
+// Mentoria e Treinamentos são injetados dinamicamente pelo AppLayout
+// a partir da configuração feita pelo super admin em /admin/menu-instancias.
 export const vendasMenuItems: SidebarEntry[] = [
   { section: 'Menu' },
   { label: 'Dashboard', icon: LayoutDashboard, path: '/vendas/dashboard' },
@@ -12,7 +13,4 @@ export const vendasMenuItems: SidebarEntry[] = [
   { label: 'Tarefas', icon: CheckSquare, path: '/vendas/tarefas' },
   { label: 'Meus Resultados', icon: TrendingUp, path: '/vendas/resultados' },
   { label: 'Configurações', icon: Settings, path: '/vendas/configuracoes' },
-  { section: 'Tribo' },
-  { label: 'Mentoria', icon: GraduationCap, path: '/vendas/mentoria' },
-  { label: 'Treinamentos', icon: PlayCircle, path: '/vendas/treinamentos' },
 ]

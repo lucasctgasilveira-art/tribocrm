@@ -4,6 +4,8 @@ import Topbar from '../Topbar/Topbar'
 import Sidebar, { type SidebarEntry, SIDEBAR_EXPANDED_W, SIDEBAR_COLLAPSED_W } from '../Sidebar/Sidebar'
 import PopupManager, { type PopupData } from '../PopupManager/PopupManager'
 import { fetchActivePopups } from '../../../services/popups.service'
+import { fetchActiveMenuButtons, type MenuButton } from '../../../services/menu-buttons.service'
+import { GraduationCap, PlayCircle } from 'lucide-react'
 import GlobalSearch from '../GlobalSearch/GlobalSearch'
 import OnboardingWizard from '../OnboardingWizard/OnboardingWizard'
 import TenantStatusGate from '../../billing/TenantStatusGate'
@@ -26,12 +28,32 @@ export default function AppLayout({ menuItems, children }: AppLayoutProps) {
   const isSuperAdmin = (() => { try { return (JSON.parse(localStorage.getItem('user') ?? '{}') as { role?: string }).role === 'SUPER_ADMIN' } catch { return false } })()
 
   const [popups, setPopups] = useState<PopupData[]>([])
+  const [extraMenuButtons, setExtraMenuButtons] = useState<MenuButton[]>([])
   useEffect(() => {
     if (isSuperAdmin) return
     let mounted = true
     fetchActivePopups().then(list => { if (mounted) setPopups(list) })
+    fetchActiveMenuButtons().then(list => { if (mounted) setExtraMenuButtons(list) })
     return () => { mounted = false }
   }, [isSuperAdmin])
+
+  // Menu lateral final = items estáticos + seção "Tribo" com os botões
+  // configurados em /admin/menu-instancias. Super admin recebe o menu
+  // estático sem injeção (já está bloqueado pelo fetch acima).
+  const finalMenuItems: SidebarEntry[] = isSuperAdmin || extraMenuButtons.length === 0
+    ? menuItems
+    : [
+        ...menuItems,
+        { section: 'Tribo' },
+        ...extraMenuButtons
+          .slice()
+          .sort((a, b) => a.order - b.order)
+          .map((b) => ({
+            label: b.label,
+            icon: b.type === 'MENTORIA' ? GraduationCap : PlayCircle,
+            path: b.url,
+          })),
+      ]
 
   /* Ctrl+K / Cmd+K */
   useEffect(() => {
@@ -80,7 +102,7 @@ export default function AppLayout({ menuItems, children }: AppLayoutProps) {
     <TenantStatusGate>
       <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
         <Topbar onOpenSearch={openSearch} />
-        <Sidebar menuItems={menuItems} />
+        <Sidebar menuItems={finalMenuItems} />
         <main style={{ marginLeft: sidebarW, paddingTop: 60, transition: 'margin-left 0.25s cubic-bezier(0.4,0,0.2,1)' }}>
           <BillingBanner />
           <div style={{ padding: 24, minHeight: 'calc(100vh - 60px)', overflow: 'hidden' }}>

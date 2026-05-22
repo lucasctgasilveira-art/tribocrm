@@ -28,9 +28,25 @@ const CSS = `
   .sidebar-nav:hover{scrollbar-color:var(--scrollbar-thumb) transparent}
 `
 
+function isExternal(path: string) {
+  return path.startsWith('http://') || path.startsWith('https://')
+}
+
 export default function Sidebar({ menuItems }: SidebarProps) {
   const location = useLocation()
   const navigate = useNavigate()
+
+  // Navega internamente OU abre URL externa em nova aba.
+  // Itens cadastrados pelo super admin em /admin/menu-instancias
+  // usam URLs absolutas (https://...) — esses devem abrir em outra
+  // aba pra não tirar o cliente do TriboCRM.
+  const goTo = useCallback((path: string) => {
+    if (isExternal(path)) {
+      window.open(path, '_blank', 'noopener,noreferrer')
+    } else {
+      navigate(path)
+    }
+  }, [navigate])
   const { theme, toggleTheme } = useTheme()
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(LS_KEY) === 'true')
   const [hoveredPath, setHoveredPath] = useState<string | null>(null)
@@ -167,7 +183,7 @@ export default function Sidebar({ menuItems }: SidebarProps) {
           const active = isActive(item.path); const hovered = hoveredPath === item.path && !active
           return (
             <div key={item.path} title={collapsed ? item.label : undefined}
-              onClick={() => navigate(item.path)}
+              onClick={() => goTo(item.path)}
               onMouseEnter={() => setHoveredPath(item.path)} onMouseLeave={() => setHoveredPath(null)}
               style={{ ...getItemStyle(active, hovered), justifyContent: collapsed ? 'center' : 'space-between' }}>
               {collapsed ? (
