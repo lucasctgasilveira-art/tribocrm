@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import Topbar from '../Topbar/Topbar'
 import Sidebar, { type SidebarEntry, SIDEBAR_EXPANDED_W, SIDEBAR_COLLAPSED_W } from '../Sidebar/Sidebar'
 import PopupManager, { type PopupData } from '../PopupManager/PopupManager'
+import { fetchActivePopups } from '../../../services/popups.service'
 import GlobalSearch from '../GlobalSearch/GlobalSearch'
 import OnboardingWizard from '../OnboardingWizard/OnboardingWizard'
 import TenantStatusGate from '../../billing/TenantStatusGate'
@@ -15,42 +16,6 @@ interface AppLayoutProps {
   children: ReactNode
 }
 
-const mockPopups: PopupData[] = [
-  {
-    id: 'pop-welcome',
-    type: 'WELCOME',
-    title: 'Bem-vindo ao TriboCRM! \u{1F389}',
-    message: 'Seu sistema está configurado e pronto para uso. Comece cadastrando seus primeiros leads no pipeline.',
-    ctaLabel: 'Começar agora',
-    ctaUrl: '/gestao/leads',
-    targetInstance: 'BOTH',
-    frequency: 'ONCE_PER_USER',
-    priority: 2,
-  },
-  {
-    id: 'pop-news',
-    type: 'NEWS',
-    title: 'Novidade — Pipeline Kanban v2',
-    message: 'Conheça as melhorias do nosso Pipeline: headers coloridos, drag and drop melhorado e drawer do lead completo.',
-    ctaLabel: 'Ver novidades',
-    ctaUrl: '/gestao/pipeline',
-    targetInstance: 'INSTANCE_2',
-    frequency: 'ONCE_PER_USER',
-    priority: 2,
-  },
-  {
-    id: 'pop-promo',
-    type: 'PROMO',
-    title: 'Upgrade para Pro com 15% OFF',
-    message: 'Aproveite nossa promoção de abril e faça upgrade para o Plano Pro com desconto especial.',
-    ctaLabel: 'Ver oferta',
-    ctaUrl: '/gestao/assinatura',
-    targetInstance: 'INSTANCE_2',
-    frequency: 'ONCE_PER_DAY',
-    priority: 2,
-  },
-]
-
 export default function AppLayout({ menuItems, children }: AppLayoutProps) {
   const navigate = useNavigate()
   const location = useLocation()
@@ -59,6 +24,14 @@ export default function AppLayout({ menuItems, children }: AppLayoutProps) {
   const openSearch = useCallback(() => setSearchOpen(true), [])
   const closeSearch = useCallback(() => setSearchOpen(false), [])
   const isSuperAdmin = (() => { try { return (JSON.parse(localStorage.getItem('user') ?? '{}') as { role?: string }).role === 'SUPER_ADMIN' } catch { return false } })()
+
+  const [popups, setPopups] = useState<PopupData[]>([])
+  useEffect(() => {
+    if (isSuperAdmin) return
+    let mounted = true
+    fetchActivePopups().then(list => { if (mounted) setPopups(list) })
+    return () => { mounted = false }
+  }, [isSuperAdmin])
 
   /* Ctrl+K / Cmd+K */
   useEffect(() => {
@@ -114,7 +87,7 @@ export default function AppLayout({ menuItems, children }: AppLayoutProps) {
             {children}
           </div>
         </main>
-        {!isSuperAdmin && <PopupManager popups={mockPopups} />}
+        {!isSuperAdmin && popups.length > 0 && <PopupManager popups={popups} />}
         {!isSuperAdmin && <BillingOverduePopup />}
         <GlobalSearch open={searchOpen} onClose={closeSearch} />
         {/* Gestor first-access wizard. Self-gates on role (MANAGER/OWNER)

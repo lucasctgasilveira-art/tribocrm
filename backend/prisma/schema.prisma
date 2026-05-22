@@ -1330,6 +1330,7 @@ model EmailCampaign {
 model Popup {
   id          String    @id @default(cuid())
   type        String
+  title       String?
   instances   String[]
   plans       String[]
   message     String

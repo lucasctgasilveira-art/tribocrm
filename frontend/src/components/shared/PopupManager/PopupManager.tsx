@@ -17,6 +17,7 @@ export interface PopupData {
   message: string
   ctaLabel?: string
   ctaUrl?: string
+  imageUrl?: string
   targetInstance: PopupTarget
   frequency: PopupFrequency
   priority: 1 | 2
@@ -152,6 +153,11 @@ export default function PopupManager({ popups }: Props) {
       <style>{CSS}</style>
       <div onClick={dismiss} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 70, animation: 'popFadeIn 0.2s ease-out' }} />
       <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 480, maxWidth: '90vw', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 71, overflow: 'hidden', animation: 'popScaleIn 0.2s ease-out' }}>
+
+        {/* Imagem (opcional, pop-up no formato criativo) */}
+        {current.imageUrl && (
+          <img src={current.imageUrl} alt="" style={{ width: '100%', display: 'block', maxHeight: 270, objectFit: 'cover' }} />
+        )}
 
         {/* Header */}
         <div style={{ background: tc.headerBg, padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>

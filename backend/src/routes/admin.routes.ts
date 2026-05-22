@@ -418,13 +418,13 @@ router.get('/popups', async (_req: Request, res: Response) => {
 
 router.post('/popups', async (req: Request, res: Response) => {
   try {
-    const { type, instances, plans, message, buttonLabel, buttonUrl, frequency, startDate, endDate, imageUrl, isActive } = req.body
+    const { type, title, instances, plans, message, buttonLabel, buttonUrl, frequency, startDate, endDate, imageUrl, isActive } = req.body
     if (!type || !message || !frequency || !startDate) {
       res.status(400).json({ success: false, error: { code: 'VALIDATION', message: 'Campos obrigatórios: type, message, frequency, startDate' } }); return
     }
     const popup = await prisma.popup.create({
       data: {
-        type, instances: instances ?? [], plans: plans ?? [], message,
+        type, title: title || null, instances: instances ?? [], plans: plans ?? [], message,
         buttonLabel: buttonLabel || null, buttonUrl: buttonUrl || null,
         frequency, startDate: new Date(startDate), endDate: endDate ? new Date(endDate) : null,
         imageUrl: imageUrl || null, isActive: isActive ?? true, createdBy: req.user!.userId,
@@ -436,9 +436,10 @@ router.post('/popups', async (req: Request, res: Response) => {
 
 router.patch('/popups/:id', async (req: Request, res: Response) => {
   try {
-    const { type, instances, plans, message, buttonLabel, buttonUrl, frequency, startDate, endDate, imageUrl, isActive } = req.body
+    const { type, title, instances, plans, message, buttonLabel, buttonUrl, frequency, startDate, endDate, imageUrl, isActive } = req.body
     const data: Record<string, unknown> = {}
     if (type !== undefined) data.type = type
+    if (title !== undefined) data.title = title || null
     if (instances !== undefined) data.instances = instances
     if (plans !== undefined) data.plans = plans
     if (message !== undefined) data.message = message

@@ -5,7 +5,7 @@ import { adminMenuItems } from '../../config/adminMenu'
 import api from '../../services/api'
 
 interface Popup {
-  id: string; type: string; instances: string[]; plans: string[]
+  id: string; type: string; title: string | null; instances: string[]; plans: string[]
   message: string; buttonLabel: string | null; buttonUrl: string | null
   frequency: string; startDate: string; endDate: string | null
   imageUrl: string | null; isActive: boolean; createdAt: string
@@ -147,6 +147,7 @@ export default function PopupsPage() {
 function PopupModal({ editPopup, onClose, onCreated, onUpdated }: { editPopup: Popup | null; onClose: () => void; onCreated: (p: Popup) => void; onUpdated: (p: Popup) => void }) {
   const isEdit = !!editPopup
   const [type, setType] = useState(editPopup?.type ?? POPUP_TYPES[0])
+  const [title, setTitle] = useState(editPopup?.title ?? '')
   const [instances, setInstances] = useState<string[]>(editPopup?.instances ?? ['Gestor', 'Vendedor'])
   const [plans, setPlans] = useState<string[]>(editPopup?.plans ?? ['Todos'])
   const [message, setMessage] = useState(editPopup?.message ?? '')
@@ -183,7 +184,7 @@ function PopupModal({ editPopup, onClose, onCreated, onUpdated }: { editPopup: P
     if (!canSave) return
     setSaving(true); setError('')
     const payload = {
-      type, instances, plans, message,
+      type, title: title || null, instances, plans, message,
       buttonLabel: buttonLabel || null, buttonUrl: buttonUrl || null,
       frequency, startDate, endDate: endDate || null,
       imageUrl: imagePreview || null,
@@ -263,6 +264,7 @@ function PopupModal({ editPopup, onClose, onCreated, onUpdated }: { editPopup: P
               ))}
             </div>
           </Fld>
+          <Fld label="Título"><input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: Black Friday — 30% OFF (opcional)" style={inputS} /></Fld>
           <Fld label="Mensagem *"><textarea value={message} onChange={e => setMessage(e.target.value)} rows={4} placeholder="Mensagem do pop-up..." style={{ ...(touched && missing.message ? inputErr : inputS), resize: 'none' } as React.CSSProperties} /></Fld>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <Fld label="Botão de ação (label)"><input value={buttonLabel} onChange={e => setButtonLabel(e.target.value)} placeholder="Ex: Regularizar" style={inputS} /></Fld>
