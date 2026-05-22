@@ -1,4 +1,4 @@
-status: aprovado
+status: publicado
 aprovado_em: '2026-05-18'
 aprovado_por: lucas
 slot:
@@ -29,6 +29,9 @@ publicacao:
 tema_visual: dark
 observacao: >
   Primeira peça da operação com mockup do produto. SVGs em _assets/mockups/ (pipeline-kanban-base + 4 zooms — novos,
-  datas, frios, fechando) e (pipeline-zoom-totalizador). Template novo: carrossel-metodo-slide-com-mockup.html — variante
-  do carrossel-metodo-slide que aceita imagem no terço inferior. Zero nome real, zero número real — placeholders genéricos
-  ("Lead 01 — Indústria SP", "R$ 12.400") conforme regra Zero Ficção.
+  datas, frios, fechando) e (pipeline-zoom-totalizador). Template novo: carrossel-metodo-slide-com-mockup.html —
+  variante do carrossel-metodo-slide que aceita imagem no terço inferior. Zero nome real, zero número real —
+  placeholders genéricos ("Lead 01 — Indústria SP", "R$ 12.400") conforme regra Zero Ficção.
+published_at: '2026-05-22T14:02:29.157Z'
+media_id: '17973738824881910'
+permalink: https://www.instagram.com/p/DYpMIu-lpd5/
