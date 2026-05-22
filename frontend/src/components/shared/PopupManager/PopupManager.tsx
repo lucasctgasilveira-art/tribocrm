@@ -186,7 +186,7 @@ export default function PopupManager({ popups }: Props) {
               <X size={14} strokeWidth={1.5} style={{ marginRight: 4, verticalAlign: 'middle' }} />Fechar
             </button>
             {current.ctaLabel && (
-              <button onClick={() => { if (current.ctaUrl) window.location.href = current.ctaUrl; dismiss() }} style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+              <button onClick={() => { if (current.ctaUrl) window.open(current.ctaUrl, '_blank', 'noopener,noreferrer'); dismiss() }} style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                 {current.ctaLabel}
               </button>
             )}
