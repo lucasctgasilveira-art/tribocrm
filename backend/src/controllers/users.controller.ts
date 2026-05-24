@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma'
 import { Prisma } from '@prisma/client'
 import { sendMail } from '../services/mailer.service'
 import { isUserInRamping } from '../lib/ramping'
+import { logAudit, getRequestIp } from '../services/audit-log.service'
 
 function generateTempPassword(): string {
   const pool = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -377,6 +378,30 @@ export async function updateUser(req: Request, res: Response): Promise<void> {
     }
 
     res.json({ success: true, data: user })
+
+    // Audit log (Onda 2) — registra mudanças de perfil/permissão de
+    // usuários do tenant. Lista os campos que efetivamente foram
+    // enviados no payload (não os valores antigos vs novos).
+    const fieldsChanged = Object.keys(data)
+    if (teamId !== undefined) fieldsChanged.push('teamId')
+    if (pipelineIds !== undefined) fieldsChanged.push('pipelineIds')
+    if (fieldsChanged.length > 0) {
+      logAudit({
+        action: 'TENANT_USER_UPDATED',
+        category: 'permission',
+        actorType: 'user',
+        actorId: req.user?.userId ?? null,
+        tenantId,
+        entityType: 'tenant_user',
+        entityId: user.id,
+        ipAddress: getRequestIp(req),
+        metadata: {
+          targetEmail: user.email,
+          targetRole: user.role,
+          fieldsChanged,
+        },
+      })
+    }
   } catch (error) {
     console.error('[Users] updateUser error:', error)
     res.status(500).json({

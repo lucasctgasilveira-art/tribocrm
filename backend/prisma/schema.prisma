@@ -1278,6 +1278,34 @@ model AuditLog {
   @@map("audit_logs")
 }
 
+// Eventos de auditoria do sistema para a UI /admin/logs (Onda 2).
+// Tabela separada de audit_logs porque esta permite tenantId nulo
+// (ações de super-admin não pertencem a tenant) e tem schema desenhado
+// pra agregação na tela de logs do sistema.
+//
+// Populada por audit-log.service em modo fire-and-forget — uma falha
+// aqui nunca bloqueia a ação principal (export, mudança de permissão,
+// etc.). Lida pelo controller system-logs.controller que agrega isso
+// com EmailLog e WebhookDelivery.
+model SystemAuditEvent {
+  id          String   @id @default(uuid()) @db.Uuid
+  action      String   @db.VarChar(80)   // ex: EXPORT_LEADS_TENANT, ADMIN_USER_UPDATED
+  category    String   @db.VarChar(20)   // 'export' | 'permission'
+  actorType   String   @map("actor_type") @db.VarChar(20)   // 'admin' | 'user'
+  actorId     String?  @map("actor_id") @db.Uuid            // userId de quem agiu
+  actorEmail  String?  @map("actor_email") @db.VarChar(255) // snapshot do email pra UI
+  tenantId    String?  @map("tenant_id") @db.Uuid           // null pra ações de super-admin
+  entityType  String?  @map("entity_type") @db.VarChar(50)
+  entityId    String?  @map("entity_id") @db.Uuid
+  ipAddress   String?  @map("ip_address") @db.VarChar(50)
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([category, createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+  @@map("system_audit_events")
+}
+
 // Persistent log of every transactional/system email attempt
 // (sub-etapa 6L.1.a). Populated by mailer.service fire-and-forget
 // after each Brevo call — failure to write here never blocks the
