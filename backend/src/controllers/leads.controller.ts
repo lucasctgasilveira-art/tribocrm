@@ -6,6 +6,7 @@ import { resolveTenantId } from '../lib/platformTenant'
 import { userHasPipelineAccess } from './pipeline.controller'
 import { sendPushToUser } from '../services/push-notification.service'
 import { triggerWebhookEvent } from '../services/webhook-dispatcher.service'
+import { logAudit, getRequestIp } from '../services/audit-log.service'
 
 // Helper pra serializar lead pro payload de webhook. Mantém shape
 // estável (mesmos campos usados na API v1) — adicionar é zero-risco,
@@ -1469,18 +1470,34 @@ export async function exportLeads(req: Request, res: Response): Promise<void> {
     widths.forEach((w, i) => { sheet.getColumn(i + 1).width = w })
 
     const today = new Date().toISOString().slice(0, 10)
+    const exportFilename = `leads_export_${today}.${format === 'csv' ? 'csv' : 'xlsx'}`
     if (format === 'csv') {
       const buffer = await wb.csv.writeBuffer({ formatterOptions: { delimiter: ',', quote: '"' } } as any)
       res.setHeader('Content-Type', 'text/csv; charset=utf-8')
-      res.setHeader('Content-Disposition', `attachment; filename="leads_export_${today}.csv"`)
+      res.setHeader('Content-Disposition', `attachment; filename="${exportFilename}"`)
       // Prepend UTF-8 BOM so Excel opens with correct encoding
       res.send(Buffer.concat([Buffer.from('\uFEFF', 'utf8'), Buffer.from(buffer as ArrayBuffer)]))
     } else {
       const buffer = await wb.xlsx.writeBuffer()
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-      res.setHeader('Content-Disposition', `attachment; filename="leads_export_${today}.xlsx"`)
+      res.setHeader('Content-Disposition', `attachment; filename="${exportFilename}"`)
       res.send(Buffer.from(buffer as ArrayBuffer))
     }
+
+    logAudit({
+      action: 'EXPORT_LEADS_TENANT',
+      category: 'export',
+      actorType: 'user',
+      actorId: req.user?.userId ?? null,
+      tenantId: req.user?.tenantId ?? null,
+      entityType: 'leads',
+      ipAddress: getRequestIp(req),
+      metadata: {
+        filename: exportFilename,
+        format,
+        rowCount: leads.length,
+      },
+    })
   } catch (error: any) {
     console.error('[Leads] exportLeads error:', error)
     res.status(500).json({

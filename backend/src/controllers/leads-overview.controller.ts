@@ -27,6 +27,7 @@ import { Request, Response } from 'express'
 import { prisma } from '../lib/prisma'
 import { Prisma } from '@prisma/client'
 import { isValidPeriodReference, getMonthsInPeriod, type AggregationPeriod } from '../lib/periodReference'
+import { logAudit, getRequestIp } from '../services/audit-log.service'
 
 type ClientFilter = 'all' | 'active' | 'inactive'
 type SellerFilter = 'all' | 'active' | 'inactive'
@@ -352,6 +353,22 @@ export async function exportLeads(req: Request, res: Response): Promise<void> {
     res.setHeader('Content-Type', 'text/csv; charset=utf-8')
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
     res.send(csv)
+
+    logAudit({
+      action: 'EXPORT_LEADS_ADMIN',
+      category: 'export',
+      actorType: 'admin',
+      actorId: req.user?.userId ?? null,
+      tenantId: null,
+      entityType: 'leads',
+      ipAddress: getRequestIp(req),
+      metadata: {
+        filename,
+        periodReference: f.periodReference,
+        tenantIdFilter: f.tenantId ?? null,
+        rowCount: leads.length,
+      },
+    })
   } catch (error) {
     console.error('[LeadsOverview] exportLeads error:', error)
     res.status(500).json({

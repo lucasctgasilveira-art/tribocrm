@@ -1,6 +1,7 @@
 import { Request, Response } from 'express'
 import ExcelJS from 'exceljs'
 import { prisma } from '../lib/prisma'
+import { logAudit, getRequestIp } from '../services/audit-log.service'
 
 // ── Helper: date range from period ──
 
@@ -590,7 +591,18 @@ export async function exportGestaoReport(req: Request, res: Response): Promise<v
     lossRows.forEach(r => wsLoss.addRow(r))
     applyHeaderStyle(wsLoss)
 
-    await streamWorkbook(res, wb, `relatorio-gestor-${periodSuffix(period)}.xlsx`)
+    const reportFilename = `relatorio-gestor-${periodSuffix(period)}.xlsx`
+    await streamWorkbook(res, wb, reportFilename)
+    logAudit({
+      action: 'EXPORT_REPORT',
+      category: 'export',
+      actorType: 'user',
+      actorId: req.user?.userId ?? null,
+      tenantId: req.user?.tenantId ?? null,
+      entityType: 'report',
+      ipAddress: getRequestIp(req),
+      metadata: { reportType: 'gestor', filename: reportFilename, period },
+    })
   } catch (error) {
     console.error('[Reports] exportGestaoReport error:', error)
     res.status(500).json({
@@ -697,7 +709,18 @@ export async function exportVendedorReport(req: Request, res: Response): Promise
     myLossRows.forEach(r => wsLoss.addRow(r))
     applyHeaderStyle(wsLoss)
 
-    await streamWorkbook(res, wb, `meus-resultados-${periodSuffix(period)}.xlsx`)
+    const reportFilename = `meus-resultados-${periodSuffix(period)}.xlsx`
+    await streamWorkbook(res, wb, reportFilename)
+    logAudit({
+      action: 'EXPORT_REPORT',
+      category: 'export',
+      actorType: 'user',
+      actorId: req.user?.userId ?? null,
+      tenantId: req.user?.tenantId ?? null,
+      entityType: 'report',
+      ipAddress: getRequestIp(req),
+      metadata: { reportType: 'vendedor', filename: reportFilename, period },
+    })
   } catch (error) {
     console.error('[Reports] exportVendedorReport error:', error)
     res.status(500).json({
@@ -810,7 +833,18 @@ export async function exportAdminFinanceiro(req: Request, res: Response): Promis
     })
     applyHeaderStyle(wsClientes)
 
-    await streamWorkbook(res, wb, `admin-financeiro-${periodSuffix(period)}.xlsx`)
+    const reportFilename = `admin-financeiro-${periodSuffix(period)}.xlsx`
+    await streamWorkbook(res, wb, reportFilename)
+    logAudit({
+      action: 'EXPORT_REPORT',
+      category: 'export',
+      actorType: 'admin',
+      actorId: req.user?.userId ?? null,
+      tenantId: null,
+      entityType: 'report',
+      ipAddress: getRequestIp(req),
+      metadata: { reportType: 'admin-financeiro', filename: reportFilename, period },
+    })
   } catch (error) {
     console.error('[Reports] exportAdminFinanceiro error:', error)
     res.status(500).json({
@@ -888,7 +922,18 @@ export async function exportAdminDashboard(req: Request, res: Response): Promise
     })
     applyHeaderStyle(wsTenants)
 
-    await streamWorkbook(res, wb, `admin-dashboard-${periodSuffix(period)}.xlsx`)
+    const reportFilename = `admin-dashboard-${periodSuffix(period)}.xlsx`
+    await streamWorkbook(res, wb, reportFilename)
+    logAudit({
+      action: 'EXPORT_REPORT',
+      category: 'export',
+      actorType: 'admin',
+      actorId: req.user?.userId ?? null,
+      tenantId: null,
+      entityType: 'report',
+      ipAddress: getRequestIp(req),
+      metadata: { reportType: 'admin-dashboard', filename: reportFilename, period },
+    })
   } catch (error) {
     console.error('[Reports] exportAdminDashboard error:', error)
     res.status(500).json({
