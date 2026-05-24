@@ -93,4 +93,36 @@ export async function updateCharge(id: string, payload: Record<string, unknown>)
   return response.data.data
 }
 
+// ── System Logs (Onda 1) ──
+// Lê falhas reais de e-mail e webhook. Outros tipos (login, rate
+// limit, exportação, permissão) chegam nas próximas ondas.
+
+export type SystemLogPeriod = 'today' | '24h' | '7d' | '30d' | 'all'
+
+export interface SystemLogItem {
+  id: string
+  type: 'Erro'
+  source: 'email' | 'webhook'
+  description: string
+  user: string
+  ip: string
+  date: string
+  createdAt: string
+}
+
+export interface SystemLogsResponse {
+  items: SystemLogItem[]
+  period: SystemLogPeriod
+  totalReturned: number
+  sources: { email: number; webhook: number }
+}
+
+export async function getSystemLogs(params?: {
+  period?: SystemLogPeriod
+  search?: string
+}): Promise<SystemLogsResponse> {
+  const response = await api.get('/admin/system-logs', { params })
+  return response.data.data
+}
+
 export default { getAdminDashboard, getTenants, getTenant, updateTenant, getFinancial, updateCharge }
