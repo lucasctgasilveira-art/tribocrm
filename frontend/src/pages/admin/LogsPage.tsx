@@ -108,9 +108,11 @@ export default function LogsPage() {
     }
   }, [period, search])
 
+  const auditCount = items.filter((l) => l.type === 'Exportação' || l.type === 'Permissão').length
+
   const filtered = items.filter((l) => {
     if (tab === 'Logins') return false
-    if (tab === 'Auditoria') return false
+    if (tab === 'Auditoria') return l.type === 'Exportação' || l.type === 'Permissão'
     if (tab === 'Erros' && l.type !== 'Erro') return false
     return true
   })
@@ -119,7 +121,7 @@ export default function LogsPage() {
     { key: 'Todos', label: 'Todos', enabled: true },
     { key: 'Erros', label: `Erros (${items.filter((l) => l.type === 'Erro').length})`, enabled: true },
     { key: 'Logins', label: 'Logins (em breve)', enabled: false },
-    { key: 'Auditoria', label: 'Auditoria (em breve)', enabled: false },
+    { key: 'Auditoria', label: `Auditoria (${auditCount})`, enabled: true },
   ]
 
   return (
@@ -148,9 +150,9 @@ export default function LogsPage() {
       >
         <Info size={16} color="#3b82f6" style={{ flexShrink: 0, marginTop: 1 }} />
         <span>
-          Mostrando <strong>falhas reais</strong> de envio de e-mail e webhook.
-          Logins, bloqueios por tentativa suspeita, exportações e mudanças de
-          permissão serão adicionados nas próximas atualizações.
+          Mostrando <strong>falhas de e-mail e webhook</strong>, <strong>exportações</strong> de
+          CSV/XLSX e <strong>mudanças de permissão</strong>. Logins e bloqueios por tentativa
+          suspeita chegam na próxima atualização.
         </span>
       </div>
 
@@ -267,7 +269,7 @@ export default function LogsPage() {
             {!loading && !error && filtered.length === 0 && (
               <tr>
                 <td colSpan={5} style={{ ...tdS, textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>
-                  {tab === 'Logins' || tab === 'Auditoria'
+                  {tab === 'Logins'
                     ? 'Esta aba será habilitada em uma próxima atualização.'
                     : 'Nenhum log encontrado no período selecionado.'}
                 </td>
