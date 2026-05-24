@@ -11,6 +11,7 @@ import {
   getLeadsOverview, exportLeads, getTenantsForFilter,
 } from '../controllers/leads-overview.controller'
 import { getSystemLogs } from '../controllers/system-logs.controller'
+import { logAudit, getRequestIp } from '../services/audit-log.service'
 import { registerPixWebhook, createPixCharge, createBoletoCharge } from '../services/efi.service'
 import { sendMail } from '../services/mailer.service'
 import { runBillingStateMachineJob } from '../jobs/billing-state-machine.job'
@@ -551,6 +552,17 @@ router.patch('/team/:id', async (req: Request, res: Response) => {
     if (role !== undefined) data.role = role
     const user = await prisma.adminUser.update({ where: { id: req.params.id as string }, data })
     res.json({ success: true, data: { id: user.id, name: user.name, email: user.email, role: user.role, isActive: user.isActive, isDualAccess: user.isDualAccess, lastLoginAt: user.lastLoginAt, createdAt: user.createdAt } })
+    logAudit({
+      action: 'ADMIN_USER_UPDATED',
+      category: 'permission',
+      actorType: 'admin',
+      actorId: req.user?.userId ?? null,
+      tenantId: null,
+      entityType: 'admin_user',
+      entityId: user.id,
+      ipAddress: getRequestIp(req),
+      metadata: { targetEmail: user.email, fieldsChanged: Object.keys(data) },
+    })
   } catch (error: any) { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }) }
 })
 
@@ -560,6 +572,17 @@ router.patch('/team/:id/status', async (req: Request, res: Response) => {
     if (!user) { res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Membro não encontrado' } }); return }
     const updated = await prisma.adminUser.update({ where: { id: req.params.id as string }, data: { isActive: !user.isActive } })
     res.json({ success: true, data: { id: updated.id, name: updated.name, email: updated.email, role: updated.role, isActive: updated.isActive, isDualAccess: updated.isDualAccess, lastLoginAt: updated.lastLoginAt, createdAt: updated.createdAt } })
+    logAudit({
+      action: 'ADMIN_USER_STATUS_CHANGED',
+      category: 'permission',
+      actorType: 'admin',
+      actorId: req.user?.userId ?? null,
+      tenantId: null,
+      entityType: 'admin_user',
+      entityId: updated.id,
+      ipAddress: getRequestIp(req),
+      metadata: { targetEmail: updated.email, newIsActive: updated.isActive },
+    })
   } catch (error: any) { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }) }
 })
 
@@ -569,8 +592,21 @@ router.patch('/team/:id/password', async (req: Request, res: Response) => {
     if (!password) { res.status(400).json({ success: false, error: { code: 'VALIDATION', message: 'Senha é obrigatória' } }); return }
     const bcrypt = await import('bcryptjs')
     const passwordHash = await bcrypt.default.hash(password, 10)
-    await prisma.adminUser.update({ where: { id: req.params.id as string }, data: { passwordHash } })
+    const targetId = req.params.id as string
+    await prisma.adminUser.update({ where: { id: targetId }, data: { passwordHash } })
     res.json({ success: true })
+    logAudit({
+      action: 'ADMIN_USER_PASSWORD_RESET',
+      category: 'permission',
+      actorType: 'admin',
+      actorId: req.user?.userId ?? null,
+      tenantId: null,
+      entityType: 'admin_user',
+      entityId: targetId,
+      ipAddress: getRequestIp(req),
+      // Não inclui a senha no metadata (nem hash nem plain).
+      metadata: null,
+    })
   } catch (error: any) { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }) }
 })
 
@@ -645,6 +681,18 @@ router.patch('/users/:id/dual-access', async (req: Request, res: Response) => {
         createdAt: updated.createdAt,
       },
     })
+    logAudit({
+      action: 'ADMIN_USER_DUAL_ACCESS_CHANGED',
+      category: 'permission',
+      actorType: 'admin',
+      actorId: callerId,
+      actorEmail: caller.email,
+      tenantId: null,
+      entityType: 'admin_user',
+      entityId: updated.id,
+      ipAddress: getRequestIp(req),
+      metadata: { targetEmail: updated.email, newIsDualAccess: updated.isDualAccess },
+    })
   } catch (error: any) {
     console.error('[Admin] dual-access update error:', error?.message ?? error)
     res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Erro interno do servidor' } })
@@ -664,6 +712,17 @@ router.patch('/team/:id/permissions', async (req: Request, res: Response) => {
     const { permissions } = req.body
     const user = await prisma.adminUser.update({ where: { id: req.params.id as string }, data: { permissions } })
     res.json({ success: true, data: { id: user.id, role: user.role, permissions: user.permissions } })
+    logAudit({
+      action: 'ADMIN_USER_PERMISSIONS_CHANGED',
+      category: 'permission',
+      actorType: 'admin',
+      actorId: req.user?.userId ?? null,
+      tenantId: null,
+      entityType: 'admin_user',
+      entityId: user.id,
+      ipAddress: getRequestIp(req),
+      metadata: { targetRole: user.role, newPermissions: user.permissions },
+    })
   } catch (error: any) { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }) }
 })
 
