@@ -10,6 +10,7 @@ import {
 import {
   getLeadsOverview, exportLeads, getTenantsForFilter,
 } from '../controllers/leads-overview.controller'
+import { getSystemLogs } from '../controllers/system-logs.controller'
 import { registerPixWebhook, createPixCharge, createBoletoCharge } from '../services/efi.service'
 import { sendMail } from '../services/mailer.service'
 import { runBillingStateMachineJob } from '../jobs/billing-state-machine.job'
@@ -1095,6 +1096,12 @@ router.post('/campaigns/:id/cancel', async (req: Request, res: Response) => {
     return
   }
 })
+
+// ── System Logs (Onda 1) ──
+// Agrega falhas de EmailLog + WebhookDelivery pra UI /admin/logs.
+// Read-only. Novos tipos (login, rate limit, etc) chegam nas próximas
+// ondas. Implementação em controllers/system-logs.controller.ts.
+router.get('/system-logs', getSystemLogs)
 
 // ── Billing Jobs ──
 
