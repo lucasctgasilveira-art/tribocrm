@@ -5,7 +5,7 @@
  * Worker de publicação automática via Instagram Graph API.
  *
  * Lê schedule/*.yaml, filtra peças prontas (status=aprovado, hora chegou,
- * formato != reel) e publica como carrossel ou feed estático.
+ * formato != reel) e publica como carrossel, feed estático ou story.
  *
  * Uso:
  *   npm run publish                    # ciclo normal (cron)
@@ -162,6 +162,18 @@ async function publishSingleImage({ urls, caption }) {
   return published.id;
 }
 
+async function publishStory({ urls }) {
+  const container = await igRequest('POST', `/${IG_BUSINESS_ACCOUNT_ID}/media`, {
+    image_url: urls[0],
+    media_type: 'STORIES'
+  });
+  await waitForContainer(container.id);
+  const published = await igRequest('POST', `/${IG_BUSINESS_ACCOUNT_ID}/media_publish`, {
+    creation_id: container.id
+  });
+  return published.id;
+}
+
 async function getPermalink(mediaId) {
   try {
     const j = await igRequest('GET', `/${mediaId}`, { fields: 'permalink' });
@@ -218,6 +230,7 @@ Uso:
 Filtros aplicados:
   - status === "aprovado"
   - formato !== "reel" (Reels: postagem manual)
+  - formato "story" publicado como STORIES (caption ignorada)
   - hora atual >= slot.data + slot.horario (a menos que --force)
 `);
     process.exit(0);
@@ -285,7 +298,8 @@ Filtros aplicados:
     console.log(`\n▶ ${name}`);
 
     const caption = await resolveCaption(schedule);
-    if (!caption) {
+    const isStory = (schedule.formato || '').toLowerCase() === 'story';
+    if (!caption && !isStory) {
       console.error(`✗ ${name} · sem caption (caption ou caption_source ausente)`);
       continue;
     }
@@ -312,10 +326,14 @@ Filtros aplicados:
       }
 
       console.log(`  ↑ IG Graph API`);
-      const mediaId =
-        urls.length === 1
-          ? await publishSingleImage({ urls, caption })
-          : await publishCarousel({ urls, caption });
+      let mediaId;
+      if (isStory) {
+        mediaId = await publishStory({ urls });
+      } else if (urls.length === 1) {
+        mediaId = await publishSingleImage({ urls, caption });
+      } else {
+        mediaId = await publishCarousel({ urls, caption });
+      }
 
       const permalink = await getPermalink(mediaId);
 
