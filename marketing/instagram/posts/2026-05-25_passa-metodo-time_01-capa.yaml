@@ -1,0 +1,18 @@
+# --------------------------------------------------------
+# Pauta: Slide 1 (capa) — Carrossel "Como passar o método pro time sem virar treinamento chato"
+# Calendário: SEG 25/05/2026 · Semana 4 · Mês 1 (TIME E CULTURA)
+# Pilar: MÉTODO
+# Status: pending_review
+# Tema: ESCURO
+# Hook origem: M22 (Banco de hooks · Pilar Método · Processo e time)
+# --------------------------------------------------------
+template: carrossel-metodo-capa
+slug: 2026-05-25_passa-metodo-time_01-capa
+data:
+  pilar: "Método · Time"
+  titulo: |
+    Como passar o método<br>
+    pro time <span class="t-orange">sem virar</span><br>
+    treinamento chato.
+  slide-number: "01 / 08"
+  handle: "@tribocrmoficial"

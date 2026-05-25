@@ -1,0 +1,21 @@
+# --------------------------------------------------------
+# Pauta: Slide 2 — Dor (treinamento que dura 2h e ninguém aplica)
+# Calendário: SEG 25/05/2026 · Semana 4 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-25_passa-metodo-time_02-dor
+data:
+  pilar: "Método · Time"
+  step-num: ""
+  titulo: "Você junta o time numa sala."
+  body-1: |
+    Slide bonito, café, duas horas
+    explicando o jeito novo de vender.
+    Todo mundo concorda na hora.
+  body-2: |
+    <span class="miolo-emphasis">Na segunda, cada vendedor
+    tá fazendo do jeito antigo.</span>
+    Não é resistência. É que ninguém
+    decora método em dia de palestra.
+  slide-number: "02 / 08"
+  handle: "@tribocrmoficial"

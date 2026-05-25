@@ -1,0 +1,19 @@
+# --------------------------------------------------------
+# Pauta: Slide 1 (capa) — Carrossel "Reunião comercial que virou terapia"
+# Calendário: TER 26/05/2026 · Semana 4 · Mês 1 (TIME E CULTURA)
+# Pilar: DOR
+# Status: pending_review
+# Tema: CLARO
+# Hook origem: D24 (Banco de hooks · Pilar Método · Processo e time)
+# --------------------------------------------------------
+template: carrossel-metodo-capa
+slug: 2026-05-26_reuniao-vira-terapia_01-capa
+theme: light
+data:
+  pilar: "Dor · Reunião comercial"
+  titulo: |
+    Quando a reunião<br>
+    de segunda virou<br>
+    <span class="t-orange">sessão de terapia</span>.
+  slide-number: "01 / 06"
+  handle: "@tribocrmoficial"

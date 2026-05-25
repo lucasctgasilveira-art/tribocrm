@@ -1,0 +1,22 @@
+# --------------------------------------------------------
+# Pauta: Slide 7 — Passo 4: cobra na reunião de segunda
+# Calendário: SEG 25/05/2026 · Semana 4 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-25_passa-metodo-time_07-passo4
+data:
+  pilar: "Passo 4 · Cobra na segunda"
+  step-num: "PASSO 4"
+  titulo: "Volta no método toda segunda."
+  body-1: |
+    <span class="miolo-emphasis">Reunião de segunda não é
+    "como foi a semana?".
+    É "cadê a próxima ação de cada lead?".</span>
+  body-2: |
+    O método só vira hábito quando
+    a equipe sabe que vai ser cobrada
+    nele toda segunda. Sem cobrança
+    no ritual, o treinamento de sábado
+    morre na quarta-feira.
+  slide-number: "07 / 08"
+  handle: "@tribocrmoficial"

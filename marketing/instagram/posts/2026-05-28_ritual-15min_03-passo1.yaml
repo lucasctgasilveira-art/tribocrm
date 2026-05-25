@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 3 — Passo 1: horário fixo (todo dia, mesma hora)
+# Calendário: QUI 28/05/2026 · Semana 4 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-28_ritual-15min_03-passo1
+theme: light
+data:
+  pilar: "Passo 1 · Horário fixo"
+  step-num: "PASSO 1"
+  titulo: "Mesmo horário, todo dia."
+  body-1: |
+    <span class="miolo-emphasis">9h da manhã. 15 minutos. Em pé.</span>
+  body-2: |
+    Não muda. Não cancela.
+    Não vira reunião de 1h.
+    Horário fixo cria hábito —
+    e hábito é o que segura método quando o dia aperta.
+  slide-number: "03 / 07"
+  handle: "@tribocrmoficial"

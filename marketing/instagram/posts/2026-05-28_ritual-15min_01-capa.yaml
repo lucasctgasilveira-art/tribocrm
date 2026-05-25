@@ -1,0 +1,19 @@
+# --------------------------------------------------------
+# Pauta: Slide 1 (capa) — Carrossel "Ritual de 15 minutos que destrava equipe travada"
+# Calendário: QUI 28/05/2026 · Semana 4 · Mês 1 (TIME E CULTURA)
+# Pilar: MÉTODO · Ritual
+# Status: pending_review
+# Tema: CLARO
+# Hook origem: M25 (Banco de hooks · Pilar Método · Processo e time)
+# --------------------------------------------------------
+template: carrossel-metodo-capa
+slug: 2026-05-28_ritual-15min_01-capa
+theme: light
+data:
+  pilar: "Método · Ritual"
+  titulo: |
+    O ritual de <span class="t-orange">15 minutos</span><br>
+    que destrava equipe<br>
+    comercial travada.
+  slide-number: "01 / 07"
+  handle: "@tribocrmoficial"

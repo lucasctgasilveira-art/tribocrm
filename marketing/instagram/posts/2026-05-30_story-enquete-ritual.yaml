@@ -1,0 +1,19 @@
+# --------------------------------------------------------
+# Pauta: Story enquete "Sua equipe tem ritual diário?"
+# Calendário: SAB 30/05/2026 · Semana 4 · Mês 1
+# Pilar: STORY (interação)
+# Observação: Story só. Sem caption.
+# --------------------------------------------------------
+template: story-enquete
+slug: 2026-05-30_story-enquete-ritual
+data:
+  pilar: "Pergunta da semana"
+  pergunta: |
+    Sua equipe comercial<br>
+    tem ritual diário?
+  opcao-a: |
+    Tem,<br>todo dia
+  opcao-b: |
+    Só<br>reunião<br>semanal
+  cta: "Manda DM se quiser comparar formato 🔥"
+  handle: "@tribocrmoficial"

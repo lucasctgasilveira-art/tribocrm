@@ -1,0 +1,21 @@
+# --------------------------------------------------------
+# Pauta: Slide 5 — Passo 3: pipeline aberto na tela
+# Calendário: QUI 28/05/2026 · Semana 4 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-28_ritual-15min_05-passo3
+theme: light
+data:
+  pilar: "Passo 3 · Pipeline na tela"
+  step-num: "PASSO 3"
+  titulo: "Pipeline aberto. Não vale memória."
+  body-1: |
+    <span class="miolo-emphasis">A tela mostra o lead.
+    O vendedor mostra a próxima ação.</span>
+  body-2: |
+    Sem pipeline aberto vira reunião
+    de impressão. Com pipeline aberto
+    o lead esquecido aparece na hora —
+    e ninguém termina o dia sem decisão.
+  slide-number: "05 / 07"
+  handle: "@tribocrmoficial"

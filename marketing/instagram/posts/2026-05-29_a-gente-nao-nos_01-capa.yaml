@@ -1,0 +1,18 @@
+# --------------------------------------------------------
+# Pauta: Slide 1 (capa) — Carrossel "Por que a gente fala 'a gente' e não 'nós'"
+# Calendário: SEX 29/05/2026 · Semana 4 · Mês 1 (TIME E CULTURA)
+# Pilar: BASTIDOR · Voz da marca
+# Status: pending_review
+# Tema: ESCURO
+# Hook origem: B10 (Bastidor · Critério de produto e voz)
+# --------------------------------------------------------
+template: carrossel-metodo-capa
+slug: 2026-05-29_a-gente-nao-nos_01-capa
+data:
+  pilar: "Bastidor · Voz"
+  titulo: |
+    Por que a gente fala<br>
+    <span class="t-orange">"a gente"</span> e<br>
+    não "nós".
+  slide-number: "01 / 05"
+  handle: "@tribocrmoficial"

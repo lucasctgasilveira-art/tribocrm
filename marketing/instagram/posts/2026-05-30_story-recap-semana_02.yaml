@@ -1,0 +1,19 @@
+# --------------------------------------------------------
+# Pauta: Story recap 2 — recap TER + QUI
+# Calendário: SAB 30/05/2026 · Semana 4 · Mês 1
+# --------------------------------------------------------
+template: story-recap
+slug: 2026-05-30_story-recap-semana_02
+data:
+  eyebrow: "Da terça e quinta"
+  headline: |
+    Reunião que<br>
+    virou terapia<br>
+    e o ritual<br>
+    de 15min.
+  subline: |
+    Duas peças sobre a equipe travada
+    e a virada que cabe numa pergunta
+    e num horário fixo.
+  cta: "↑ Arrasta pra cima · vai pro feed"
+  handle: "@tribocrmoficial"

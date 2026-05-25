@@ -1,0 +1,21 @@
+# --------------------------------------------------------
+# Pauta: Slide 3 — Erro comum (tratar método como curso)
+# Calendário: SEG 25/05/2026 · Semana 4 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-25_passa-metodo-time_03-erro
+data:
+  pilar: "O erro comum"
+  step-num: ""
+  titulo: "Quase toda PME erra igual."
+  body-1: |
+    <span class="miolo-emphasis">Trata método como curso.</span>
+    Reserva um sábado, traz consultor,
+    entrega apostila, manda aplicar.
+  body-2: |
+    Método não se aprende em sala.
+    Se aprende fazendo, com cliente real,
+    do lado de quem já faz.
+    O resto é teatro corporativo.
+  slide-number: "03 / 08"
+  handle: "@tribocrmoficial"

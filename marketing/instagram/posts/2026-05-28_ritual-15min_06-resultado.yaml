@@ -1,0 +1,22 @@
+# --------------------------------------------------------
+# Pauta: Slide 6 — Síntese (o que muda em 2 semanas)
+# Calendário: QUI 28/05/2026 · Semana 4 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-28_ritual-15min_06-resultado
+theme: light
+data:
+  pilar: "O que muda"
+  step-num: ""
+  titulo: "Duas semanas e a equipe destrava."
+  body-1: |
+    <span class="miolo-emphasis">Vendedor para de perguntar
+    "por onde começo?" — começa
+    pela próxima ação que ele mesmo
+    escreveu no dia anterior.</span>
+  body-2: |
+    O dono para de ser babá
+    de pipeline. A semana fica curta
+    porque cada dia já chega com plano.
+  slide-number: "06 / 07"
+  handle: "@tribocrmoficial"

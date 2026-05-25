@@ -1,0 +1,21 @@
+# --------------------------------------------------------
+# Pauta: Slide 4 — Passo 1: mostra rodando antes de explicar
+# Calendário: SEG 25/05/2026 · Semana 4 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-25_passa-metodo-time_04-passo1
+data:
+  pilar: "Passo 1 · Mostra rodando"
+  step-num: "PASSO 1"
+  titulo: "Leva o vendedor numa venda sua."
+  body-1: |
+    <span class="miolo-emphasis">Vai junto numa ligação,
+    numa reunião, num fechamento.</span>
+  body-2: |
+    Antes de qualquer slide, ele vê
+    a pergunta que você faz, a ordem,
+    o jeito que você anota.
+    Vinte minutos disso ensinam mais
+    que duas horas de treinamento.
+  slide-number: "04 / 08"
+  handle: "@tribocrmoficial"

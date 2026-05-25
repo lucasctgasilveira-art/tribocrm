@@ -1,0 +1,21 @@
+# --------------------------------------------------------
+# Pauta: Slide 2 — Cena (a reunião real, como ela acontece)
+# Calendário: TER 26/05/2026 · Semana 4 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-26_reuniao-vira-terapia_02-cena
+theme: light
+data:
+  pilar: "A cena"
+  step-num: ""
+  titulo: "Segunda, 9h. Café na mesa."
+  body-1: |
+    Você pergunta: "como tá o pipeline?"
+    Vendedor responde: <span class="miolo-emphasis">"tô correndo atrás."</span>
+  body-2: |
+    Você pergunta de novo, mais específico.
+    Vem outra frase genérica.
+    Vinte minutos depois ninguém
+    sabe nenhum número.
+  slide-number: "02 / 06"
+  handle: "@tribocrmoficial"

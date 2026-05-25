@@ -1,0 +1,22 @@
+# --------------------------------------------------------
+# Pauta: Slide 2 — Contexto (a equipe travada que você reconhece)
+# Calendário: QUI 28/05/2026 · Semana 4 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-28_ritual-15min_02-contexto
+theme: light
+data:
+  pilar: "Contexto"
+  step-num: ""
+  titulo: "Tem semana que a equipe trava."
+  body-1: |
+    Vendedor abre o pipeline e olha por 5 minutos.
+    Não sabe qual lead atacar primeiro.
+    Acaba mexendo no que é mais fácil
+    e deixando o mais importante pra "depois".
+  body-2: |
+    <span class="miolo-emphasis">Reunião semanal não resolve.
+    A semana é longa demais
+    pra travar de segunda a sexta.</span>
+  slide-number: "02 / 07"
+  handle: "@tribocrmoficial"

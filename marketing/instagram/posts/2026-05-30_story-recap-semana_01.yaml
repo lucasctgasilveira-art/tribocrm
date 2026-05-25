@@ -1,0 +1,22 @@
+# --------------------------------------------------------
+# Pauta: Story recap 1 — recap visual da semana (SEG + TER)
+# Calendário: SAB 30/05/2026 · Semana 4 · Mês 1 (TIME E CULTURA)
+# Pilar: STORY (recap)
+# Status: pending_review
+# Observação: Story só. Sem caption.
+# --------------------------------------------------------
+template: story-recap
+slug: 2026-05-30_story-recap-semana_01
+data:
+  eyebrow: "Semana de Time e Cultura"
+  headline: |
+    Como passar<br>
+    o método pro<br>
+    time sem virar<br>
+    treinamento.
+  subline: |
+    Carrossel de segunda — 4 passos pra fazer
+    o time aplicar de verdade o que combinou
+    no sábado.
+  cta: "↑ Arrasta pra cima · vai pro feed"
+  handle: "@tribocrmoficial"

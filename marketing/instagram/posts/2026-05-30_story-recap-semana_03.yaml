@@ -1,0 +1,18 @@
+# --------------------------------------------------------
+# Pauta: Story recap 3 — recap SEX (bastidor "a gente")
+# Calendário: SAB 30/05/2026 · Semana 4 · Mês 1
+# --------------------------------------------------------
+template: story-recap
+slug: 2026-05-30_story-recap-semana_03
+data:
+  eyebrow: "Bastidor de sexta"
+  headline: |
+    Por que a<br>
+    gente fala<br>
+    "a gente".
+  subline: |
+    Cinco slides sobre a escolha de palavra
+    que separa software brasileiro de
+    multinacional traduzida.
+  cta: "↑ Arrasta pra cima · vai pro feed"
+  handle: "@tribocrmoficial"

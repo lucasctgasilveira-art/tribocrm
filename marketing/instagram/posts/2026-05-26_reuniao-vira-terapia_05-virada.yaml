@@ -1,0 +1,22 @@
+# --------------------------------------------------------
+# Pauta: Slide 5 — Virada (o que muda quando a pergunta muda)
+# Calendário: TER 26/05/2026 · Semana 4 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-26_reuniao-vira-terapia_05-virada
+theme: light
+data:
+  pilar: "A virada"
+  step-num: ""
+  titulo: "Troca a pergunta. Muda a reunião."
+  body-1: |
+    No lugar de "como tá o pipeline?"
+    <span class="miolo-emphasis">"Cadê a próxima ação
+    de cada lead que entrou?"</span>
+  body-2: |
+    Pergunta específica obriga
+    resposta específica. Em 5 minutos
+    a reunião vira sobre número,
+    não mais sobre sentimento.
+  slide-number: "05 / 06"
+  handle: "@tribocrmoficial"

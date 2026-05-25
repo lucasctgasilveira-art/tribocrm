@@ -1,0 +1,22 @@
+# --------------------------------------------------------
+# Pauta: Slide 4 — O que muda na confiança
+# Calendário: SEX 29/05/2026 · Semana 4 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-29_a-gente-nao-nos_04-o-que-muda
+data:
+  pilar: "O que muda"
+  step-num: ""
+  titulo: "Palavra escolhida vira confiança."
+  body-1: |
+    <span class="miolo-emphasis">"A gente" diz que tem gente
+    de verdade do outro lado.
+    Não é uma multinacional
+    se passando por brasileira.</span>
+  body-2: |
+    Pra PME que já levou cano
+    de software gringo traduzido às pressas,
+    palavra escolhida é o primeiro sinal
+    de que a empresa é o que diz que é.
+  slide-number: "04 / 05"
+  handle: "@tribocrmoficial"

@@ -1,0 +1,21 @@
+# --------------------------------------------------------
+# Pauta: Slide 2 — A decisão (não é descuido, é escolha)
+# Calendário: SEX 29/05/2026 · Semana 4 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-29_a-gente-nao-nos_02-decisao
+data:
+  pilar: "A decisão"
+  step-num: ""
+  titulo: "Não é descuido. É escolha."
+  body-1: |
+    <span class="miolo-emphasis">Toda peça que sai da gente
+    é revisada pra trocar "nós"
+    por "a gente".</span>
+  body-2: |
+    Tem regra de marca pra isso.
+    Não é menos formal —
+    é mais perto da boca
+    de quem vai ler.
+  slide-number: "02 / 05"
+  handle: "@tribocrmoficial"

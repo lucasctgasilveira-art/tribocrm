@@ -1,0 +1,22 @@
+# --------------------------------------------------------
+# Pauta: Slide 3 — Quem fala "nós" pra PME brasileira
+# Calendário: SEX 29/05/2026 · Semana 4 · Mês 1
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-05-29_a-gente-nao-nos_03-quem-fala
+data:
+  pilar: "Quem fala 'nós'"
+  step-num: ""
+  titulo: "Quem fala 'nós' no Brasil?"
+  body-1: |
+    Manual de empresa.
+    Slide de governo.
+    E-mail jurídico.
+  body-2: |
+    <span class="miolo-emphasis">Vendedor de PME brasileira
+    não fala "nós entregamos".
+    Fala "a gente entrega".</span>
+    Quem fala "nós" tá performando —
+    e PME percebe na primeira frase.
+  slide-number: "03 / 05"
+  handle: "@tribocrmoficial"

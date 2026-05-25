@@ -1,0 +1,34 @@
+# --------------------------------------------------------
+# Pauta: Feed manifesto "Vendedor sem método é guerreiro sem estratégia"
+# Calendário: QUA 27/05/2026 · Semana 4 · Mês 1 (TIME E CULTURA)
+# Pilar: MANIFESTO
+# Status: pending_review
+# Tema: ESCURO (default)
+# Hook origem: Man16 — Lucas manteve hook mesmo com risco de soar Herói.
+#              A linha do card mantém "guerreiro" como provocação literal.
+#              A legenda aterrissa em PT-BR popular (sem postura de mestre).
+# --------------------------------------------------------
+template: feed-manifesto
+slug: 2026-05-27_feed-manifesto-guerreiro
+data:
+  linha-1: "Vendedor sem método"
+  linha-2: "é guerreiro"
+  linha-3: |
+    sem <span class="t-orange">estratégia</span>.
+  handle: "@tribocrmoficial"
+
+# Legenda final oficial
+caption: |
+  Vendedor sem método é guerreiro sem estratégia.
+
+  Briga muito. Corre o dia inteiro. Liga, manda WhatsApp, faz proposta. Quando o mês fecha, ninguém entende como saiu o número — nem ele nem o dono.
+
+  Talento sem método é energia gasta no escuro. Faz barulho, faz suor, faz drama. Não faz previsibilidade.
+
+  Método não é amarra. É o jeito de chegar na sexta sabendo qual lead virou cliente, qual virou "não" e qual ainda tá aberto — e por quê.
+
+  A gente faz Máquina de Vendas pra PME brasileira parar de premiar quem corre mais e começar a premiar quem fecha com clareza.
+
+  Compartilha com o vendedor da tua equipe que ainda acha que correria é sinônimo de venda.
+
+  #vendasb2b #pmebrasileira #processocomercial #gestaocomercial #equipecomercial
