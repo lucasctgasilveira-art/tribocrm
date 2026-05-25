@@ -1,15 +1,14 @@
-status: aprovado
+status: publicado
 aprovado_em: '2026-05-24'
 aprovado_por: lucas
 slot:
   data: '2026-05-25'
   horario: 09:00 BRT
   justificativa: >
-    Segunda 09:00 BRT — abertura da Semana 4 (Time e Cultura). Carrossel de 8 slides no tema escuro
-    com hook M22 ("como passar o método pro time sem virar treinamento chato"). Cai cedo na segunda
-    pra resolver a dor exata do dono que acabou de fazer reunião comercial no fim de semana e
-    descobriu que o time não tá aplicando o método combinado. Encadeia com o tema da semana — toda
-    a Semana 4 fala de cultura comercial, ritual e equipe.
+    Segunda 09:00 BRT — abertura da Semana 4 (Time e Cultura). Carrossel de 8 slides no tema escuro com hook M22 ("como
+    passar o método pro time sem virar treinamento chato"). Cai cedo na segunda pra resolver a dor exata do dono que
+    acabou de fazer reunião comercial no fim de semana e descobriu que o time não tá aplicando o método combinado.
+    Encadeia com o tema da semana — toda a Semana 4 fala de cultura comercial, ritual e equipe.
 formato: carrossel
 slides: 8
 arquivos:
@@ -29,6 +28,9 @@ publicacao:
   acao_humana_necessaria: aprovacao_lucas_antes_de_postar
 tema_visual: dark
 observacao: >
-  Abre a Semana 4 (Time e Cultura). Quatro passos práticos pra passar método pro time —
-  mostra rodando, 1 página, treina no pipeline real, cobra na reunião de segunda. Tema
-  escuro padrão. Aprovado em batch pelo Lucas em 2026-05-24 junto da pauta inicial.
+  Abre a Semana 4 (Time e Cultura). Quatro passos práticos pra passar método pro time — mostra rodando, 1 página, treina
+  no pipeline real, cobra na reunião de segunda. Tema escuro padrão. Aprovado em batch pelo Lucas em 2026-05-24 junto da
+  pauta inicial.
+published_at: '2026-05-25T13:58:26.323Z'
+media_id: '18338727589223907'
+permalink: https://www.instagram.com/p/DYw6DDdFOc5/
