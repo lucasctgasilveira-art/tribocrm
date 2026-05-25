@@ -1,0 +1,24 @@
+status: aprovado
+aprovado_em: '2026-05-24'
+aprovado_por: lucas
+slot:
+  data: '2026-05-30'
+  horario: '10:32 BRT'
+  justificativa: >
+    Sábado 10:32 BRT — story 2 de 4 do encerramento da Semana 4 (Time e Cultura). Recap
+    visual do carrossel de QUI (2026-05-28 "ritual diário de 15 minutos"). Sequência de 2
+    minutos depois do story 1 pra aparecer junto na visualização sequencial do IG. Story
+    estático puro — sem sticker interativo (Graph API não suporta sticker "Ver post"). O
+    visual do card já sinaliza qual é o post recapitulado.
+formato: story
+arquivos:
+  - output/2026-05-30_story-recap-semana_02.png
+caption_source: null
+publicacao:
+  metodo: instagram_graph_api
+  acao_humana_necessaria: aprovacao_lucas_antes_de_postar
+tema_visual: dark
+observacao: >
+  Story 2 de 4 do encerramento Semana 4. Recap visual de QUI. Aprovado em batch pelo Lucas
+  em 2026-05-24 junto da pauta da semana. Schedule separado do recap original
+  (2026-05-30_story-recap-semana.yaml) pra permitir automação via Graph API.

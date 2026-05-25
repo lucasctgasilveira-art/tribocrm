@@ -1,0 +1,24 @@
+status: aprovado
+aprovado_em: '2026-05-24'
+aprovado_por: lucas
+slot:
+  data: '2026-05-30'
+  horario: '10:34 BRT'
+  justificativa: >
+    Sábado 10:34 BRT — story 3 de 4 do encerramento da Semana 4 (Time e Cultura). Recap
+    visual do carrossel de SEX (2026-05-29 "a gente, não nós"). Sequência de 2 minutos
+    depois do story 2 pra aparecer junto na visualização sequencial do IG. Story estático
+    puro — sem sticker interativo (Graph API não suporta sticker "Ver post"). O visual do
+    card já sinaliza qual é o post recapitulado.
+formato: story
+arquivos:
+  - output/2026-05-30_story-recap-semana_03.png
+caption_source: null
+publicacao:
+  metodo: instagram_graph_api
+  acao_humana_necessaria: aprovacao_lucas_antes_de_postar
+tema_visual: dark
+observacao: >
+  Story 3 de 4 do encerramento Semana 4. Recap visual de SEX. Aprovado em batch pelo Lucas
+  em 2026-05-24 junto da pauta da semana. Schedule separado do recap original
+  (2026-05-30_story-recap-semana.yaml) pra permitir automação via Graph API.

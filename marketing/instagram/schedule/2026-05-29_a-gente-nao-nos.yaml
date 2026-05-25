@@ -1,0 +1,33 @@
+status: aprovado
+aprovado_em: '2026-05-24'
+aprovado_por: lucas
+slot:
+  data: '2026-05-29'
+  horario: 09:00 BRT
+  justificativa: >
+    Sexta 09:00 BRT — Semana 4 (Time e Cultura), Pilar Bastidor. Carrossel de 5 slides
+    explicando por que TriboCRM fala "a gente" e não "nós". Slot matinal de sexta funciona
+    pra peça de bastidor — encerra a semana mostrando critério de marca, gera afinidade
+    sem precisar entregar método novo (sexta é dia de respirar a tese da semana). Conecta
+    com o tema Cultura mostrando que cultura interna vira escolha de palavra externa.
+formato: carrossel
+slides: 5
+arquivos:
+  - output/2026-05-29_a-gente-nao-nos_01-capa.png
+  - output/2026-05-29_a-gente-nao-nos_02-decisao.png
+  - output/2026-05-29_a-gente-nao-nos_03-quem-fala.png
+  - output/2026-05-29_a-gente-nao-nos_04-o-que-muda.png
+  - output/2026-05-29_a-gente-nao-nos_05-cta.png
+caption_source: posts/2026-05-29_a-gente-nao-nos_05-cta.yaml#caption
+hashtags_inline_na_caption: true
+primeiro_comentario: null
+publicacao:
+  metodo: instagram_graph_api
+  acao_humana_necessaria: aprovacao_dada_em_2026-05-24_por_lucas_chat
+tema_visual: dark
+observacao: >
+  Pilar Bastidor da Semana 4. Mostra critério de marca por trás da escolha "a gente" vs
+  "nós" — palavra escolhida vira confiança pra PME brasileira que já levou cano de
+  software gringo traduzido. Peça meta-marca que reforça a tese da Semana 4 (cultura
+  comercial = escolha consciente, não acaso). Aprovado em batch pelo Lucas em 2026-05-24
+  junto da pauta da semana.

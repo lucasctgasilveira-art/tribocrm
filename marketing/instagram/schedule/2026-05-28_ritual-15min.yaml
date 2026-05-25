@@ -1,0 +1,35 @@
+status: aprovado
+aprovado_em: '2026-05-24'
+aprovado_por: lucas
+slot:
+  data: '2026-05-28'
+  horario: 09:00 BRT
+  justificativa: >
+    Quinta 09:00 BRT — Semana 4 (Time e Cultura), Pilar Método. Carrossel de 7 slides no tema
+    escuro entregando o ritual diário de 15 minutos (daily comercial). Slot matinal de quinta
+    funciona porque é a peça pivô da semana — passa o "como passar método pro time" (segunda)
+    + a dor da reunião sem número (terça) pra solução acionável: ritual de equipe diário.
+    Legenda mantém o termo "daily comercial" como apelido (Lucas autorizou — o resto da
+    legenda traduz pra "ritual de 15 minutos" e "equipe").
+formato: carrossel
+slides: 7
+arquivos:
+  - output/2026-05-28_ritual-15min_01-capa.png
+  - output/2026-05-28_ritual-15min_02-contexto.png
+  - output/2026-05-28_ritual-15min_03-passo1.png
+  - output/2026-05-28_ritual-15min_04-passo2.png
+  - output/2026-05-28_ritual-15min_05-passo3.png
+  - output/2026-05-28_ritual-15min_06-resultado.png
+  - output/2026-05-28_ritual-15min_07-cta.png
+caption_source: posts/2026-05-28_ritual-15min_07-cta.yaml#caption
+hashtags_inline_na_caption: true
+primeiro_comentario: null
+publicacao:
+  metodo: instagram_graph_api
+  acao_humana_necessaria: aprovacao_dada_em_2026-05-24_por_lucas_chat
+tema_visual: dark
+observacao: >
+  Pilar Método da Semana 4. Três regras do ritual diário (mesmo horário todo dia, cada
+  vendedor responde 3 coisas, pipeline aberto na tela). Peça pivô da semana — converte
+  dor de terça em ação concreta de equipe. Aprovado em batch pelo Lucas em 2026-05-24
+  junto da pauta da semana.
