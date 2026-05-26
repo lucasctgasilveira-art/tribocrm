@@ -1,15 +1,14 @@
-status: aprovado
+status: publicado
 aprovado_em: '2026-05-24'
 aprovado_por: lucas
 slot:
   data: '2026-05-26'
   horario: 09:00 BRT
   justificativa: >
-    Terça 09:00 BRT — Semana 4 (Time e Cultura), Pilar Dor. Carrossel de 6 slides no tema escuro
-    com hook "quando reunião de segunda vira sessão de terapia". Slot matinal de terça aterra a
-    dor exata vivida no dia anterior — o dono que saiu da reunião de segunda sem nenhum número
-    e ainda tá com a sensação fresca. Conecta com a abertura de segunda (M22 — passar método
-    pro time) mostrando o efeito colateral de não ter método: reunião que vira terapia coletiva.
+    Terça 09:00 BRT — Semana 4 (Time e Cultura), Pilar Dor. Carrossel de 6 slides no tema escuro com hook "quando
+    reunião de segunda vira sessão de terapia". Slot matinal de terça aterra a dor exata vivida no dia anterior — o dono
+    que saiu da reunião de segunda sem nenhum número e ainda tá com a sensação fresca. Conecta com a abertura de segunda
+    (M22 — passar método pro time) mostrando o efeito colateral de não ter método: reunião que vira terapia coletiva.
 formato: carrossel
 slides: 6
 arquivos:
@@ -27,6 +26,9 @@ publicacao:
   acao_humana_necessaria: aprovacao_dada_em_2026-05-24_por_lucas_chat
 tema_visual: dark
 observacao: >
-  Pilar Dor da Semana 4. Cena clássica de PME ("como tá o pipeline?" / "tô correndo atrás"),
-  tradução honesta da frase genérica, custo da reunião sem número, virada numa pergunta
-  específica. Aprovado em batch pelo Lucas em 2026-05-24 junto da pauta da semana.
+  Pilar Dor da Semana 4. Cena clássica de PME ("como tá o pipeline?" / "tô correndo atrás"), tradução honesta da frase
+  genérica, custo da reunião sem número, virada numa pergunta específica. Aprovado em batch pelo Lucas em 2026-05-24
+  junto da pauta da semana.
+published_at: '2026-05-26T16:19:14.775Z'
+media_id: '17921240130147073'
+permalink: https://www.instagram.com/p/DYzu9ocmz8p/
