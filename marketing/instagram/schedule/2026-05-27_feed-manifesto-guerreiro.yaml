@@ -1,15 +1,14 @@
-status: aprovado
+status: publicado
 aprovado_em: '2026-05-24'
 aprovado_por: lucas
 slot:
   data: '2026-05-27'
   horario: 12:30 BRT
   justificativa: >
-    Quarta 12:30 BRT — Semana 4 (Time e Cultura), Pilar Manifesto. Feed estático single ("Vendedor
-    sem método é guerreiro sem estratégia"). Slot horário de almoço aproveita a janela de
-    consumo rápido em que decisor PME abre o feed pra dar uma respirada. Frase curta de marca
-    funciona melhor isolada — sem carrossel, sem CTA pesado, só a tese pra fixar. Risco do hook
-    "guerreiro" (pode soar Herói) foi assumido pelo Lucas; legenda aterra em PT-BR popular pra
+    Quarta 12:30 BRT — Semana 4 (Time e Cultura), Pilar Manifesto. Feed estático single ("Vendedor sem método é
+    guerreiro sem estratégia"). Slot horário de almoço aproveita a janela de consumo rápido em que decisor PME abre o
+    feed pra dar uma respirada. Frase curta de marca funciona melhor isolada — sem carrossel, sem CTA pesado, só a tese
+    pra fixar. Risco do hook "guerreiro" (pode soar Herói) foi assumido pelo Lucas; legenda aterra em PT-BR popular pra
     compensar.
 formato: feed-estatico
 slides: 1
@@ -23,7 +22,9 @@ publicacao:
   acao_humana_necessaria: aprovacao_dada_em_2026-05-24_por_lucas_chat
 tema_visual: dark
 observacao: >
-  Pilar Manifesto da Semana 4. Hook origem Man16. Lucas manteve "guerreiro" mesmo com risco
-  estilístico — a linha do card mantém a palavra como provocação literal, e a legenda
-  aterrissa em "talento sem método é energia gasta no escuro". Aprovado em batch pelo Lucas
-  em 2026-05-24 junto da pauta da semana.
+  Pilar Manifesto da Semana 4. Hook origem Man16. Lucas manteve "guerreiro" mesmo com risco estilístico — a linha do
+  card mantém a palavra como provocação literal, e a legenda aterrissa em "talento sem método é energia gasta no
+  escuro". Aprovado em batch pelo Lucas em 2026-05-24 junto da pauta da semana.
+published_at: '2026-05-27T17:00:43.900Z'
+media_id: '18124591801712372'
+permalink: https://www.instagram.com/p/DY2YciMjY_4/
