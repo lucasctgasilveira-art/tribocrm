@@ -1,15 +1,14 @@
-status: aprovado
+status: publicado
 aprovado_em: '2026-05-24'
 aprovado_por: lucas
 slot:
   data: '2026-05-29'
   horario: 09:00 BRT
   justificativa: >
-    Sexta 09:00 BRT — Semana 4 (Time e Cultura), Pilar Bastidor. Carrossel de 5 slides
-    explicando por que TriboCRM fala "a gente" e não "nós". Slot matinal de sexta funciona
-    pra peça de bastidor — encerra a semana mostrando critério de marca, gera afinidade
-    sem precisar entregar método novo (sexta é dia de respirar a tese da semana). Conecta
-    com o tema Cultura mostrando que cultura interna vira escolha de palavra externa.
+    Sexta 09:00 BRT — Semana 4 (Time e Cultura), Pilar Bastidor. Carrossel de 5 slides explicando por que TriboCRM fala
+    "a gente" e não "nós". Slot matinal de sexta funciona pra peça de bastidor — encerra a semana mostrando critério de
+    marca, gera afinidade sem precisar entregar método novo (sexta é dia de respirar a tese da semana). Conecta com o
+    tema Cultura mostrando que cultura interna vira escolha de palavra externa.
 formato: carrossel
 slides: 5
 arquivos:
@@ -26,8 +25,10 @@ publicacao:
   acao_humana_necessaria: aprovacao_dada_em_2026-05-24_por_lucas_chat
 tema_visual: dark
 observacao: >
-  Pilar Bastidor da Semana 4. Mostra critério de marca por trás da escolha "a gente" vs
-  "nós" — palavra escolhida vira confiança pra PME brasileira que já levou cano de
-  software gringo traduzido. Peça meta-marca que reforça a tese da Semana 4 (cultura
-  comercial = escolha consciente, não acaso). Aprovado em batch pelo Lucas em 2026-05-24
-  junto da pauta da semana.
+  Pilar Bastidor da Semana 4. Mostra critério de marca por trás da escolha "a gente" vs "nós" — palavra escolhida vira
+  confiança pra PME brasileira que já levou cano de software gringo traduzido. Peça meta-marca que reforça a tese da
+  Semana 4 (cultura comercial = escolha consciente, não acaso). Aprovado em batch pelo Lucas em 2026-05-24 junto da
+  pauta da semana.
+published_at: '2026-05-29T14:27:50.093Z'
+media_id: '18067814213698156'
+permalink: https://www.instagram.com/p/DY7QlBWFPyn/
