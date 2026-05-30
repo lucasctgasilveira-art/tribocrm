@@ -1,16 +1,14 @@
-status: aprovado
+status: publicado
 aprovado_em: '2026-05-24'
 aprovado_por: lucas
 slot:
   data: '2026-05-30'
-  horario: '10:30 BRT'
+  horario: 10:30 BRT
   justificativa: >
-    Sábado 10:30 BRT — story 1 de 4 do encerramento da Semana 4 (Time e Cultura). Recap
-    visual do carrossel de TER (2026-05-26 "reunião comercial que vira terapia"). Janela
-    manhã de sábado funciona pra story porque é horário de consumo leve em que decisor PME
-    revisita o feed da semana de bobeira no celular. Story estático puro — sem sticker
-    interativo (Graph API não suporta sticker "Ver post"). O visual do card já sinaliza
-    qual é o post recapitulado.
+    Sábado 10:30 BRT — story 1 de 4 do encerramento da Semana 4 (Time e Cultura). Recap visual do carrossel de TER
+    (2026-05-26 "reunião comercial que vira terapia"). Janela manhã de sábado funciona pra story porque é horário de
+    consumo leve em que decisor PME revisita o feed da semana de bobeira no celular. Story estático puro — sem sticker
+    interativo (Graph API não suporta sticker "Ver post"). O visual do card já sinaliza qual é o post recapitulado.
 formato: story
 arquivos:
   - output/2026-05-30_story-recap-semana_01.png
@@ -20,6 +18,9 @@ publicacao:
   acao_humana_necessaria: aprovacao_lucas_antes_de_postar
 tema_visual: dark
 observacao: >
-  Story 1 de 4 do encerramento Semana 4. Recap visual de TER. Aprovado em batch pelo Lucas
-  em 2026-05-24 junto da pauta da semana. Schedule separado do recap original
-  (2026-05-30_story-recap-semana.yaml) pra permitir automação via Graph API.
+  Story 1 de 4 do encerramento Semana 4. Recap visual de TER. Aprovado em batch pelo Lucas em 2026-05-24 junto da pauta
+  da semana. Schedule separado do recap original (2026-05-30_story-recap-semana.yaml) pra permitir automação via Graph
+  API.
+published_at: '2026-05-30T14:08:33.138Z'
+media_id: '17932025838274956'
+permalink: https://www.instagram.com/stories/tribocrmoficial/3908504912468949204
