@@ -1,0 +1,17 @@
+# --------------------------------------------------------
+# Pauta: Slide 1 (capa) — Carrossel "Funil parte 4: Fechamento sem empurrão"
+# Calendário: SEX 05/06/2026 · Semana 5 · Mês 2 (SÉRIE FUNIL EM 4 PARTES)
+# Pilar: MÉTODO · Etapa 4/4 (Fechamento) — encerra a série
+# Status: pending_review
+# Tema: ESCURO (default)
+# --------------------------------------------------------
+template: carrossel-metodo-capa
+slug: 2026-06-05_funil-fechamento_01-capa
+data:
+  pilar: "Método · Funil 4/4"
+  titulo: |
+    Fechar não é<br>
+    <span class="t-orange">empurrar</span>.<br>
+    É confirmar.
+  slide-number: "01 / 08"
+  handle: "@tribocrmoficial"

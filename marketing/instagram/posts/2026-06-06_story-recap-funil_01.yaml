@@ -1,0 +1,22 @@
+# --------------------------------------------------------
+# Pauta: Story recap 1 — recap SEG + TER (Atração + Qualificação)
+# Calendário: SAB 06/06/2026 · Semana 5 · Mês 2 (SÉRIE FUNIL EM 4 PARTES)
+# Pilar: STORY (recap)
+# Status: pending_review
+# Observação: Story só. Sem caption.
+# --------------------------------------------------------
+template: story-recap
+slug: 2026-06-06_story-recap-funil_01
+data:
+  eyebrow: "Funil em 4 partes · 1 e 2"
+  headline: |
+    Atração que<br>
+    não some e a<br>
+    qualificação<br>
+    que ninguém faz.
+  subline: |
+    As duas primeiras etapas da semana:
+    juntar gente certa e ter coragem
+    de qualificar quem realmente compra.
+  cta: "↑ Arrasta pra cima · vai pro feed"
+  handle: "@tribocrmoficial"

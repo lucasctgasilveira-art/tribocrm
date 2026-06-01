@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 2 — Cena (lead entra muito, fecha pouco)
+# Calendário: QUA 03/06/2026 · Semana 5 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-06-03_funil-furado_02-cena
+theme: light
+data:
+  pilar: "A cena"
+  step-num: ""
+  titulo: "Entra muito lead. Fecha pouco cliente."
+  body-1: |
+    <span class="miolo-emphasis">O topo do funil tá cheio.
+    A base tá vazia.</span>
+  body-2: |
+    Você olha o WhatsApp lotado e pensa
+    que falta gente. Não falta gente.
+    Falta o lead chegar inteiro até o fim.
+  slide-number: "02 / 06"
+  handle: "@tribocrmoficial"

@@ -1,0 +1,19 @@
+# --------------------------------------------------------
+# Pauta: Slide 7 — Síntese (atração boa é atração medida)
+# Calendário: SEG 01/06/2026 · Semana 5 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-06-01_funil-atracao_07-sintese
+data:
+  pilar: "A síntese"
+  step-num: ""
+  titulo: "Atração não é volume. É começo de funil que dá pra seguir."
+  body-1: |
+    <span class="miolo-emphasis">Origem marcada, resposta rápida,
+    contato separado de oportunidade.</span>
+  body-2: |
+    Com isso, a próxima etapa recebe
+    lead organizado em vez de bagunça.
+    É aí que a qualificação começa a funcionar.
+  slide-number: "07 / 08"
+  handle: "@tribocrmoficial"

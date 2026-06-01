@@ -1,0 +1,19 @@
+# --------------------------------------------------------
+# Pauta: Slide 2 — Dor (proposta vira vácuo)
+# Calendário: QUI 04/06/2026 · Semana 5 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-06-04_funil-proposta_02-dor
+data:
+  pilar: "A dor"
+  step-num: ""
+  titulo: "Proposta enviada virou silêncio."
+  body-1: |
+    <span class="miolo-emphasis">Você caprichou no PDF, mandou no e-mail,
+    e agora espera o lead responder.</span>
+  body-2: |
+    Passa um dia. Passa uma semana.
+    Você fica sem saber se ele leu,
+    se gostou, ou se já fechou com outro.
+  slide-number: "02 / 08"
+  handle: "@tribocrmoficial"

@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 6 — Passo 3: sai com próxima data marcada
+# Calendário: QUI 04/06/2026 · Semana 5 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-06-04_funil-proposta_06-passo3
+data:
+  pilar: "Passo 3 · Marca o retorno"
+  step-num: "PASSO 3"
+  titulo: "Nenhuma proposta sai sem data de resposta."
+  body-1: |
+    <span class="miolo-emphasis">"Te procuro depois" mata mais venda
+    que preço alto.</span>
+  body-2: |
+    Antes de encerrar, combina o retorno
+    e marca a data no sistema: "te ligo quinta
+    às 10h pra fechar". A data marcada no sistema
+    tira a proposta do limbo.
+  slide-number: "06 / 08"
+  handle: "@tribocrmoficial"

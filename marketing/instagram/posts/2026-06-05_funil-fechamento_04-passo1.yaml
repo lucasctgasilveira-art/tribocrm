@@ -1,0 +1,19 @@
+# --------------------------------------------------------
+# Pauta: Slide 4 — Passo 1: pergunta direta de fechamento
+# Calendário: SEX 05/06/2026 · Semana 5 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-06-05_funil-fechamento_04-passo1
+data:
+  pilar: "Passo 1 · Pergunta o sim"
+  step-num: "PASSO 1"
+  titulo: "Quando o sim tá na hora, o pipeline avisa."
+  body-1: |
+    <span class="miolo-emphasis">Lead qualificado, proposta aceita, retorno marcado —
+    a etapa no sistema mostra que tá na hora de perguntar.</span>
+  body-2: |
+    "Tá tudo certo pra começarmos?" deixa de ser
+    susto e vira o passo óbvio que a tela aponta.
+    A gente fecha lendo o pipeline, não no chute.
+  slide-number: "04 / 08"
+  handle: "@tribocrmoficial"

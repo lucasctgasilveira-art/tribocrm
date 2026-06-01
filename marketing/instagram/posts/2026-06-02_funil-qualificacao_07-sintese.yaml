@@ -1,0 +1,19 @@
+# --------------------------------------------------------
+# Pauta: Slide 7 — Síntese (qualificar é proteger tempo)
+# Calendário: TER 02/06/2026 · Semana 5 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-06-02_funil-qualificacao_07-sintese
+data:
+  pilar: "A síntese"
+  step-num: ""
+  titulo: "Qualificar é proteger o tempo de quem vende."
+  body-1: |
+    <span class="miolo-emphasis">Dor, decisor e pressa confirmados —
+    o vendedor sabe onde colocar energia.</span>
+  body-2: |
+    O lead que passa por aqui chega
+    na proposta já meio vendido.
+    É disso que a parte 3 vai falar.
+  slide-number: "07 / 08"
+  handle: "@tribocrmoficial"

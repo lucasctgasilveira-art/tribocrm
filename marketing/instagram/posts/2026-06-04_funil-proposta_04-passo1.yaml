@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 4 — Passo 1: apresenta a proposta junto
+# Calendário: QUI 04/06/2026 · Semana 5 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-06-04_funil-proposta_04-passo1
+data:
+  pilar: "Passo 1 · Apresenta junto"
+  step-num: "PASSO 1"
+  titulo: "Nunca manda proposta. Apresenta."
+  body-1: |
+    <span class="miolo-emphasis">Marca 15 minutos pra mostrar a proposta
+    com o lead na linha, não no e-mail sozinho.</span>
+  body-2: |
+    Aí você ouve a reação na hora,
+    responde a dúvida na hora,
+    e a proposta não vira um PDF órfão
+    perdido na caixa de entrada.
+  slide-number: "04 / 08"
+  handle: "@tribocrmoficial"

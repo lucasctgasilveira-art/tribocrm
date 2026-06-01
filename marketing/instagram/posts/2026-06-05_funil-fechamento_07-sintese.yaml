@@ -1,0 +1,19 @@
+# --------------------------------------------------------
+# Pauta: Slide 7 — Síntese (fecha a série inteira)
+# Calendário: SEX 05/06/2026 · Semana 5 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-06-05_funil-fechamento_07-sintese
+data:
+  pilar: "A síntese · Fim da série"
+  step-num: ""
+  titulo: "Funil inteiro: atrai certo, qualifica, apresenta, confirma."
+  body-1: |
+    <span class="miolo-emphasis">Quatro etapas, cada uma entregando
+    o lead organizado pra próxima.</span>
+  body-2: |
+    Sem método em cada uma, o funil vira
+    corredor: o lead entra rápido e sai
+    mais rápido ainda. Com método, vira venda.
+  slide-number: "07 / 08"
+  handle: "@tribocrmoficial"

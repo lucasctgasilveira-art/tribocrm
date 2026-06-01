@@ -1,0 +1,19 @@
+# --------------------------------------------------------
+# Pauta: Slide 3 — Erro (medo de qualificar pra não perder lead)
+# Calendário: TER 02/06/2026 · Semana 5 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-06-02_funil-qualificacao_03-erro
+data:
+  pilar: "O erro"
+  step-num: ""
+  titulo: "Qualificar parece perder lead. É o contrário."
+  body-1: |
+    <span class="miolo-emphasis">Tem dono que evita perguntar
+    porque acha que vai espantar o cliente.</span>
+  body-2: |
+    Mas perguntar não espanta quem quer comprar.
+    Espanta só quem ia te enrolar três semanas
+    pra no fim dizer "vou pensar".
+  slide-number: "03 / 08"
+  handle: "@tribocrmoficial"

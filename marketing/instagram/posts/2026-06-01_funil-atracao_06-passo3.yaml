@@ -1,0 +1,19 @@
+# --------------------------------------------------------
+# Pauta: Slide 6 — Passo 3: separa contato de oportunidade
+# Calendário: SEG 01/06/2026 · Semana 5 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-06-01_funil-atracao_06-passo3
+data:
+  pilar: "Passo 3 · Separa o joio"
+  step-num: "PASSO 3"
+  titulo: "Nem todo contato é oportunidade."
+  body-1: |
+    <span class="miolo-emphasis">Contato é só alguém que apareceu.
+    Oportunidade é quem tem dor, grana e pressa.</span>
+  body-2: |
+    Misturar os dois no mesmo balde
+    faz o vendedor correr atrás de quem
+    nunca ia comprar — e esquecer quem ia.
+  slide-number: "06 / 08"
+  handle: "@tribocrmoficial"

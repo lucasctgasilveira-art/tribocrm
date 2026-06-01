@@ -1,0 +1,19 @@
+# --------------------------------------------------------
+# Pauta: Slide 3 — Erro (o que faz a atração vazar)
+# Calendário: SEG 01/06/2026 · Semana 5 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-06-01_funil-atracao_03-erro
+data:
+  pilar: "O erro"
+  step-num: ""
+  titulo: "O lead entra e ninguém anota de onde veio."
+  body-1: |
+    <span class="miolo-emphasis">Sem origem registrada, você não sabe
+    qual canal traz cliente e qual traz curioso.</span>
+  body-2: |
+    Continua gastando energia igual nos dois.
+    Mês que vem, repete o mesmo gasto
+    sem saber o que deu certo.
+  slide-number: "03 / 08"
+  handle: "@tribocrmoficial"

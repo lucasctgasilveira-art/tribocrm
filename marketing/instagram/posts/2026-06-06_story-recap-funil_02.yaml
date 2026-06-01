@@ -1,0 +1,19 @@
+# --------------------------------------------------------
+# Pauta: Story recap 2 — recap QUA + QUI (Funil furado + Proposta)
+# Calendário: SAB 06/06/2026 · Semana 5 · Mês 2
+# --------------------------------------------------------
+template: story-recap
+slug: 2026-06-06_story-recap-funil_02
+data:
+  eyebrow: "Da quarta e quinta"
+  headline: |
+    O furo que<br>
+    escorre venda<br>
+    e a proposta<br>
+    que vira silêncio.
+  subline: |
+    A dor que une a série — lead vazando no
+    meio — e como apresentar proposta sem
+    ela sumir na caixa de entrada.
+  cta: "↑ Arrasta pra cima · vai pro feed"
+  handle: "@tribocrmoficial"

@@ -1,0 +1,21 @@
+# --------------------------------------------------------
+# Pauta: Story recap 3 — recap SEX (Fechamento) + MANIFESTO embutido
+# Calendário: SAB 06/06/2026 · Semana 5 · Mês 2
+# Decisão Lucas: o manifesto "Funil sem método é corredor" entra AQUI,
+#                como frase-fechamento do recap (preserva 5 peças de feed).
+# --------------------------------------------------------
+template: story-recap
+slug: 2026-06-06_story-recap-funil_03
+data:
+  eyebrow: "Fechamento de sexta · e a tese da semana"
+  headline: |
+    Funil sem<br>
+    método é<br>
+    corredor.
+  subline: |
+    Fechar não é empurrar, é confirmar. E a
+    semana inteira prova a tese: sem método em
+    cada etapa, o lead entra rápido e sai mais
+    rápido ainda.
+  cta: "↑ Arrasta pra cima · vê a série completa"
+  handle: "@tribocrmoficial"

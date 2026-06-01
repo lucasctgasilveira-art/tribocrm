@@ -1,0 +1,19 @@
+# --------------------------------------------------------
+# Pauta: Slide 2 — Dor (medo de fechar)
+# Calendário: SEX 05/06/2026 · Semana 5 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-06-05_funil-fechamento_02-dor
+data:
+  pilar: "A dor"
+  step-num: ""
+  titulo: "O vendedor faz tudo certo e trava na hora de pedir o sim."
+  body-1: |
+    <span class="miolo-emphasis">Qualifica, apresenta, responde tudo —
+    e na hora de fechar fica esperando o lead decidir sozinho.</span>
+  body-2: |
+    Aí o lead esfria, some, ou aparece
+    um concorrente que teve coragem
+    de perguntar "fechamos?".
+  slide-number: "02 / 08"
+  handle: "@tribocrmoficial"

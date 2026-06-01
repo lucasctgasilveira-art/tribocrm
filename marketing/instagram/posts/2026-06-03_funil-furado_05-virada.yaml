@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 5 — Virada (achar o furo antes de encher o topo)
+# Calendário: QUA 03/06/2026 · Semana 5 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-06-03_funil-furado_05-virada
+theme: light
+data:
+  pilar: "A virada"
+  step-num: ""
+  titulo: "Antes de buscar mais lead, acha o furo."
+  body-1: |
+    <span class="miolo-emphasis">Olha cada etapa e pergunta:
+    quantos entraram aqui e quantos passaram pra frente?</span>
+  body-2: |
+    A etapa que mais segura lead é o teu furo.
+    Tapa esse primeiro. Aí sim vale a pena
+    encher o topo de novo.
+  slide-number: "05 / 06"
+  handle: "@tribocrmoficial"

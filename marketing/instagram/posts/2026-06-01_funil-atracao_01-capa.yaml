@@ -1,0 +1,18 @@
+# --------------------------------------------------------
+# Pauta: Slide 1 (capa) — Carrossel "Funil parte 1: Atração que não some no dia seguinte"
+# Calendário: SEG 01/06/2026 · Semana 5 · Mês 2 (SÉRIE FUNIL EM 4 PARTES)
+# Pilar: MÉTODO · Etapa 1/4 (Atração)
+# Status: pending_review
+# Tema: ESCURO (default)
+# Hook origem: Banco de hooks · Funil e etapas
+# --------------------------------------------------------
+template: carrossel-metodo-capa
+slug: 2026-06-01_funil-atracao_01-capa
+data:
+  pilar: "Método · Funil 1/4"
+  titulo: |
+    O lead chega.<br>
+    E <span class="t-orange">some</span> antes<br>
+    de virar cliente.
+  slide-number: "01 / 08"
+  handle: "@tribocrmoficial"

@@ -1,0 +1,18 @@
+# --------------------------------------------------------
+# Pauta: Slide 1 (capa) — Carrossel-DOR "Teu funil não tá lento. Tá furado."
+# Calendário: QUA 03/06/2026 · Semana 5 · Mês 2 (SÉRIE FUNIL EM 4 PARTES)
+# Pilar: DOR · amarra a série (entre Qualificação e Proposta)
+# Status: pending_review
+# Tema: ESCURO (default)
+# Decisão Lucas: CARROSSEL-DOR (NÃO reel). Gera 100% pelo pipeline.
+# --------------------------------------------------------
+template: carrossel-metodo-capa
+slug: 2026-06-03_funil-furado_01-capa
+data:
+  pilar: "Dor · Funil"
+  titulo: |
+    Teu funil não<br>
+    tá lento. Tá<br>
+    <span class="t-orange">furado</span>.
+  slide-number: "01 / 06"
+  handle: "@tribocrmoficial"

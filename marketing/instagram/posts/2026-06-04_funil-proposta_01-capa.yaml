@@ -1,0 +1,17 @@
+# --------------------------------------------------------
+# Pauta: Slide 1 (capa) — Carrossel "Funil parte 3: Proposta que não some"
+# Calendário: QUI 04/06/2026 · Semana 5 · Mês 2 (SÉRIE FUNIL EM 4 PARTES)
+# Pilar: MÉTODO · Etapa 3/4 (Proposta)
+# Status: pending_review
+# Tema: ESCURO (default)
+# --------------------------------------------------------
+template: carrossel-metodo-capa
+slug: 2026-06-04_funil-proposta_01-capa
+data:
+  pilar: "Método · Funil 3/4"
+  titulo: |
+    Você mandou a<br>
+    proposta. E o lead<br>
+    <span class="t-orange">sumiu</span>.
+  slide-number: "01 / 08"
+  handle: "@tribocrmoficial"

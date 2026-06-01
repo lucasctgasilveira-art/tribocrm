@@ -1,0 +1,19 @@
+# --------------------------------------------------------
+# Pauta: Slide 4 — Passo 1: registra a origem de todo lead
+# Calendário: SEG 01/06/2026 · Semana 5 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-06-01_funil-atracao_04-passo1
+data:
+  pilar: "Passo 1 · Marca a origem"
+  step-num: "PASSO 1"
+  titulo: "Anota de onde cada lead veio."
+  body-1: |
+    <span class="miolo-emphasis">Indicação, anúncio, Instagram, feira, site —
+    cada lead entra no sistema com a origem marcada.</span>
+  body-2: |
+    Trinta dias disso e a tela mostra
+    qual canal vira cliente de verdade.
+    Aí a gente para de gastar onde só entra curioso.
+  slide-number: "04 / 08"
+  handle: "@tribocrmoficial"

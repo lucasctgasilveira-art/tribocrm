@@ -1,0 +1,19 @@
+# --------------------------------------------------------
+# Pauta: Slide 2 — Dor (tratar todo lead igual)
+# Calendário: TER 02/06/2026 · Semana 5 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-06-02_funil-qualificacao_02-dor
+data:
+  pilar: "A dor"
+  step-num: ""
+  titulo: "Sua PME trata todo lead como se fosse o último."
+  body-1: |
+    <span class="miolo-emphasis">Lead bom e lead ruim recebem
+    o mesmo tempo, a mesma proposta, a mesma corrida.</span>
+  body-2: |
+    Resultado: o vendedor gasta a semana
+    com quem nunca ia comprar e chega
+    cansado em quem ia fechar.
+  slide-number: "02 / 08"
+  handle: "@tribocrmoficial"

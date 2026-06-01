@@ -1,0 +1,17 @@
+# --------------------------------------------------------
+# Pauta: Slide 1 (capa) — Carrossel "Funil parte 2: Qualificação que ninguém faz"
+# Calendário: TER 02/06/2026 · Semana 5 · Mês 2 (SÉRIE FUNIL EM 4 PARTES)
+# Pilar: MÉTODO · Etapa 2/4 (Qualificação)
+# Status: pending_review
+# Tema: ESCURO (default)
+# --------------------------------------------------------
+template: carrossel-metodo-capa
+slug: 2026-06-02_funil-qualificacao_01-capa
+data:
+  pilar: "Método · Funil 2/4"
+  titulo: |
+    A etapa do funil<br>
+    que <span class="t-orange">ninguém faz</span><br>
+    porque dá trabalho.
+  slide-number: "01 / 08"
+  handle: "@tribocrmoficial"

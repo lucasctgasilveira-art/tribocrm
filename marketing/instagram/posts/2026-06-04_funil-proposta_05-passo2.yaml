@@ -1,0 +1,19 @@
+# --------------------------------------------------------
+# Pauta: Slide 5 — Passo 2: amarra na dor, não no produto
+# Calendário: QUI 04/06/2026 · Semana 5 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-06-04_funil-proposta_05-passo2
+data:
+  pilar: "Passo 2 · Amarra na dor"
+  step-num: "PASSO 2"
+  titulo: "A proposta fala da dor dele, não do teu produto."
+  body-1: |
+    <span class="miolo-emphasis">Lead não compra item de lista.
+    Compra o problema dele resolvido.</span>
+  body-2: |
+    Abre a proposta lembrando o que ele
+    te contou que doía. Aí o preço aparece
+    como o que resolve, não como gasto.
+  slide-number: "05 / 08"
+  handle: "@tribocrmoficial"

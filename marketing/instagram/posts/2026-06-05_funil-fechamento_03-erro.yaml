@@ -1,0 +1,19 @@
+# --------------------------------------------------------
+# Pauta: Slide 3 — Erro (achar que fechamento é momento mágico)
+# Calendário: SEX 05/06/2026 · Semana 5 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-06-05_funil-fechamento_03-erro
+data:
+  pilar: "O erro"
+  step-num: ""
+  titulo: "Fechamento não é uma frase mágica no final."
+  body-1: |
+    <span class="miolo-emphasis">Muita gente procura a técnica certa
+    pra "virar" o cliente no último minuto.</span>
+  body-2: |
+    Mas se as três etapas antes foram bem feitas,
+    o fechamento é só a conta fechando.
+    Empurrão no fim é remendo de etapa mal feita.
+  slide-number: "03 / 08"
+  handle: "@tribocrmoficial"

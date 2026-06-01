@@ -1,0 +1,19 @@
+# --------------------------------------------------------
+# Pauta: Slide 3 — Erro (mandar proposta cedo demais)
+# Calendário: QUI 04/06/2026 · Semana 5 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-06-04_funil-proposta_03-erro
+data:
+  pilar: "O erro"
+  step-num: ""
+  titulo: "A proposta sumiu porque foi enviada cedo demais."
+  body-1: |
+    <span class="miolo-emphasis">Mandar proposta no primeiro "me manda um valor"
+    é entregar preço antes de construir desejo.</span>
+  body-2: |
+    Sem a dor confirmada e o valor combinado,
+    a proposta vira só um número.
+    E número solto é fácil de ignorar.
+  slide-number: "03 / 08"
+  handle: "@tribocrmoficial"

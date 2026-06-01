@@ -1,0 +1,19 @@
+# --------------------------------------------------------
+# Pauta: Slide 4 — Passo 1: pergunta da dor (não do orçamento)
+# Calendário: TER 02/06/2026 · Semana 5 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-06-02_funil-qualificacao_04-passo1
+data:
+  pilar: "Passo 1 · Acha a dor"
+  step-num: "PASSO 1"
+  titulo: "Pergunta o impacto, não o orçamento."
+  body-1: |
+    <span class="miolo-emphasis">Não é "qual seu orçamento?".
+    É "o que acontece se isso continuar do jeito que tá?".</span>
+  body-2: |
+    Pergunta diferente, resposta diferente.
+    Quem sente a dor responde rápido.
+    Quem tá só pesquisando, enrola.
+  slide-number: "04 / 08"
+  handle: "@tribocrmoficial"

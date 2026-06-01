@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 4 — Custo (o que o furo cobra)
+# Calendário: QUA 03/06/2026 · Semana 5 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-06-03_funil-furado_04-custo
+theme: light
+data:
+  pilar: "O custo"
+  step-num: ""
+  titulo: "Funil furado faz você gastar mais pra vender o mesmo."
+  body-1: |
+    <span class="miolo-emphasis">Você bota mais anúncio, mais lead, mais corrida —
+    e o número final quase não mexe.</span>
+  body-2: |
+    Porque o problema não é a entrada.
+    É o vazamento no meio. Encher mais o topo
+    de um balde furado só molha o chão.
+  slide-number: "04 / 06"
+  handle: "@tribocrmoficial"

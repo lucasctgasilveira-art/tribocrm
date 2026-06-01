@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 3 — Tradução (onde o lead vaza)
+# Calendário: QUA 03/06/2026 · Semana 5 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-06-03_funil-furado_03-traducao
+theme: light
+data:
+  pilar: "A tradução"
+  step-num: ""
+  titulo: "O lead não some sozinho. Ele cai num buraco."
+  body-1: |
+    <span class="miolo-emphasis">Buraco da atração sem origem.
+    Buraco da qualificação que ninguém faz.</span>
+  body-2: |
+    Buraco da proposta que some na caixa de entrada.
+    Buraco do fechamento sem próxima data.
+    Cada buraco escorre venda sem você ver.
+  slide-number: "03 / 06"
+  handle: "@tribocrmoficial"

@@ -1,0 +1,21 @@
+status: aprovado
+slot:
+  data: '2026-06-06'
+  horario: '10:30 BRT'
+  justificativa: >
+    Sábado 10:30 BRT — story 1 de 3 do encerramento da Semana 5 (Série "Funil em 4 partes").
+    Recap visual das etapas 1 e 2 (Atração de segunda + Qualificação de terça). Horário replicado
+    da semana anterior (stories de sábado a partir de 10:30, em sequência de 2 min). Story estático
+    puro — sem sticker interativo (Graph API não suporta sticker "Ver post"). O visual do card já
+    sinaliza qual parte da série é recapitulada.
+formato: story
+arquivos:
+  - output/2026-06-06_story-recap-funil_01.png
+caption_source: null
+publicacao:
+  metodo: instagram_graph_api
+  acao_humana_necessaria: aprovacao_lucas_antes_de_postar
+tema_visual: dark
+observacao: >
+  Story 1 de 3 do encerramento Semana 5. Recap das etapas Atração + Qualificação. Sai automático
+  via Graph API. Pendente de aprovação do Lucas.

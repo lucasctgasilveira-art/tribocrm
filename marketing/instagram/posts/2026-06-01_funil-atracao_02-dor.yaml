@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 2 — Dor (a atração existe, mas vaza)
+# Calendário: SEG 01/06/2026 · Semana 5 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-06-01_funil-atracao_02-dor
+data:
+  pilar: "A primeira etapa"
+  step-num: ""
+  titulo: "Atração não é juntar gente. É juntar gente certa."
+  body-1: |
+    <span class="miolo-emphasis">Muita PME mede atração pelo número
+    de contato que entra.</span>
+  body-2: |
+    Aí o WhatsApp lota, o vendedor
+    fica ocupado o dia inteiro,
+    e no fim do mês quase ninguém
+    daquele monte virou cliente.
+  slide-number: "02 / 08"
+  handle: "@tribocrmoficial"

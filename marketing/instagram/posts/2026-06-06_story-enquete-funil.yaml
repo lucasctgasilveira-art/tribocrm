@@ -1,0 +1,22 @@
+# --------------------------------------------------------
+# Pauta: Story enquete OPCIONAL "Qual etapa do teu funil mais vaza?"
+# Calendário: SAB 06/06/2026 · Semana 5 · Mês 2
+# Pilar: STORY (interação)
+# STATUS: DESCARTADO (decisão Lucas 01/06/2026) — enquete NÃO entra esta semana.
+#         Sábado fecha em 3 stories de recap. Slide-fonte mantido (reversível),
+#         mas NÃO renderizado e NÃO publicado. Schedule correspondente: status=descartado.
+# Observação: Story só. Sem caption. Sticker enquete = manual no app (Graph API não suporta).
+# --------------------------------------------------------
+template: story-enquete
+slug: 2026-06-06_story-enquete-funil
+data:
+  pilar: "Pergunta da semana"
+  pergunta: |
+    Qual etapa do teu<br>
+    funil mais vaza lead?
+  opcao-a: |
+    Atração /<br>Qualificação
+  opcao-b: |
+    Proposta /<br>Fechamento
+  cta: "Manda DM se quiser achar o furo 🔥"
+  handle: "@tribocrmoficial"
