@@ -1,13 +1,12 @@
-status: aprovado
+status: publicado
 slot:
   data: '2026-06-01'
   horario: 09:00 BRT
   justificativa: >
-    Segunda 09:00 BRT — abertura da Semana 5 (Série "Funil em 4 partes"). Carrossel de 8 slides
-    no tema escuro com a etapa 1 do funil: Atração. Horário replicado da semana anterior (SEG 09:00).
-    Cai cedo na segunda pra abrir a série inteira da semana — uma etapa do funil por dia. Resolve a
-    dor do dono que mede atração por número de contato e descobre no fim do mês que quase ninguém
-    daquele monte virou cliente.
+    Segunda 09:00 BRT — abertura da Semana 5 (Série "Funil em 4 partes"). Carrossel de 8 slides no tema escuro com a
+    etapa 1 do funil: Atração. Horário replicado da semana anterior (SEG 09:00). Cai cedo na segunda pra abrir a série
+    inteira da semana — uma etapa do funil por dia. Resolve a dor do dono que mede atração por número de contato e
+    descobre no fim do mês que quase ninguém daquele monte virou cliente.
 formato: carrossel
 slides: 8
 arquivos:
@@ -27,6 +26,8 @@ publicacao:
   acao_humana_necessaria: aprovacao_lucas_antes_de_postar
 tema_visual: dark
 observacao: >
-  Abre a Série "Funil em 4 partes" (Semana 5, Mês 2). Etapa 1/4 — Atração. Três passos:
-  marca a origem de cada lead, responde rápido, separa contato de oportunidade. Tema escuro
-  padrão. Pendente de aprovação do Lucas.
+  Abre a Série "Funil em 4 partes" (Semana 5, Mês 2). Etapa 1/4 — Atração. Três passos: marca a origem de cada lead,
+  responde rápido, separa contato de oportunidade. Tema escuro padrão. Pendente de aprovação do Lucas.
+published_at: '2026-06-01T18:26:35.025Z'
+media_id: '18080514896185352'
+permalink: https://www.instagram.com/p/DZDaUmQCQjP/
