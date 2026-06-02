@@ -1,12 +1,12 @@
-status: aprovado
+status: publicado
 slot:
   data: '2026-06-02'
   horario: 09:00 BRT
   justificativa: >
-    Terça 09:00 BRT — Semana 5 (Série "Funil em 4 partes"), etapa 2: Qualificação. Carrossel de
-    8 slides no tema escuro. Horário replicado da semana anterior (TER ~09:00). Encadeia com a
-    Atração de segunda: o lead que entrou organizado agora precisa ser qualificado. Aterra a dor
-    do dono que trata todo lead igual e gasta a semana com quem nunca ia comprar.
+    Terça 09:00 BRT — Semana 5 (Série "Funil em 4 partes"), etapa 2: Qualificação. Carrossel de 8 slides no tema escuro.
+    Horário replicado da semana anterior (TER ~09:00). Encadeia com a Atração de segunda: o lead que entrou organizado
+    agora precisa ser qualificado. Aterra a dor do dono que trata todo lead igual e gasta a semana com quem nunca ia
+    comprar.
 formato: carrossel
 slides: 8
 arquivos:
@@ -26,6 +26,9 @@ publicacao:
   acao_humana_necessaria: aprovacao_lucas_antes_de_postar
 tema_visual: dark
 observacao: >
-  Série "Funil em 4 partes" (Semana 5, Mês 2). Etapa 2/4 — Qualificação. Três passos:
-  pergunta o impacto (não o orçamento), descobre cedo quem assina, sabe dar o "boa sorte"
-  pra lead ruim. Tema escuro padrão. Pendente de aprovação do Lucas.
+  Série "Funil em 4 partes" (Semana 5, Mês 2). Etapa 2/4 — Qualificação. Três passos: pergunta o impacto (não o
+  orçamento), descobre cedo quem assina, sabe dar o "boa sorte" pra lead ruim. Tema escuro padrão. Pendente de aprovação
+  do Lucas.
+published_at: '2026-06-02T14:57:56.472Z'
+media_id: '18077034947402996'
+permalink: https://www.instagram.com/p/DZFnOcllC3l/
