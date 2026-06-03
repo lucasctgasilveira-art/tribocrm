@@ -1,14 +1,13 @@
-status: aprovado
+status: publicado
 slot:
   data: '2026-06-03'
   horario: 09:00 BRT
   justificativa: >
-    Quarta 09:00 BRT — Semana 5 (Série "Funil em 4 partes"), Pilar DOR. Carrossel-DOR de 6 slides
-    no tema escuro com tema light nos slides de cena/tradução/custo/virada (espelha o padrão dor
-    da semana anterior). Horário replicado da semana anterior. Decisão do Lucas: CARROSSEL-DOR
-    (NÃO reel) — gera 100% pelo pipeline, sem gravação, e mantém o padrão de carrosséis que vem
-    performando em saves/1k. Faz a pausa no meio da série pra aterrar a dor que une as 4 etapas:
-    funil furado vaza lead no meio.
+    Quarta 09:00 BRT — Semana 5 (Série "Funil em 4 partes"), Pilar DOR. Carrossel-DOR de 6 slides no tema escuro com
+    tema light nos slides de cena/tradução/custo/virada (espelha o padrão dor da semana anterior). Horário replicado da
+    semana anterior. Decisão do Lucas: CARROSSEL-DOR (NÃO reel) — gera 100% pelo pipeline, sem gravação, e mantém o
+    padrão de carrosséis que vem performando em saves/1k. Faz a pausa no meio da série pra aterrar a dor que une as 4
+    etapas: funil furado vaza lead no meio.
 formato: carrossel
 slides: 6
 arquivos:
@@ -26,7 +25,9 @@ publicacao:
   acao_humana_necessaria: aprovacao_lucas_antes_de_postar
 tema_visual: dark
 observacao: >
-  Pilar Dor da Semana 5, no meio da série. Carrossel-dor (decisão do Lucas: não reel).
-  Estrutura cena -> tradução -> custo -> virada -> cta, espelhando o carrossel-dor da semana
-  anterior (reunião-vira-terapia). Tese: teu funil não tá lento, tá furado — acha o furo antes
-  de buscar mais lead. Pendente de aprovação do Lucas.
+  Pilar Dor da Semana 5, no meio da série. Carrossel-dor (decisão do Lucas: não reel). Estrutura cena -> tradução ->
+  custo -> virada -> cta, espelhando o carrossel-dor da semana anterior (reunião-vira-terapia). Tese: teu funil não tá
+  lento, tá furado — acha o furo antes de buscar mais lead. Pendente de aprovação do Lucas.
+published_at: '2026-06-03T16:10:35.190Z'
+media_id: '18009873458722204'
+permalink: https://www.instagram.com/p/DZIUVDvEW-K/
