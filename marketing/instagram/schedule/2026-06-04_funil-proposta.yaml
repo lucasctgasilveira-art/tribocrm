@@ -1,12 +1,11 @@
-status: aprovado
+status: publicado
 slot:
   data: '2026-06-04'
   horario: 09:00 BRT
   justificativa: >
-    Quinta 09:00 BRT — Semana 5 (Série "Funil em 4 partes"), etapa 3: Proposta. Carrossel de
-    8 slides no tema escuro. Horário replicado da semana anterior (QUI 09:00). Retoma a série
-    depois da pausa-dor de quarta: o lead qualificado agora chega na proposta. Aterra a dor da
-    proposta enviada por e-mail que vira silêncio.
+    Quinta 09:00 BRT — Semana 5 (Série "Funil em 4 partes"), etapa 3: Proposta. Carrossel de 8 slides no tema escuro.
+    Horário replicado da semana anterior (QUI 09:00). Retoma a série depois da pausa-dor de quarta: o lead qualificado
+    agora chega na proposta. Aterra a dor da proposta enviada por e-mail que vira silêncio.
 formato: carrossel
 slides: 8
 arquivos:
@@ -26,6 +25,8 @@ publicacao:
   acao_humana_necessaria: aprovacao_lucas_antes_de_postar
 tema_visual: dark
 observacao: >
-  Série "Funil em 4 partes" (Semana 5, Mês 2). Etapa 3/4 — Proposta. Três passos: nunca manda,
-  apresenta junto; amarra na dor do lead (não no produto); sai com data de retorno marcada.
-  Tema escuro padrão. Pendente de aprovação do Lucas.
+  Série "Funil em 4 partes" (Semana 5, Mês 2). Etapa 3/4 — Proposta. Três passos: nunca manda, apresenta junto; amarra
+  na dor do lead (não no produto); sai com data de retorno marcada. Tema escuro padrão. Pendente de aprovação do Lucas.
+published_at: '2026-06-04T14:31:25.810Z'
+media_id: '17956642215137780'
+permalink: https://www.instagram.com/p/DZKtycdFI95/
