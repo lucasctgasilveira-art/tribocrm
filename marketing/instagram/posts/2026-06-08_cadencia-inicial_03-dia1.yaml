@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 3 — Dia 1: responde na hora e marca o próximo passo
+# Calendário: SEG 08/06/2026 · Semana 6 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+theme: light
+slug: 2026-06-08_cadencia-inicial_03-dia1
+data:
+  pilar: "Cadência · Dia 1"
+  step-num: "DIA 1"
+  titulo: "Responde rápido e já marca o próximo toque."
+  body-1: |
+    <span class="miolo-emphasis">Lead quente esfria em horas.
+    Quem fala primeiro larga na frente.</span>
+  body-2: |
+    Não precisa ser texto bonito.
+    Precisa ser rápido e já deixar combinado
+    quando vocês falam de novo.
+  slide-number: "03 / 08"
+  handle: "@tribocrmoficial"

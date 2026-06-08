@@ -1,0 +1,35 @@
+status: aprovado
+aprovado_em: '2026-06-08'
+aprovado_por: lucas
+slot:
+  data: '2026-06-09'
+  horario: 18:00 BRT
+  justificativa: >
+    Terça 18:00 BRT — pilar Dor da PME (Série "Cadência"). Reel curto (0:20) sobre a cena de
+    "vou ligar amanhã" que vira semana que vem. Slot fim de tarde replicado das semanas anteriores
+    (TER reel ~18:00) e casa com o tema (a hora exata em que o dia engoliu o vendedor). REEL = vídeo,
+    postagem MANUAL pelo Lucas — o publisher pula automaticamente (formato=reel). Capa renderizada
+    como thumbnail.
+formato: reel
+slides: 1
+arquivos:
+  - output/2026-06-09_reel-vou-ligar-amanha.png
+caption_source: posts/2026-06-09_reel-vou-ligar-amanha.yaml#caption
+hashtags_inline_na_caption: true
+primeiro_comentario: null
+publicacao:
+  metodo: manual_lucas_grava_e_publica
+  acao_humana_necessaria: lucas_grava_video_20s_e_publica_no_celular
+roteiro_gravacao:
+  duracao_alvo: "0:18 a 0:22"
+  formato: "vertical 9:16 — celular na altura dos olhos, luz frontal natural, escritório real"
+  estrutura:
+    - "0:00-0:03 — HOOK falado direto pra câmera: 'Vou ligar amanhã. Já reparou que esse amanhã nunca chega?'"
+    - "0:03-0:09 — REENACT: o dia atropelando — reunião, proposta, telefone tocando. Voz over: 'Não é preguiça. O dia engole o vendedor.'"
+    - "0:09-0:15 — VIRADA: voltar a falar pra câmera, mais sério: 'Quando ele lembra do lead, já é sexta. E o lead já comprou de outro.'"
+    - "0:15-0:20 — RESOLUÇÃO: 'Lead bom sai da conversa com a próxima data marcada. Aí não tem amanhã solto. Tem quinta, 10h — e o sistema avisa.' Final firme."
+  legenda_em_video:
+    - "Legenda automática (queimar no vídeo) — Instagram não conta sem legenda em 2026"
+  trilha:
+    - "Voz original sem música, ou trilha lo-fi muito baixa (algoritmo IG: voz original cria mais retenção)"
+  dica_critica: "Grava no escritório real, mostra o ambiente PME. NÃO é ambiente de coach gravando em estúdio."

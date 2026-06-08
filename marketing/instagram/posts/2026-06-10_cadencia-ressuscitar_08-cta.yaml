@@ -1,0 +1,42 @@
+# --------------------------------------------------------
+# Pauta: Slide 8 (CTA) — Carrossel "Cadência de ressuscitar"
+# Calendário: QUA 10/06/2026 · Semana 6 · Mês 2
+# Pilar: MÉTODO · CTA
+# Status: pending_review
+# Nota: CTA usa canvas laranja intrínseco (.canvas--cta). Sem theme:light.
+# --------------------------------------------------------
+template: carrossel-metodo-cta
+slug: 2026-06-10_cadencia-ressuscitar_08-cta
+data:
+  titulo: |
+    Salva. É a parte 2 da<br>
+    semana de cadência.
+    <span class="cta-emoji">🔥</span>
+  direcional: |
+    Quer um pipeline que mostra quais leads frios travaram só por timing?<br>
+    <span class="acc">Link na bio · demo em 15 min.</span>
+  handle: "@tribocrmoficial"
+  tagline: "Máquina de Vendas pra PMEs brasileiras"
+  slide-number: "08 / 08"
+
+# Legenda oficial (texto literal que vai pro Instagram)
+caption: |
+  Tem PME brasileira sentada em dezenas de leads frios que só travaram por timing. E na hora de retomar, a maioria manda aquele "oi, sumido! ainda tem interesse?" — que já entrega que você esqueceu dele e joga o peso da conversa nas costas do lead.
+
+  Lead frio não volta por cobrança. Volta por um motivo novo. Olha como retomar sem soar desesperado:
+
+  Passo 1 — separa quem vale. Nem todo lead esquecido merece retorno. Quem parou na proposta há 30 dias é ouro. Quem nunca respondeu nada, deixa pra lá. No sistema dá pra filtrar por etapa e por data.
+
+  Passo 2 — volta com motivo de verdade. Uma condição nova, um caso parecido com o dele, uma novidade que muda a conta. "Lembrei de você porque saiu algo que resolve o que te travou" abre conversa. "E aí, decidiu?" fecha.
+
+  Passo 3 — dá uma saída honesta. "Se não for o momento, me fala que eu paro de te lembrar." Tira o peso. Quem não tem interesse agradece e some, e tudo bem. Quem ainda tem, volta justamente porque você não ficou empurrando.
+
+  Passo 4 — registra o destino. Voltou a conversar? Marca o próximo passo na hora. Não? Remarca pra revisar em 60 ou 90 dias. Sem registro, o mesmo lead some pela segunda vez — e aí ninguém volta mais.
+
+  Lead esquecido não é lead perdido. É dinheiro parado esperando a conversa certa.
+
+  A gente faz Máquina de Vendas pra PME brasileira transformar pipeline frio em conversa de novo, sem mendigar atenção.
+
+  Salva pra rodar com teu time. Sexta a gente fecha a semana 🔥
+
+  #vendasb2b #pmebrasileira #processocomercial #gestaocomercial #followup

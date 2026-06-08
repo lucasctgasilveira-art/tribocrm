@@ -1,0 +1,35 @@
+status: aprovado
+aprovado_em: '2026-06-08'
+aprovado_por: lucas
+slot:
+  data: '2026-06-11'
+  horario: 17:00 BRT
+  justificativa: >
+    Quinta 17:00 BRT — pilar Bastidor (Série "Cadência"). Reel de 0:25 sobre como nasceu a cadência
+    de domingo (15 minutos pra desenhar a semana). Slot 17h fim de expediente replicado do reel
+    bastidor anterior (QUI 17:00), horário em que dono PME respira e abre rede social. REEL =
+    postagem MANUAL pelo Lucas — o publisher pula automaticamente (formato=reel). Capa renderizada
+    como thumbnail.
+formato: reel
+slides: 1
+arquivos:
+  - output/2026-06-11_reel-bastidor-cadencia-domingo.png
+caption_source: posts/2026-06-11_reel-bastidor-cadencia-domingo.yaml#caption
+hashtags_inline_na_caption: true
+primeiro_comentario: null
+publicacao:
+  metodo: manual_lucas_grava_e_publica
+  acao_humana_necessaria: lucas_grava_video_25s_e_publica_no_celular
+roteiro_gravacao:
+  duracao_alvo: "0:22 a 0:28"
+  formato: "vertical 9:16 — Lucas falando direto pra câmera (talking head), ambiente real do escritório"
+  estrutura:
+    - "0:00-0:05 — HOOK direto: 'A cadência de domingo não nasceu numa reunião bonita. Nasceu de um domingo à noite ruim.'"
+    - "0:05-0:12 — CENA: 'A gente abria o WhatsApp no domingo só pra olhar. E sempre tinha aquele lead bom que sumiu na sexta.'"
+    - "0:12-0:20 — VIRADA: 'Em vez de virar culpa, virou hábito. Domingo, 15 minutos: passa o olho em quem está aberto, marca o próximo toque de cada um, fecha o notebook.'"
+    - "0:20-0:25 — FECHAMENTO: 'A gente não inventou método de livro. Arrumou a própria bagunça e virou sistema.' Final firme."
+  legenda_em_video:
+    - "Queimar legenda automática no vídeo (essencial pra reels em 2026)"
+  trilha:
+    - "Voz original sem música, ou música ambient muito baixa (-30dB)"
+  dica_critica: "Lucas em ambiente cotidiano (não estúdio). Camisa lisa, fundo desorganizado-real, sem ring light caricato. Preserva o tom 'gente como a gente'."

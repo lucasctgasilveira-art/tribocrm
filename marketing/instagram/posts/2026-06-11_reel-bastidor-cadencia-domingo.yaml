@@ -1,0 +1,36 @@
+# --------------------------------------------------------
+# Pauta: Capa do reel-bastidor "Como nasceu a cadência de domingo"
+# Calendário: QUI 11/06/2026 · Semana 6 · Mês 2 (SÉRIE CADÊNCIA)
+# Pilar: BASTIDOR
+# Status: pending_review
+# Tema: ESCURO (default)
+# Hook origem: Calendário Semana 6 · "Como nasceu a cadência de domingo" (Bast8)
+# Observação: REEL = vídeo. Capa renderizada vira thumbnail.
+#             Postagem manual pelo Lucas (publisher pula formato=reel).
+# --------------------------------------------------------
+template: reel-cover
+slug: 2026-06-11_reel-bastidor-cadencia-domingo
+data:
+  pilar: "Bastidor"
+  titulo: |
+    Como nasceu<br>
+    a cadência de<br>
+    <span class="t-orange">domingo</span>.
+  meta: "▶ Reel · Bastidor · 0:25"
+  handle: "@tribocrmoficial"
+
+# Legenda final oficial
+caption: |
+  A cadência de domingo não nasceu numa reunião bonita. Nasceu de um domingo à noite ruim.
+
+  A gente abria o WhatsApp no domingo só pra dar uma olhada. E sempre tinha aquele lead bom que tinha sumido na sexta. Toda semana a mesma coisa: o fim de semana engolia gente que estava quase fechando.
+
+  Em vez de transformar isso em culpa, a gente transformou em hábito. Domingo à noite, 15 minutos: passa o olho em quem está aberto, marca o próximo toque de cada um pra semana e fecha o notebook. Segunda começa com a semana já desenhada, não com a bagunça da sexta.
+
+  Foi daí que veio uma das ideias dentro do TriboCRM: o sistema mostrar, num lugar só, quem está aberto e qual o próximo passo de cada lead — pra esse ritual durar 15 minutos e não uma manhã inteira.
+
+  A gente não inventou método de livro. A gente arrumou a própria bagunça e virou sistema.
+
+  Tu também tem um ritual que nasceu de um domingo ruim? Conta aqui embaixo 🔥
+
+  #vendasb2b #pmebrasileira #bastidores #processocomercial #gestaocomercial

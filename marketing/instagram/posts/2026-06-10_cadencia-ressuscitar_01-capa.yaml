@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 1 (capa) — Carrossel "Cadência de ressuscitar: retomar lead esquecido sem soar desesperado"
+# Calendário: QUA 10/06/2026 · Semana 6 · Mês 2 (SÉRIE CADÊNCIA)
+# Pilar: MÉTODO · Carrossel 2/3 (Cadência de ressuscitar)
+# Status: pending_review
+# Tema: CLARO (theme: light) — peça clara da semana
+# Hook origem: Calendário Semana 6 · "Cadência de ressuscitar (lead esquecido)"
+# --------------------------------------------------------
+template: carrossel-metodo-capa
+slug: 2026-06-10_cadencia-ressuscitar_01-capa
+theme: light
+data:
+  pilar: "Método · Cadência 2/3"
+  titulo: |
+    Como retomar<br>
+    o lead esquecido<br>
+    sem parecer<br>
+    <span class="t-orange">desesperado</span>.
+  slide-number: "01 / 08"
+  handle: "@tribocrmoficial"

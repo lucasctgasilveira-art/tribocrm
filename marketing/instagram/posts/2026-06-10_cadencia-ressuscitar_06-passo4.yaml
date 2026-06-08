@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 6 — Passo 4: registra o destino e remarca, não some de novo
+# Calendário: QUA 10/06/2026 · Semana 6 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+theme: light
+slug: 2026-06-10_cadencia-ressuscitar_06-passo4
+data:
+  pilar: "Passo 4 · Não some de novo"
+  step-num: "PASSO 4"
+  titulo: "Marca o destino pra não esquecer outra vez."
+  body-1: |
+    <span class="miolo-emphasis">Voltou a conversar? Registra o próximo passo na hora.
+    Não? Marca pra revisar daqui a 60 ou 90 dias.</span>
+  body-2: |
+    Ressuscitar lead só funciona se virar hábito.
+    Sem registro, o mesmo lead some pela segunda vez —
+    e aí ninguém volta mais.
+  slide-number: "06 / 08"
+  handle: "@tribocrmoficial"

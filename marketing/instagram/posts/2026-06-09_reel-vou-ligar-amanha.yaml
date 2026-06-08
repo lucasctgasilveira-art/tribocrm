@@ -1,0 +1,39 @@
+# --------------------------------------------------------
+# Pauta: Capa do reel "'Vou ligar amanhã' virou semana que vem"
+# Calendário: TER 09/06/2026 · Semana 6 · Mês 2 (SÉRIE CADÊNCIA)
+# Pilar: DOR DA PME
+# Status: pending_review
+# Tema: ESCURO (default)
+# Hook origem: Banco de hooks · "Vou ligar amanhã — e amanhã virou semana que vem"
+# Observação: REEL = vídeo. Capa renderizada vira thumbnail.
+#             Postagem manual pelo Lucas (publisher pula formato=reel).
+# --------------------------------------------------------
+template: reel-cover
+slug: 2026-06-09_reel-vou-ligar-amanha
+data:
+  pilar: "Dor da PME"
+  titulo: |
+    "Vou ligar<br>
+    amanhã" virou<br>
+    semana que<br>
+    <span class="t-orange">vem</span>.
+  meta: "▶ Reel · 0:20"
+  handle: "@tribocrmoficial"
+
+# Legenda final oficial (feed-dor)
+caption: |
+  "Vou ligar amanhã." E amanhã virou semana que vem.
+
+  Não foi preguiça. O dia engoliu o vendedor. Reunião, proposta, cliente que reclamou, telefone tocando. Quando ele lembra do lead, já é sexta — e o lead já comprou de outro.
+
+  Esse é o jeito mais silencioso de perder venda em PME brasileira. Ninguém vê acontecer. Não tem um "não" gravado em lugar nenhum. O lead só evaporou entre uma terça e a outra.
+
+  O problema não é o vendedor esquecer. Gente esquece, é normal. O problema é não ter nada lembrando por ele.
+
+  Cadência resolve isso de um jeito chato de tão simples: todo lead sai da conversa com a próxima data marcada. Aí não existe "amanhã" solto. Existe "quinta, 10h, retoma o orçamento" — e o sistema avisa.
+
+  A gente faz Máquina de Vendas pra PME brasileira parar de perder cliente pro próprio calendário.
+
+  Marca aquele vendedor que vive dizendo "vou ligar amanhã" 🔥
+
+  #vendasb2b #pmebrasileira #processocomercial #gestaocomercial #followup

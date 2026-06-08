@@ -1,0 +1,19 @@
+# --------------------------------------------------------
+# Pauta: Slide 6 — Dia 6 e 7: pergunta direta e define o destino do lead
+# Calendário: SEG 08/06/2026 · Semana 6 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+theme: light
+slug: 2026-06-08_cadencia-inicial_06-dia6-7
+data:
+  pilar: "Cadência · Dia 6 e 7"
+  step-num: "DIA 6 E 7"
+  titulo: "Fecha o ciclo com uma pergunta direta."
+  body-1: |
+    <span class="miolo-emphasis">"Faz sentido seguir ou prefere que eu pare por aqui?"
+    Pergunta honesta dá resposta honesta.</span>
+  body-2: |
+    Se o lead segue, vira oportunidade com data marcada.
+    Se não segue, sai do balde e a equipe respira.
+  slide-number: "06 / 08"
+  handle: "@tribocrmoficial"

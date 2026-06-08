@@ -1,0 +1,18 @@
+# --------------------------------------------------------
+# Pauta: Slide 2 — O erro (lead novo entra e fica esperando)
+# Calendário: SEG 08/06/2026 · Semana 6 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+theme: light
+slug: 2026-06-08_cadencia-inicial_02-erro
+data:
+  pilar: "O erro de sempre"
+  titulo: "Lead novo entra e fica esperando."
+  body-1: |
+    <span class="miolo-emphasis">A maioria fala uma vez no primeiro dia,
+    o lead não responde, e ninguém volta.</span>
+  body-2: |
+    Aí ele compra de quem lembrou dele na semana.
+    Não foi preço. Foi presença.
+  slide-number: "02 / 08"
+  handle: "@tribocrmoficial"

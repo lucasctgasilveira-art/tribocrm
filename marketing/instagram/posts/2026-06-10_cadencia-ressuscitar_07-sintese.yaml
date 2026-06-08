@@ -1,0 +1,19 @@
+# --------------------------------------------------------
+# Pauta: Slide 7 (síntese) — Ressuscitar é filtrar, dar motivo e dar saída
+# Calendário: QUA 10/06/2026 · Semana 6 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+theme: light
+slug: 2026-06-10_cadencia-ressuscitar_07-sintese
+data:
+  pilar: "Resumo do método"
+  titulo: "Lead esquecido não é lead perdido."
+  body-1: |
+    <span class="miolo-emphasis">Filtra quem vale, volta com motivo, dá saída honesta
+    e registra o destino. Quatro passos, zero desespero.</span>
+  body-2: |
+    Tem PME sentada em dezenas de leads frios que só
+    travaram por timing. Cadência de ressuscitar é dinheiro
+    parado virando conversa de novo.
+  slide-number: "07 / 08"
+  handle: "@tribocrmoficial"

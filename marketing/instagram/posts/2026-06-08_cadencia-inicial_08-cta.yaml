@@ -1,0 +1,45 @@
+# --------------------------------------------------------
+# Pauta: Slide 8 (CTA) — Carrossel "Cadência inicial"
+# Calendário: SEG 08/06/2026 · Semana 6 · Mês 2
+# Pilar: MÉTODO · CTA
+# Status: pending_review
+# Nota: CTA usa canvas laranja intrínseco (.canvas--cta). Sem theme:light —
+#       fecha o carrossel claro com a âncora laranja de marca, como sempre.
+# --------------------------------------------------------
+template: carrossel-metodo-cta
+slug: 2026-06-08_cadencia-inicial_08-cta
+data:
+  titulo: |
+    Salva. É a parte 1 da<br>
+    semana de cadência.
+    <span class="cta-emoji">🔥</span>
+  direcional: |
+    Quer um pipeline que avisa o vendedor qual lead tem toque marcado pra hoje?<br>
+    <span class="acc">Link na bio · demo em 15 min.</span>
+  handle: "@tribocrmoficial"
+  tagline: "Máquina de Vendas pra PMEs brasileiras"
+  slide-number: "08 / 08"
+
+# Legenda oficial (texto literal que vai pro Instagram)
+caption: |
+  Os primeiros 7 dias decidem se o lead vira cliente ou vira "depois eu vejo".
+
+  Tem uma cena que se repete em PME brasileira: chega lead novo, o vendedor fala uma vez no primeiro dia, o lead não responde, e ninguém volta. Aí, uma semana depois, ele compra de quem lembrou dele. Não foi preço. Foi presença.
+
+  Cadência não é encher o lead de mensagem. É ter o próximo toque sempre combinado. Olha como ficam os 7 primeiros dias:
+
+  Dia 1 — responde rápido e já marca o próximo toque. Lead quente esfria em horas. Quem fala primeiro larga na frente.
+
+  Dia 2 e 3 — aparece levando algo, não cobrando resposta. Um material, um exemplo, uma resposta pra uma dúvida que ele nem fez. Toque que ajuda não cansa.
+
+  Dia 4 e 5 — sumiu no WhatsApp? Troca de canal. Liga, manda áudio, chama por e-mail. Às vezes o lead só não viu a mensagem.
+
+  Dia 6 e 7 — fecha o ciclo com pergunta direta: "faz sentido seguir ou prefere que eu pare por aqui?". Se segue, vira oportunidade com data marcada. Se não, sai do balde e a equipe respira.
+
+  A diferença não é vendedor mais esperto. É a próxima conversa sempre combinada, dentro do sistema, sem depender de memória.
+
+  A gente faz Máquina de Vendas pra PME brasileira parar de perder lead bom por esquecimento.
+
+  Salva. Quinta tem a parte 2: como ressuscitar lead esquecido sem soar desesperado 🔥
+
+  #vendasb2b #pmebrasileira #processocomercial #gestaocomercial #cadenciadevendas

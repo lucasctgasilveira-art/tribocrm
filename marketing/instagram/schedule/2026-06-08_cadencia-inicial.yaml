@@ -1,0 +1,34 @@
+status: aprovado
+slot:
+  data: '2026-06-08'
+  horario: 09:00 BRT
+  justificativa: >
+    Segunda 09:00 BRT — abertura da Semana 6 (Série "Cadência"). Carrossel de 8 slides no tema
+    escuro com a parte 1: cadência inicial (os 7 primeiros dias do lead novo). Horário replicado
+    das semanas anteriores (SEG carrossel ~09:00). Cai cedo na segunda pra abrir a série da semana.
+    Aterra a dor do dono que fala uma vez com o lead novo, não volta, e perde pra quem lembrou dele.
+    O cron oficial publica esta peça no slot de hoje via time-gate; as demais da semana aguardam o
+    próprio dia.
+formato: carrossel
+slides: 8
+arquivos:
+  - output/2026-06-08_cadencia-inicial_01-capa.png
+  - output/2026-06-08_cadencia-inicial_02-erro.png
+  - output/2026-06-08_cadencia-inicial_03-dia1.png
+  - output/2026-06-08_cadencia-inicial_04-dia2-3.png
+  - output/2026-06-08_cadencia-inicial_05-dia4-5.png
+  - output/2026-06-08_cadencia-inicial_06-dia6-7.png
+  - output/2026-06-08_cadencia-inicial_07-sintese.png
+  - output/2026-06-08_cadencia-inicial_08-cta.png
+caption_source: posts/2026-06-08_cadencia-inicial_08-cta.yaml#caption
+hashtags_inline_na_caption: true
+primeiro_comentario: null
+publicacao:
+  metodo: instagram_graph_api
+  acao_humana_necessaria: aprovacao_lucas_antes_de_postar
+tema_visual: dark
+observacao: >
+  Abre a Série "Cadência" (Semana 6, Mês 2). Parte 1/2 — Cadência inicial. Os 7 primeiros dias:
+  responde rápido e marca o próximo toque, aparece levando algo, troca de canal se sumiu, fecha o
+  ciclo com pergunta direta. Tema escuro padrão. Aprovado pelo Lucas — cron publica no slot via
+  time-gate.

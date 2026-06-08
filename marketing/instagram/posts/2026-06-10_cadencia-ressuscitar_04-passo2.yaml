@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 4 — Passo 2: volta com motivo, não com cobrança
+# Calendário: QUA 10/06/2026 · Semana 6 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+theme: light
+slug: 2026-06-10_cadencia-ressuscitar_04-passo2
+data:
+  pilar: "Passo 2 · Motivo novo"
+  step-num: "PASSO 2"
+  titulo: "Chama de volta com um motivo de verdade."
+  body-1: |
+    <span class="miolo-emphasis">Uma condição nova, um caso parecido com o dele,
+    uma novidade que muda a conta que ele fazia.</span>
+  body-2: |
+    "Lembrei de você porque saiu algo que resolve
+    aquilo que te travou" abre conversa.
+    "E aí, decidiu?" fecha.
+  slide-number: "04 / 08"
+  handle: "@tribocrmoficial"

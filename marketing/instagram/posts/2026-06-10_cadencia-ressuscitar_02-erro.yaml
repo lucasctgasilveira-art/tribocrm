@@ -1,0 +1,19 @@
+# --------------------------------------------------------
+# Pauta: Slide 2 — O erro ("oi, sumido" e o lead foge)
+# Calendário: QUA 10/06/2026 · Semana 6 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+theme: light
+slug: 2026-06-10_cadencia-ressuscitar_02-erro
+data:
+  pilar: "O erro de sempre"
+  step-num: ""
+  titulo: '"Oi, sumido! Ainda tem interesse?"'
+  body-1: |
+    <span class="miolo-emphasis">Essa mensagem entrega que você esqueceu dele.
+    E coloca o peso da conversa nas costas do lead.</span>
+  body-2: |
+    Lead frio não volta por cobrança.
+    Volta por um motivo novo pra conversar.
+  slide-number: "02 / 08"
+  handle: "@tribocrmoficial"

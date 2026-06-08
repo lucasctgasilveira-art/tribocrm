@@ -1,0 +1,36 @@
+# --------------------------------------------------------
+# Pauta: Feed-manifesto "Quem não escreve esquece. Quem esquece perde."
+# Calendário: SEX 12/06/2026 · Semana 6 · Mês 2 (SÉRIE CADÊNCIA)
+# Pilar: MANIFESTO
+# Status: pending_review
+# Tema: LARANJA-ÂNCORA — template feed-manifesto-orange (.canvas--orange)
+#       Peça-âncora da semana (1 laranja, conforme moderação de cor aprovada).
+#       Tinta preta sobre laranja; símbolo D dark; sem .t-orange (laranja
+#       sobre laranja não teria contraste — vira preto sólido via tokens).
+# Hook origem: Banco de hooks · Man "Quem não escreve esquece. Quem esquece perde."
+# --------------------------------------------------------
+template: feed-manifesto-orange
+slug: 2026-06-12_feed-manifesto-escreve-esquece
+data:
+  linha-1: "Quem não escreve"
+  linha-2: "esquece."
+  linha-3: "Quem esquece perde."
+  handle: "@tribocrmoficial"
+
+# Legenda final oficial
+caption: |
+  Quem não escreve esquece. Quem esquece perde.
+
+  A semana inteira a gente falou de cadência. E cadência depende de uma coisa simples que quase ninguém faz direito: registrar.
+
+  O vendedor confia na memória. Acha que vai lembrar do lead que pediu pra chamar quinta, da objeção que o cliente levantou, do orçamento que precisa de retorno na segunda. Não vai. A cabeça enche, o dia atropela, e o que não está escrito evapora.
+
+  Não é falha de caráter. É como gente funciona. Por isso o problema nunca se resolve cobrando "presta mais atenção". Resolve tirando a venda da cabeça e colocando no sistema.
+
+  Lead com próximo passo escrito não some. Objeção anotada vira argumento na próxima conversa. Combinado registrado vira compromisso que o sistema lembra por você.
+
+  A gente faz Máquina de Vendas pra PME brasileira parar de perder venda pelo que ninguém anotou.
+
+  Compartilha com o vendedor que ainda confia só na memória 🔥
+
+  #vendasb2b #pmebrasileira #processocomercial #gestaocomercial #crmbrasileiro
