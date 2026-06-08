@@ -1,0 +1,22 @@
+# --------------------------------------------------------
+# Pauta: Story recap — fecha a semana de cadência
+# Calendário: SAB 13/06/2026 · Semana 6 · Mês 2 (SÉRIE CADÊNCIA)
+# Pilar: STORY (recap)
+# Status: pending_review
+# Observação: Story só. Sem caption.
+# --------------------------------------------------------
+template: story-recap
+slug: 2026-06-13_story-recap-cadencia
+data:
+  eyebrow: "Semana de cadência · recap"
+  headline: |
+    A semana<br>
+    foi sobre<br>
+    não perder<br>
+    lead bom.
+  subline: |
+    Os 7 primeiros dias, como ressuscitar
+    lead frio e por que quem não escreve
+    esquece. Tá tudo lá no perfil.
+  cta: "↑ Arrasta pra cima · vai pro perfil"
+  handle: "@tribocrmoficial"

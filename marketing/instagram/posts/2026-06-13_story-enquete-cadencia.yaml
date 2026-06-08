@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Story enquete "Qual parte da cadência mais te escapa?"
+# Calendário: SAB 13/06/2026 · Semana 6 · Mês 2 (SÉRIE CADÊNCIA)
+# Pilar: STORY (interação)
+# Status: pending_review
+# Observação: Story só. Sem caption. Sticker enquete = manual no app (Graph API não suporta).
+# --------------------------------------------------------
+template: story-enquete
+slug: 2026-06-13_story-enquete-cadencia
+data:
+  pilar: "Pergunta da semana"
+  pergunta: |
+    Qual parte da cadência<br>
+    mais te escapa?
+  opcao-a: |
+    O primeiro<br>toque
+  opcao-b: |
+    Voltar no<br>lead frio
+  cta: "Manda DM se quiser montar a tua 🔥"
+  handle: "@tribocrmoficial"
