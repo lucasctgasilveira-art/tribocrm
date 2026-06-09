@@ -1,14 +1,13 @@
-status: aprovado
+status: publicado
 slot:
   data: '2026-06-08'
   horario: 09:00 BRT
   justificativa: >
-    Segunda 09:00 BRT — abertura da Semana 6 (Série "Cadência"). Carrossel de 8 slides no tema
-    escuro com a parte 1: cadência inicial (os 7 primeiros dias do lead novo). Horário replicado
-    das semanas anteriores (SEG carrossel ~09:00). Cai cedo na segunda pra abrir a série da semana.
-    Aterra a dor do dono que fala uma vez com o lead novo, não volta, e perde pra quem lembrou dele.
-    O cron oficial publica esta peça no slot de hoje via time-gate; as demais da semana aguardam o
-    próprio dia.
+    Segunda 09:00 BRT — abertura da Semana 6 (Série "Cadência"). Carrossel de 8 slides no tema escuro com a parte 1:
+    cadência inicial (os 7 primeiros dias do lead novo). Horário replicado das semanas anteriores (SEG carrossel
+    ~09:00). Cai cedo na segunda pra abrir a série da semana. Aterra a dor do dono que fala uma vez com o lead novo, não
+    volta, e perde pra quem lembrou dele. O cron oficial publica esta peça no slot de hoje via time-gate; as demais da
+    semana aguardam o próprio dia.
 formato: carrossel
 slides: 8
 arquivos:
@@ -28,7 +27,9 @@ publicacao:
   acao_humana_necessaria: aprovacao_lucas_antes_de_postar
 tema_visual: dark
 observacao: >
-  Abre a Série "Cadência" (Semana 6, Mês 2). Parte 1/2 — Cadência inicial. Os 7 primeiros dias:
-  responde rápido e marca o próximo toque, aparece levando algo, troca de canal se sumiu, fecha o
-  ciclo com pergunta direta. Tema escuro padrão. Aprovado pelo Lucas — cron publica no slot via
-  time-gate.
+  Abre a Série "Cadência" (Semana 6, Mês 2). Parte 1/2 — Cadência inicial. Os 7 primeiros dias: responde rápido e marca
+  o próximo toque, aparece levando algo, troca de canal se sumiu, fecha o ciclo com pergunta direta. Tema escuro padrão.
+  Aprovado pelo Lucas — cron publica no slot via time-gate.
+published_at: '2026-06-09T19:12:03.344Z'
+media_id: '18083018810444138'
+permalink: https://www.instagram.com/p/DZYF356FEfO/
