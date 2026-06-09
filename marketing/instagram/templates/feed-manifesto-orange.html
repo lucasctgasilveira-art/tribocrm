@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>TriboCRM · Feed Manifesto · Laranja-âncora</title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  /*
+    Variante laranja-âncora do feed-manifesto.
+    Mesmo layout do feed-manifesto.html, mas canvas em gradient laranja
+    (.canvas--orange) com tinta preta e símbolo D dark. Usada como peça
+    de fechamento/destaque (1 por semana, conforme moderação de cor).
+  */
+  .manifesto {
+    position: absolute;
+    top: 50%;
+    left: var(--canvas-pad);
+    right: var(--canvas-pad);
+    transform: translateY(-55%);
+    max-width: 920px;
+  }
+  .manifesto-text {
+    line-height: 1.02;
+    letter-spacing: -0.03em;
+  }
+  .manifesto-text + .manifesto-text {
+    margin-top: var(--s-4);
+  }
+</style>
+</head>
+<body>
+<div class="preview-stage">
+
+  <div class="canvas canvas--feed canvas--orange" data-format="feed-manifesto-orange">
+
+    <div class="manifesto">
+      <h1 class="manifesto-text t-h1-xl" data-edit="linha-1">Quem não escreve</h1>
+      <h1 class="manifesto-text t-h1-xl" data-edit="linha-2">esquece.</h1>
+      <h1 class="manifesto-text t-h1-xl" data-edit="linha-3">Quem esquece perde.</h1>
+    </div>
+
+    <span class="brand-signature" data-edit="handle">@tribocrmoficial</span>
+    <img class="brand-symbol" src="../_assets/symbol-d-dark.svg" alt="">
+
+  </div>
+
+</div>
+</body>
+</html>

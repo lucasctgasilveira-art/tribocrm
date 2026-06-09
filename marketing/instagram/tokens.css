@@ -236,6 +236,25 @@ img, svg { display: block; max-width: 100%; }
 .canvas--cta .slide-number    { color: rgba(0,0,0,.5); }
 
 /* ============================================================
+   VARIANTE LARANJA-ÂNCORA — .canvas--orange
+   ============================================================
+   Peça-âncora ocasional (1 por semana, conforme moderação de cor
+   aprovada). Mesmo gradient do CTA, mas pensada pra feed-manifesto:
+   tinta preta sobre laranja. A palavra de destaque (.t-orange) vira
+   preto sólido aqui — laranja sobre laranja não teria contraste.
+   Símbolo D usa a versão dark (miolo preto) pra ficar visível.
+   Aditivo: só ativa quando a classe está no canvas; manifestos
+   escuros (default) seguem intactos.
+   ============================================================ */
+.canvas--orange {
+  background: linear-gradient(135deg, var(--tribo-orange) 0%, var(--tribo-orange-deep) 100%);
+  color: var(--tribo-black);
+}
+.canvas--orange .manifesto-text { color: var(--tribo-black); }
+.canvas--orange .t-orange       { color: var(--tribo-black); }
+.canvas--orange .brand-signature { color: rgba(0,0,0,.62); }
+
+/* ============================================================
    VARIANTE TEMA CLARO — .canvas[data-theme="light"]
    ============================================================
    Ativada quando o YAML do post tem `theme: light`.
