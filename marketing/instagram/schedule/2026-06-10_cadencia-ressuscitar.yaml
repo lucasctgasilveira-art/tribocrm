@@ -1,13 +1,12 @@
-status: aprovado
+status: publicado
 slot:
   data: '2026-06-10'
   horario: 09:00 BRT
   justificativa: >
-    Quarta 09:00 BRT — Semana 6 (Série "Cadência"), parte 2: ressuscitar lead frio. Carrossel de
-    8 slides no tema escuro. Horário de manhã replicado das semanas anteriores (QUA carrossel manhã
-    ~09:00). Encadeia com a cadência inicial de segunda: depois de não perder o lead novo, agora é
-    recuperar o que já esfriou — sem soar desesperado. Aterra a dor do dono sentado em dezenas de
-    leads frios que travaram só por timing.
+    Quarta 09:00 BRT — Semana 6 (Série "Cadência"), parte 2: ressuscitar lead frio. Carrossel de 8 slides no tema
+    escuro. Horário de manhã replicado das semanas anteriores (QUA carrossel manhã ~09:00). Encadeia com a cadência
+    inicial de segunda: depois de não perder o lead novo, agora é recuperar o que já esfriou — sem soar desesperado.
+    Aterra a dor do dono sentado em dezenas de leads frios que travaram só por timing.
 formato: carrossel
 slides: 8
 arquivos:
@@ -27,6 +26,9 @@ publicacao:
   acao_humana_necessaria: aprovacao_lucas_antes_de_postar
 tema_visual: dark
 observacao: >
-  Série "Cadência" (Semana 6, Mês 2). Parte 2/2 — ressuscitar lead frio. Quatro passos: separa
-  quem vale, volta com motivo de verdade, dá uma saída honesta, registra o destino. Tema escuro
-  padrão. Aprovado pelo Lucas — cron publica no slot via time-gate.
+  Série "Cadência" (Semana 6, Mês 2). Parte 2/2 — ressuscitar lead frio. Quatro passos: separa quem vale, volta com
+  motivo de verdade, dá uma saída honesta, registra o destino. Tema escuro padrão. Aprovado pelo Lucas — cron publica no
+  slot via time-gate.
+published_at: '2026-06-10T12:03:42.903Z'
+media_id: '18553564402068861'
+permalink: https://www.instagram.com/p/DZZ5qVLEbMQ/
