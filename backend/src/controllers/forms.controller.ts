@@ -48,6 +48,8 @@ export async function getForms(req: Request, res: Response): Promise<void> {
           stage: stage ?? { id: form.destinationStageId, name: 'Desconhecido' },
           leadsCount: form.submissions.length,
           lastSubmission: lastSubmission?.submittedAt ?? null,
+          successRedirectUrl: form.successRedirectUrl,
+          successMessage: form.successMessage,
         }
       })
     )
