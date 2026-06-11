@@ -226,7 +226,7 @@ export default function FormsPage() {
 // ── Embed Modal ──
 
 function EmbedModal({ form, onClose, onCopy }: { form: FormItem; onClose: () => void; onCopy: () => void }) {
-  const code = `<script src="https://app.tribocrm.com.br/embed.js"\n  data-form="${form.embedToken}"\n  data-theme="dark">\n</script>`
+  const code = `<script src="https://api.tribocrm.com.br/public/embed.js"\n  data-form="${form.embedToken}"\n  data-theme="dark">\n</script>`
 
   function handleCopy() {
     navigator.clipboard.writeText(code).then(onCopy)
