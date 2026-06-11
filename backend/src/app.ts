@@ -39,7 +39,26 @@ const app = express()
 
 // Security
 app.use(helmet())
-app.use(cors({
+
+// Área pública do embed (/public/*): aceita qualquer origem e relaxa o
+// CORP pra que o <script> do embed.js carregue em sites de clientes.
+// O Helmet marca CORP como same-origin por padrão, o que dispara
+// ERR_BLOCKED_BY_RESPONSE.NotSameOrigin ao carregar o widget em domínio
+// externo. Montado ANTES da lista branca abaixo (que pula /public), de
+// forma que origens externas não sejam rejeitadas com 500 nos endpoints
+// públicos de formulário (GET schema + POST submit).
+app.use(
+  '/public',
+  cors({ origin: true, credentials: false, methods: ['GET', 'POST', 'OPTIONS'] }),
+  (_req, res, next) => {
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
+    next()
+  },
+)
+
+// Lista branca rígida para o restante do app (login, leads, signup...).
+// Comportamento idêntico ao anterior — apenas /public fica de fora.
+const whitelistCors = cors({
   origin: (origin, callback) => {
     const allowed = [
       process.env.FRONTEND_URL || 'http://localhost:3000',
@@ -60,7 +79,11 @@ app.use(cors({
     }
   },
   credentials: true,
-}))
+})
+app.use((req, res, next) => {
+  if (req.path.startsWith('/public')) return next()
+  whitelistCors(req, res, next)
+})
 
 // Rate limiting (skip webhooks — Efi sends bursts of notifications)
 const limiter = rateLimit({
