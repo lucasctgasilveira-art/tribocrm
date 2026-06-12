@@ -1,13 +1,12 @@
-status: aprovado
+status: publicado
 slot:
   data: '2026-06-12'
   horario: 12:30 BRT
   justificativa: >
-    Sexta 12:30 BRT — pilar Manifesto (Série "Cadência"). Feed estático único, peça-âncora laranja
-    da semana ("Quem não escreve esquece. Quem esquece perde."). Horário de almoço replicado das
-    semanas anteriores (SEX feed ~12:30). Fecha o arco da semana amarrando cadência a registrar:
-    a venda que não está escrita evapora. Tema laranja-âncora (1 laranja por semana, conforme
-    moderação de cor aprovada).
+    Sexta 12:30 BRT — pilar Manifesto (Série "Cadência"). Feed estático único, peça-âncora laranja da semana ("Quem não
+    escreve esquece. Quem esquece perde."). Horário de almoço replicado das semanas anteriores (SEX feed ~12:30). Fecha
+    o arco da semana amarrando cadência a registrar: a venda que não está escrita evapora. Tema laranja-âncora (1
+    laranja por semana, conforme moderação de cor aprovada).
 formato: feed
 slides: 1
 arquivos:
@@ -20,6 +19,8 @@ publicacao:
   acao_humana_necessaria: aprovacao_lucas_antes_de_postar
 tema_visual: orange
 observacao: >
-  Peça-âncora laranja da Semana 6 (Manifesto). Tinta preta sobre laranja, símbolo D dark, sem
-  .t-orange (laranja sobre laranja não teria contraste). Fecha a série de cadência. Aprovado pelo
-  Lucas — cron publica no slot via time-gate.
+  Peça-âncora laranja da Semana 6 (Manifesto). Tinta preta sobre laranja, símbolo D dark, sem .t-orange (laranja sobre
+  laranja não teria contraste). Fecha a série de cadência. Aprovado pelo Lucas — cron publica no slot via time-gate.
+published_at: '2026-06-12T17:22:40.159Z'
+media_id: '17902709343441776'
+permalink: https://www.instagram.com/p/DZfnrOfFEyj/
