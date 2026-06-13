@@ -1,12 +1,12 @@
-status: aprovado
+status: publicado
 slot:
   data: '2026-06-13'
-  horario: '10:30 BRT'
+  horario: 10:30 BRT
   justificativa: >
-    Sábado 10:30 BRT — story 1 de 2 do encerramento da Semana 6 (Série "Cadência"). Recap visual
-    da semana: os 7 primeiros dias, ressuscitar lead frio e por que quem não escreve esquece.
-    Horário replicado das semanas anteriores (stories de sábado a partir de 10:30, em sequência de
-    ~2 min). Story estático puro — sai automático via Graph API. O card já sinaliza o recap da série.
+    Sábado 10:30 BRT — story 1 de 2 do encerramento da Semana 6 (Série "Cadência"). Recap visual da semana: os 7
+    primeiros dias, ressuscitar lead frio e por que quem não escreve esquece. Horário replicado das semanas anteriores
+    (stories de sábado a partir de 10:30, em sequência de ~2 min). Story estático puro — sai automático via Graph API. O
+    card já sinaliza o recap da série.
 formato: story
 arquivos:
   - output/2026-06-13_story-recap-cadencia.png
@@ -16,5 +16,8 @@ publicacao:
   acao_humana_necessaria: aprovacao_lucas_antes_de_postar
 tema_visual: dark
 observacao: >
-  Story 1 de 2 do encerramento da Semana 6. Recap da série de cadência. Sai automático via Graph
-  API. Aprovado pelo Lucas — cron publica no slot via time-gate.
+  Story 1 de 2 do encerramento da Semana 6. Recap da série de cadência. Sai automático via Graph API. Aprovado pelo
+  Lucas — cron publica no slot via time-gate.
+published_at: '2026-06-13T14:30:28.591Z'
+media_id: '17977146150018415'
+permalink: https://www.instagram.com/stories/tribocrmoficial/3918662806124192801
