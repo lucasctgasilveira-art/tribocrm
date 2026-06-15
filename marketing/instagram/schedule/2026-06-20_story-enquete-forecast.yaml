@@ -1,0 +1,21 @@
+status: aprovado
+slot:
+  data: '2026-06-20'
+  horario: '10:30 BRT'
+  justificativa: >
+    Sábado 10:30 BRT — story 1 de 2 do encerramento da Semana 7 (Série "Forecast"). Enquete da semana: "Como você faz
+    forecast hoje?" — "Olhando o pipeline" vs "No achômetro do mês". Horário replicado das semanas anteriores (stories de
+    sábado a partir de 10:30). O sticker de enquete é colado manualmente no app (Graph API não suporta sticker interativo);
+    o card já traz as duas opções desenhadas pra alinhar com o sticker por cima.
+formato: story
+arquivos:
+  - output/2026-06-20_story-enquete-forecast.png
+caption_source: null
+publicacao:
+  metodo: manual_app
+  acao_humana_necessaria: lucas_posta_no_app_com_sticker_enquete
+tema_visual: dark
+observacao: >
+  Story 1 de 2 do encerramento da Semana 7. Enquete de interação. Sticker de enquete = manual no app (Graph API não cola
+  sticker). Card desenhado com as duas opções pra Lucas posicionar o sticker por cima. "Achômetro" ecoa o vilão (achismo).
+  Pendente de aprovação do Lucas.

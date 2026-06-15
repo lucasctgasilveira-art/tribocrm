@@ -1,0 +1,19 @@
+# --------------------------------------------------------
+# Pauta: Slide 7 (síntese) — Forecast não prevê o futuro, dá tempo de mudar
+# Calendário: QUI 18/06/2026 · Semana 7 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+theme: light
+slug: 2026-06-18_forecast-recuperar_07-sintese
+data:
+  pilar: "Resumo da virada"
+  titulo: "Forecast não adivinha o mês. Dá tempo de mudar ele."
+  body-1: |
+    <span class="miolo-emphasis">Vê o buraco cedo, fecha o que está quase lá,
+    reativa o que travou e junta o time no número.</span>
+  body-2: |
+    Mês fraco não é destino. É aviso.
+    Quem mede recebe o aviso no dia 10
+    e tem três semanas pra virar o jogo.
+  slide-number: "07 / 08"
+  handle: "@tribocrmoficial"

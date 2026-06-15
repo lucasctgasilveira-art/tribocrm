@@ -1,0 +1,31 @@
+status: aprovado
+slot:
+  data: '2026-06-17'
+  horario: 09:00 BRT
+  justificativa: >
+    Quarta 09:00 BRT — parte 2 da Semana 7 (Série "Forecast"). Carrossel de 8 slides no tema claro: como defender o
+    forecast na reunião com o sócio (pipeline aberto na tela, separar o provável da torcida, mostrar histórico de acerto,
+    chegar com o plano caso falte). Horário replicado das semanas anteriores (QUA carrossel ~09:00). Aterra a cena do
+    sócio que pergunta o número e recebe silêncio — vira discussão de opinião em vez de conversa sobre dado.
+formato: carrossel
+slides: 8
+arquivos:
+  - output/2026-06-17_forecast-defender_01-capa.png
+  - output/2026-06-17_forecast-defender_02-erro.png
+  - output/2026-06-17_forecast-defender_03-passo1.png
+  - output/2026-06-17_forecast-defender_04-passo2.png
+  - output/2026-06-17_forecast-defender_05-passo3.png
+  - output/2026-06-17_forecast-defender_06-passo4.png
+  - output/2026-06-17_forecast-defender_07-sintese.png
+  - output/2026-06-17_forecast-defender_08-cta.png
+caption_source: posts/2026-06-17_forecast-defender_08-cta.yaml#caption
+hashtags_inline_na_caption: true
+primeiro_comentario: null
+publicacao:
+  metodo: instagram_graph_api
+  acao_humana_necessaria: aprovacao_lucas_antes_de_postar
+tema_visual: light
+observacao: >
+  Série "Forecast" (Semana 7, Mês 2). Parte 2/3 — Como defender o forecast na reunião com o sócio. Quatro passos: chega
+  com o pipeline aberto, separa o que é firme do que é torcida, mostra o histórico de acerto e já traz o plano se faltar.
+  Síntese amarra na frase-manifesto "Quem mede vende. Quem acha negocia." Tema claro. Pendente de aprovação do Lucas.

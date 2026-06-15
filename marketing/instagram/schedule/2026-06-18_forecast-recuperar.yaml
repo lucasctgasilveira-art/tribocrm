@@ -1,0 +1,31 @@
+status: aprovado
+slot:
+  data: '2026-06-18'
+  horario: 09:00 BRT
+  justificativa: >
+    Quinta 09:00 BRT — parte 3 da Semana 7 (Série "Forecast"). Carrossel de 8 slides no tema claro: como recuperar um mês
+    fraco com forecast certo (medir o buraco enquanto dá tempo, atacar o que está quase fechando, reativar o que travou,
+    juntar o time no número e não na culpa). 3º carrossel encaixado no lugar do reel de quinta por decisão do Lucas — a
+    semana fica com 3 carrosséis (SEG/QUA/QUI). Horário replicado das semanas anteriores (QUI carrossel ~09:00).
+formato: carrossel
+slides: 8
+arquivos:
+  - output/2026-06-18_forecast-recuperar_01-capa.png
+  - output/2026-06-18_forecast-recuperar_02-erro.png
+  - output/2026-06-18_forecast-recuperar_03-passo1.png
+  - output/2026-06-18_forecast-recuperar_04-passo2.png
+  - output/2026-06-18_forecast-recuperar_05-passo3.png
+  - output/2026-06-18_forecast-recuperar_06-passo4.png
+  - output/2026-06-18_forecast-recuperar_07-sintese.png
+  - output/2026-06-18_forecast-recuperar_08-cta.png
+caption_source: posts/2026-06-18_forecast-recuperar_08-cta.yaml#caption
+hashtags_inline_na_caption: true
+primeiro_comentario: null
+publicacao:
+  metodo: instagram_graph_api
+  acao_humana_necessaria: aprovacao_lucas_antes_de_postar
+tema_visual: light
+observacao: >
+  Série "Forecast" (Semana 7, Mês 2). Parte 3/3 — Como recuperar mês fraco com forecast certo. Quatro passos: vê o buraco
+  cedo (dia 10, não dia 30), vai primeiro no que está quase fechando, reativa o que travou no meio, junta o time em cima
+  do número e não da culpa. 3º carrossel no lugar do reel de quinta (decisão do Lucas). Tema claro. Pendente de aprovação.

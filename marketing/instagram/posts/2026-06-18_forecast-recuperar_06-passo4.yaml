@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 6 — Passo 4: chama o time pra cima do número, não da culpa
+# Calendário: QUI 18/06/2026 · Semana 7 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+theme: light
+slug: 2026-06-18_forecast-recuperar_06-passo4
+data:
+  pilar: "Recuperar · Passo 4"
+  step-num: "PASSO 4"
+  titulo: "Junta o time em cima do número, não da culpa."
+  body-1: |
+    <span class="miolo-emphasis">"Faltam R$ 30 mil. Cada um pega os seus três
+    mais quentes." Meta clara move time melhor que sermão.</span>
+  body-2: |
+    Reunião sem dado vira caça ao culpado.
+    Com forecast na mesa, todo mundo enxerga
+    a mesma conta e sabe onde puxar.
+  slide-number: "06 / 08"
+  handle: "@tribocrmoficial"

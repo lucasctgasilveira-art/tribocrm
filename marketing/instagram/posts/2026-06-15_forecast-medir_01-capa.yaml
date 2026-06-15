@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 1 (capa) — Carrossel "Como medir forecast real"
+# Calendário: SEG 15/06/2026 · Semana 7 · Mês 2 (SÉRIE FORECAST)
+# Pilar: MÉTODO · Carrossel 1/3 (Como medir forecast real)
+# Status: pending_review
+# Tema: CLARO (theme: light) — peça clara de abertura da semana
+# Hook origem: Banco de hooks · Método "Forecast que você defende na reunião"
+# --------------------------------------------------------
+template: carrossel-metodo-capa
+slug: 2026-06-15_forecast-medir_01-capa
+theme: light
+data:
+  pilar: "Método · Forecast 1/3"
+  titulo: |
+    Como medir o<br>
+    forecast de<br>
+    verdade, sem<br>
+    <span class="t-orange">achismo</span>.
+  slide-number: "01 / 08"
+  handle: "@tribocrmoficial"

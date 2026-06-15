@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Story enquete "Como você faz forecast hoje?"
+# Calendário: SAB 20/06/2026 · Semana 7 · Mês 2 (SÉRIE FORECAST)
+# Pilar: STORY (interação)
+# Status: pending_review
+# Observação: Story só. Sem caption. Sticker enquete = manual no app (Graph API não suporta).
+# --------------------------------------------------------
+template: story-enquete
+slug: 2026-06-20_story-enquete-forecast
+data:
+  pilar: "Pergunta da semana"
+  pergunta: |
+    Como você faz<br>
+    forecast hoje?
+  opcao-a: |
+    Olhando o<br>pipeline
+  opcao-b: |
+    No achômetro<br>do mês
+  cta: "Manda DM se quiser sair do achômetro 🔥"
+  handle: "@tribocrmoficial"

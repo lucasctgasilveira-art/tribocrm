@@ -1,0 +1,45 @@
+# --------------------------------------------------------
+# Pauta: Slide 8 (CTA) — Carrossel "Como medir forecast real"
+# Calendário: SEG 15/06/2026 · Semana 7 · Mês 2
+# Pilar: MÉTODO · CTA
+# Status: pending_review
+# Nota: CTA usa canvas laranja intrínseco (.canvas--cta). Sem theme:light —
+#       fecha o carrossel claro com a âncora laranja de marca, como sempre.
+# --------------------------------------------------------
+template: carrossel-metodo-cta
+slug: 2026-06-15_forecast-medir_08-cta
+data:
+  titulo: |
+    Salva. É a parte 1 da<br>
+    semana de forecast.
+    <span class="cta-emoji">🔥</span>
+  direcional: |
+    Quer um pipeline que calcula o forecast sozinho, com base nos seus próprios números?<br>
+    <span class="acc">Link na bio · demo em 15 min.</span>
+  handle: "@tribocrmoficial"
+  tagline: "Máquina de Vendas pra PMEs brasileiras"
+  slide-number: "08 / 08"
+
+# Legenda oficial (texto literal que vai pro Instagram)
+caption: |
+  Forecast de verdade não é o vendedor dizer "acho que esse mês fecha bem".
+
+  Tem uma cena que se repete em PME brasileira: chega o fim do mês, o gestor pergunta quanto vai fechar, e a resposta é um chute baseado no humor da semana. Aí o mês fecha na metade do que foi prometido e ninguém sabe explicar onde a conta furou.
+
+  Forecast é conta, não fé. E a conta cabe em quatro passos:
+
+  Passo 1 — todo negócio no pipeline com valor e etapa escritos. Sem isso você não mede nada, só soma um monte de "talvez" e chama de previsão.
+
+  Passo 2 — cada etapa tem uma chance real de fechar. Proposta enviada não vale o mesmo que primeira conversa. O peso vem do seu próprio histórico: de cada 10 propostas, quantas viram venda?
+
+  Passo 3 — todo negócio tem data prevista pra fechar. Sem data, ele fica eterno no pipeline e infla o mês que nunca chega. Com data, você sabe o que cabe em junho e o que é conversa pra julho.
+
+  Passo 4 — no fim do mês, compara o previsto com o que fechou. Previu R$ 80 mil e fechou R$ 50 mil? Não é fracasso, é informação pra calibrar. A cada mês comparado, o forecast erra menos.
+
+  A diferença não é vendedor mais esperto. É a previsão sair do caderno e virar conta de pipeline, atualizada no sistema.
+
+  A gente faz Máquina de Vendas pra PME brasileira parar de descobrir o resultado só no dia 30.
+
+  Salva. Quarta tem a parte 2: como defender esse forecast na reunião com o sócio 🔥
+
+  #vendasb2b #pmebrasileira #processocomercial #gestaocomercial #forecastdevendas

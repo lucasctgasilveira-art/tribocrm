@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 1 (capa) — Carrossel "Como defender o forecast na reunião com o sócio"
+# Calendário: QUA 17/06/2026 · Semana 7 · Mês 2 (SÉRIE FORECAST)
+# Pilar: MÉTODO · Carrossel 2/3 (Defender o forecast)
+# Status: pending_review
+# Tema: CLARO (theme: light)
+# Hook origem: Banco de hooks · Método "Forecast que você defende na reunião com o sócio"
+# --------------------------------------------------------
+template: carrossel-metodo-capa
+slug: 2026-06-17_forecast-defender_01-capa
+theme: light
+data:
+  pilar: "Método · Forecast 2/3"
+  titulo: |
+    Como defender<br>
+    o forecast na<br>
+    reunião com o<br>
+    <span class="t-orange">sócio</span>.
+  slide-number: "01 / 08"
+  handle: "@tribocrmoficial"

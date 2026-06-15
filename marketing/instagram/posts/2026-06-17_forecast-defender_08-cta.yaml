@@ -1,0 +1,44 @@
+# --------------------------------------------------------
+# Pauta: Slide 8 (CTA) — Carrossel "Como defender o forecast na reunião com o sócio"
+# Calendário: QUA 17/06/2026 · Semana 7 · Mês 2
+# Pilar: MÉTODO · CTA
+# Status: pending_review
+# Nota: CTA usa canvas laranja intrínseco (.canvas--cta). Sem theme:light.
+# --------------------------------------------------------
+template: carrossel-metodo-cta
+slug: 2026-06-17_forecast-defender_08-cta
+data:
+  titulo: |
+    Salva. É a parte 2 da<br>
+    semana de forecast.
+    <span class="cta-emoji">🔥</span>
+  direcional: |
+    Quer chegar na próxima reunião com o pipeline aberto e o número que se defende sozinho?<br>
+    <span class="acc">Link na bio · demo em 15 min.</span>
+  handle: "@tribocrmoficial"
+  tagline: "Máquina de Vendas pra PMEs brasileiras"
+  slide-number: "08 / 08"
+
+# Legenda oficial (texto literal que vai pro Instagram)
+caption: |
+  "Vai fechar quanto esse mês?" — e vem o silêncio.
+
+  Toda PME brasileira com sócio conhece essa reunião. O sócio pergunta o número, e a resposta é "acho que dá", "tá vindo", "tô correndo atrás". Sem dado pra mostrar, vira discussão de opinião: quem fala mais alto ganha. E isso não é defender forecast, é apostar.
+
+  Defender forecast é trocar opinião por dado. Em quatro movimentos:
+
+  Passo 1 — chega com o pipeline aberto na tela, não com promessa. Cada negócio com nome, valor, etapa e data. O sócio vê de onde sai o número, não tem como discutir.
+
+  Passo 2 — separa o provável da torcida. Mostra os três grupos: o que é quase certo, o que ainda pode virar, e o que é só esperança. "Tenho R$ 40 mil firme e R$ 30 mil em disputa" vale mais que um número redondo sem lastro.
+
+  Passo 3 — mostra que mês passado você acertou. "Previ R$ 60 mil, fechei R$ 58 mil." Histórico de acerto é o que dá peso à previsão de hoje. Quem vem acertando, o sócio leva a sério na hora.
+
+  Passo 4 — já chega com o plano caso falte. "Se esses dois não fecharem, puxo estes três de julho pra cá." Defender forecast não é jurar que vai dar certo. É mostrar que você sabe o que fazer se uma parte não der.
+
+  Com isso, a reunião deixa de ser quem fala mais alto. Vira conversa sobre números que os dois conseguem ver.
+
+  A gente faz Máquina de Vendas pra PME brasileira parar de defender resultado no grito.
+
+  Salva. Quinta tem a parte 3: como recuperar um mês fraco com forecast certo 🔥
+
+  #vendasb2b #pmebrasileira #processocomercial #gestaocomercial #forecastdevendas

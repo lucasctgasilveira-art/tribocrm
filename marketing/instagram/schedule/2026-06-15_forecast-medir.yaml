@@ -1,0 +1,31 @@
+status: aprovado
+slot:
+  data: '2026-06-15'
+  horario: 09:00 BRT
+  justificativa: >
+    Segunda 09:00 BRT — abertura da Semana 7 (Série "Forecast"). Carrossel de 8 slides no tema claro com a parte 1: como
+    medir forecast real (valor e etapa escritos, chance por etapa pelo histórico próprio, data prevista, previsto contra o
+    real). Horário replicado das semanas anteriores (SEG carrossel ~09:00). Cai cedo na segunda pra abrir a série da
+    semana. Aterra a dor do gestor que só descobre o resultado no dia 30 porque o forecast nasceu de chute.
+formato: carrossel
+slides: 8
+arquivos:
+  - output/2026-06-15_forecast-medir_01-capa.png
+  - output/2026-06-15_forecast-medir_02-erro.png
+  - output/2026-06-15_forecast-medir_03-passo1.png
+  - output/2026-06-15_forecast-medir_04-passo2.png
+  - output/2026-06-15_forecast-medir_05-passo3.png
+  - output/2026-06-15_forecast-medir_06-passo4.png
+  - output/2026-06-15_forecast-medir_07-sintese.png
+  - output/2026-06-15_forecast-medir_08-cta.png
+caption_source: posts/2026-06-15_forecast-medir_08-cta.yaml#caption
+hashtags_inline_na_caption: true
+primeiro_comentario: null
+publicacao:
+  metodo: instagram_graph_api
+  acao_humana_necessaria: aprovacao_lucas_antes_de_postar
+tema_visual: light
+observacao: >
+  Abre a Série "Forecast" (Semana 7, Mês 2). Parte 1/3 — Como medir forecast real. Quatro passos: cada negócio com valor
+  e etapa, chance de fechar por etapa pelo próprio histórico, data prevista de fechamento, comparar previsto contra o real
+  pra calibrar. Tema claro. Pendente de aprovação do Lucas — só vira 'aprovado' depois do OK dele.

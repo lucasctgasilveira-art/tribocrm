@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 6 — Passo 4: já chega com o plano se faltar
+# Calendário: QUA 17/06/2026 · Semana 7 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+theme: light
+slug: 2026-06-17_forecast-defender_06-passo4
+data:
+  pilar: "Defender · Passo 4"
+  step-num: "PASSO 4"
+  titulo: "Já chega com o plano caso falte."
+  body-1: |
+    <span class="miolo-emphasis">"Se esses dois não fecharem, puxo estes três
+    de julho pra cá." O sócio quer ver o plano B.</span>
+  body-2: |
+    Defender forecast não é jurar que vai dar certo.
+    É mostrar que você sabe o que fazer
+    se uma parte não der.
+  slide-number: "06 / 08"
+  handle: "@tribocrmoficial"

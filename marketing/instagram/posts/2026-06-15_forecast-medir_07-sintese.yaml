@@ -1,0 +1,19 @@
+# --------------------------------------------------------
+# Pauta: Slide 7 (síntese) — Forecast real é conta de pipeline, não fé
+# Calendário: SEG 15/06/2026 · Semana 7 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+theme: light
+slug: 2026-06-15_forecast-medir_07-sintese
+data:
+  pilar: "Resumo do forecast"
+  titulo: "Forecast real é conta de pipeline, não fé."
+  body-1: |
+    <span class="miolo-emphasis">Valor por negócio, chance por etapa,
+    data de fechamento e o previsto contra o real.</span>
+  body-2: |
+    Quatro coisas escritas, atualizadas no sistema.
+    Não precisa ser exato. Precisa ser honesto
+    e melhorar todo mês.
+  slide-number: "07 / 08"
+  handle: "@tribocrmoficial"

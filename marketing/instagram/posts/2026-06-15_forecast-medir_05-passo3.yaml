@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 5 — Passo 3: todo negócio tem data de fechamento
+# Calendário: SEG 15/06/2026 · Semana 7 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+theme: light
+slug: 2026-06-15_forecast-medir_05-passo3
+data:
+  pilar: "Forecast · Passo 3"
+  step-num: "PASSO 3"
+  titulo: "Todo negócio tem uma data prevista pra fechar."
+  body-1: |
+    <span class="miolo-emphasis">Sem data, o negócio fica eterno no pipeline
+    e infla o forecast do mês que nunca chega.</span>
+  body-2: |
+    Com data, você sabe o que cabe em junho
+    e o que é conversa pra julho.
+    Previsão é por período, não por torcida.
+  slide-number: "05 / 08"
+  handle: "@tribocrmoficial"

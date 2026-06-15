@@ -1,0 +1,38 @@
+# --------------------------------------------------------
+# Pauta: Feed-manifesto "Quem mede vende. Quem acha negocia."
+# Calendário: SEX 19/06/2026 · Semana 7 · Mês 2 (SÉRIE FORECAST)
+# Pilar: MANIFESTO
+# Status: pending_review
+# Tema: ESCURO (default) — branco sobre preto, "mede" em laranja como
+#       contraste. (Não usa orange-âncora: a frase precisa de duas palavras
+#       em destaque — "mede" vs "acha" — e o contraste se perde em laranja
+#       sobre laranja.)
+# Hook origem: Man12 — "Quem mede vende. Quem acha negocia."
+# Fecha o arco da Semana 7 (Forecast) amarrando medir x achar.
+# --------------------------------------------------------
+template: feed-manifesto
+slug: 2026-06-19_feed-manifesto-mede-vende
+data:
+  linha-1: |
+    Quem <span class="t-orange">mede</span> vende.
+  linha-2: "Quem acha"
+  linha-3: "negocia."
+  handle: "@tribocrmoficial"
+
+# Legenda final oficial
+caption: |
+  Quem mede vende. Quem acha negocia.
+
+  A semana inteira a gente falou de forecast. E forecast, no fundo, é só isso: a diferença entre medir e achar.
+
+  Quem acha vive de "tá vindo", "esse mês fecha bem", "tô confiante". Fala bonito na reunião e descobre no dia 30 que a conta não bateu. Quando o número aperta, só resta negociar prazo, desconto, paciência do sócio.
+
+  Quem mede chega na reunião com o pipeline aberto. Sabe quanto tem firme, quanto está em disputa e quanto falta pra meta. Vê o buraco no dia 10, não no dia 30. Não precisa negociar a própria credibilidade, porque o número se defende sozinho.
+
+  Não é questão de ser mais otimista ou mais pessimista. É questão de ter onde olhar. Achismo é o que sobra pra quem não tem dado.
+
+  A gente faz Máquina de Vendas pra PME brasileira trocar o "acho" pelo que está escrito no pipeline.
+
+  Compartilha com o sócio que ainda toma decisão no "acho que fecha bem" 🔥
+
+  #vendasb2b #pmebrasileira #processocomercial #gestaocomercial #forecastdevendas

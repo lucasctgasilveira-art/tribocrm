@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 4 — Passo 2: separa o que é provável do que é torcida
+# Calendário: QUA 17/06/2026 · Semana 7 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+theme: light
+slug: 2026-06-17_forecast-defender_04-passo2
+data:
+  pilar: "Defender · Passo 2"
+  step-num: "PASSO 2"
+  titulo: "Separa o provável da torcida."
+  body-1: |
+    <span class="miolo-emphasis">Mostra os três grupos: o que é quase certo,
+    o que ainda pode virar, e o que é só esperança.</span>
+  body-2: |
+    Sócio confia em quem não esconde o risco.
+    "Tenho R$ 40 mil firme e R$ 30 mil em disputa"
+    vale mais que um número redondo sem lastro.
+  slide-number: "04 / 08"
+  handle: "@tribocrmoficial"

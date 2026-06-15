@@ -1,0 +1,18 @@
+# --------------------------------------------------------
+# Pauta: Slide 2 — O erro (chega na reunião sem nada pra mostrar)
+# Calendário: QUA 17/06/2026 · Semana 7 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+theme: light
+slug: 2026-06-17_forecast-defender_02-erro
+data:
+  pilar: "O erro de sempre"
+  titulo: "O sócio pergunta o número e vem o silêncio."
+  body-1: |
+    <span class="miolo-emphasis">"Vai fechar quanto esse mês?"
+    E a resposta é "acho que dá", "tá vindo", "tô correndo atrás".</span>
+  body-2: |
+    Sem dado pra mostrar, vira discussão de opinião.
+    Quem fala mais alto ganha. E isso não é defender forecast.
+  slide-number: "02 / 08"
+  handle: "@tribocrmoficial"

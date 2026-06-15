@@ -1,0 +1,18 @@
+# --------------------------------------------------------
+# Pauta: Slide 2 — O erro (forecast é chute do vendedor sobre o próprio humor)
+# Calendário: SEG 15/06/2026 · Semana 7 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+theme: light
+slug: 2026-06-15_forecast-medir_02-erro
+data:
+  pilar: "O erro de sempre"
+  titulo: "Forecast vira chute de fim de mês."
+  body-1: |
+    <span class="miolo-emphasis">O vendedor diz "tá quente", o gestor anota
+    no caderno, e o número nasce do humor da semana.</span>
+  body-2: |
+    Aí o mês fecha na metade do que foi prometido.
+    E ninguém sabe explicar onde a conta furou.
+  slide-number: "02 / 08"
+  handle: "@tribocrmoficial"

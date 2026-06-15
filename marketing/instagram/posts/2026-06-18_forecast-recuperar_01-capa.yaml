@@ -1,0 +1,21 @@
+# --------------------------------------------------------
+# Pauta: Slide 1 (capa) — Carrossel "Como recuperar mês fraco com forecast certo"
+# Calendário: QUI 18/06/2026 · Semana 7 · Mês 2 (SÉRIE FORECAST)
+# Pilar: MÉTODO · Carrossel 3/3 (Recuperar mês fraco)
+# Status: pending_review
+# Tema: CLARO (theme: light)
+# Hook origem: Calendário Semana 7 · "Como recuperar mês fraco com forecast certo"
+# Nota: 3º carrossel encaixado no lugar do reel de quinta (decisão do Lucas).
+# --------------------------------------------------------
+template: carrossel-metodo-capa
+slug: 2026-06-18_forecast-recuperar_01-capa
+theme: light
+data:
+  pilar: "Método · Forecast 3/3"
+  titulo: |
+    Como virar um<br>
+    mês fraco com<br>
+    forecast na<br>
+    <span class="t-orange">mão</span>.
+  slide-number: "01 / 08"
+  handle: "@tribocrmoficial"

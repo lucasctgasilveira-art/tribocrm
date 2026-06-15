@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 3 — Passo 1: vê o tamanho do buraco cedo
+# Calendário: QUI 18/06/2026 · Semana 7 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+theme: light
+slug: 2026-06-18_forecast-recuperar_03-passo1
+data:
+  pilar: "Recuperar · Passo 1"
+  step-num: "PASSO 1"
+  titulo: "Mede o buraco enquanto dá tempo."
+  body-1: |
+    <span class="miolo-emphasis">"Faltam R$ 30 mil pra meta e o mês tá na metade."
+    Número claro tira o pânico e mostra o tamanho real.</span>
+  body-2: |
+    Recuperação começa sabendo quanto falta.
+    Sem essa conta, o time corre pra todo lado
+    e ninguém sabe se já chegou.
+  slide-number: "03 / 08"
+  handle: "@tribocrmoficial"

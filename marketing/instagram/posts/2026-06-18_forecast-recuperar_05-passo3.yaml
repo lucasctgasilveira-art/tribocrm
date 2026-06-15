@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 5 — Passo 3: reativa o que travou no meio
+# Calendário: QUI 18/06/2026 · Semana 7 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+theme: light
+slug: 2026-06-18_forecast-recuperar_05-passo3
+data:
+  pilar: "Recuperar · Passo 3"
+  step-num: "PASSO 3"
+  titulo: "Reativa o que travou no meio do caminho."
+  body-1: |
+    <span class="miolo-emphasis">Negócio parado há dias com proposta na mesa
+    é dinheiro esquecido. O sistema lista todos.</span>
+  body-2: |
+    Uma ligação pra entender a objeção real
+    destrava mais venda que prospectar do zero.
+    Mês fraco tem ouro parado no próprio pipeline.
+  slide-number: "05 / 08"
+  handle: "@tribocrmoficial"

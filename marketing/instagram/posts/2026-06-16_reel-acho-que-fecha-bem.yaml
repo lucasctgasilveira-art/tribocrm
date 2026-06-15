@@ -1,0 +1,42 @@
+# --------------------------------------------------------
+# Pauta: Capa do reel "'Acho que esse mês fecha bem'"
+# Calendário: TER 16/06/2026 · Semana 7 · Mês 2 (SÉRIE FORECAST)
+# Pilar: DOR DA PME
+# Status: pending_review
+# Tema: ESCURO (default)
+# Hook origem: Banco de hooks · Dor "Forecast no achismo: acho que esse mês fecha bem"
+# Observação: REEL = vídeo. Capa renderizada vira thumbnail.
+#             Postagem manual pelo Lucas (publisher pula formato=reel).
+# --------------------------------------------------------
+template: reel-cover
+slug: 2026-06-16_reel-acho-que-fecha-bem
+data:
+  pilar: "Dor da PME"
+  titulo: |
+    "Acho que<br>
+    esse mês<br>
+    <span class="t-orange">fecha bem</span>."
+  meta: "▶ Reel · 0:20"
+  handle: "@tribocrmoficial"
+
+# Legenda final oficial (feed-dor)
+caption: |
+  "Acho que esse mês fecha bem."
+
+  Essa frase parece otimismo. É chute disfarçado de previsão.
+
+  O sócio pergunta quanto vai entrar, o gestor responde com a sensação da semana, e a empresa toma decisão em cima disso: contrata, segura, gasta, espera. Tudo apoiado num "acho".
+
+  Aí chega o dia 30 e o mês fecha na metade. Ninguém mentiu. Só ninguém mediu.
+
+  Forecast no achismo é assim: funciona enquanto dá sorte. Quando para de dar, a conta vem toda de uma vez e pega o time desprevenido.
+
+  A saída é simples e chata: tirar a previsão da cabeça e botar no pipeline. Valor por negócio, chance de fechar por etapa, data prevista. Aí o número para de depender do humor e passa a depender do que está escrito.
+
+  Quem mede vende. Quem acha negocia.
+
+  A gente faz Máquina de Vendas pra PME brasileira trocar o "acho" pelo dado.
+
+  Marca o sócio que ainda decide no "acho que fecha bem" 🔥
+
+  #vendasb2b #pmebrasileira #processocomercial #gestaocomercial #forecastdevendas

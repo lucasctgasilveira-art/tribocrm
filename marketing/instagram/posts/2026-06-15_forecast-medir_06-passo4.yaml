@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 6 — Passo 4: compara o previsto com o que fechou
+# Calendário: SEG 15/06/2026 · Semana 7 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+theme: light
+slug: 2026-06-15_forecast-medir_06-passo4
+data:
+  pilar: "Forecast · Passo 4"
+  step-num: "PASSO 4"
+  titulo: "No fim do mês, compara o previsto com o real."
+  body-1: |
+    <span class="miolo-emphasis">Previu R$ 80 mil e fechou R$ 50 mil?
+    Não é fracasso. É informação pra calibrar.</span>
+  body-2: |
+    A cada mês comparado, o forecast erra menos.
+    Quem mede vira melhor. Quem só chuta
+    repete o mesmo susto todo dia 30.
+  slide-number: "06 / 08"
+  handle: "@tribocrmoficial"

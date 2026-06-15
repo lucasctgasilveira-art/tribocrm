@@ -1,0 +1,19 @@
+# --------------------------------------------------------
+# Pauta: Slide 3 — Passo 1: chega com o pipeline aberto na tela
+# Calendário: QUA 17/06/2026 · Semana 7 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+theme: light
+slug: 2026-06-17_forecast-defender_03-passo1
+data:
+  pilar: "Defender · Passo 1"
+  step-num: "PASSO 1"
+  titulo: "Chega com o pipeline aberto, não com promessa."
+  body-1: |
+    <span class="miolo-emphasis">Cada negócio na tela: nome, valor, etapa, data.
+    O sócio vê de onde sai o número.</span>
+  body-2: |
+    Promessa o sócio já ouviu mil vezes.
+    Pipeline na tela ele não tem como discutir.
+  slide-number: "03 / 08"
+  handle: "@tribocrmoficial"

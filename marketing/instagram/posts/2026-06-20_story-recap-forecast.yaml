@@ -1,0 +1,22 @@
+# --------------------------------------------------------
+# Pauta: Story recap — fecha a semana de forecast
+# Calendário: SAB 20/06/2026 · Semana 7 · Mês 2 (SÉRIE FORECAST)
+# Pilar: STORY (recap)
+# Status: pending_review
+# Observação: Story só. Sem caption.
+# --------------------------------------------------------
+template: story-recap
+slug: 2026-06-20_story-recap-forecast
+data:
+  eyebrow: "Semana de forecast · recap"
+  headline: |
+    A semana<br>
+    foi sobre<br>
+    medir, não<br>
+    achar.
+  subline: |
+    Como medir forecast real, como defender
+    ele na reunião com o sócio e como virar
+    um mês fraco a tempo. Tá tudo no perfil.
+  cta: "↑ Arrasta pra cima · vai pro perfil"
+  handle: "@tribocrmoficial"

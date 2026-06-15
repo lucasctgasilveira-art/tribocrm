@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 5 — Passo 3: mostra o histórico de acerto
+# Calendário: QUA 17/06/2026 · Semana 7 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+theme: light
+slug: 2026-06-17_forecast-defender_05-passo3
+data:
+  pilar: "Defender · Passo 3"
+  step-num: "PASSO 3"
+  titulo: "Mostra que mês passado você acertou."
+  body-1: |
+    <span class="miolo-emphasis">"Previ R$ 60 mil, fechei R$ 58 mil."
+    Histórico de acerto é o que dá peso à previsão de hoje.</span>
+  body-2: |
+    Forecast novo de quem errou feio mês passado
+    vale pouco. Forecast de quem vem acertando
+    o sócio leva a sério na hora.
+  slide-number: "05 / 08"
+  handle: "@tribocrmoficial"

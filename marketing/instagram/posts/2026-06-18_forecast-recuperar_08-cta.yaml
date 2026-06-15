@@ -1,0 +1,44 @@
+# --------------------------------------------------------
+# Pauta: Slide 8 (CTA) — Carrossel "Como recuperar mês fraco com forecast certo"
+# Calendário: QUI 18/06/2026 · Semana 7 · Mês 2
+# Pilar: MÉTODO · CTA
+# Status: pending_review
+# Nota: CTA usa canvas laranja intrínseco (.canvas--cta). Sem theme:light.
+# --------------------------------------------------------
+template: carrossel-metodo-cta
+slug: 2026-06-18_forecast-recuperar_08-cta
+data:
+  titulo: |
+    Salva. Fecha a<br>
+    semana de forecast.
+    <span class="cta-emoji">🔥</span>
+  direcional: |
+    Quer ver o buraco do mês no dia 10, com tempo de virar o jogo?<br>
+    <span class="acc">Link na bio · demo em 15 min.</span>
+  handle: "@tribocrmoficial"
+  tagline: "Máquina de Vendas pra PMEs brasileiras"
+  slide-number: "08 / 08"
+
+# Legenda oficial (texto literal que vai pro Instagram)
+caption: |
+  Mês fraco não se vira no dia 30. Se vira no dia 10 — se você souber que ele tá fraco.
+
+  Essa é a diferença que ninguém conta. Sem forecast, o gestor só sente o tombo quando já não dá tempo de reagir. Com forecast, ele vê o buraco enquanto ainda tem três semanas pra correr atrás.
+
+  Como recuperar um mês fraco com forecast na mão:
+
+  Passo 1 — mede o buraco enquanto dá tempo. "Faltam R$ 30 mil pra meta e o mês tá na metade." Número claro tira o pânico e mostra o tamanho real. Sem essa conta, o time corre pra todo lado sem saber se já chegou.
+
+  Passo 2 — vai primeiro no que está quase fechando. O pipeline mostra quais negócios estão na boca do gol. Mês fraco não se salva buscando lead novo do zero. Salva fechando o que já está quente e parado por um detalhe.
+
+  Passo 3 — reativa o que travou no meio. Negócio parado há dias com proposta na mesa é dinheiro esquecido. Uma ligação pra entender a objeção real destrava mais venda que prospectar do zero. Tem ouro parado no próprio pipeline.
+
+  Passo 4 — junta o time em cima do número, não da culpa. "Faltam R$ 30 mil. Cada um pega os seus três mais quentes." Reunião sem dado vira caça ao culpado. Com forecast na mesa, todo mundo enxerga a mesma conta e sabe onde puxar.
+
+  Forecast não adivinha o mês. Dá tempo de mudar ele. Mês fraco não é destino, é aviso — e quem mede recebe o aviso cedo.
+
+  A gente faz Máquina de Vendas pra PME brasileira parar de descobrir o problema quando já passou.
+
+  Salva pra rodar no próximo mês que apertar 🔥
+
+  #vendasb2b #pmebrasileira #processocomercial #gestaocomercial #forecastdevendas

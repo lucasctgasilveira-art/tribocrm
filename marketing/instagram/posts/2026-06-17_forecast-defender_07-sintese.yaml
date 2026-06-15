@@ -1,0 +1,19 @@
+# --------------------------------------------------------
+# Pauta: Slide 7 (síntese) — Defender forecast é trocar opinião por dado
+# Calendário: QUA 17/06/2026 · Semana 7 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+theme: light
+slug: 2026-06-17_forecast-defender_07-sintese
+data:
+  pilar: "Resumo da reunião"
+  titulo: "Quem mede vende. Quem acha negocia."
+  body-1: |
+    <span class="miolo-emphasis">Pipeline na tela, risco separado, histórico de acerto
+    e o plano caso falte. Esse é o pacote.</span>
+  body-2: |
+    Com isso, a reunião deixa de ser discussão
+    de quem fala mais alto. Vira conversa sobre números
+    que os dois conseguem ver.
+  slide-number: "07 / 08"
+  handle: "@tribocrmoficial"

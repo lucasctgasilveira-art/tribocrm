@@ -1,0 +1,19 @@
+# --------------------------------------------------------
+# Pauta: Slide 2 — O erro (descobre que o mês tá fraco no dia 28)
+# Calendário: QUI 18/06/2026 · Semana 7 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+theme: light
+slug: 2026-06-18_forecast-recuperar_02-erro
+data:
+  pilar: "O erro de sempre"
+  titulo: "Descobre que o mês tá fraco no dia 28."
+  body-1: |
+    <span class="miolo-emphasis">Sem forecast, o gestor só sente o tombo
+    quando já não dá tempo de reagir.</span>
+  body-2: |
+    Quem mede vê o buraco no dia 10.
+    Tem três semanas pra correr atrás.
+    Quem chuta descobre na última sexta.
+  slide-number: "02 / 08"
+  handle: "@tribocrmoficial"
