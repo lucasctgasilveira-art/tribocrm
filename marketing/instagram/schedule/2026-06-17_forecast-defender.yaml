@@ -1,12 +1,12 @@
-status: aprovado
+status: publicado
 slot:
   data: '2026-06-17'
   horario: 09:00 BRT
   justificativa: >
     Quarta 09:00 BRT — parte 2 da Semana 7 (Série "Forecast"). Carrossel de 8 slides no tema claro: como defender o
-    forecast na reunião com o sócio (pipeline aberto na tela, separar o provável da torcida, mostrar histórico de acerto,
-    chegar com o plano caso falte). Horário replicado das semanas anteriores (QUA carrossel ~09:00). Aterra a cena do
-    sócio que pergunta o número e recebe silêncio — vira discussão de opinião em vez de conversa sobre dado.
+    forecast na reunião com o sócio (pipeline aberto na tela, separar o provável da torcida, mostrar histórico de
+    acerto, chegar com o plano caso falte). Horário replicado das semanas anteriores (QUA carrossel ~09:00). Aterra a
+    cena do sócio que pergunta o número e recebe silêncio — vira discussão de opinião em vez de conversa sobre dado.
 formato: carrossel
 slides: 8
 arquivos:
@@ -27,5 +27,9 @@ publicacao:
 tema_visual: light
 observacao: >
   Série "Forecast" (Semana 7, Mês 2). Parte 2/3 — Como defender o forecast na reunião com o sócio. Quatro passos: chega
-  com o pipeline aberto, separa o que é firme do que é torcida, mostra o histórico de acerto e já traz o plano se faltar.
-  Síntese amarra na frase-manifesto "Quem mede vende. Quem acha negocia." Tema claro. Pendente de aprovação do Lucas.
+  com o pipeline aberto, separa o que é firme do que é torcida, mostra o histórico de acerto e já traz o plano se
+  faltar. Síntese amarra na frase-manifesto "Quem mede vende. Quem acha negocia." Tema claro. Pendente de aprovação do
+  Lucas.
+published_at: '2026-06-17T12:07:54.634Z'
+media_id: '18411647038148078'
+permalink: https://www.instagram.com/p/DZr7sb_nBjD/
