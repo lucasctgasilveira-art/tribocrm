@@ -1,12 +1,13 @@
-status: aprovado
+status: publicado
 slot:
   data: '2026-06-18'
   horario: 09:00 BRT
   justificativa: >
-    Quinta 09:00 BRT — parte 3 da Semana 7 (Série "Forecast"). Carrossel de 8 slides no tema claro: como recuperar um mês
-    fraco com forecast certo (medir o buraco enquanto dá tempo, atacar o que está quase fechando, reativar o que travou,
-    juntar o time no número e não na culpa). 3º carrossel encaixado no lugar do reel de quinta por decisão do Lucas — a
-    semana fica com 3 carrosséis (SEG/QUA/QUI). Horário replicado das semanas anteriores (QUI carrossel ~09:00).
+    Quinta 09:00 BRT — parte 3 da Semana 7 (Série "Forecast"). Carrossel de 8 slides no tema claro: como recuperar um
+    mês fraco com forecast certo (medir o buraco enquanto dá tempo, atacar o que está quase fechando, reativar o que
+    travou, juntar o time no número e não na culpa). 3º carrossel encaixado no lugar do reel de quinta por decisão do
+    Lucas — a semana fica com 3 carrosséis (SEG/QUA/QUI). Horário replicado das semanas anteriores (QUI carrossel
+    ~09:00).
 formato: carrossel
 slides: 8
 arquivos:
@@ -26,6 +27,10 @@ publicacao:
   acao_humana_necessaria: aprovacao_lucas_antes_de_postar
 tema_visual: light
 observacao: >
-  Série "Forecast" (Semana 7, Mês 2). Parte 3/3 — Como recuperar mês fraco com forecast certo. Quatro passos: vê o buraco
-  cedo (dia 10, não dia 30), vai primeiro no que está quase fechando, reativa o que travou no meio, junta o time em cima
-  do número e não da culpa. 3º carrossel no lugar do reel de quinta (decisão do Lucas). Tema claro. Pendente de aprovação.
+  Série "Forecast" (Semana 7, Mês 2). Parte 3/3 — Como recuperar mês fraco com forecast certo. Quatro passos: vê o
+  buraco cedo (dia 10, não dia 30), vai primeiro no que está quase fechando, reativa o que travou no meio, junta o time
+  em cima do número e não da culpa. 3º carrossel no lugar do reel de quinta (decisão do Lucas). Tema claro. Pendente de
+  aprovação.
+published_at: '2026-06-18T14:34:24.712Z'
+media_id: '18112701601924659'
+permalink: https://www.instagram.com/p/DZuxRrhkaPL/
