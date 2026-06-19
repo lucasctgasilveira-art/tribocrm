@@ -1,12 +1,12 @@
-status: aprovado
+status: publicado
 slot:
   data: '2026-06-19'
   horario: 12:30 BRT
   justificativa: >
     Sexta 12:30 BRT — pilar Manifesto (Série "Forecast"). Feed estático único com a frase-âncora da semana ("Quem mede
     vende. Quem acha negocia."). Horário de almoço replicado das semanas anteriores (SEX feed ~12:30). Fecha o arco da
-    semana amarrando a tese: forecast é a diferença entre medir e achar. Tema escuro — a frase precisa de duas palavras em
-    contraste ("mede" em laranja sobre branco), o que se perderia no laranja-âncora (laranja sobre laranja).
+    semana amarrando a tese: forecast é a diferença entre medir e achar. Tema escuro — a frase precisa de duas palavras
+    em contraste ("mede" em laranja sobre branco), o que se perderia no laranja-âncora (laranja sobre laranja).
 formato: feed
 slides: 1
 arquivos:
@@ -22,3 +22,6 @@ observacao: >
   Pilar Manifesto da Semana 7 (Forecast). Hook Man12 — "Quem mede vende. Quem acha negocia." Tema escuro com "mede" em
   laranja como contraste (não usa o laranja-âncora porque a frase tem duas palavras em oposição: mede x acha). Fecha o
   arco da semana. Pendente de aprovação do Lucas.
+published_at: '2026-06-19T17:04:57.764Z'
+media_id: '18104807150044750'
+permalink: https://www.instagram.com/p/DZxnNvjFZUL/
