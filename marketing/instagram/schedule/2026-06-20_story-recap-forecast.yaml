@@ -1,11 +1,11 @@
-status: aprovado
+status: publicado
 slot:
   data: '2026-06-20'
-  horario: '10:32 BRT'
+  horario: 10:32 BRT
   justificativa: >
     Sábado 10:32 BRT — story 2 de 2 do encerramento da Semana 7 (Série "Forecast"). Recap visual da semana: como medir
-    forecast real, como defender ele na reunião com o sócio e como virar um mês fraco a tempo. Sai logo depois da enquete
-    (sequência de ~2 min, padrão das semanas anteriores). Story estático puro — sai automático via Graph API.
+    forecast real, como defender ele na reunião com o sócio e como virar um mês fraco a tempo. Sai logo depois da
+    enquete (sequência de ~2 min, padrão das semanas anteriores). Story estático puro — sai automático via Graph API.
 formato: story
 arquivos:
   - output/2026-06-20_story-recap-forecast.png
@@ -17,3 +17,6 @@ tema_visual: dark
 observacao: >
   Story 2 de 2 do encerramento da Semana 7. Recap da série de forecast. Sai automático via Graph API. Pendente de
   aprovação do Lucas.
+published_at: '2026-06-20T15:18:57.040Z'
+media_id: '18076082426328397'
+permalink: https://www.instagram.com/stories/tribocrmoficial/3923760736531232487
