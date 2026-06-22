@@ -1,0 +1,22 @@
+# ATENCAO: status 'rascunho' => o publisher PULA (so publica status 'aprovado').
+status: aprovado
+slot:
+  data: '2026-06-26'
+  horario: 18:00 BRT
+  justificativa: >
+    Sexta 18:00 BRT — feed manifesto que fecha a Semana 8. "Reunião sem dado é grupo de apoio." Imagem única no tema
+    escuro. Horário no fim do expediente de sexta, quando o gestor revisita a semana. Pilar Manifesto (10% do mix), fecha
+    a série de Reuniões com a tese central.
+formato: feed
+arquivos:
+  - output/2026-06-26_feed-manifesto-reuniao-grupo-apoio.png
+caption_source: posts/2026-06-26_feed-manifesto-reuniao-grupo-apoio.yaml#caption
+hashtags_inline_na_caption: true
+primeiro_comentario: null
+publicacao:
+  metodo: instagram_graph_api
+  acao_humana_necessaria: aprovacao_lucas_antes_de_postar
+tema_visual: dark
+observacao: >
+  Feed manifesto que fecha a Semana 8 (Série "Reuniões"). Pendente de aprovação do Lucas — só vira 'aprovado' depois do
+  OK dele.

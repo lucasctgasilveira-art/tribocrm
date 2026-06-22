@@ -1,0 +1,21 @@
+# --------------------------------------------------------
+# Pauta: Story recap 1 — recap da semana de Reuniões (SEG + TER)
+# Calendário: SAB 27/06/2026 · Semana 8 · Mês 2 (RITUAIS DE REUNIÃO)
+# Pilar: STORY (recap)
+# Status: pending_review
+# Observação: Story só. Sem caption.
+# --------------------------------------------------------
+template: story-recap
+slug: 2026-06-27_story-recap-reunioes_01
+data:
+  eyebrow: "Semana de Reuniões"
+  headline: |
+    A reunião de<br>
+    segunda em<br>
+    30 minutos.
+  subline: |
+    Carrossel de segunda — o roteiro pra
+    trocar a reunião que vira desabafo por
+    reunião que vira decisão.
+  cta: "↑ Arrasta pra cima · vai pro feed"
+  handle: "@tribocrmoficial"

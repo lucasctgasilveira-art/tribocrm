@@ -1,0 +1,21 @@
+# --------------------------------------------------------
+# Pauta: Slide 7 — Bloco 4: metas e prioridades do próximo mês
+# Calendário: QUI 25/06/2026 · Semana 8 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-06-25_mensal-estrategico-90min_07-passo4
+data:
+  pilar: "Bloco 4 · ~20 min"
+  step-num: "BLOCO 4"
+  titulo: "Metas e prioridades do próximo mês."
+  body-1: |
+    <span class="miolo-emphasis">Com o mês fechado na mão, define
+    a meta e as poucas prioridades que
+    vão puxar o número.</span>
+  body-2: |
+    Meta sem prioridade clara é só um
+    desejo. Sai da mensal com o
+    próximo mês já desenhado — não
+    com a torcida de sempre.
+  slide-number: "07 / 08"
+  handle: "@tribocrmoficial"

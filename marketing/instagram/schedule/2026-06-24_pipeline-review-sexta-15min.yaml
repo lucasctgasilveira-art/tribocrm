@@ -1,0 +1,29 @@
+# ATENCAO: status 'rascunho' => o publisher PULA (so publica status 'aprovado').
+status: aprovado
+slot:
+  data: '2026-06-24'
+  horario: 09:00 BRT
+  justificativa: >
+    Quarta 09:00 BRT — parte 2/3 da Série "Reuniões". Carrossel de 8 slides no tema escuro: o pipeline review de sexta em
+    15 minutos (placar da semana, leads parados, promessas não cumpridas, 3 prioridades de segunda). Mantém o ritmo de
+    carrossel-método da semana.
+formato: carrossel
+slides: 8
+arquivos:
+  - output/2026-06-24_pipeline-review-sexta-15min_01-capa.png
+  - output/2026-06-24_pipeline-review-sexta-15min_02-dor.png
+  - output/2026-06-24_pipeline-review-sexta-15min_03-erro.png
+  - output/2026-06-24_pipeline-review-sexta-15min_04-passo1.png
+  - output/2026-06-24_pipeline-review-sexta-15min_05-passo2.png
+  - output/2026-06-24_pipeline-review-sexta-15min_06-passo3.png
+  - output/2026-06-24_pipeline-review-sexta-15min_07-passo4.png
+  - output/2026-06-24_pipeline-review-sexta-15min_08-cta.png
+caption_source: posts/2026-06-24_pipeline-review-sexta-15min_08-cta.yaml#caption
+hashtags_inline_na_caption: true
+primeiro_comentario: null
+publicacao:
+  metodo: instagram_graph_api
+  acao_humana_necessaria: aprovacao_lucas_antes_de_postar
+tema_visual: dark
+observacao: >
+  Parte 2/3 da Série "Reuniões". Pendente de aprovação do Lucas — só vira 'aprovado' depois do OK dele.

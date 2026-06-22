@@ -1,0 +1,21 @@
+# --------------------------------------------------------
+# Pauta: Slide 6 — Bloco 3: de onde vieram os clientes
+# Calendário: QUI 25/06/2026 · Semana 8 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-06-25_mensal-estrategico-90min_06-passo3
+data:
+  pilar: "Bloco 3 · ~20 min"
+  step-num: "BLOCO 3"
+  titulo: "De onde vieram os clientes que fecharam."
+  body-1: |
+    <span class="miolo-emphasis">Indicação, anúncio, prospecção
+    ativa? Olha a origem de cada
+    cliente que virou venda.</span>
+  body-2: |
+    Saber qual canal traz cliente de
+    verdade é o que separa investir
+    com método de gastar no escuro
+    mais um mês.
+  slide-number: "06 / 08"
+  handle: "@tribocrmoficial"

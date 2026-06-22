@@ -1,0 +1,33 @@
+# --------------------------------------------------------
+# Pauta: Feed manifesto "Reunião sem dado é grupo de apoio"
+# Calendário: SEX 26/06/2026 · Semana 8 · Mês 2 (RITUAIS DE REUNIÃO)
+# Pilar: MANIFESTO
+# Status: pending_review
+# Tema: ESCURO
+# Hook origem: Fecha a semana de rituais de reunião com a provocação
+#              que amarra os três carrosséis (segunda, sexta e mensal).
+# --------------------------------------------------------
+template: feed-manifesto
+slug: 2026-06-26_feed-manifesto-reuniao-grupo-apoio
+data:
+  linha-1: "Reunião sem dado"
+  linha-2: "é grupo"
+  linha-3: |
+    de <span class="t-orange">apoio</span>.
+  handle: "@tribocrmoficial"
+
+# Legenda final oficial
+caption: |
+  Reunião sem dado é grupo de apoio.
+
+  Todo mundo desabafa. "Tô correndo atrás", "o cliente sumiu", "a semana foi corrida". Cada um conta sua história, todo mundo balança a cabeça, alguém promete que a próxima vai ser melhor. Uma hora e meia depois, saiu reunião e não saiu decisão.
+
+  Acolhimento é bom pra vida. Pra venda, não resolve. O que muda o número não é quem fala mais alto na sala — é o que o pipeline mostra na tela.
+
+  Reunião que vira Máquina de Vendas tem dado na frente de todo mundo: qual lead andou, qual travou, qual morreu, qual é a próxima ação de cada um. O resto é conversa de corredor com cadeira mais confortável.
+
+  A gente faz Máquina de Vendas pra PME brasileira trocar a reunião que vira desabafo por reunião que vira decisão.
+
+  Marca o gestor que precisa ouvir isso antes da próxima segunda.
+
+  #vendasb2b #pmebrasileira #gestaocomercial #processocomercial #equipecomercial

@@ -1,0 +1,21 @@
+# --------------------------------------------------------
+# Pauta: Slide 3 (erro) — Carrossel "Pipeline review de sexta em 15 min"
+# Calendário: QUA 24/06/2026 · Semana 8 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-06-24_pipeline-review-sexta-15min_03-erro
+data:
+  pilar: "Por que não acontece"
+  step-num: "O ERRO"
+  titulo: "Review longo no fim de semana ninguém faz."
+  body-1: |
+    <span class="miolo-emphasis">A revisão que toma uma hora vira
+    "deixa pra segunda" — e segunda
+    nunca chega.</span>
+  body-2: |
+    Sem um ritual curto, de 15 minutos,
+    o fechamento de semana vira nada.
+    O que não tem hora marcada e
+    formato fixo não acontece.
+  slide-number: "03 / 08"
+  handle: "@tribocrmoficial"

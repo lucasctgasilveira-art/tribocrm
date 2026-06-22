@@ -1,0 +1,22 @@
+# --------------------------------------------------------
+# Pauta: Slide 3 (erro) — Carrossel "Mensal estratégico em 90 min"
+# Calendário: QUI 25/06/2026 · Semana 8 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-06-25_mensal-estrategico-90min_03-erro
+data:
+  pilar: "Por que não ajuda"
+  step-num: "O ERRO"
+  titulo: "A mensal vira retrospectiva de desculpa."
+  body-1: |
+    <span class="miolo-emphasis">Cada um explica por que não bateu,
+    o dono cobra, e ninguém olha o
+    dado pra ajustar a rota.</span>
+  body-2: |
+    Sem números na mesa, a reunião
+    vira justificativa em vez de
+    calibragem. Olha pra trás pra
+    culpar — não pra frente pra
+    corrigir.
+  slide-number: "03 / 08"
+  handle: "@tribocrmoficial"

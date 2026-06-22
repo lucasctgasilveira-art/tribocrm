@@ -1,0 +1,21 @@
+# --------------------------------------------------------
+# Pauta: Slide 4 — Bloco 1: previsto contra real
+# Calendário: QUI 25/06/2026 · Semana 8 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-06-25_mensal-estrategico-90min_04-passo1
+data:
+  pilar: "Bloco 1 · ~25 min"
+  step-num: "BLOCO 1"
+  titulo: "Previsão x real: onde a previsão errou e por quê."
+  body-1: |
+    <span class="miolo-emphasis">Compara o que o pipeline previa no
+    começo do mês com o que de fato
+    fechou.</span>
+  body-2: |
+    A diferença não é pra culpar — é
+    pra entender. Previsão que erra
+    sempre pro mesmo lado mostra onde
+    o time se ilude.
+  slide-number: "04 / 08"
+  handle: "@tribocrmoficial"

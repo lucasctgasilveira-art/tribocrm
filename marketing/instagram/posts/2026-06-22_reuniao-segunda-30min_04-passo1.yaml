@@ -1,0 +1,21 @@
+# --------------------------------------------------------
+# Pauta: Slide 4 — Passo 1: abre pelo pipeline
+# Calendário: SEG 22/06/2026 · Semana 8 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-06-22_reuniao-segunda-30min_04-passo1
+data:
+  pilar: "Passo 1 · 5 min"
+  step-num: "PASSO 1"
+  titulo: "Abre pelo pipeline, não pelas histórias."
+  body-1: |
+    <span class="miolo-emphasis">A tela do pipeline fica na frente
+    de todo mundo. É ela que conduz
+    a reunião — não a memória.</span>
+  body-2: |
+    Cada lead na etapa certa, na cara
+    do time. Quem fala olha pro lead,
+    não pro teto. A conversa segue o
+    funil, não o desabafo.
+  slide-number: "04 / 08"
+  handle: "@tribocrmoficial"

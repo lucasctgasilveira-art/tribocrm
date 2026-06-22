@@ -1,0 +1,32 @@
+# ATENCAO: status 'rascunho' => o publisher PULA (so publica status 'aprovado').
+# So o Lucas troca pra 'aprovado' depois de revisar. NAO publicar sozinho.
+status: aprovado
+slot:
+  data: '2026-06-22'
+  horario: 09:00 BRT
+  justificativa: >
+    Segunda 09:00 BRT — abertura da Semana 8 (Série "Reuniões", Mês 2). Carrossel de 8 slides no tema escuro: o roteiro da
+    reunião comercial de segunda em 30 minutos (abre pelo pipeline, vai lead por lead, decide o que morre, sai com a próxima
+    ação anotada). Horário replicado das aberturas de semana anteriores (SEG carrossel ~09:00). Abre a série de rituais de
+    reunião que estrutura toda a semana.
+formato: carrossel
+slides: 8
+arquivos:
+  - output/2026-06-22_reuniao-segunda-30min_01-capa.png
+  - output/2026-06-22_reuniao-segunda-30min_02-dor.png
+  - output/2026-06-22_reuniao-segunda-30min_03-erro.png
+  - output/2026-06-22_reuniao-segunda-30min_04-passo1.png
+  - output/2026-06-22_reuniao-segunda-30min_05-passo2.png
+  - output/2026-06-22_reuniao-segunda-30min_06-passo3.png
+  - output/2026-06-22_reuniao-segunda-30min_07-passo4.png
+  - output/2026-06-22_reuniao-segunda-30min_08-cta.png
+caption_source: posts/2026-06-22_reuniao-segunda-30min_08-cta.yaml#caption
+hashtags_inline_na_caption: true
+primeiro_comentario: null
+publicacao:
+  metodo: instagram_graph_api
+  acao_humana_necessaria: aprovacao_lucas_antes_de_postar
+tema_visual: dark
+observacao: >
+  Abre a Semana 8 (Série "Reuniões"). Parte 1/3 dos rituais. Pendente de aprovação do Lucas — só vira 'aprovado' depois
+  do OK dele. Data já vencida em relação a hoje (22/06): manter 'rascunho' até aprovação evita publicação atrasada.

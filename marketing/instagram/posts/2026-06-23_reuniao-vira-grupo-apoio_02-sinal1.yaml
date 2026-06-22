@@ -1,0 +1,19 @@
+# --------------------------------------------------------
+# Pauta: Slide 2 — Sinal 1 — Carrossel-dor "Reunião virou terapia"
+# Calendário: TER 23/06/2026 · Semana 8 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-06-23_reuniao-vira-grupo-apoio_02-sinal1
+data:
+  pilar: "Sinal 1"
+  step-num: "SINAL 1"
+  titulo: "Todo mundo fala, ninguém mostra."
+  body-1: |
+    <span class="miolo-emphasis">A reunião é só relato:
+    "tô correndo atrás", "o cliente sumiu".</span>
+  body-2: |
+    Ninguém abre o pipeline na tela.
+    A gente já saiu de reunião assim:
+    pura sensação, virou desabafo.
+  slide-number: "02 / 04"
+  handle: "@tribocrmoficial"

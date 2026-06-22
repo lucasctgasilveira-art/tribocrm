@@ -1,0 +1,21 @@
+# --------------------------------------------------------
+# Pauta: Slide 4 — Passo 1: o que entrou e o que saiu
+# Calendário: QUA 24/06/2026 · Semana 8 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-06-24_pipeline-review-sexta-15min_04-passo1
+data:
+  pilar: "Passo 1 · ~4 min"
+  step-num: "PASSO 1"
+  titulo: "Conta o que entrou e o que saiu do pipeline."
+  body-1: |
+    <span class="miolo-emphasis">Quantos leads novos chegaram,
+    quantos viraram cliente e quantos
+    viraram "não" na semana.</span>
+  body-2: |
+    É o placar da semana em três
+    números. Sem isso, "a semana foi
+    boa" é só sensação — com isso,
+    vira fato na tela.
+  slide-number: "04 / 08"
+  handle: "@tribocrmoficial"

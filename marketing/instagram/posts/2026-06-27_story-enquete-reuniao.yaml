@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Story enquete "reunião comercial: decisão vs desabafo"
+# Calendário: SAB 27/06/2026 · Semana 8 · Mês 2 (RITUAIS DE REUNIÃO)
+# Pilar: STORY (interação)
+# Status: pending_review
+# Observação: Story só. Sem caption (story não usa).
+# --------------------------------------------------------
+template: story-enquete
+slug: 2026-06-27_story-enquete-reuniao
+data:
+  pilar: "Pergunta da semana"
+  pergunta: |
+    Quando sua reunião comercial<br>
+    acaba, o time sai com...
+  opcao-a: |
+    Próxima ação<br>anotada
+  opcao-b: |
+    Sensação de<br>que correu
+  cta: "Manda DM se quiser conversar 🔥"
+  handle: "@tribocrmoficial"

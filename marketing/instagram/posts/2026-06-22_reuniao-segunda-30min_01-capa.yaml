@@ -1,0 +1,18 @@
+# --------------------------------------------------------
+# Pauta: Slide 1 (capa) — Carrossel "Reunião comercial de segunda em 30 min"
+# Calendário: SEG 22/06/2026 · Semana 8 · Mês 2 (RITUAIS DE REUNIÃO)
+# Pilar: MÉTODO
+# Status: pending_review
+# Tema: ESCURO
+# Hook origem: M23 (Banco de hooks · Pilar Método · Reuniões)
+# --------------------------------------------------------
+template: carrossel-metodo-capa
+slug: 2026-06-22_reuniao-segunda-30min_01-capa
+data:
+  pilar: "Método · Reuniões"
+  titulo: |
+    A reunião comercial<br>
+    de segunda em <span class="t-orange">30 minutos</span>:<br>
+    o roteiro.
+  slide-number: "01 / 08"
+  handle: "@tribocrmoficial"

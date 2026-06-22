@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 3 — Sinal 2 — Carrossel-dor "Reunião virou terapia"
+# Calendário: TER 23/06/2026 · Semana 8 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-06-23_reuniao-vira-grupo-apoio_03-sinal2
+data:
+  pilar: "Sinal 2"
+  step-num: "SINAL 2"
+  titulo: "Sai reunião, não sai decisão."
+  body-1: |
+    <span class="miolo-emphasis">Uma hora e meia depois,
+    ninguém sai com tarefa nova anotada.</span>
+  body-2: |
+    O mesmo lead parado vai aparecer
+    igual na semana que vem.
+    Reunião que não muda o pipeline
+    é só hora de café mais longa.
+  slide-number: "03 / 04"
+  handle: "@tribocrmoficial"

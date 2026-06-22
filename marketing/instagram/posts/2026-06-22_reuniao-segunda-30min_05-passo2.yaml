@@ -1,0 +1,21 @@
+# --------------------------------------------------------
+# Pauta: Slide 5 — Passo 2: etapa por etapa, lead por lead
+# Calendário: SEG 22/06/2026 · Semana 8 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-06-22_reuniao-segunda-30min_05-passo2
+data:
+  pilar: "Passo 2 · 15 min"
+  step-num: "PASSO 2"
+  titulo: "Vai etapa por etapa, lead por lead."
+  body-1: |
+    <span class="miolo-emphasis">Abre cada lead e faz uma pergunta
+    só: qual a próxima ação e pra
+    quando?</span>
+  body-2: |
+    Lead sem próxima ação e sem data
+    não passa. É aqui que mora a
+    reunião de verdade — o resto é
+    só conversa de corredor.
+  slide-number: "05 / 08"
+  handle: "@tribocrmoficial"

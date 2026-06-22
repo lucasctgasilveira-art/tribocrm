@@ -1,0 +1,21 @@
+# --------------------------------------------------------
+# Pauta: Slide 5 — Passo 2: leads parados há mais de X dias
+# Calendário: QUA 24/06/2026 · Semana 8 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-06-24_pipeline-review-sexta-15min_05-passo2
+data:
+  pilar: "Passo 2 · ~4 min"
+  step-num: "PASSO 2"
+  titulo: "Olha os leads parados há mais de X dias."
+  body-1: |
+    <span class="miolo-emphasis">Filtra quem não anda há uma semana
+    e decide: cutuca de novo ou tira
+    do pipeline?</span>
+  body-2: |
+    Lead parado é dinheiro esquecido
+    na gaveta. A sexta é a hora de
+    desencalhar antes que vire mais
+    uma semana perdida.
+  slide-number: "05 / 08"
+  handle: "@tribocrmoficial"

@@ -1,0 +1,22 @@
+# --------------------------------------------------------
+# Pauta: Story recap 2 — recap da semana de Reuniões (QUA + QUI + SEX)
+# Calendário: SAB 27/06/2026 · Semana 8 · Mês 2 (RITUAIS DE REUNIÃO)
+# Pilar: STORY (recap)
+# Status: pending_review
+# Observação: Story só. Sem caption.
+# --------------------------------------------------------
+template: story-recap
+slug: 2026-06-27_story-recap-reunioes_02
+data:
+  eyebrow: "Semana de Reuniões"
+  headline: |
+    Sexta em 15 min.<br>
+    Mensal em 90.<br>
+    Cada uma no<br>
+    seu ritmo.
+  subline: |
+    Pipeline review de sexta, mensal estratégico
+    e o manifesto: reunião sem dado é grupo
+    de apoio. Tudo no feed.
+  cta: "↑ Arrasta pra cima · vai pro feed"
+  handle: "@tribocrmoficial"

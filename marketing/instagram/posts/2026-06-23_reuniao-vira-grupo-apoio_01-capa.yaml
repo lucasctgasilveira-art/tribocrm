@@ -1,0 +1,19 @@
+# --------------------------------------------------------
+# Pauta: Slide 1 (capa) — Carrossel-dor "Como saber se sua reunião comercial virou terapia"
+# Calendário: TER 23/06/2026 · Semana 8 · Mês 2 (RITUAIS DE REUNIÃO)
+# Pilar: DOR
+# Status: pending_review
+# Tema: ESCURO
+# Hook origem: D24 (Banco de hooks · Pilar Dor · Reuniões)
+# Observacao: substitui o Reel da terça (não gravado). Carrossel-dor avulso, 4 slides.
+# --------------------------------------------------------
+template: carrossel-metodo-capa
+slug: 2026-06-23_reuniao-vira-grupo-apoio_01-capa
+data:
+  pilar: "Dor · Reuniões"
+  titulo: |
+    Como saber se sua<br>
+    reunião comercial<br>
+    <span class="t-orange">virou terapia</span>.
+  slide-number: "01 / 04"
+  handle: "@tribocrmoficial"

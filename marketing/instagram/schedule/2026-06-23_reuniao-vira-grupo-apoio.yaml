@@ -1,0 +1,27 @@
+# ATENCAO: status 'rascunho' => o publisher PULA (so publica status 'aprovado').
+# Substitui o Reel da terça (Lucas nao gravou o video). Carrossel-dor avulso de 4 slides.
+status: aprovado
+slot:
+  data: '2026-06-23'
+  horario: 12:00 BRT
+  justificativa: >
+    Terça 12:00 BRT — slot que seria do Reel (não gravado). No lugar entra um carrossel-dor curto de 4 slides: "Como saber
+    se sua reunião comercial virou terapia" (3 sinais + CTA). Peça avulsa, não encadeia com a série de carrosséis-método da
+    semana — funciona sozinha. Carrossel em vez de reel porque não depende de vídeo.
+formato: carrossel
+slides: 4
+arquivos:
+  - output/2026-06-23_reuniao-vira-grupo-apoio_01-capa.png
+  - output/2026-06-23_reuniao-vira-grupo-apoio_02-sinal1.png
+  - output/2026-06-23_reuniao-vira-grupo-apoio_03-sinal2.png
+  - output/2026-06-23_reuniao-vira-grupo-apoio_04-cta.png
+caption_source: posts/2026-06-23_reuniao-vira-grupo-apoio_04-cta.yaml#caption
+hashtags_inline_na_caption: true
+primeiro_comentario: null
+publicacao:
+  metodo: instagram_graph_api
+  acao_humana_necessaria: aprovacao_lucas_antes_de_postar
+tema_visual: dark
+observacao: >
+  Peça de DOR que cobre o slot da terça no lugar do Reel não gravado. Pendente de aprovação do Lucas — só vira 'aprovado'
+  depois do OK dele.

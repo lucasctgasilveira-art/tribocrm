@@ -1,0 +1,21 @@
+# --------------------------------------------------------
+# Pauta: Slide 2 (dor) — Carrossel "Reunião de segunda em 30 min"
+# Calendário: SEG 22/06/2026 · Semana 8 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-06-22_reuniao-segunda-30min_02-dor
+data:
+  pilar: "A cena de sempre"
+  step-num: "A DOR"
+  titulo: "A reunião de segunda vira desabafo."
+  body-1: |
+    <span class="miolo-emphasis">Uma hora e meia depois,
+    todo mundo correu atrás de cada
+    história — e ninguém sabe o que
+    vai fechar.</span>
+  body-2: |
+    "Tô correndo atrás", "o cliente
+    sumiu", "semana foi corrida".
+    Saiu reunião, não saiu decisão.
+  slide-number: "02 / 08"
+  handle: "@tribocrmoficial"

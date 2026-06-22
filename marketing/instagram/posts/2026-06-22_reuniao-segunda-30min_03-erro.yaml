@@ -1,0 +1,20 @@
+# --------------------------------------------------------
+# Pauta: Slide 3 (erro) — Carrossel "Reunião de segunda em 30 min"
+# Calendário: SEG 22/06/2026 · Semana 8 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-06-22_reuniao-segunda-30min_03-erro
+data:
+  pilar: "Por que estoura o tempo"
+  step-num: "O ERRO"
+  titulo: "Reunião sem pauta vira contação de história."
+  body-1: |
+    <span class="miolo-emphasis">Sem uma ordem fixa, cada vendedor
+    fala o que lembra — e o que dói menos.</span>
+  body-2: |
+    O lead parado some da conversa.
+    O que precisa de decisão fica pra
+    "semana que vem". A reunião enche
+    de relato e esvazia de ação.
+  slide-number: "03 / 08"
+  handle: "@tribocrmoficial"

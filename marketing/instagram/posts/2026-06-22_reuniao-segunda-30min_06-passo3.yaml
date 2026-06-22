@@ -1,0 +1,21 @@
+# --------------------------------------------------------
+# Pauta: Slide 6 — Passo 3: decide o que morre
+# Calendário: SEG 22/06/2026 · Semana 8 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-06-22_reuniao-segunda-30min_06-passo3
+data:
+  pilar: "Passo 3 · 5 min"
+  step-num: "PASSO 3"
+  titulo: "Decide o que morre."
+  body-1: |
+    <span class="miolo-emphasis">Lead parado há semanas tem dois
+    caminhos: vira "perdido" ou ganha
+    uma ação real agora.</span>
+  body-2: |
+    Pipeline cheio de lead morto
+    engana o time inteiro. Limpar é
+    o que faz o número da semana
+    parar de mentir.
+  slide-number: "06 / 08"
+  handle: "@tribocrmoficial"

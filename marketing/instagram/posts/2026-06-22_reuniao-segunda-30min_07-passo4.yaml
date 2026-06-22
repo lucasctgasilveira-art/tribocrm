@@ -1,0 +1,22 @@
+# --------------------------------------------------------
+# Pauta: Slide 7 — Passo 4: sai com a próxima ação anotada
+# Calendário: SEG 22/06/2026 · Semana 8 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-06-22_reuniao-segunda-30min_07-passo4
+data:
+  pilar: "Passo 4 · 5 min"
+  step-num: "PASSO 4"
+  titulo: "Sai com a próxima ação de cada um anotada."
+  body-1: |
+    <span class="miolo-emphasis">Ninguém levanta da reunião sem
+    uma tarefa com data dentro do
+    sistema.</span>
+  body-2: |
+    O que ficou no "depois eu vejo"
+    nunca acontece. Tarefa anotada,
+    com dono e prazo, é o que
+    transforma reunião em semana
+    que rende.
+  slide-number: "07 / 08"
+  handle: "@tribocrmoficial"

@@ -1,0 +1,21 @@
+# --------------------------------------------------------
+# Pauta: Slide 5 — Bloco 2: conversão por etapa do funil
+# Calendário: QUI 25/06/2026 · Semana 8 · Mês 2
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-06-25_mensal-estrategico-90min_05-passo2
+data:
+  pilar: "Bloco 2 · ~25 min"
+  step-num: "BLOCO 2"
+  titulo: "Taxa de conversão por etapa do funil."
+  body-1: |
+    <span class="miolo-emphasis">Quanto avança de uma etapa pra
+    outra? É aí que o gargalo aparece
+    com nome e número.</span>
+  body-2: |
+    Muito lead entra e some na
+    proposta? Trava no contato? O
+    funil mostra onde a venda vaza —
+    e onde vale colocar energia.
+  slide-number: "05 / 08"
+  handle: "@tribocrmoficial"

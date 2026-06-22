@@ -1,0 +1,18 @@
+# --------------------------------------------------------
+# Pauta: Slide 1 (capa) — Carrossel "Pipeline review de sexta em 15 min"
+# Calendário: QUA 24/06/2026 · Semana 8 · Mês 2 (RITUAIS DE REUNIÃO)
+# Pilar: MÉTODO
+# Status: pending_review
+# Tema: ESCURO
+# Hook origem: M24 (Banco de hooks · Pilar Método · Reuniões)
+# --------------------------------------------------------
+template: carrossel-metodo-capa
+slug: 2026-06-24_pipeline-review-sexta-15min_01-capa
+data:
+  pilar: "Método · Reuniões"
+  titulo: |
+    O pipeline review<br>
+    de sexta em <span class="t-orange">15 minutos</span>:<br>
+    o roteiro.
+  slide-number: "01 / 08"
+  handle: "@tribocrmoficial"
