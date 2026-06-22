@@ -1,14 +1,12 @@
-# ATENCAO: status 'rascunho' => o publisher PULA (so publica status 'aprovado').
-# So o Lucas troca pra 'aprovado' depois de revisar. NAO publicar sozinho.
-status: aprovado
+status: publicado
 slot:
   data: '2026-06-22'
   horario: 09:00 BRT
   justificativa: >
-    Segunda 09:00 BRT — abertura da Semana 8 (Série "Reuniões", Mês 2). Carrossel de 8 slides no tema escuro: o roteiro da
-    reunião comercial de segunda em 30 minutos (abre pelo pipeline, vai lead por lead, decide o que morre, sai com a próxima
-    ação anotada). Horário replicado das aberturas de semana anteriores (SEG carrossel ~09:00). Abre a série de rituais de
-    reunião que estrutura toda a semana.
+    Segunda 09:00 BRT — abertura da Semana 8 (Série "Reuniões", Mês 2). Carrossel de 8 slides no tema escuro: o roteiro
+    da reunião comercial de segunda em 30 minutos (abre pelo pipeline, vai lead por lead, decide o que morre, sai com a
+    próxima ação anotada). Horário replicado das aberturas de semana anteriores (SEG carrossel ~09:00). Abre a série de
+    rituais de reunião que estrutura toda a semana.
 formato: carrossel
 slides: 8
 arquivos:
@@ -30,3 +28,6 @@ tema_visual: dark
 observacao: >
   Abre a Semana 8 (Série "Reuniões"). Parte 1/3 dos rituais. Pendente de aprovação do Lucas — só vira 'aprovado' depois
   do OK dele. Data já vencida em relação a hoje (22/06): manter 'rascunho' até aprovação evita publicação atrasada.
+published_at: '2026-06-22T20:35:07.936Z'
+media_id: '18110074037316054'
+permalink: https://www.instagram.com/p/DZ5tuEVlk_v/
