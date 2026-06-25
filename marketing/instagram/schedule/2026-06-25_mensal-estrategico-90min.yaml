@@ -1,5 +1,4 @@
-# ATENCAO: status 'rascunho' => o publisher PULA (so publica status 'aprovado').
-status: aprovado
+status: publicado
 slot:
   data: '2026-06-25'
   horario: 09:00 BRT
@@ -25,5 +24,8 @@ publicacao:
   metodo: instagram_graph_api
   acao_humana_necessaria: aprovacao_lucas_antes_de_postar
 tema_visual: dark
-observacao: >
+observacao: |
   Parte 3/3 da Série "Reuniões". Pendente de aprovação do Lucas — só vira 'aprovado' depois do OK dele.
+published_at: '2026-06-25T13:40:18.484Z'
+media_id: '18098806616587513'
+permalink: https://www.instagram.com/p/DaAsoo3IPHW/
