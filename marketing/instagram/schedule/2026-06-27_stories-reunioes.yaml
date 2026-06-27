@@ -1,6 +1,4 @@
-# ATENCAO: status 'rascunho' => o publisher PULA (so publica status 'aprovado').
-# Stories da Semana 8: 1 enquete + 2 recaps. Publicados como STORIES (caption ignorada).
-status: aprovado
+status: publicado
 slot:
   data: '2026-06-27'
   horario: 10:00 BRT
@@ -24,3 +22,6 @@ tema_visual: dark
 observacao: >
   Três stories da Semana 8 (1 enquete + 2 recaps). Story não usa caption. Pendente de aprovação do Lucas — só vira
   'aprovado' depois do OK dele.
+published_at: '2026-06-27T14:29:46.231Z'
+media_id: '18102366794019923'
+permalink: https://www.instagram.com/stories/tribocrmoficial/3928809322402891291
