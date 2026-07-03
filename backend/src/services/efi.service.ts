@@ -289,17 +289,35 @@ export async function getChargeStatus(txid: string): Promise<{ status: string; p
 
 // ── Cancel ──
 
-export async function cancelCharge(txid: string): Promise<void> {
-  const charge = await prisma.charge.findFirst({
-    where: { efiChargeId: txid, status: 'PENDING' },
-  })
-
-  if (!charge) throw new Error('Cobrança não encontrada ou já processada')
-
-  await prisma.charge.update({
-    where: { id: charge.id },
-    data: { status: 'CANCELLED' },
-  })
+// Cancela um boleto na Efi (PUT /charge/:id/cancel) para que ele deixe
+// de ser pagável no banco emissor. NUNCA lança — devolve um resultado
+// estruturado que o chamador usa pra decidir se persiste o CANCELLED
+// local. O id numérico da cobrança Efi fica em Charge.efiChargeId.
+// (PIX usa outra API e expira sozinho; MANUAL não tem nada na Efi — por
+// isso o chamador só invoca isto para boletos com efiChargeId numérico.)
+export async function cancelBoletoAtEfi(
+  efiChargeId: string | null,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const clean = efiChargeId?.trim() ?? ''
+  if (!/^\d+$/.test(clean)) {
+    return { ok: false, message: `efiChargeId inválido para cancelamento na Efi: ${efiChargeId}` }
+  }
+  const id = parseInt(clean, 10)
+  try {
+    const efi = getClient()
+    await efi.cancelCharge({ id } as any)
+    console.log(`[efi:cancelBoletoAtEfi] boleto ${id} cancelado na Efi`)
+    return { ok: true }
+  } catch (err: any) {
+    const message =
+      err?.response?.data?.error_description ??
+      err?.response?.data?.message ??
+      err?.mensagem ??
+      err?.message ??
+      String(err)
+    console.error(`[efi:cancelBoletoAtEfi] falha ao cancelar boleto ${id} na Efi:`, message)
+    return { ok: false, message: String(message) }
+  }
 }
 
 // ── Card Subscription ──
