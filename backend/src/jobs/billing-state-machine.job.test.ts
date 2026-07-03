@@ -659,6 +659,31 @@ describe('runBillingStateMachineJob — OVERDUE / SUSPENDED / edge', () => {
       expect(prismaMock.tenant.updateMany).toHaveBeenCalledTimes(1)
     })
 
+    it('Trial expirado com marker TRIAL_D1_SENT NÃO fica preso: entra no branch D+0', async () => {
+      // Regressão: um trial que rodou o ciclo de lembretes termina com
+      // lastBillingState='TRIAL_D1_SENT'. Antes do fix, o branch D+0 só
+      // aceitava null/TRIAL_EXPIRED, então esse tenant ficava congelado
+      // em TRIAL pra sempre em vez de virar PAYMENT_OVERDUE.
+      const tenant = makeTenant({
+        status: 'TRIAL',
+        lastBillingState: 'TRIAL_D1_SENT',
+        trialEndsAt: new Date('2026-04-15T12:00:00Z'),
+      })
+      prismaMock.tenant.findMany.mockResolvedValue([tenant] as any)
+
+      await runBillingStateMachineJob()
+
+      expect(sendMock).toHaveBeenCalledWith(expect.objectContaining({ templateId: 5 }))
+      expect(prismaMock.tenant.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            status: 'PAYMENT_OVERDUE',
+            lastBillingState: 'OVERDUE_D0_SENT',
+          }),
+        }),
+      )
+    })
+
     it('Legacy TRIAL_EXPIRED: tenant com marker antigo entra no branch D+0', async () => {
       const tenant = makeTenant({
         status: 'TRIAL',

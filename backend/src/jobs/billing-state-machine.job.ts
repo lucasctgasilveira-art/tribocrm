@@ -416,11 +416,16 @@ export async function runBillingStateMachineJob(): Promise<void> {
           targetState = 'OVERDUE_D7_SENT'
           templateId = BILLING_TEMPLATES.OVERDUE_D7
         } else if (
-          !tenant.lastBillingState ||
-          tenant.lastBillingState === 'TRIAL_EXPIRED'
+          tenant.lastBillingState !== 'OVERDUE_D0_SENT' &&
+          tenant.lastBillingState !== 'OVERDUE_D7_SENT' &&
+          tenant.lastBillingState !== 'SUSPENDED_D10_SENT'
         ) {
-          // First visit post-expiry — or tenant carries the legacy
-          // 'TRIAL_EXPIRED' marker from the pre-6E version of this job.
+          // Not yet in the overdue lane. Covers null, the legacy
+          // 'TRIAL_EXPIRED' marker, AND the pre-expiry reminder markers
+          // (TRIAL_D7/D3/D1_SENT) a tenant carries after running the full
+          // reminder sequence. Without matching the reminder markers, a
+          // trial that received the D-1 email would never leave TRIAL —
+          // it would sit unpaid forever instead of going PAYMENT_OVERDUE.
           targetState = 'OVERDUE_D0_SENT'
           templateId = BILLING_TEMPLATES.OVERDUE_D0
         }
