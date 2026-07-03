@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useSearchParams } from 'react-router-dom'
 import { TrendingUp, BarChart2, AlertCircle, UserMinus, DollarSign, Download, Loader2, Search, X, Plus, MoreHorizontal } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
@@ -82,7 +83,17 @@ export default function FinancialPage() {
   const [chargeModal, setChargeModal] = useState<Charge | null>(null)
   const [updateModal, setUpdateModal] = useState<Charge | null>(null)
   const [newChargeModal, setNewChargeModal] = useState(false)
-  const [openMenu, setOpenMenu] = useState<string | null>(null)
+  const [openMenu, setOpenMenu] = useState<{ id: string; top: number; right: number } | null>(null)
+  useEffect(() => {
+    if (!openMenu) return
+    const close = () => setOpenMenu(null)
+    window.addEventListener('scroll', close, true)
+    window.addEventListener('resize', close)
+    return () => {
+      window.removeEventListener('scroll', close, true)
+      window.removeEventListener('resize', close)
+    }
+  }, [openMenu])
   const [reloadKey, setReloadKey] = useState(0)
   const [toast, setToast] = useState('')
 
@@ -341,13 +352,17 @@ export default function FinancialPage() {
                         <td style={{ ...tdS, position: 'relative' }}>
                           {canEdit ? (
                             <>
-                              <button onClick={() => setOpenMenu(openMenu === c.id ? null : c.id)} style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--border)', background: openMenu === c.id ? 'var(--border)' : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
+                              <button onClick={e => {
+                                if (openMenu?.id === c.id) { setOpenMenu(null); return }
+                                const r = e.currentTarget.getBoundingClientRect()
+                                setOpenMenu({ id: c.id, top: r.bottom + 4, right: window.innerWidth - r.right })
+                              }} style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--border)', background: openMenu?.id === c.id ? 'var(--border)' : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
                                 <MoreHorizontal size={14} strokeWidth={1.5} />
                               </button>
-                              {openMenu === c.id && (
+                              {openMenu?.id === c.id && createPortal(
                                 <>
-                                  <div onClick={() => setOpenMenu(null)} style={{ position: 'fixed', inset: 0, zIndex: 29 }} />
-                                  <div style={{ position: 'absolute', right: 14, top: '100%', zIndex: 30, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.5)', minWidth: 200, padding: '4px 0', marginTop: 4 }}>
+                                  <div onClick={() => setOpenMenu(null)} style={{ position: 'fixed', inset: 0, zIndex: 1000 }} />
+                                  <div style={{ position: 'fixed', top: openMenu.top, right: openMenu.right, zIndex: 1001, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.5)', minWidth: 200, padding: '4px 0' }}>
                                     <div onClick={() => { setOpenMenu(null); setUpdateModal(c) }}
                                       style={{ padding: '8px 14px', fontSize: 13, color: 'var(--text-primary)', cursor: 'pointer' }}
                                       onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
@@ -368,7 +383,8 @@ export default function FinancialPage() {
                                       Cancelar Cobrança
                                     </div>
                                   </div>
-                                </>
+                                </>,
+                                document.body
                               )}
                             </>
                           ) : (
