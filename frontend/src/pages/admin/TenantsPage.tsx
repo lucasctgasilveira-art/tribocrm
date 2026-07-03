@@ -72,6 +72,7 @@ export default function TenantsPage() {
   const [newClientModal, setNewClientModal] = useState(false)
   const [editTenant, setEditTenant] = useState<Tenant | null>(null)
   const [discountTenant, setDiscountTenant] = useState<Tenant | null>(null)
+  const [extendTenant, setExtendTenant] = useState<Tenant | null>(null)
   const [noteModal, setNoteModal] = useState<string | null>(null)
   const [toast, setToast] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
@@ -228,7 +229,7 @@ export default function TenantsPage() {
                                 if (opt === 'Visualizar') navigate(`/admin/clientes/${t.id}`)
                                 else if (opt === 'Editar') setEditTenant(t)
                                 else if (opt === 'Suspender') { await updateTenant(t.id, { status: t.status === 'SUSPENDED' ? 'ACTIVE' : 'SUSPENDED' }); showToast(t.status === 'SUSPENDED' ? 'Cliente reativado' : 'Cliente suspenso'); reload() }
-                                else if (opt === 'Estender gratuidade') { const d = new Date(); d.setDate(d.getDate() + 7); await updateTenant(t.id, { trialEndsAt: d.toISOString() }); showToast('Trial estendido em 7 dias'); reload() }
+                                else if (opt === 'Estender gratuidade') setExtendTenant(t)
                                 else if (opt === 'Ver cobranças') navigate(`/admin/financeiro?tenantId=${t.id}`)
                                 else if (opt === 'Aplicar desconto') setDiscountTenant(t)
                                 else if (opt === 'Registrar observação') setNoteModal(t.id)
@@ -259,6 +260,7 @@ export default function TenantsPage() {
       {newClientModal && <NewClientModal onClose={() => setNewClientModal(false)} onCreated={() => { setNewClientModal(false); reload(); showToast('Cliente criado com sucesso!') }} />}
       {editTenant && <EditTenantModal tenant={editTenant} onClose={() => setEditTenant(null)} onSaved={() => { setEditTenant(null); reload(); showToast('Cliente atualizado!') }} />}
       {discountTenant && <DiscountModal tenant={discountTenant} onClose={() => setDiscountTenant(null)} onSaved={() => { setDiscountTenant(null); showToast('Desconto aplicado!') }} />}
+      {extendTenant && <ExtendTrialModal tenant={extendTenant} onClose={() => setExtendTenant(null)} onSaved={(msg) => { setExtendTenant(null); reload(); showToast(msg) }} />}
       {noteModal && <NoteModal tenantId={noteModal} onClose={() => setNoteModal(null)} onSaved={() => { setNoteModal(null); showToast('Observação registrada') }} />}
     </AppLayout>
   )
@@ -460,6 +462,72 @@ function DiscountModal({ tenant, onClose, onSaved }: { tenant: Tenant; onClose: 
         <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
           <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
           <button onClick={handleSave} disabled={!discountValue || saving} style={{ background: discountValue ? '#f97316' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: discountValue ? '#fff' : 'var(--text-muted)', cursor: discountValue ? 'pointer' : 'not-allowed' }}>Aplicar desconto</button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+function ExtendTrialModal({ tenant, onClose, onSaved }: { tenant: Tenant; onClose: () => void; onSaved: (msg: string) => void }) {
+  const [amount, setAmount] = useState('7')
+  const [unit, setUnit] = useState<'days' | 'months'>('days')
+  const [saving, setSaving] = useState(false)
+
+  const qty = parseInt(amount, 10)
+  const valid = Number.isFinite(qty) && qty > 0
+
+  // Soma a partir do fim atual do trial; se já venceu (ou não existe),
+  // parte de hoje. Assim "estender" sempre empurra o prazo pra frente
+  // preservando o que ainda resta.
+  const now = new Date()
+  const current = tenant.trialEndsAt ? new Date(tenant.trialEndsAt) : null
+  const base = current && current.getTime() > now.getTime() ? new Date(current) : new Date(now)
+  const newDate = new Date(base)
+  if (valid) {
+    if (unit === 'days') newDate.setDate(newDate.getDate() + qty)
+    else newDate.setMonth(newDate.getMonth() + qty)
+  }
+  const fmtD = (d: Date) => d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  const expired = !current || current.getTime() <= now.getTime()
+
+  async function handleSave() {
+    if (!valid) return
+    setSaving(true)
+    try {
+      await updateTenant(tenant.id, { trialEndsAt: newDate.toISOString() })
+      onSaved(`Trial estendido até ${fmtD(newDate)}`)
+    } catch { setSaving(false) }
+  }
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 440, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51 }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Estender trial</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+        </div>
+        <div style={{ padding: 24 }}>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16 }}>
+            {expired
+              ? <>O trial de <strong style={{ color: 'var(--text-primary)' }}>{tenant.name}</strong> já venceu. A extensão parte de hoje.</>
+              : <>Fim atual do trial de <strong style={{ color: 'var(--text-primary)' }}>{tenant.name}</strong>: {fmtD(current!)}</>}
+          </div>
+          <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Estender por</label>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <input type="number" min={1} value={amount} onChange={e => setAmount(e.target.value)} style={{ flex: 1, background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }} />
+            <select value={unit} onChange={e => setUnit(e.target.value as 'days' | 'months')} style={{ ...selectStyle, flex: 1 }}>
+              <option value="days">Dias</option>
+              <option value="months">Meses</option>
+            </select>
+          </div>
+          <div style={{ marginTop: 16, padding: '10px 14px', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, color: 'var(--text-secondary)' }}>
+            Novo fim do trial: <strong style={{ color: valid ? '#f97316' : 'var(--text-muted)' }}>{valid ? fmtD(newDate) : '—'}</strong>
+          </div>
+        </div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
+          <button onClick={handleSave} disabled={!valid || saving} style={{ background: valid ? '#f97316' : 'var(--border)', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: valid ? '#fff' : 'var(--text-muted)', cursor: valid ? 'pointer' : 'not-allowed' }}>{saving ? 'Salvando...' : 'Estender'}</button>
         </div>
       </div>
     </>

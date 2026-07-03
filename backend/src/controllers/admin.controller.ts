@@ -242,7 +242,19 @@ export async function updateTenant(req: Request, res: Response): Promise<void> {
     if (phone !== undefined) data.phone = phone
     if (status !== undefined) data.status = status
     if (planId !== undefined) data.plan = { connect: { id: planId } }
-    if (trialEndsAt !== undefined) data.trialEndsAt = trialEndsAt ? new Date(trialEndsAt) : null
+    if (trialEndsAt !== undefined) {
+      const parsedTrialEnd = trialEndsAt ? new Date(trialEndsAt) : null
+      data.trialEndsAt = parsedTrialEnd
+      // Ao (re)definir o trial para uma data futura — ex.: admin estende
+      // a gratuidade — zeramos os marcadores de cobrança para que o ciclo
+      // de lembretes (D-7/D-3/D-1) e a geração do boleto no D-3 rodem
+      // limpos no novo período. Sem isso, o marcador antigo (ex.:
+      // TRIAL_D1_SENT) bloquearia os lembretes e o boleto do novo prazo.
+      if (parsedTrialEnd && parsedTrialEnd.getTime() > Date.now()) {
+        data.lastBillingState = null
+        data.lastBillingStateAt = null
+      }
+    }
     if (internalNotes !== undefined) data.internalNotes = internalNotes
     if (addressStreet !== undefined) data.addressStreet = addressStreet
     if (addressNumber !== undefined) data.addressNumber = addressNumber
