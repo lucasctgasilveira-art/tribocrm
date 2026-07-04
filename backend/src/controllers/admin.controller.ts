@@ -1,6 +1,7 @@
 import { Request, Response } from 'express'
 import { prisma } from '../lib/prisma'
 import { Prisma } from '@prisma/client'
+import { cancelPendingChargesForTenant } from '../services/efi.service'
 
 // ── Dashboard ──
 
@@ -242,6 +243,7 @@ export async function updateTenant(req: Request, res: Response): Promise<void> {
     if (phone !== undefined) data.phone = phone
     if (status !== undefined) data.status = status
     if (planId !== undefined) data.plan = { connect: { id: planId } }
+    let extendedTrialToFuture = false
     if (trialEndsAt !== undefined) {
       const parsedTrialEnd = trialEndsAt ? new Date(trialEndsAt) : null
       data.trialEndsAt = parsedTrialEnd
@@ -253,6 +255,7 @@ export async function updateTenant(req: Request, res: Response): Promise<void> {
       if (parsedTrialEnd && parsedTrialEnd.getTime() > Date.now()) {
         data.lastBillingState = null
         data.lastBillingStateAt = null
+        extendedTrialToFuture = true
       }
     }
     if (internalNotes !== undefined) data.internalNotes = internalNotes
@@ -279,6 +282,14 @@ export async function updateTenant(req: Request, res: Response): Promise<void> {
       data,
       include: { plan: { select: { id: true, name: true, slug: true } } },
     })
+
+    // Estender o trial torna órfão o boleto/PIX gerado para o prazo antigo
+    // (no D-3). Cancelamos essas cobranças pendentes — no banco e na Efi —
+    // para que não fiquem pagáveis; o novo ciclo gera cobrança nova no novo
+    // D-3. Best-effort: nunca lança, não bloqueia a resposta da extensão.
+    if (extendedTrialToFuture) {
+      await cancelPendingChargesForTenant(id)
+    }
 
     res.json({ success: true, data: tenant })
   } catch (error) {

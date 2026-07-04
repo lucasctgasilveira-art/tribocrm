@@ -320,6 +320,79 @@ export async function cancelBoletoAtEfi(
   }
 }
 
+// Remove uma cobrança PIX imediata (não paga) na Efi
+// (PATCH /v2/cob/:txid → status REMOVIDA_PELO_USUARIO_RECEBEDOR) para que
+// deixe de ser pagável. NUNCA lança — devolve resultado estruturado. O
+// txid do PIX fica em Charge.efiChargeId.
+export async function cancelPixAtEfi(
+  txid: string | null,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const clean = txid?.trim() ?? ''
+  if (!clean) {
+    return { ok: false, message: `txid inválido para cancelamento na Efi: ${txid}` }
+  }
+  try {
+    const efi = getClient()
+    await efi.pixUpdateCharge({ txid: clean }, { status: 'REMOVIDA_PELO_USUARIO_RECEBEDOR' } as any)
+    console.log(`[efi:cancelPixAtEfi] cobrança PIX ${clean} removida na Efi`)
+    return { ok: true }
+  } catch (err: any) {
+    const message =
+      err?.response?.data?.error_description ??
+      err?.response?.data?.message ??
+      err?.mensagem ??
+      err?.message ??
+      String(err)
+    console.error(`[efi:cancelPixAtEfi] falha ao remover PIX ${clean} na Efi:`, message)
+    return { ok: false, message: String(message) }
+  }
+}
+
+// Cancela (best-effort) as cobranças PENDENTES de um tenant, no nosso
+// banco e na Efi. Usado ao estender o trial: o boleto/PIX gerado para o
+// prazo antigo (no D-3) vira órfão e deve sair de circulação, já que o
+// novo ciclo gera cobrança nova no novo D-3. Best-effort: se a Efi
+// recusar uma (ex.: já paga), pulamos e NÃO marcamos CANCELLED local
+// para ela — o webhook mantém o estado real. NUNCA lança, para não
+// bloquear a extensão do trial caso a Efi esteja indisponível.
+export async function cancelPendingChargesForTenant(
+  tenantId: string,
+): Promise<{ cancelled: number; skipped: number }> {
+  let cancelled = 0
+  let skipped = 0
+
+  const pending = await prisma.charge.findMany({
+    where: { tenantId, status: 'PENDING' },
+    select: { id: true, paymentMethod: true, efiChargeId: true },
+  })
+
+  for (const c of pending) {
+    let efiOk = true
+    if (c.paymentMethod === 'BOLETO' && c.efiChargeId && /^\d+$/.test(c.efiChargeId)) {
+      const r = await cancelBoletoAtEfi(c.efiChargeId)
+      efiOk = r.ok
+      if (!r.ok) console.warn(`[cancelPendingChargesForTenant] boleto ${c.id} não cancelado na Efi: ${r.message}`)
+    } else if (c.paymentMethod === 'PIX' && c.efiChargeId) {
+      const r = await cancelPixAtEfi(c.efiChargeId)
+      efiOk = r.ok
+      if (!r.ok) console.warn(`[cancelPendingChargesForTenant] PIX ${c.id} não removido na Efi: ${r.message}`)
+    }
+    // MANUAL (ou sem efiChargeId): nada na Efi, só marca local.
+
+    if (efiOk) {
+      await prisma.charge.update({ where: { id: c.id }, data: { status: 'CANCELLED' } })
+      cancelled++
+    } else {
+      skipped++
+    }
+  }
+
+  if (pending.length) {
+    console.log(`[cancelPendingChargesForTenant] tenant=${tenantId} cancelled=${cancelled} skipped=${skipped}`)
+  }
+  return { cancelled, skipped }
+}
+
 // ── Card Subscription ──
 //
 // Real recurring subscription flow (sub-etapa 6J.3). Uses the Efi

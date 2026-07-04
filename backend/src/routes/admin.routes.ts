@@ -12,7 +12,7 @@ import {
 } from '../controllers/leads-overview.controller'
 import { getSystemLogs } from '../controllers/system-logs.controller'
 import { logAudit, getRequestIp } from '../services/audit-log.service'
-import { registerPixWebhook, createPixCharge, createBoletoCharge, cancelBoletoAtEfi } from '../services/efi.service'
+import { registerPixWebhook, createPixCharge, createBoletoCharge, cancelBoletoAtEfi, cancelPixAtEfi } from '../services/efi.service'
 import { sendMail } from '../services/mailer.service'
 import { runBillingStateMachineJob } from '../jobs/billing-state-machine.job'
 import {
@@ -335,25 +335,24 @@ router.patch('/charges/:id', async (req: Request, res: Response) => {
       })
     }
 
-    // Propaga o cancelamento pra Efi ANTES de gravar no banco. Um boleto
-    // marcado CANCELLED só no nosso banco continuaria pagável no emissor —
+    // Propaga o cancelamento pra Efi ANTES de gravar no banco. Uma cobrança
+    // marcada CANCELLED só no nosso banco continuaria pagável no emissor —
     // então só persistimos o CANCELLED local se a Efi confirmar. Se a Efi
-    // recusar (ex.: boleto já pago), bloqueamos e devolvemos o motivo, pra
-    // nunca ficar "cancelado aqui, mas ativo lá". PIX/MANUAL não passam por
-    // aqui (PIX expira sozinho; MANUAL não tem cobrança na Efi).
-    if (
-      status === 'CANCELLED' &&
-      charge.paymentMethod === 'BOLETO' &&
-      charge.efiChargeId &&
-      /^\d+$/.test(charge.efiChargeId)
-    ) {
-      const efiResult = await cancelBoletoAtEfi(charge.efiChargeId)
-      if (!efiResult.ok) {
+    // recusar (ex.: já paga), bloqueamos e devolvemos o motivo, pra nunca
+    // ficar "cancelado aqui, mas ativo lá". MANUAL não tem cobrança na Efi.
+    if (status === 'CANCELLED' && charge.efiChargeId) {
+      let efiResult: { ok: true } | { ok: false; message: string } | null = null
+      if (charge.paymentMethod === 'BOLETO' && /^\d+$/.test(charge.efiChargeId)) {
+        efiResult = await cancelBoletoAtEfi(charge.efiChargeId)
+      } else if (charge.paymentMethod === 'PIX') {
+        efiResult = await cancelPixAtEfi(charge.efiChargeId)
+      }
+      if (efiResult && !efiResult.ok) {
         return res.status(422).json({
           success: false,
           error: {
             code: 'EFI_CANCEL_FAILED',
-            message: `Não foi possível cancelar o boleto na Efi: ${efiResult.message}`,
+            message: `Não foi possível cancelar a cobrança na Efi: ${efiResult.message}`,
           },
         })
       }
