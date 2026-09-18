@@ -1,0 +1,17 @@
+# --------------------------------------------------------
+# Pauta: A extensão do TriboCRM funciona só no WhatsApp. De propósito.
+# Calendário: QUI 24/09/2026 · Semana 9 · Série "4 dores que toda PME conhece"
+# Pilar: BASTIDOR · Produto
+# Status: aprovado por Lucas em 2026-09-18
+# Tema: ESCURO
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-09-24_extensao-so-whatsapp_04-porque
+data:
+  pilar: Por que WhatsApp primeiro
+  step-num: ''
+  titulo: É lá que a PME vende.
+  body-1: '<span class="miolo-emphasis">Orçamento, negociação, "fechado, pode mandar o boleto": tá tudo no WhatsApp.</span>'
+  body-2: Se o sistema não tá onde a conversa acontece, a anotação não acontece.
+  slide-number: 04 / 06
+  handle: '@tribocrmoficial'

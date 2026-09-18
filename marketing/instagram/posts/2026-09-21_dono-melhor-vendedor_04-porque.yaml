@@ -1,0 +1,17 @@
+# --------------------------------------------------------
+# Pauta: O dono é o melhor vendedor. E não consegue sair.
+# Calendário: SEG 21/09/2026 · Semana 9 · Série "4 dores que toda PME conhece"
+# Pilar: DOR · Série 1/4
+# Status: aprovado por Lucas em 2026-09-18
+# Tema: ESCURO
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-09-21_dono-melhor-vendedor_04-porque
+data:
+  pilar: Por que acontece
+  step-num: ''
+  titulo: O método tá na sua cabeça, não no sistema.
+  body-1: <span class="miolo-emphasis">Quem é cliente bom, que pergunta fazer, até onde o preço vai.</span>
+  body-2: Nada disso tá escrito. Então só você consegue fazer.
+  slide-number: 04 / 06
+  handle: '@tribocrmoficial'

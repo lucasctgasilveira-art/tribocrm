@@ -1,0 +1,17 @@
+status: aprovado
+aprovado_em: '2026-09-18'
+aprovado_por: lucas
+slot:
+  data: '2026-09-23'
+  horario: 12:30 BRT
+  justificativa: QUA 23/09/2026 — Semana 9, Série "4 dores que toda PME conhece". Pilar MANIFESTO (dor 3/4). CRM que ninguém usa é planilha cara.
+formato: feed
+arquivos:
+  - output/2026-09-23_feed-manifesto-crm-planilha-cara.png
+caption_source: posts/2026-09-23_feed-manifesto-crm-planilha-cara.yaml#caption
+hashtags_inline_na_caption: true
+primeiro_comentario: null
+publicacao:
+  metodo: instagram_graph_api
+  acao_humana_necessaria: nenhuma — aprovado por Lucas em 2026-09-18
+tema_visual: dark

@@ -1,0 +1,29 @@
+# --------------------------------------------------------
+# Pauta: A extensão do TriboCRM funciona só no WhatsApp. De propósito.
+# Calendário: QUI 24/09/2026 · Semana 9 · Série "4 dores que toda PME conhece"
+# Pilar: BASTIDOR · Produto
+# Status: aprovado por Lucas em 2026-09-18
+# Tema: ESCURO
+# --------------------------------------------------------
+template: carrossel-metodo-cta
+slug: 2026-09-24_extensao-so-whatsapp_06-cta
+data:
+  titulo: Onde sua equipe<br>mais vende hoje?<br><span class="cta-emoji">🔥</span>
+  direcional: WhatsApp, telefone, e-mail ou visita?<br><span class="acc">Conta nos comentários. A gente lê.</span>
+  tagline: Máquina de Vendas pra PMEs brasileiras
+  slide-number: 06 / 06
+  handle: '@tribocrmoficial'
+caption: |
+  A extensão do TriboCRM funciona só no WhatsApp Web. E foi decisão, não esquecimento.
+
+  Hoje, quando você abre uma conversa no WhatsApp Web, o TriboCRM mostra ali do lado o lead daquele número: notas, tarefas, histórico, e dá pra registrar venda ou perda sem trocar de aba.
+
+  A gente chegou a começar versões pro LinkedIn e pro Gmail. Tirou as duas antes de publicar a extensão. Motivo simples: ainda não faziam nada útil. E botão que não ajuda a vender é só enfeite na tela do vendedor.
+
+  O WhatsApp veio primeiro porque é lá que a PME brasileira vende: orçamento, negociação, "fechado, pode mandar o boleto". Se o sistema não tá onde a conversa acontece, a anotação não acontece.
+
+  A regra que ficou pra gente: lançar menos, mas lançar pronto. LinkedIn e Gmail voltam quando ajudarem a vender de verdade. Não antes.
+
+  Conta pra gente: onde a sua equipe mais vende hoje? WhatsApp, telefone, e-mail ou visita?
+
+  #TriboCRM #MáquinaDeVendas #VendasPME #VendasPeloWhatsApp #EquipeComercial

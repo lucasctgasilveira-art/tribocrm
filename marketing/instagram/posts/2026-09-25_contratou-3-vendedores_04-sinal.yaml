@@ -1,0 +1,17 @@
+# --------------------------------------------------------
+# Pauta: Contratou 3 vendedores e o resultado piorou. Sabe por quê?
+# Calendário: SEX 25/09/2026 · Semana 9 · Série "4 dores que toda PME conhece"
+# Pilar: DOR · Série 4/4
+# Status: aprovado por Lucas em 2026-09-18
+# Tema: ESCURO
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-09-25_contratou-3-vendedores_04-sinal
+data:
+  pilar: O sinal
+  step-num: ''
+  titulo: Ninguém consegue comparar ninguém.
+  body-1: <span class="miolo-emphasis">Sem etapa igual pra todo mundo, você não sabe quem trava onde.</span>
+  body-2: Aí a avaliação vira "fulano é bom, ciclano é fraco". É achismo com crachá.
+  slide-number: 04 / 06
+  handle: '@tribocrmoficial'

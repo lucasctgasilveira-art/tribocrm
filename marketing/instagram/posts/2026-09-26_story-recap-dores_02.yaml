@@ -1,0 +1,15 @@
+# --------------------------------------------------------
+# Pauta: Stories de sábado — Semana 9 (enquete + recap)
+# Calendário: SAB 26/09/2026 · Semana 9
+# Pilar: STORY (interação / recap)
+# Status: aprovado por Lucas em 2026-09-18
+# Observação: story não usa caption. Enquete sai como imagem, sem votação.
+# --------------------------------------------------------
+template: story-recap
+slug: 2026-09-26_story-recap-dores_02
+data:
+  eyebrow: Bastidor da quinta
+  headline: Por que a<br>extensão é só<br>WhatsApp.
+  subline: LinkedIn e Gmail ficaram de fora de propósito. A gente contou o motivo no feed.
+  cta: Tá no feed · @tribocrmoficial
+  handle: '@tribocrmoficial'

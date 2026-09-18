@@ -1,0 +1,17 @@
+# --------------------------------------------------------
+# Pauta: Contratou 3 vendedores e o resultado piorou. Sabe por quê?
+# Calendário: SEX 25/09/2026 · Semana 9 · Série "4 dores que toda PME conhece"
+# Pilar: DOR · Série 4/4
+# Status: aprovado por Lucas em 2026-09-18
+# Tema: ESCURO
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-09-25_contratou-3-vendedores_03-porque
+data:
+  pilar: Por que acontece
+  step-num: ''
+  titulo: Você contratou gente. Não contratou método.
+  body-1: <span class="miolo-emphasis">Cada vendedor novo chega e vende do jeito dele.</span>
+  body-2: Um qualifica, outro atende todo mundo. Um faz follow-up, outro espera o cliente voltar.
+  slide-number: 03 / 06
+  handle: '@tribocrmoficial'

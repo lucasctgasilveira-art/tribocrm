@@ -1,0 +1,17 @@
+# --------------------------------------------------------
+# Pauta: O dono é o melhor vendedor. E não consegue sair.
+# Calendário: SEG 21/09/2026 · Semana 9 · Série "4 dores que toda PME conhece"
+# Pilar: DOR · Série 1/4
+# Status: aprovado por Lucas em 2026-09-18
+# Tema: ESCURO
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-09-21_dono-melhor-vendedor_03-custo
+data:
+  pilar: O custo
+  step-num: ''
+  titulo: A empresa cresce até o tamanho da sua agenda.
+  body-1: <span class="miolo-emphasis">Toda venda grande passa por você. Seu dia acaba, a venda para.</span>
+  body-2: E o time aprende a esperar o dono em vez de aprender a fechar.
+  slide-number: 03 / 06
+  handle: '@tribocrmoficial'

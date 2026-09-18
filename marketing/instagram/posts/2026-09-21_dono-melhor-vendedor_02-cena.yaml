@@ -1,0 +1,17 @@
+# --------------------------------------------------------
+# Pauta: O dono é o melhor vendedor. E não consegue sair.
+# Calendário: SEG 21/09/2026 · Semana 9 · Série "4 dores que toda PME conhece"
+# Pilar: DOR · Série 1/4
+# Status: aprovado por Lucas em 2026-09-18
+# Tema: ESCURO
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-09-21_dono-melhor-vendedor_02-cena
+data:
+  pilar: A cena
+  step-num: ''
+  titulo: Todo cliente grande quer falar com você.
+  body-1: '<span class="miolo-emphasis">O vendedor leva até a proposta. Na hora de fechar: "o dono pode vir?"</span>'
+  body-2: E você vai. Porque só você sabe o preço que dá pra fazer e a história daquele cliente.
+  slide-number: 02 / 06
+  handle: '@tribocrmoficial'

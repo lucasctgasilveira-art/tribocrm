@@ -1,0 +1,17 @@
+# --------------------------------------------------------
+# Pauta: Contratou 3 vendedores e o resultado piorou. Sabe por quê?
+# Calendário: SEX 25/09/2026 · Semana 9 · Série "4 dores que toda PME conhece"
+# Pilar: DOR · Série 4/4
+# Status: aprovado por Lucas em 2026-09-18
+# Tema: ESCURO
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-09-25_contratou-3-vendedores_02-cena
+data:
+  pilar: A cena
+  step-num: ''
+  titulo: A conta parecia óbvia.
+  body-1: <span class="miolo-emphasis">Um vendedor traz X. Três vendedores trazem 3X.</span>
+  body-2: 'Seis meses depois: mais salário, mais comissão, mais lead desperdiçado. E o faturamento no mesmo lugar.'
+  slide-number: 02 / 06
+  handle: '@tribocrmoficial'

@@ -1,0 +1,17 @@
+# --------------------------------------------------------
+# Pauta: O cliente liga. O vendedor não lembra do que prometeu.
+# Calendário: TER 22/09/2026 · Semana 9 · Série "4 dores que toda PME conhece"
+# Pilar: DOR · Série 2/4
+# Status: aprovado por Lucas em 2026-09-18
+# Tema: ESCURO
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-09-22_cliente-liga-vendedor-esquece_02-cena
+data:
+  pilar: A cena
+  step-num: ''
+  titulo: '"É sobre aquela condição que você me passou..."'
+  body-1: <span class="miolo-emphasis">Qual condição? Quando? Pra quem?</span>
+  body-2: O vendedor rola 3 meses de WhatsApp com o cliente esperando na linha. O cliente percebe.
+  slide-number: 02 / 05
+  handle: '@tribocrmoficial'

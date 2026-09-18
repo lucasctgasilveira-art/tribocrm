@@ -1,0 +1,14 @@
+# --------------------------------------------------------
+# Pauta: A extensão do TriboCRM funciona só no WhatsApp. De propósito.
+# Calendário: QUI 24/09/2026 · Semana 9 · Série "4 dores que toda PME conhece"
+# Pilar: BASTIDOR · Produto
+# Status: aprovado por Lucas em 2026-09-18
+# Tema: ESCURO
+# --------------------------------------------------------
+template: carrossel-metodo-capa
+slug: 2026-09-24_extensao-so-whatsapp_01-capa
+data:
+  pilar: Bastidor · Produto
+  titulo: A extensão do TriboCRM<br>funciona só no WhatsApp.<br><span class="t-orange">De propósito.</span>
+  slide-number: 01 / 06
+  handle: '@tribocrmoficial'

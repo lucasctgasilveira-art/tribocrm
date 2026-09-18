@@ -1,0 +1,23 @@
+status: aprovado
+aprovado_em: '2026-09-18'
+aprovado_por: lucas
+slot:
+  data: '2026-09-24'
+  horario: 07:30 BRT
+  justificativa: QUI 24/09/2026 — Semana 9, Série "4 dores que toda PME conhece". Pilar BASTIDOR · Produto. A extensão do TriboCRM funciona só no WhatsApp. De propósito.
+formato: carrossel
+slides: 6
+arquivos:
+  - output/2026-09-24_extensao-so-whatsapp_01-capa.png
+  - output/2026-09-24_extensao-so-whatsapp_02-hoje.png
+  - output/2026-09-24_extensao-so-whatsapp_03-fora.png
+  - output/2026-09-24_extensao-so-whatsapp_04-porque.png
+  - output/2026-09-24_extensao-so-whatsapp_05-regra.png
+  - output/2026-09-24_extensao-so-whatsapp_06-cta.png
+caption_source: posts/2026-09-24_extensao-so-whatsapp_06-cta.yaml#caption
+hashtags_inline_na_caption: true
+primeiro_comentario: null
+publicacao:
+  metodo: instagram_graph_api
+  acao_humana_necessaria: nenhuma — aprovado por Lucas em 2026-09-18
+tema_visual: dark

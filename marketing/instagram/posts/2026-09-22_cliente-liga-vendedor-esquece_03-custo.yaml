@@ -1,0 +1,17 @@
+# --------------------------------------------------------
+# Pauta: O cliente liga. O vendedor não lembra do que prometeu.
+# Calendário: TER 22/09/2026 · Semana 9 · Série "4 dores que toda PME conhece"
+# Pilar: DOR · Série 2/4
+# Status: aprovado por Lucas em 2026-09-18
+# Tema: ESCURO
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-09-22_cliente-liga-vendedor-esquece_03-custo
+data:
+  pilar: O custo
+  step-num: ''
+  titulo: Cliente não perdoa quem esquece dele.
+  body-1: <span class="miolo-emphasis">Ele não pensa "o vendedor tá ocupado". Pensa "eu não sou importante aqui".</span>
+  body-2: 'Aí só sobra uma coisa pra negociar: preço. Quem esquece a conversa vira quem dá desconto.'
+  slide-number: 03 / 05
+  handle: '@tribocrmoficial'

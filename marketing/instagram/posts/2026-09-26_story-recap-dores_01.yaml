@@ -1,0 +1,15 @@
+# --------------------------------------------------------
+# Pauta: Stories de sábado — Semana 9 (enquete + recap)
+# Calendário: SAB 26/09/2026 · Semana 9
+# Pilar: STORY (interação / recap)
+# Status: aprovado por Lucas em 2026-09-18
+# Observação: story não usa caption. Enquete sai como imagem, sem votação.
+# --------------------------------------------------------
+template: story-recap
+slug: 2026-09-26_story-recap-dores_01
+data:
+  eyebrow: Série da semana
+  headline: 4 dores que<br>toda PME<br>conhece.
+  subline: Dono que não sai da venda, cliente esquecido, CRM que ninguém abre e time que cresce sem método.
+  cta: Tá tudo no feed · @tribocrmoficial
+  handle: '@tribocrmoficial'

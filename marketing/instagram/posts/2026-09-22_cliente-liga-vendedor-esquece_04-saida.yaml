@@ -1,0 +1,17 @@
+# --------------------------------------------------------
+# Pauta: O cliente liga. O vendedor não lembra do que prometeu.
+# Calendário: TER 22/09/2026 · Semana 9 · Série "4 dores que toda PME conhece"
+# Pilar: DOR · Série 2/4
+# Status: aprovado por Lucas em 2026-09-18
+# Tema: ESCURO
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-09-22_cliente-liga-vendedor-esquece_04-saida
+data:
+  pilar: A saída
+  step-num: PASSO 1
+  titulo: Toda conversa termina com 1 linha anotada.
+  body-1: <span class="miolo-emphasis">O que foi combinado, o valor e a próxima data. No lead, não na memória.</span>
+  body-2: Leva menos de 1 minuto. Na próxima ligação, você abre o lead e fala como quem lembra.
+  slide-number: 04 / 05
+  handle: '@tribocrmoficial'

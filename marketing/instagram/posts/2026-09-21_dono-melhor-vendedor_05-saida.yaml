@@ -1,0 +1,17 @@
+# --------------------------------------------------------
+# Pauta: O dono é o melhor vendedor. E não consegue sair.
+# Calendário: SEG 21/09/2026 · Semana 9 · Série "4 dores que toda PME conhece"
+# Pilar: DOR · Série 1/4
+# Status: aprovado por Lucas em 2026-09-18
+# Tema: ESCURO
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-09-21_dono-melhor-vendedor_05-saida
+data:
+  pilar: A saída
+  step-num: PASSO 1
+  titulo: Tira da cabeça, põe no pipeline.
+  body-1: <span class="miolo-emphasis">Na próxima venda grande, anota no lead as perguntas que você faria e o limite de preço.</span>
+  body-2: O vendedor fecha com o seu roteiro. Você entra só se ele pedir.
+  slide-number: 05 / 06
+  handle: '@tribocrmoficial'

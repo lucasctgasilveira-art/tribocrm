@@ -1,0 +1,14 @@
+# --------------------------------------------------------
+# Pauta: O dono é o melhor vendedor. E não consegue sair.
+# Calendário: SEG 21/09/2026 · Semana 9 · Série "4 dores que toda PME conhece"
+# Pilar: DOR · Série 1/4
+# Status: aprovado por Lucas em 2026-09-18
+# Tema: ESCURO
+# --------------------------------------------------------
+template: carrossel-metodo-capa
+slug: 2026-09-21_dono-melhor-vendedor_01-capa
+data:
+  pilar: Dor · Série 1/4
+  titulo: O dono é o<br>melhor vendedor.<br><span class="t-orange">E não consegue sair.</span>
+  slide-number: 01 / 06
+  handle: '@tribocrmoficial'

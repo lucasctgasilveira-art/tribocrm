@@ -1,0 +1,14 @@
+# --------------------------------------------------------
+# Pauta: O cliente liga. O vendedor não lembra do que prometeu.
+# Calendário: TER 22/09/2026 · Semana 9 · Série "4 dores que toda PME conhece"
+# Pilar: DOR · Série 2/4
+# Status: aprovado por Lucas em 2026-09-18
+# Tema: ESCURO
+# --------------------------------------------------------
+template: carrossel-metodo-capa
+slug: 2026-09-22_cliente-liga-vendedor-esquece_01-capa
+data:
+  pilar: Dor · Série 2/4
+  titulo: O cliente liga.<br>O vendedor <span class="t-orange">não lembra</span><br>do que prometeu.
+  slide-number: 01 / 05
+  handle: '@tribocrmoficial'

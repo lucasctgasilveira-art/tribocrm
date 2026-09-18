@@ -1,0 +1,16 @@
+# --------------------------------------------------------
+# Pauta: Stories de sábado — Semana 9 (enquete + recap)
+# Calendário: SAB 26/09/2026 · Semana 9
+# Pilar: STORY (interação / recap)
+# Status: aprovado por Lucas em 2026-09-18
+# Observação: story não usa caption. Enquete sai como imagem, sem votação.
+# --------------------------------------------------------
+template: story-enquete
+slug: 2026-09-26_story-enquete-dores
+data:
+  pilar: Pergunta da semana
+  pergunta: O que mais trava<br>a venda aí hoje?
+  opcao-a: Tudo passa<br>pelo dono
+  opcao-b: Cada um vende<br>de um jeito
+  cta: Manda DM se quiser conversar 🔥
+  handle: '@tribocrmoficial'

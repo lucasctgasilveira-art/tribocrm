@@ -1,0 +1,17 @@
+# --------------------------------------------------------
+# Pauta: Contratou 3 vendedores e o resultado piorou. Sabe por quê?
+# Calendário: SEX 25/09/2026 · Semana 9 · Série "4 dores que toda PME conhece"
+# Pilar: DOR · Série 4/4
+# Status: aprovado por Lucas em 2026-09-18
+# Tema: ESCURO
+# --------------------------------------------------------
+template: carrossel-metodo-slide
+slug: 2026-09-25_contratou-3-vendedores_05-saida
+data:
+  pilar: A saída
+  step-num: PASSO 1
+  titulo: Antes do 4º vendedor, 1 funil igual pra todos.
+  body-1: <span class="miolo-emphasis">Mesmas etapas, mesma regra pra avançar, mesma próxima ação anotada.</span>
+  body-2: Aí dá pra ver quem precisa de ajuda e em qual etapa. Contratar vira multiplicar.
+  slide-number: 05 / 06
+  handle: '@tribocrmoficial'

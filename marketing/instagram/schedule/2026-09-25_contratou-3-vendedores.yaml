@@ -1,0 +1,23 @@
+status: aprovado
+aprovado_em: '2026-09-18'
+aprovado_por: lucas
+slot:
+  data: '2026-09-25'
+  horario: 11:30 BRT
+  justificativa: SEX 25/09/2026 — Semana 9, Série "4 dores que toda PME conhece". Pilar DOR · Série 4/4. Contratou 3 vendedores e o resultado piorou. Sabe por quê?
+formato: carrossel
+slides: 6
+arquivos:
+  - output/2026-09-25_contratou-3-vendedores_01-capa.png
+  - output/2026-09-25_contratou-3-vendedores_02-cena.png
+  - output/2026-09-25_contratou-3-vendedores_03-porque.png
+  - output/2026-09-25_contratou-3-vendedores_04-sinal.png
+  - output/2026-09-25_contratou-3-vendedores_05-saida.png
+  - output/2026-09-25_contratou-3-vendedores_06-cta.png
+caption_source: posts/2026-09-25_contratou-3-vendedores_06-cta.yaml#caption
+hashtags_inline_na_caption: true
+primeiro_comentario: null
+publicacao:
+  metodo: instagram_graph_api
+  acao_humana_necessaria: nenhuma — aprovado por Lucas em 2026-09-18
+tema_visual: dark

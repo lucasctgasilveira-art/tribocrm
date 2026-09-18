@@ -1,0 +1,14 @@
+# --------------------------------------------------------
+# Pauta: Contratou 3 vendedores e o resultado piorou. Sabe por quê?
+# Calendário: SEX 25/09/2026 · Semana 9 · Série "4 dores que toda PME conhece"
+# Pilar: DOR · Série 4/4
+# Status: aprovado por Lucas em 2026-09-18
+# Tema: ESCURO
+# --------------------------------------------------------
+template: carrossel-metodo-capa
+slug: 2026-09-25_contratou-3-vendedores_01-capa
+data:
+  pilar: Dor · Série 4/4
+  titulo: Contratou 3 vendedores<br>e o resultado <span class="t-orange">piorou</span>.<br>Sabe por quê?
+  slide-number: 01 / 06
+  handle: '@tribocrmoficial'

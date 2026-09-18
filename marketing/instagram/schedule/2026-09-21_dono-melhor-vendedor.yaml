@@ -1,0 +1,23 @@
+status: aprovado
+aprovado_em: '2026-09-18'
+aprovado_por: lucas
+slot:
+  data: '2026-09-21'
+  horario: 08:00 BRT
+  justificativa: SEG 21/09/2026 — Semana 9, Série "4 dores que toda PME conhece". Pilar DOR · Série 1/4. O dono é o melhor vendedor. E não consegue sair.
+formato: carrossel
+slides: 6
+arquivos:
+  - output/2026-09-21_dono-melhor-vendedor_01-capa.png
+  - output/2026-09-21_dono-melhor-vendedor_02-cena.png
+  - output/2026-09-21_dono-melhor-vendedor_03-custo.png
+  - output/2026-09-21_dono-melhor-vendedor_04-porque.png
+  - output/2026-09-21_dono-melhor-vendedor_05-saida.png
+  - output/2026-09-21_dono-melhor-vendedor_06-cta.png
+caption_source: posts/2026-09-21_dono-melhor-vendedor_06-cta.yaml#caption
+hashtags_inline_na_caption: true
+primeiro_comentario: null
+publicacao:
+  metodo: instagram_graph_api
+  acao_humana_necessaria: nenhuma — aprovado por Lucas em 2026-09-18
+tema_visual: dark
