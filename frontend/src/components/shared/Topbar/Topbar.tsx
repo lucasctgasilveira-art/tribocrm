@@ -566,7 +566,7 @@ function PasswordModal({ onClose }: { onClose: () => void }) {
       await api.post('/auth/change-password', { currentPassword: current, newPassword: newPw })
       setToast('Senha alterada com sucesso!')
       setTimeout(() => { setToast(''); onClose() }, 1500)
-    } catch { setError('Senha atual incorreta'); setSaving(false) }
+    } catch (e: any) { setError(e.response?.data?.error?.message ?? 'Erro ao alterar senha'); setSaving(false) }
   }
 
   const inputS: React.CSSProperties = { width: '100%', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }

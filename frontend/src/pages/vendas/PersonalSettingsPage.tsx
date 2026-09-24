@@ -264,7 +264,7 @@ function AccountTab() {
       await api.post('/auth/change-password', { currentPassword: curPw, newPassword: newPw })
       setCurPw(''); setNewPw(''); setConfirmPw('')
       setToast('Senha alterada!'); setTimeout(() => setToast(''), 3000)
-    } catch { setPwError('Senha atual incorreta') }
+    } catch (e: any) { setPwError(e.response?.data?.error?.message ?? 'Erro ao alterar senha') }
     setPwSaving(false)
   }
 
