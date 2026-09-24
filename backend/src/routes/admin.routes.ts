@@ -293,6 +293,44 @@ router.delete('/tenants/:id/notes/:noteId', async (req: Request, res: Response) 
   } catch (error: any) { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }) }
 })
 
+// ── Tenant User Password Reset ──
+// Gera senha temporária para um usuário do cliente e devolve em texto puro
+// uma única vez (mesmo padrão da criação de tenant). Também invalida
+// qualquer link pendente de "esqueci minha senha" desse usuário.
+
+router.post('/tenants/:id/users/:userId/reset-password', async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.params.id as string
+    const userId = req.params.userId as string
+    const uuid = z.string().uuid()
+    if (!uuid.safeParse(tenantId).success || !uuid.safeParse(userId).success) {
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Usuário não encontrado' } }); return
+    }
+    const user = await prisma.user.findFirst({ where: { id: userId, tenantId, deletedAt: null }, select: { id: true } })
+    if (!user) { res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Usuário não encontrado' } }); return }
+
+    const tempPassword = generateTempPassword()
+    const passwordHash = await bcrypt.hash(tempPassword, 12)
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash, passwordResetToken: null, passwordResetExpiresAt: null },
+    })
+    res.json({ success: true, data: { tempPassword } })
+    logAudit({
+      action: 'TENANT_USER_PASSWORD_RESET',
+      category: 'permission',
+      actorType: 'admin',
+      actorId: req.user?.userId ?? null,
+      tenantId,
+      entityType: 'tenant_user',
+      entityId: user.id,
+      ipAddress: getRequestIp(req),
+      // Não inclui a senha no metadata (nem hash nem plain).
+      metadata: null,
+    })
+  } catch (error: any) { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } }) }
+})
+
 // ── Tenant Discount ──
 
 router.post('/tenants/:id/discount', async (req: Request, res: Response) => {

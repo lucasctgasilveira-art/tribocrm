@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Loader2, Users, BarChart2, Target, CreditCard, Pencil, X, DollarSign } from 'lucide-react'
+import { ArrowLeft, Loader2, Users, BarChart2, Target, CreditCard, Pencil, X, DollarSign, KeyRound } from 'lucide-react'
 import AppLayout from '../../components/shared/AppLayout/AppLayout'
 import ChargeNowModal from '../../components/admin/ChargeNowModal'
 import { adminMenuItems } from '../../config/adminMenu'
@@ -79,6 +79,7 @@ export default function TenantDetailPage() {
   const [toast, setToast] = useState<{ msg: string; type: 'ok' | 'err' } | null>(null)
   const [editModal, setEditModal] = useState(false)
   const [chargeModal, setChargeModal] = useState(false)
+  const [resetUser, setResetUser] = useState<TenantUser | null>(null)
 
   function showToast(msg: string, type: 'ok' | 'err' = 'ok') {
     setToast({ msg, type })
@@ -227,7 +228,7 @@ export default function TenantDetailPage() {
         </div>
         {data.users?.length ? (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead><tr style={{ background: 'var(--bg)' }}>{['Nome', 'E-mail', 'Cargo', 'Último login', 'Status'].map(h => <th key={h} style={thS}>{h}</th>)}</tr></thead>
+            <thead><tr style={{ background: 'var(--bg)' }}>{['Nome', 'E-mail', 'Cargo', 'Último login', 'Status', 'Ações'].map(h => <th key={h} style={thS}>{h}</th>)}</tr></thead>
             <tbody>
               {data.users.map(u => (
                 <tr key={u.id}>
@@ -236,6 +237,11 @@ export default function TenantDetailPage() {
                   <td style={tdS}>{roleL[u.role] ?? u.role}</td>
                   <td style={tdS}>{formatDateTime(u.lastLoginAt)}</td>
                   <td style={tdS}><span style={{ background: u.isActive ? 'rgba(34,197,94,0.12)' : 'rgba(107,114,128,0.12)', color: u.isActive ? '#22c55e' : 'var(--text-muted)', borderRadius: 999, padding: '2px 8px', fontSize: 10, fontWeight: 500 }}>{u.isActive ? 'Ativo' : 'Inativo'}</span></td>
+                  <td style={tdS}>
+                    <button onClick={() => setResetUser(u)} style={{ ...btnS, display: 'inline-flex', alignItems: 'center', gap: 4, color: '#f97316' }}>
+                      <KeyRound size={12} strokeWidth={1.5} /> Resetar senha
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -308,6 +314,7 @@ export default function TenantDetailPage() {
         </div>
       </div>
 
+      {resetUser && id && <ResetUserPasswordModal tenantId={id} user={resetUser} onClose={() => setResetUser(null)} />}
       {editModal && <EditTenantModal data={data} onClose={() => setEditModal(false)} onSave={handleEditSave} />}
       {chargeModal && id && (
         <ChargeNowModal
@@ -320,6 +327,69 @@ export default function TenantDetailPage() {
         />
       )}
     </AppLayout>
+  )
+}
+
+/* ── Reset User Password Modal ── */
+function ResetUserPasswordModal({ tenantId, user, onClose }: { tenantId: string; user: TenantUser; onClose: () => void }) {
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [tempPassword, setTempPassword] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  async function handleConfirm() {
+    setSaving(true); setError('')
+    try {
+      const { data: res } = await api.post(`/admin/tenants/${tenantId}/users/${user.id}/reset-password`)
+      setTempPassword(res.data?.tempPassword ?? null)
+    } catch (e: any) { setError(e.response?.data?.error?.message ?? 'Erro ao resetar senha') }
+    finally { setSaving(false) }
+  }
+
+  return (
+    <>
+      <div onClick={saving ? undefined : onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 50 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 460, maxWidth: '90vw', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, zIndex: 51, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{tempPassword ? 'Senha redefinida!' : 'Resetar senha'}</h2>
+          <button onClick={onClose} disabled={saving} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} strokeWidth={1.5} /></button>
+        </div>
+        {tempPassword ? (
+          <div style={{ padding: 24 }}>
+            <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: 1.5 }}>
+              Nova senha de <strong style={{ color: 'var(--text-primary)' }}>{user.name}</strong> ({user.email}).
+              <br /><br />
+              <span style={{ color: '#f97316' }}>Senha temporária — copie antes de fechar, ela não poderá ser recuperada depois:</span>
+            </div>
+            <div style={{ background: 'var(--bg)', border: '2px solid #f97316', borderRadius: 10, padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <code style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: 2, fontFamily: 'monospace' }}>{tempPassword}</code>
+              <button onClick={() => { navigator.clipboard.writeText(tempPassword); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
+                style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                {copied ? 'Copiado!' : 'Copiar senha'}
+              </button>
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 12 }}>Envie esta senha ao usuário por um canal seguro. Recomende que ele troque após o login.</div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
+              <button onClick={onClose} style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Concluir</button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div style={{ padding: 24, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              Gerar nova senha para <strong style={{ color: 'var(--text-primary)' }}>{user.name}</strong> ({user.email})?
+              <br />A senha atual deixará de funcionar.
+              {error && <div style={{ marginTop: 12, color: '#ef4444', fontSize: 12 }}>{error}</div>}
+            </div>
+            <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+              <button onClick={onClose} disabled={saving} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 20px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Cancelar</button>
+              <button onClick={handleConfirm} disabled={saving} style={{ background: '#f97316', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 600, color: '#fff', cursor: saving ? 'not-allowed' : 'pointer' }}>
+                {saving ? 'Gerando...' : 'Gerar nova senha'}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </>
   )
 }
 

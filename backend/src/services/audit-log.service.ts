@@ -22,6 +22,7 @@ export type AuditAction =
   | 'ADMIN_USER_DUAL_ACCESS_CHANGED'
   | 'ADMIN_USER_PERMISSIONS_CHANGED'
   | 'TENANT_USER_UPDATED'
+  | 'TENANT_USER_PASSWORD_RESET'
 
 export interface AuditLogInput {
   action: AuditAction
