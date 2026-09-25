@@ -103,6 +103,14 @@ interface LeadPurchaseRow {
   closedBy: string | null
 }
 
+interface LinkedLeadRow {
+  id: string
+  pipelineName: string
+  stageName: string
+  stageColor: string | null
+  responsibleName: string
+}
+
 type Tab = 'history' | 'tasks' | 'info'
 
 const CSS = `
@@ -139,6 +147,9 @@ export default function LeadDrawer({ lead, onClose, stageColor, instance = 'gest
   const [purchases, setPurchases] = useState<LeadPurchaseRow[]>([])
   const [purchasesTotal, setPurchasesTotal] = useState<number>(0)
   const [clienteSince, setClienteSince] = useState<string | null>(null)
+  // Outros cards ativos da mesma pessoa (mesmo e-mail) em outros
+  // pipelines, via GET /lead-links/:id. Seção só aparece se houver algum.
+  const [linkedLeads, setLinkedLeads] = useState<LinkedLeadRow[]>([])
   const temp = tempConfig[lead.temperature] ?? tempConfig.COLD!
 
   useEffect(() => {
@@ -174,6 +185,14 @@ export default function LeadDrawer({ lead, onClose, stageColor, instance = 'gest
         setPurchasesTotal(0)
         setClienteSince(null)
       })
+    return () => { cancelled = true }
+  }, [lead.id])
+
+  useEffect(() => {
+    let cancelled = false
+    api.get(`/lead-links/${lead.id}`)
+      .then(r => { if (!cancelled) setLinkedLeads((r.data?.data ?? []) as LinkedLeadRow[]) })
+      .catch(() => { if (!cancelled) setLinkedLeads([]) })
     return () => { cancelled = true }
   }, [lead.id])
 
@@ -346,6 +365,23 @@ export default function LeadDrawer({ lead, onClose, stageColor, instance = 'gest
                 {purchases.map(p => (
                   <div key={p.id} style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
                     • {formatMonthYear(p.wonAt)} — {p.productName ?? 'Venda'} — <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{formatCurrency(p.closedValue)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Também está em — outros cards ativos da mesma pessoa. Só
+            informativo (sem link), pra não furar o isolamento de SELLER. */}
+        {linkedLeads.length > 0 && (
+          <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+            <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, padding: 14 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 10 }}>Também está em</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {linkedLeads.map(l => (
+                  <div key={l.id} style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                    • <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{l.pipelineName}</span> — <span style={{ color: l.stageColor ?? 'var(--text-secondary)' }}>{l.stageName}</span> — {l.responsibleName}
                   </div>
                 ))}
               </div>
