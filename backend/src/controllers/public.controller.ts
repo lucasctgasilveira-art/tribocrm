@@ -150,26 +150,33 @@ export async function submitPublicForm(req: Request, res: Response): Promise<voi
     const stageId = form.destinationStageId
 
     const result = await prisma.$transaction(async (tx) => {
-      // Deduplication: if the visitor already exists as an ACTIVE lead
-      // under this tenant (same email), append an interaction to the
-      // existing lead instead of creating a second card. WON/LOST leads
-      // represent finished deals — a new submission from that email
-      // is treated as a fresh opportunity and gets a new card.
+      const now = new Date()
+      const timestamp = now.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+
+      // Deduplication (per pipeline): if the visitor already exists as
+      // an ACTIVE lead (same email, case-insensitive) in THIS form's
+      // pipeline, append an interaction to it instead of creating a
+      // second card. An ACTIVE lead in another pipeline doesn't block —
+      // a new card is created here and those leads get a note below.
+      // WON/LOST leads represent finished deals — a new submission from
+      // that email is treated as a fresh opportunity and gets a new card.
+      let otherPipelineLeads: { id: string; responsibleId: string }[] = []
       if (email) {
-        const existing = await tx.lead.findFirst({
+        const activeLeads = await tx.lead.findMany({
           where: {
             tenantId,
-            email,
+            email: { equals: email, mode: 'insensitive' },
             status: 'ACTIVE',
             deletedAt: null,
           },
-          select: { id: true, responsibleId: true },
+          orderBy: { createdAt: 'asc' },
+          take: 20,
+          select: { id: true, responsibleId: true, pipelineId: true },
         })
+        const existing = activeLeads.find(l => l.pipelineId === pipelineId)
+        otherPipelineLeads = activeLeads.filter(l => l.pipelineId !== pipelineId)
 
         if (existing) {
-          const now = new Date()
-          const timestamp = now.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
-
           // Timeline note. userId is required by the FK, so we stamp
           // the lead's current responsible and mark isAuto=true so the
           // drawer renders "• Sistema" instead of the person's name.
@@ -179,7 +186,7 @@ export async function submitPublicForm(req: Request, res: Response): Promise<voi
               leadId: existing.id,
               userId: existing.responsibleId,
               type: 'SYSTEM',
-              content: `Lead resubmeteu o formulário de captação em ${timestamp}`,
+              content: `Lead preencheu novamente o formulário "${form.name}" em ${timestamp}`,
               isAuto: true,
             },
           })
@@ -206,7 +213,7 @@ export async function submitPublicForm(req: Request, res: Response): Promise<voi
 
       const pipeline = await tx.pipeline.findFirst({
         where: { id: pipelineId, tenantId },
-        select: { id: true, lastAssignedUserId: true },
+        select: { id: true, name: true, lastAssignedUserId: true },
       })
       if (!pipeline) throw new Error('Pipeline não encontrado')
 
@@ -249,6 +256,24 @@ export async function submitPublicForm(req: Request, res: Response): Promise<voi
           ipAddress: (req.ip ?? req.socket.remoteAddress ?? '').slice(0, 50) || null,
         },
       })
+
+      // Avisa os cards ativos da mesma pessoa em outros pipelines.
+      for (const other of otherPipelineLeads) {
+        await tx.interaction.create({
+          data: {
+            tenantId,
+            leadId: other.id,
+            userId: other.responsibleId,
+            type: 'SYSTEM',
+            content: `Lead também preencheu o formulário "${form.name}" (pipeline ${pipeline.name}) em ${timestamp}`,
+            isAuto: true,
+          },
+        })
+        await tx.lead.update({
+          where: { id: other.id },
+          data: { lastActivityAt: now },
+        })
+      }
 
       return { leadId: lead.id, dedup: false as const }
     })
