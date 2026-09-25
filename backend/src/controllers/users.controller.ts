@@ -190,6 +190,9 @@ export async function createUser(req: Request, res: Response): Promise<void> {
         // String "YYYY-MM" → 1º dia do mês como Date. NULL = entra em tudo.
         // Doc seção 6.3.
         rampingStartsAt: parseRampingStartsAt(rampingStartsAt),
+        // Cadastro interno pelo gestor: nasce confirmado, senão o
+        // authMiddleware bloqueia o usuário (EMAIL_NOT_VERIFIED).
+        emailVerified: true,
       },
       select: {
         id: true,

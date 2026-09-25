@@ -95,6 +95,9 @@ router.post('/tenants', async (req: Request, res: Response) => {
           email,
           passwordHash,
           role: 'OWNER',
+          // Cadastro interno: o admin já conhece o e-mail, então o
+          // usuário nasce confirmado (senão o authMiddleware bloqueia tudo).
+          emailVerified: true,
         },
       })
 
