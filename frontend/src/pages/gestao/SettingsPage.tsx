@@ -380,7 +380,8 @@ function DistributionRuleCard({ pipelines }: { pipelines: PipelineSummary[] }) {
         // plain calls (no nested setState) so React 18 batches them
         // into a single render and no stale value leaks through.
         const keep = selectedId && list.find(p => p.id === selectedId)
-        const target = keep ?? list[0]
+        // `||` (não `??`): keep pode ser '' quando selectedId começou vazio.
+        const target = keep || list[0]
         if (target) {
           setSelectedId(target.id)
           setDistType(target.distributionType)
